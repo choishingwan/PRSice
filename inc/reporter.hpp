@@ -37,7 +37,8 @@ public:
     Reporter(const std::string& log_name, size_t width = 60) : m_width(width)
     {
         m_log_file.open(log_name.c_str());
-        if (!m_log_file.is_open()) {
+        if (!m_log_file.is_open())
+        {
             std::string error_message =
                 "Error: " + log_name + " cannot be open";
             throw std::runtime_error(error_message);
@@ -50,7 +51,8 @@ public:
         m_width = width;
         if (m_log_file.is_open()) m_log_file.close();
         m_log_file.open(log_name.c_str());
-        if (!m_log_file.is_open()) {
+        if (!m_log_file.is_open())
+        {
             std::string error_message =
                 "Error: " + log_name + " cannot be open";
             throw std::runtime_error(error_message);

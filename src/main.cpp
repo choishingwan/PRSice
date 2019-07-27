@@ -42,7 +42,8 @@ int main(int argc, char* argv[])
         Commander commander;
         try
         {
-            if (!commander.init(argc, argv, reporter)) {
+            if (!commander.init(argc, argv, reporter))
+            {
                 return 0; // only require the usage information
             }
         }
@@ -205,7 +206,8 @@ int main(int argc, char* argv[])
                                commander.is_binary(), reporter);
             // Store relevant parameters to the target object
             target_file->set_info(commander);
-            if (!commander.no_clump()) {
+            if (!commander.no_clump())
+            {
                 // now go through the snp vector an define the
                 // windows so that we can jump directly to the
                 // relevant SNPs immediately when doing clumping
@@ -213,7 +215,8 @@ int main(int argc, char* argv[])
                 // get the sort by p index vector for target
                 // so that we can still find out the relative coordinates of
                 // each SNPs This is only required for clumping
-                if (!target_file->sort_by_p()) {
+                if (!target_file->sort_by_p())
+                {
                     std::string error_message =
                         "No SNPs left for PRSice processing";
                     reporter.report(error_message);
@@ -225,8 +228,10 @@ int main(int argc, char* argv[])
                     reporter, commander.pearson());
                 // immediately free the memory
             }
-            if (init_ref) {
-                if (commander.use_ref_maf() && !has_ref_maf) {
+            if (init_ref)
+            {
+                if (commander.use_ref_maf() && !has_ref_maf)
+                {
                     // doesn't need to worry about generating the intermediate
                     // file as we will always have the reference maf if we are
                     // going to generate the intermediate file
@@ -259,22 +264,26 @@ int main(int argc, char* argv[])
             background_start_idx = region_membership.cbegin();
             std::advance(background_start_idx, region_start_idx[1]);
             background_end_idx = region_membership.cbegin();
-            if (num_regions > 2) {
-                std::advance(background_end_idx, region_start_idx[2]);
-            }
+            if (num_regions > 2)
+            { std::advance(background_end_idx, region_start_idx[2]); }
             // we can now quickly check if any of the region are empty
             bool has_empty_region = false;
             std::ofstream empty_region;
             std::string empty_region_name = commander.out() + ".xregion";
             // region_start_idx size always = num_regions
-            for (size_t i = 2; i < region_start_idx.size(); ++i) {
+            for (size_t i = 2; i < region_start_idx.size(); ++i)
+            {
                 size_t cur_idx = region_start_idx[i];
-                if (i + 1 >= region_start_idx[i]) {
-                    if (cur_idx == region_membership.size()) {
+                if (i + 1 >= region_start_idx[i])
+                {
+                    if (cur_idx == region_membership.size())
+                    {
                         // this is empty
-                        if (!has_empty_region) {
+                        if (!has_empty_region)
+                        {
                             empty_region.open(empty_region_name.c_str());
-                            if (!empty_region.is_open()) {
+                            if (!empty_region.is_open())
+                            {
                                 std::string error_message =
                                     "Error: Cannot open file: "
                                     + empty_region_name + " to write!";
@@ -288,9 +297,11 @@ int main(int argc, char* argv[])
                 }
                 else if (cur_idx == region_start_idx[i + 1])
                 {
-                    if (!has_empty_region) {
+                    if (!has_empty_region)
+                    {
                         empty_region.open(empty_region_name.c_str());
-                        if (!empty_region.is_open()) {
+                        if (!empty_region.is_open())
+                        {
                             std::string error_message =
                                 "Error: Cannot open file: " + empty_region_name
                                 + " to write!";
@@ -308,7 +319,8 @@ int main(int argc, char* argv[])
             // Initialize the progress bar
             prsice.init_process_count(commander, num_regions,
                                       target_file->num_threshold());
-            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno) {
+            for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
+            {
                 fprintf(stderr, "Processing the %zu th phenotype\n",
                         i_pheno + 1);
                 prsice.init_matrix(commander, i_pheno, commander.delim(),
@@ -320,7 +332,8 @@ int main(int argc, char* argv[])
                                    commander.no_regress());
                 // go through each region
                 fprintf(stderr, "\nStart Processing\n");
-                for (size_t i_region = 0; i_region < num_regions; ++i_region) {
+                for (size_t i_region = 0; i_region < num_regions; ++i_region)
+                {
                     // always skip background region
                     if (i_region == 1) continue;
                     if (!prsice.run_prsice(commander, i_pheno, i_region,
@@ -336,7 +349,8 @@ int main(int argc, char* argv[])
                         prsice.output(commander, region_names, i_pheno,
                                       i_region);
                 }
-                if (!commander.no_regress() && commander.perform_set_perm()) {
+                if (!commander.no_regress() && commander.perform_set_perm())
+                {
                     // only perform permutation if regression is performed
                     // and user request it
                     prsice.run_competitive(*target_file, background_start_idx,

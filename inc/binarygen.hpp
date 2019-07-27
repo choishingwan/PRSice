@@ -107,7 +107,8 @@ private:
     {
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        if (m_ref_plink) {
+        if (m_ref_plink)
+        {
             // when m_ref_plink is set, it suggest we are using the
             // intermediate, which is a binary plink format. Therefore we can
             // directly read from the file
@@ -117,7 +118,8 @@ private:
                 if (m_bgen_file.is_open()) m_bgen_file.close();
                 // read in the file in binary format
                 m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
-                if (!m_bgen_file.is_open()) {
+                if (!m_bgen_file.is_open())
+                {
                     std::string error_message =
                         "Error: Cannot open intermediate file: " + file_name;
                     throw std::runtime_error(error_message);
@@ -182,14 +184,16 @@ private:
             if (m_bgen_file.is_open()) m_bgen_file.close();
 
             std::string bgen_name = file_name + ".bgen";
-            if (intermediate) {
+            if (intermediate)
+            {
                 // if it is the intermeidate file, we don't need to add the
                 // suffix
                 bgen_name = file_name;
             }
             // we can now open the file in binary mode
             m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-            if (!m_bgen_file.is_open()) {
+            if (!m_bgen_file.is_open())
+            {
                 std::string error_message =
                     "Error: Cannot open bgen file: " + bgen_name;
                 if (intermediate) error_message.append(" (intermediate file)");
@@ -209,7 +213,8 @@ private:
                 "Error: Cannot seek within the bgen file!");
         }
 
-        if (!intermediate) {
+        if (!intermediate)
+        {
             // we are not using intermediate file at the moment, so this must be
             // in bgen format obtain the context information of the current bgen
             // file
@@ -271,7 +276,7 @@ private:
      */
     struct PRS_Interpreter
     {
-        ~PRS_Interpreter(){};
+        ~PRS_Interpreter() {};
         /*!
          * \brief PRS_Interpreter is the structure used by BGEN library to parse
          * the probability data
@@ -326,14 +331,16 @@ private:
             // to match the encoding in PLINK format, we "unflip" SNPs here
             // otherwise our polygenic score will be going to an opposite
             // direction
-            if (!flipped) {
+            if (!flipped)
+            {
                 // immediately flip the weight at the beginning
                 std::swap(m_homcom_weight, m_homrar_weight);
             }
             m_adj_score = 0;
             m_miss_score = 0;
             m_miss_count = 0;
-            if (!m_setzero) {
+            if (!m_setzero)
+            {
                 // this is the only one that depends on ploidy
                 m_miss_count = 2;
                 // again, mean_impute is stable, branch prediction should be ok
@@ -424,7 +431,8 @@ private:
         {
             auto&& sample_prs = (*m_sample_prs)[m_prs_sample_i];
 
-            if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing) {
+            if (misc::logically_equal(m_sum_prob, 0.0) || m_is_missing)
+            {
                 m_missing.push_back(m_prs_sample_i);
                 sample_prs.num_snp =
                     sample_prs.num_snp * m_not_first + m_miss_count;
@@ -450,18 +458,19 @@ private:
          */
         void finalise()
         {
-            if (m_centre) {
-                m_adj_score = m_stat * rs.mean();
-            }
-            if (!m_setzero) {
+            if (m_centre) { m_adj_score = m_stat * rs.mean(); }
+            if (!m_setzero)
+            {
                 m_miss_count = 2;
                 m_miss_score = m_stat * rs.mean();
             }
 
             // only need to do this if we don't have the expected information
             size_t cur_idx = 0;
-            for (size_t i = 0; i < m_sample_prs->size(); ++i) {
-                if (cur_idx < m_missing.size() && i == m_missing[cur_idx]) {
+            for (size_t i = 0; i < m_sample_prs->size(); ++i)
+            {
+                if (cur_idx < m_missing.size() && i == m_missing[cur_idx])
+                {
                     (*m_sample_prs)[i].prs =
                         (*m_sample_prs)[i].prs * m_not_first + m_miss_score;
                     cur_idx++;
@@ -645,13 +654,16 @@ private:
             else
             {
                 m_hard_prob = 0;
-                for (size_t geno = 0; geno < 3; ++geno) {
-                    if (m_prob[geno] > m_hard_prob) {
+                for (size_t geno = 0; geno < 3; ++geno)
+                {
+                    if (m_prob[geno] > m_hard_prob)
+                    {
                         m_geno = (geno == 0) ? geno : geno + 1;
                         m_hard_prob = m_prob[geno];
                     }
                 }
-                if (m_hard_prob < m_dose_threshold) {
+                if (m_hard_prob < m_dose_threshold)
+                {
                     // set to missing
                     m_geno = 1;
                 }
@@ -669,7 +681,8 @@ private:
             m_shift += 2;
             // if we reach the boundary, we will now add the index and reset
             // the shift
-            if (m_shift == BITCT) {
+            if (m_shift == BITCT)
+            {
                 m_index++;
                 m_shift = 0;
             }

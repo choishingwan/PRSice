@@ -882,9 +882,7 @@ void aligned_free(uintptr_t* aligned_pp);
 
 HEADER_INLINE void aligned_free_cond(uintptr_t* aligned_ptr)
 {
-    if (aligned_ptr) {
-        aligned_free(aligned_ptr);
-    }
+    if (aligned_ptr) { aligned_free(aligned_ptr); }
 }
 
 HEADER_INLINE void aligned_free_null(uintptr_t** aligned_pp)
@@ -895,7 +893,8 @@ HEADER_INLINE void aligned_free_null(uintptr_t** aligned_pp)
 
 HEADER_INLINE void aligned_free_cond_null(uintptr_t** aligned_pp)
 {
-    if (*aligned_pp) {
+    if (*aligned_pp)
+    {
         aligned_free(*aligned_pp);
         *aligned_pp = nullptr;
     }
@@ -1036,9 +1035,7 @@ HEADER_INLINE int32_t fread_checked(char* buf, uintptr_t len, FILE* infile,
 
 HEADER_INLINE void fclose_cond(FILE* fptr)
 {
-    if (fptr) {
-        fclose(fptr);
-    }
+    if (fptr) { fclose(fptr); }
 }
 
 HEADER_INLINE int32_t fclose_null(FILE** fptr_ptr)
@@ -1062,18 +1059,14 @@ HEADER_INLINE int32_t gzclose_null(gzFile* gzf_ptr)
 
 HEADER_INLINE void gzclose_cond(gzFile gz_infile)
 {
-    if (gz_infile) {
-        gzclose(gz_infile);
-    }
+    if (gz_infile) { gzclose(gz_infile); }
 }
 
 HEADER_INLINE int32_t flexwrite_checked(const void* buf, size_t len,
                                         uint32_t output_gz, FILE* outfile,
                                         gzFile gz_outfile)
 {
-    if (!output_gz) {
-        return fwrite_checked(buf, len, outfile);
-    }
+    if (!output_gz) { return fwrite_checked(buf, len, outfile); }
     else
     {
         return (!gzwrite(gz_outfile, buf, len));
@@ -1083,7 +1076,8 @@ HEADER_INLINE int32_t flexwrite_checked(const void* buf, size_t len,
 HEADER_INLINE int32_t flexputc_checked(int32_t ii, uint32_t output_gz,
                                        FILE* outfile, gzFile gz_outfile)
 {
-    if (!output_gz) {
+    if (!output_gz)
+    {
         putc(ii, outfile);
         return ferror(outfile);
     }
@@ -1096,9 +1090,7 @@ HEADER_INLINE int32_t flexputc_checked(int32_t ii, uint32_t output_gz,
 HEADER_INLINE int32_t flexputs_checked(const char* ss, uint32_t output_gz,
                                        FILE* outfile, gzFile gz_outfile)
 {
-    if (!output_gz) {
-        return fputs_checked(ss, outfile);
-    }
+    if (!output_gz) { return fputs_checked(ss, outfile); }
     else
     {
         return (gzputs(gz_outfile, ss) == -1);
@@ -1108,9 +1100,7 @@ HEADER_INLINE int32_t flexputs_checked(const char* ss, uint32_t output_gz,
 HEADER_INLINE int32_t flexclose_null(uint32_t output_gz, FILE** fptr_ptr,
                                      gzFile* gzf_ptr)
 {
-    if (!output_gz) {
-        return fclose_null(fptr_ptr);
-    }
+    if (!output_gz) { return fclose_null(fptr_ptr); }
     else
     {
         return gzclose_null(gzf_ptr);
@@ -1340,9 +1330,7 @@ HEADER_INLINE int32_t no_more_tokens_kns(const char* sptr)
 
 HEADER_INLINE char* skip_initial_spaces(char* sptr)
 {
-    while ((*sptr == ' ') || (*sptr == '\t')) {
-        sptr++;
-    }
+    while ((*sptr == ' ') || (*sptr == '\t')) { sptr++; }
     return sptr;
 }
 
@@ -1541,13 +1529,15 @@ HEADER_INLINE void fputs_w4(const char* ss, FILE* outfile)
 {
     // for efficient handling of width-4 allele columns; don't want to call
     // strlen() since that's redundant with fputs
-    if (!ss[1]) {
+    if (!ss[1])
+    {
         fputs("   ", outfile);
         putc(ss[0], outfile);
     }
     else
     {
-        if (!ss[2]) {
+        if (!ss[2])
+        {
             putc(' ', outfile);
             putc(' ', outfile);
         }
@@ -1588,9 +1578,7 @@ uint32_t intlen(int32_t num);
 HEADER_INLINE uintptr_t strlen_se(const char* ss)
 {
     const char* ss2 = ss;
-    while (!is_space_or_eoln(*ss2)) {
-        ss2++;
-    }
+    while (!is_space_or_eoln(*ss2)) { ss2++; }
     return (uintptr_t)(ss2 - ss);
 }
 
@@ -1606,9 +1594,7 @@ HEADER_INLINE char* next_token_multz(char* sptr, uint32_t ct)
     // tried replacing this with ternary operator, but that actually seemed to
     // slow things down a bit under gcc 4.2.1 (tail call optimization issue?).
     // todo: recheck this under newer gcc/clang.
-    if (ct) {
-        return next_token_mult(sptr, ct);
-    }
+    if (ct) { return next_token_mult(sptr, ct); }
     else
     {
         return sptr;
@@ -1621,7 +1607,8 @@ HEADER_INLINE char* fw_strcpyn(uint32_t min_width, uint32_t source_len,
                                const char* source, char* dest)
 {
     // right-justified strcpy with known source length
-    if (source_len < min_width) {
+    if (source_len < min_width)
+    {
         memcpy(memseta(dest, 32, min_width - source_len), source, source_len);
         return &(dest[min_width]);
     }
@@ -1683,12 +1670,8 @@ HEADER_INLINE void trailing_zeroes_to_spaces(char* start)
 {
     // removes trailing zeroes
     start--;
-    while (*start == '0') {
-        *start-- = ' ';
-    }
-    if (*start == '.') {
-        *start = ' ';
-    }
+    while (*start == '0') { *start-- = ' '; }
+    if (*start == '.') { *start = ' '; }
 }
 
 HEADER_INLINE char* clip_trailing_zeroes(char* start)
@@ -1712,9 +1695,7 @@ char* ftoa_g(float dxx, char* start);
 HEADER_INLINE char* width_force(uint32_t min_width, char* startp, char* endp)
 {
     uintptr_t diff = (endp - startp);
-    if (diff >= min_width) {
-        return endp;
-    }
+    if (diff >= min_width) { return endp; }
     else
     {
         diff = min_width - diff;
@@ -1937,9 +1918,8 @@ uint32_t next_unset_unsafe(const uintptr_t* bitarr, uint32_t loc);
 HEADER_INLINE void next_unset_unsafe_ck(const uintptr_t* __restrict bitarr,
                                         uint32_t* __restrict loc_ptr)
 {
-    if (IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_unset_unsafe(bitarr, *loc_ptr);
-    }
+    if (IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_unset_unsafe(bitarr, *loc_ptr); }
 }
 
 #ifdef __LP64__
@@ -1955,9 +1935,8 @@ HEADER_INLINE uintptr_t next_unset_ul_unsafe(const uintptr_t* bitarr,
 HEADER_INLINE void next_unset_ul_unsafe_ck(const uintptr_t* __restrict bitarr,
                                            uintptr_t* __restrict loc_ptr)
 {
-    if (IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_unset_ul_unsafe(bitarr, *loc_ptr);
-    }
+    if (IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_unset_ul_unsafe(bitarr, *loc_ptr); }
 }
 
 uint32_t next_unset(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil);
@@ -1965,9 +1944,8 @@ uint32_t next_unset(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil);
 HEADER_INLINE void next_unset_ck(const uintptr_t* __restrict bitarr,
                                  uint32_t ceil, uint32_t* __restrict loc_ptr)
 {
-    if (IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_unset(bitarr, *loc_ptr, ceil);
-    }
+    if (IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_unset(bitarr, *loc_ptr, ceil); }
 }
 
 #ifdef __LP64__
@@ -1984,9 +1962,8 @@ HEADER_INLINE void next_unset_ul_ck(const uintptr_t* __restrict bitarr,
                                     uintptr_t ceil,
                                     uintptr_t* __restrict loc_ptr)
 {
-    if (IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_unset_ul(bitarr, *loc_ptr, ceil);
-    }
+    if (IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_unset_ul(bitarr, *loc_ptr, ceil); }
 }
 
 uint32_t next_set_unsafe(const uintptr_t* bitarr, uint32_t loc);
@@ -1994,9 +1971,8 @@ uint32_t next_set_unsafe(const uintptr_t* bitarr, uint32_t loc);
 HEADER_INLINE void next_set_unsafe_ck(const uintptr_t* __restrict bitarr,
                                       uint32_t* __restrict loc_ptr)
 {
-    if (!IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_set_unsafe(bitarr, *loc_ptr);
-    }
+    if (!IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_set_unsafe(bitarr, *loc_ptr); }
 }
 
 #ifdef __LP64__
@@ -2012,9 +1988,8 @@ HEADER_INLINE uintptr_t next_set_ul_unsafe(const uintptr_t* bitarr,
 HEADER_INLINE void next_set_ul_unsafe_ck(const uintptr_t* __restrict bitarr,
                                          uintptr_t* __restrict loc_ptr)
 {
-    if (!IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_set_ul_unsafe(bitarr, *loc_ptr);
-    }
+    if (!IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_set_ul_unsafe(bitarr, *loc_ptr); }
 }
 
 uint32_t next_set(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil);
@@ -2022,9 +1997,8 @@ uint32_t next_set(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil);
 HEADER_INLINE void next_set_ck(const uintptr_t* __restrict bitarr,
                                uint32_t ceil, uint32_t* __restrict loc_ptr)
 {
-    if (!IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_set(bitarr, *loc_ptr, ceil);
-    }
+    if (!IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_set(bitarr, *loc_ptr, ceil); }
 }
 
 #ifdef __LP64__
@@ -2040,9 +2014,8 @@ HEADER_INLINE uintptr_t next_set_ul(const uintptr_t* bitarr, uintptr_t loc,
 HEADER_INLINE void next_set_ul_ck(const uintptr_t* __restrict bitarr,
                                   uintptr_t ceil, uintptr_t* loc_ptr)
 {
-    if (!IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = next_set_ul(bitarr, *loc_ptr, ceil);
-    }
+    if (!IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = next_set_ul(bitarr, *loc_ptr, ceil); }
 }
 
 int32_t last_set_bit(const uintptr_t* bitarr, uint32_t word_ct);
@@ -2060,9 +2033,8 @@ HEADER_INLINE void prev_unset_unsafe_ck(const uintptr_t* bitarr,
                                         uint32_t* loc_ptr)
 {
     *loc_ptr -= 1;
-    if (IS_SET(bitarr, *loc_ptr)) {
-        *loc_ptr = prev_unset_unsafe(bitarr, *loc_ptr);
-    }
+    if (IS_SET(bitarr, *loc_ptr))
+    { *loc_ptr = prev_unset_unsafe(bitarr, *loc_ptr); }
 }
 
 // These functions seem to optimize better than memset(arr, 0, x) under OS X
@@ -2071,9 +2043,7 @@ HEADER_INLINE void prev_unset_unsafe_ck(const uintptr_t* bitarr,
 HEADER_INLINE void fill_ulong_zero(size_t size, uintptr_t* ularr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *ularr++ = 0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *ularr++ = 0; }
 }
 
 #ifdef __LP64__
@@ -2086,9 +2056,7 @@ HEADER_INLINE void fill_ull_zero(size_t size, uint64_t* ullarr)
 HEADER_INLINE void fill_vvec_zero(size_t size, VECITYPE* vvec)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *vvec++ = _mm_setzero_si128();
-    }
+    for (ulii = 0; ulii < size; ulii++) { *vvec++ = _mm_setzero_si128(); }
 }
 #else
 HEADER_INLINE void fill_ull_zero(size_t size, uint64_t* ullarr)
@@ -2100,9 +2068,7 @@ HEADER_INLINE void fill_ull_zero(size_t size, uint64_t* ullarr)
 HEADER_INLINE void fill_ulong_one(size_t size, uintptr_t* ularr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *ularr++ = ~ZEROLU;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *ularr++ = ~ZEROLU; }
 }
 
 #ifdef __LP64__
@@ -2120,49 +2086,37 @@ HEADER_INLINE void fill_ull_one(size_t size, uint64_t* ullarr)
 HEADER_INLINE void fill_int_zero(size_t size, int32_t* iarr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *iarr++ = 0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *iarr++ = 0; }
 }
 
 HEADER_INLINE void fill_int_one(size_t size, int32_t* iarr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *iarr++ = -1;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *iarr++ = -1; }
 }
 
 HEADER_INLINE void fill_uint_zero(size_t size, uint32_t* uiarr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *uiarr++ = 0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *uiarr++ = 0; }
 }
 
 HEADER_INLINE void fill_uint_one(size_t size, uint32_t* uiarr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *uiarr++ = ~0U;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *uiarr++ = ~0U; }
 }
 
 HEADER_INLINE void fill_float_zero(size_t size, float* farr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *farr++ = 0.0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *farr++ = 0.0; }
 }
 
 HEADER_INLINE void fill_double_zero(size_t size, double* darr)
 {
     size_t ulii;
-    for (ulii = 0; ulii < size; ulii++) {
-        *darr++ = 0.0;
-    }
+    for (ulii = 0; ulii < size; ulii++) { *darr++ = 0.0; }
 }
 
 
@@ -2232,9 +2186,7 @@ uintptr_t geqprime(uintptr_t floor);
 
 HEADER_INLINE uint32_t get_id_htable_size(uintptr_t item_ct)
 {
-    if (item_ct < 32761) {
-        return 65521;
-    }
+    if (item_ct < 32761) { return 65521; }
     else
     {
         return geqprime(item_ct * 2 + 1);
@@ -2253,9 +2205,7 @@ HEADER_INLINE int32_t alloc_and_populate_id_htable(
     uint32_t* id_htable_size_ptr, uint32_t** id_htable_ptr)
 {
     uint32_t id_htable_size = get_id_htable_size(item_ct);
-    if (bigstack_alloc_ui(id_htable_size, id_htable_ptr)) {
-        return RET_NOMEM;
-    }
+    if (bigstack_alloc_ui(id_htable_size, id_htable_ptr)) { return RET_NOMEM; }
     *id_htable_size_ptr = id_htable_size;
     return populate_id_htable(unfiltered_ct, exclude_arr, item_ct, item_ids,
                               max_id_len, allow_dups, id_htable_size,
@@ -2314,9 +2264,7 @@ uint32_t alloc_collapsed_haploid_filters(
 
 HEADER_INLINE void free_cond(void* memptr)
 {
-    if (memptr) {
-        free(memptr);
-    }
+    if (memptr) { free(memptr); }
 }
 
 HEADER_INLINE uint32_t realnum(double dd)
@@ -2452,9 +2400,7 @@ void init_default_chrom_mask(Chrom_info* chrom_info_ptr);
 HEADER_INLINE int32_t init_chrom_info_human(Chrom_info* chrom_info_ptr)
 {
     // convenience wrapper
-    if (init_chrom_info(chrom_info_ptr)) {
-        return RET_NOMEM;
-    }
+    if (init_chrom_info(chrom_info_ptr)) { return RET_NOMEM; }
     init_species(SPECIES_HUMAN, chrom_info_ptr);
     init_default_chrom_mask(chrom_info_ptr);
     return 0;
@@ -2483,10 +2429,9 @@ HEADER_INLINE const char* species_str(uintptr_t ct)
 HEADER_INLINE uint32_t are_all_words_zero(const uintptr_t* word_arr,
                                           uintptr_t word_ct)
 {
-    while (word_ct--) {
-        if (*word_arr++) {
-            return 0;
-        }
+    while (word_ct--)
+    {
+        if (*word_arr++) { return 0; }
     }
     return 1;
 }
@@ -2567,9 +2512,7 @@ HEADER_INLINE int32_t get_or_add_chrom_code(
     int32_t* chrom_idx_ptr)
 {
     *chrom_idx_ptr = get_chrom_code(chrom_name, chrom_info_ptr, name_slen);
-    if (*chrom_idx_ptr >= 0) {
-        return 0;
-    }
+    if (*chrom_idx_ptr >= 0) { return 0; }
     return try_to_add_chrom_name(chrom_name, file_descrip, line_idx, name_slen,
                                  allow_extra_chroms, chrom_idx_ptr,
                                  chrom_info_ptr);
@@ -2829,10 +2772,9 @@ HEADER_INLINE uintptr_t popcount_longs_nzbase(const uintptr_t* lptr,
                                               uintptr_t end_idx)
 {
     uintptr_t prefix_ct = 0;
-    if (start_idx & 1) {
-        if (end_idx == start_idx) {
-            return 0;
-        }
+    if (start_idx & 1)
+    {
+        if (end_idx == start_idx) { return 0; }
         prefix_ct = popcount_long(lptr[start_idx++]);
     }
     return prefix_ct + popcount_longs(&(lptr[start_idx]), end_idx - start_idx);
@@ -2948,9 +2890,8 @@ HEADER_INLINE void zero_trailing_bits(uintptr_t unfiltered_ct,
                                       uintptr_t* bitarr)
 {
     uintptr_t trail_ct = unfiltered_ct & (BITCT - 1);
-    if (trail_ct) {
-        bitarr[unfiltered_ct / BITCT] &= (ONELU << trail_ct) - ONELU;
-    }
+    if (trail_ct)
+    { bitarr[unfiltered_ct / BITCT] &= (ONELU << trail_ct) - ONELU; }
 }
 
 void fill_all_bits(uintptr_t ct, uintptr_t* bitarr);
@@ -2982,9 +2923,7 @@ HEADER_INLINE uint32_t count_chrom_markers(const Chrom_info* chrom_info_ptr,
                                            const uintptr_t* marker_exclude,
                                            uint32_t chrom_idx)
 {
-    if (!is_set(chrom_info_ptr->chrom_mask, chrom_idx)) {
-        return 0;
-    }
+    if (!is_set(chrom_info_ptr->chrom_mask, chrom_idx)) { return 0; }
     const uint32_t chrom_fo_idx = chrom_info_ptr->chrom_idx_to_foidx[chrom_idx];
     const uint32_t min_idx = chrom_info_ptr->chrom_fo_vidx_start[chrom_fo_idx];
     const uint32_t max_idx =
@@ -3038,9 +2977,7 @@ HEADER_INLINE uint32_t load_raw(uintptr_t unfiltered_sample_ct4, FILE* bedfile,
 HEADER_INLINE uintptr_t get_final_mask(uint32_t sample_ct)
 {
     uint32_t uii = sample_ct % BITCT2;
-    if (uii) {
-        return (ONELU << (2 * uii)) - ONELU;
-    }
+    if (uii) { return (ONELU << (2 * uii)) - ONELU; }
     else
     {
         return ~ZEROLU;
@@ -3054,9 +2991,7 @@ HEADER_INLINE uint32_t load_raw2(uintptr_t unfiltered_sample_ct4,
 {
     if (fread(rawbuf, 1, unfiltered_sample_ct4, bedfile)
         < unfiltered_sample_ct4)
-    {
-        return 1;
-    }
+    { return 1; }
     rawbuf[unfiltered_sample_ctl2m1] &= final_mask;
     return 0;
 }
@@ -3183,14 +3118,15 @@ HEADER_INLINE void haploid_fix(uint32_t hh_exists,
                                uintptr_t sample_ct, uint32_t is_x,
                                uint32_t is_y, unsigned char* loadbuf)
 {
-    if (is_x) {
-        if (hh_exists & XMHH_EXISTS) {
-            hh_reset(loadbuf, sample_male_include_quaterarr, sample_ct);
-        }
+    if (is_x)
+    {
+        if (hh_exists & XMHH_EXISTS)
+        { hh_reset(loadbuf, sample_male_include_quaterarr, sample_ct); }
     }
     else if (is_y)
     {
-        if (hh_exists & Y_FIX_NEEDED) {
+        if (hh_exists & Y_FIX_NEEDED)
+        {
             hh_reset_y(loadbuf, sample_include_quaterarr,
                        sample_male_include_quaterarr, sample_ct);
         }
@@ -3221,9 +3157,8 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
 HEADER_INLINE char sexchar(uintptr_t* sex_nm, uintptr_t* sex_male,
                            uintptr_t sample_uidx)
 {
-    if (is_set(sex_nm, sample_uidx)) {
-        return '2' - is_set(sex_male, sample_uidx);
-    }
+    if (is_set(sex_nm, sample_uidx))
+    { return '2' - is_set(sex_male, sample_uidx); }
     else
     {
         return '0';
@@ -3324,9 +3259,8 @@ HEADER_INLINE void precompute_mods(uintptr_t sample_ct,
 {
     // sets precomputed_mods[n] = 2^32 mod (n-2)
     uintptr_t sample_idx;
-    for (sample_idx = 2; sample_idx <= sample_ct; sample_idx++) {
-        *precomputed_mods++ = (uint32_t)(0x100000000LLU % sample_idx);
-    }
+    for (sample_idx = 2; sample_idx <= sample_ct; sample_idx++)
+    { *precomputed_mods++ = (uint32_t)(0x100000000LLU % sample_idx); }
 }
 
 void generate_perm1_interleaved(uint32_t tot_ct, uint32_t set_ct,

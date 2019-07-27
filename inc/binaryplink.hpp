@@ -101,14 +101,14 @@ protected:
             (m_unfiltered_sample_ct + 3) / 4;
         // we don't need to check if m_cur_file is empty because empty equals
         // only to empty, which shouldn't happen
-        if (m_cur_file != file_name) {
-            if (m_bed_file.is_open()) {
-                m_bed_file.close();
-            }
+        if (m_cur_file != file_name)
+        {
+            if (m_bed_file.is_open()) { m_bed_file.close(); }
             std::string bedname = file_name + ".bed";
             // open the bed file in binary mode
             m_bed_file.open(bedname.c_str(), std::ios::binary);
-            if (!m_bed_file.is_open()) {
+            if (!m_bed_file.is_open())
+            {
                 throw std::runtime_error(std::string(
                     "Error: Cannot open bed file: " + file_name + ".bed"));
             }
@@ -175,14 +175,12 @@ protected:
         uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
         // if we don't perform selection, we can directly perform the read on
         // the mainbuf
-        if (unfiltered_sample_ct == sample_ct) {
-            rawbuf = mainbuf;
-        }
+        if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
         // we try to read in the data and store it in rawbug
-        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
-            return RET_READ_FAIL;
-        }
-        if (unfiltered_sample_ct != sample_ct) {
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
+        { return RET_READ_FAIL; }
+        if (unfiltered_sample_ct != sample_ct)
+        {
             // if we need to perform selection, we will remove all unwanted
             // sample and push the data forward
             copy_quaterarr_nonempty_subset(rawbuf, sample_include,
@@ -195,7 +193,8 @@ protected:
             // region (to avoid the leftover, if any)
             mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
-        if (do_reverse) {
+        if (do_reverse)
+        {
             // this will never be callsed in PRSice
             reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
         }
@@ -210,9 +209,8 @@ protected:
         // 2. explicit iteration from 0..(unfiltered_sample_ct-1).
         // otherwise improper trailing bits might cause a segfault, when we
         // should be ignoring them or just issuing a warning.
-        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4)) {
-            return RET_READ_FAIL;
-        }
+        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
+        { return RET_READ_FAIL; }
         return 0;
     }
 };

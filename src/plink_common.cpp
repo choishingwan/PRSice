@@ -74,7 +74,8 @@ uint32_t aligned_malloc(uintptr_t size, uintptr_t** aligned_pp)
     // 16-byte-aligned malloc().  (Slightly different code is needed if malloc()
     // does not even guarantee 8-byte alignment.)
     uintptr_t* malloc_ptr = (uintptr_t*) malloc(size + VEC_BYTES);
-    if (!malloc_ptr) {
+    if (!malloc_ptr)
+    {
         g_failed_alloc_attempt_size = size + VEC_BYTES;
         return 1;
     }
@@ -84,7 +85,8 @@ uint32_t aligned_malloc(uintptr_t size, uintptr_t** aligned_pp)
 #else
     // no SSE2 concerns here
     *aligned_pp = (uintptr_t*) malloc(size);
-    if (!(*aligned_pp)) {
+    if (!(*aligned_pp))
+    {
         g_failed_alloc_attempt_size = size;
         return 1;
     }
@@ -105,7 +107,8 @@ uint32_t push_ll_str(const char* ss, Ll_str** ll_stack_ptr)
 {
     uintptr_t str_bytes = strlen(ss) + 1;
     Ll_str* new_ll_str = (Ll_str*) malloc(sizeof(Ll_str) + str_bytes);
-    if (!new_ll_str) {
+    if (!new_ll_str)
+    {
         g_failed_alloc_attempt_size = sizeof(Ll_str) + str_bytes;
         return 1;
     }
@@ -117,9 +120,11 @@ uint32_t push_ll_str(const char* ss, Ll_str** ll_stack_ptr)
 
 void logstr(const char* ss)
 {
-    if (!g_debug_on) {
+    if (!g_debug_on)
+    {
         fputs(ss, g_logfile);
-        if (ferror(g_logfile)) {
+        if (ferror(g_logfile))
+        {
             putc_unlocked('\n', stdout);
             fflush(stdout);
             fprintf(stderr,
@@ -131,14 +136,16 @@ void logstr(const char* ss)
     }
     else
     {
-        if (g_log_failed) {
+        if (g_log_failed)
+        {
             fflush(stdout);
             fputs(ss, stderr);
         }
         else
         {
             fputs(ss, g_logfile);
-            if (ferror(g_logfile)) {
+            if (ferror(g_logfile))
+            {
                 putc_unlocked('\n', stdout);
                 fflush(stdout);
                 fprintf(stderr,
@@ -192,11 +199,11 @@ void wordwrap(uint32_t suffix_len, char* ss)
     char* token_start = ss;
     char* line_end = &(ss[79]);
     char* token_end;
-    while (1) {
-        while (*token_start == ' ') {
-            token_start++;
-        }
-        if (token_start > line_end) {
+    while (1)
+    {
+        while (*token_start == ' ') { token_start++; }
+        if (token_start > line_end)
+        {
             do
             {
                 *line_end = '\n';
@@ -204,13 +211,14 @@ void wordwrap(uint32_t suffix_len, char* ss)
             } while (token_start > line_end);
         }
         token_end = strchr(token_start, ' ');
-        if (!token_end) {
-            if (&(token_start[79]) == line_end) {
-                return;
-            }
+        if (!token_end)
+        {
+            if (&(token_start[79]) == line_end) { return; }
             token_end = strchr(token_start, '\0');
-            if (!suffix_len) {
-                if (token_end <= &(line_end[1])) {
+            if (!suffix_len)
+            {
+                if (token_end <= &(line_end[1]))
+                {
                     // okay if end-of-string is one past the end, because
                     // function assumes last character is \n in suffix_len == 0
                     // case
@@ -220,9 +228,7 @@ void wordwrap(uint32_t suffix_len, char* ss)
             }
             else
             {
-                if (&(token_end[suffix_len]) <= line_end) {
-                    return;
-                }
+                if (&(token_end[suffix_len]) <= line_end) { return; }
                 // because of terminal space assumption, token_start actually
                 // points to the end of the string
                 assert(token_start[-1] == ' ');
@@ -230,11 +236,14 @@ void wordwrap(uint32_t suffix_len, char* ss)
             token_start[-1] = '\n';
             return;
         }
-        if (token_end > line_end) {
-            if (&(token_start[79]) != line_end) {
+        if (token_end > line_end)
+        {
+            if (&(token_start[79]) != line_end)
+            {
                 token_start[-1] = '\n';
                 line_end = &(token_start[79]);
-                if (token_end > line_end) {
+                if (token_end > line_end)
+                {
                     // single really long token, can't do anything beyond
                     // putting it on its own line
                     *token_end = '\n';
@@ -258,7 +267,8 @@ void wordwrapb(uint32_t suffix_len) { wordwrap(suffix_len, g_logbuf); }
 int32_t fopen_checked(const char* fname, const char* mode, FILE** target_ptr)
 {
     *target_ptr = fopen(fname, mode);
-    if (!(*target_ptr)) {
+    if (!(*target_ptr))
+    {
         LOGERRPRINTFWW(g_errstr_fopen, fname);
         return -1;
     }
@@ -267,7 +277,8 @@ int32_t fopen_checked(const char* fname, const char* mode, FILE** target_ptr)
 
 int32_t fwrite_checked(const void* buf, size_t len, FILE* outfile)
 {
-    while (len > 0x7ffff000) {
+    while (len > 0x7ffff000)
+    {
         // OS X can't perform 2GB+ writes
         // typical disk block size is 4kb, so 0x7ffff000 is the largest sensible
         // write size
@@ -288,7 +299,8 @@ unsigned char* bigstack_alloc(uintptr_t size)
 {
     unsigned char* alloc_ptr;
     size = round_up_pow2(size, CACHELINE);
-    if (bigstack_left() < size) {
+    if (bigstack_left() < size)
+    {
         g_failed_alloc_attempt_size = size;
         return nullptr;
     }
@@ -309,7 +321,8 @@ unsigned char* bigstack_end_alloc_presized(uintptr_t size)
 {
     assert(!(size & END_ALLOC_CHUNK_M1));
     uintptr_t cur_bigstack_left = bigstack_left();
-    if (size > cur_bigstack_left) {
+    if (size > cur_bigstack_left)
+    {
         g_failed_alloc_attempt_size = size;
         return nullptr;
     }
@@ -325,9 +338,8 @@ uint32_t match_upper(const char* ss, const char* fixed_str)
     char cc = *fixed_str++;
     do
     {
-        if ((((unsigned char) (*ss++)) & 0xdf) != ((unsigned char) cc)) {
-            return 0;
-        }
+        if ((((unsigned char) (*ss++)) & 0xdf) != ((unsigned char) cc))
+        { return 0; }
         cc = *fixed_str++;
     } while (cc);
     return !(*ss);
@@ -339,9 +351,7 @@ uint32_t match_upper_counted(const char* ss, const char* fixed_str, uint32_t ct)
     {
         if ((((unsigned char) (*ss++)) & 0xdf)
             != ((unsigned char) (*fixed_str++)))
-        {
-            return 0;
-        }
+        { return 0; }
     } while (--ct);
     return 1;
 }
@@ -351,25 +361,21 @@ static inline uint32_t scan_uint_capped_finish(const char* ss, uint64_t cap,
                                                uint32_t* valp)
 {
     uint64_t val = *valp;
-    while (1) {
+    while (1)
+    {
         // a little bit of unrolling seems to help
         const uint64_t cur_digit = (uint64_t)((unsigned char) (*ss++)) - 48;
-        if (cur_digit >= 10) {
-            break;
-        }
+        if (cur_digit >= 10) { break; }
         // val = val * 10 + cur_digit;
         const uint64_t cur_digit2 = (uint64_t)((unsigned char) (*ss++)) - 48;
-        if (cur_digit2 >= 10) {
+        if (cur_digit2 >= 10)
+        {
             val = val * 10 + cur_digit;
-            if (val > cap) {
-                return 1;
-            }
+            if (val > cap) { return 1; }
             break;
         }
         val = val * 100 + cur_digit * 10 + cur_digit2;
-        if (val > cap) {
-            return 1;
-        }
+        if (val > cap) { return 1; }
     }
     *valp = val;
     return 0;
@@ -379,21 +385,17 @@ uint32_t scan_posint_capped(const char* ss, uint64_t cap, uint32_t* valp)
 {
     // '0' has ascii code 48
     *valp = (uint32_t)((unsigned char) (*ss++)) - 48;
-    if (*valp >= 10) {
+    if (*valp >= 10)
+    {
         // permit leading '+' (ascii 43), but not '++' or '+-'
-        if (*valp != 0xfffffffbU) {
-            return 1;
-        }
+        if (*valp != 0xfffffffbU) { return 1; }
         *valp = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (*valp >= 10) {
-            return 1;
-        }
+        if (*valp >= 10) { return 1; }
     }
-    while (!(*valp)) {
+    while (!(*valp))
+    {
         *valp = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if ((*valp) >= 10) {
-            return 1;
-        }
+        if ((*valp) >= 10) { return 1; }
     }
     return scan_uint_capped_finish(ss, cap, valp);
 }
@@ -402,12 +404,12 @@ uint32_t scan_uint_capped(const char* ss, uint64_t cap, uint32_t* valp)
 {
     // Reads an integer in [0, cap].  Assumes first character is nonspace.
     uint32_t val = (uint32_t)((unsigned char) (*ss++)) - 48;
-    if (val >= 10) {
-        if (val != 0xfffffffbU) {
+    if (val >= 10)
+    {
+        if (val != 0xfffffffbU)
+        {
             // '-' has ascii code 45, so unsigned 45 - 48 = 0xfffffffdU
-            if ((val != 0xfffffffdU) || (*ss != '0')) {
-                return 1;
-            }
+            if ((val != 0xfffffffdU) || (*ss != '0')) { return 1; }
             // accept "-0", "-00", etc.
             while (*(++ss) == '0')
                 ;
@@ -416,9 +418,7 @@ uint32_t scan_uint_capped(const char* ss, uint64_t cap, uint32_t* valp)
         }
         // accept leading '+'
         val = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
     *valp = val;
     return scan_uint_capped_finish(ss, cap, valp);
@@ -430,22 +430,17 @@ uint32_t scan_int_abs_bounded(const char* ss, uint64_t bound, int32_t* valp)
     // nonspace.
     *valp = (uint32_t)((unsigned char) (*ss++)) - 48;
     int32_t sign = 1;
-    if (((uint32_t) *valp) >= 10) {
-        if (*valp == -3) {
-            sign = -1;
-        }
+    if (((uint32_t) *valp) >= 10)
+    {
+        if (*valp == -3) { sign = -1; }
         else if (*valp != -5)
         {
             return 1;
         }
         *valp = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (((uint32_t) *valp) >= 10) {
-            return 1;
-        }
+        if (((uint32_t) *valp) >= 10) { return 1; }
     }
-    if (scan_uint_capped_finish(ss, bound, (uint32_t*) valp)) {
-        return 1;
-    }
+    if (scan_uint_capped_finish(ss, bound, (uint32_t*) valp)) { return 1; }
     *valp *= sign;
     return 0;
 }
@@ -455,33 +450,29 @@ uint32_t scan_posint_capped32(const char* ss, uint32_t cap_div_10,
 {
     // '0' has ascii code 48
     uint32_t val = (uint32_t)((unsigned char) (*ss++)) - 48;
-    if (val >= 10) {
-        if (val != 0xfffffffbU) {
-            return 1;
-        }
+    if (val >= 10)
+    {
+        if (val != 0xfffffffbU) { return 1; }
         val = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
-    while (!val) {
+    while (!val)
+    {
         val = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
-    while (1) {
+    while (1)
+    {
         const uint32_t cur_digit = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (cur_digit >= 10) {
+        if (cur_digit >= 10)
+        {
             *valp = val;
             return 0;
         }
         // avoid integer overflow in middle of computation
         if ((val >= cap_div_10)
             && ((val > cap_div_10) || (cur_digit > cap_mod_10)))
-        {
-            return 1;
-        }
+        { return 1; }
         val = val * 10 + cur_digit;
     }
 }
@@ -491,32 +482,30 @@ uint32_t scan_uint_capped32(const char* ss, uint32_t cap_div_10,
 {
     // Reads an integer in [0, cap].  Assumes first character is nonspace.
     uint32_t val = (uint32_t)((unsigned char) (*ss++)) - 48;
-    if (val >= 10) {
-        if (val != 0xfffffffbU) {
-            if ((val != 0xfffffffdU) || (*ss != '0')) {
-                return 1;
-            }
+    if (val >= 10)
+    {
+        if (val != 0xfffffffbU)
+        {
+            if ((val != 0xfffffffdU) || (*ss != '0')) { return 1; }
             while (*(++ss) == '0')
                 ;
             *valp = 0;
             return ((uint32_t)((unsigned char) (*ss)) - 48) < 10;
         }
         val = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
-    while (1) {
+    while (1)
+    {
         const uint32_t cur_digit = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (cur_digit >= 10) {
+        if (cur_digit >= 10)
+        {
             *valp = val;
             return 0;
         }
         if ((val >= cap_div_10)
             && ((val > cap_div_10) || (cur_digit > cap_mod_10)))
-        {
-            return 1;
-        }
+        { return 1; }
         val = val * 10 + cur_digit;
     }
 }
@@ -528,30 +517,27 @@ uint32_t scan_int_abs_bounded32(const char* ss, uint32_t bound_div_10,
     // nonspace.
     uint32_t val = (uint32_t)((unsigned char) (*ss++)) - 48;
     int32_t sign = 1;
-    if (val >= 10) {
-        if (val == 0xfffffffdU) {
-            sign = -1;
-        }
+    if (val >= 10)
+    {
+        if (val == 0xfffffffdU) { sign = -1; }
         else if (val != 0xfffffffbU)
         {
             return 1;
         }
         val = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
-    while (1) {
+    while (1)
+    {
         const uint32_t cur_digit = (uint32_t)((unsigned char) (*ss++)) - 48;
-        if (cur_digit >= 10) {
+        if (cur_digit >= 10)
+        {
             *valp = sign * ((int32_t) val);
             return 0;
         }
         if ((val >= bound_div_10)
             && ((val > bound_div_10) || (cur_digit > bound_mod_10)))
-        {
-            return 1;
-        }
+        { return 1; }
         val = val * 10 + cur_digit;
     }
 }
@@ -562,26 +548,20 @@ uint32_t scan_posintptr(const char* ss, uintptr_t* valp)
     // Reads an integer in [1, 2^BITCT - 1].  Assumes first character is
     // nonspace.
     uintptr_t val = (uintptr_t)((unsigned char) (*ss++)) - 48;
-    if (val >= 10) {
+    if (val >= 10)
+    {
 #ifdef __LP64__
-        if (val != 0xfffffffffffffffbLLU) {
-            return 1;
-        }
+        if (val != 0xfffffffffffffffbLLU) { return 1; }
 #else
-        if (val != 0xfffffffbU) {
-            return 1;
-        }
+        if (val != 0xfffffffbU) { return 1; }
 #endif
         val = (uintptr_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
-    while (!val) {
+    while (!val)
+    {
         val = (uintptr_t)((unsigned char) (*ss++)) - 48;
-        if (val >= 10) {
-            return 1;
-        }
+        if (val >= 10) { return 1; }
     }
 // limit is 20 digits, we've already read one
 #ifdef __LP64__
@@ -589,25 +569,27 @@ uint32_t scan_posintptr(const char* ss, uintptr_t* valp)
 #else
     const char* ss_limit = &(ss[10]);
 #endif
-    while (1) {
+    while (1)
+    {
         const uintptr_t cur_digit = (uintptr_t)((unsigned char) (*ss++)) - 48;
-        if (cur_digit >= 10) {
+        if (cur_digit >= 10)
+        {
             *valp = val;
             return 0;
         }
         const uintptr_t cur_digit2 = (uintptr_t)((unsigned char) (*ss++)) - 48;
-        if (ss == ss_limit) {
+        if (ss == ss_limit)
+        {
             if ((cur_digit2 < 10)
                 || ((val >= (~ZEROLU) / 10)
                     && ((val > (~ZEROLU) / 10)
                         || (cur_digit > (~ZEROLU) % 10))))
-            {
-                return 1;
-            }
+            { return 1; }
             *valp = val * 10 + cur_digit;
             return 0;
         }
-        if (cur_digit2 >= 10) {
+        if (cur_digit2 >= 10)
+        {
             *valp = val * 10 + cur_digit;
             return 0;
         }
@@ -658,9 +640,7 @@ uint32_t scan_two_doubles(char* ss, double* __restrict val1p,
 {
     char* ss2;
     *val1p = strtod(ss, &ss2);
-    if (ss == ss2) {
-        return 1;
-    }
+    if (ss == ss2) { return 1; }
     ss = skip_initial_spaces(ss2);
     *val2p = strtod(ss, &ss2);
     return (ss == ss2) ? 1 : 0;
@@ -681,16 +661,17 @@ int32_t scan_token_ct_len(uintptr_t half_bufsize, FILE* infile, char* buf,
     char* bufptr2;
     char* buf_end;
     uintptr_t bufsize;
-    while (1) {
-        if (fread_checked(midbuf, half_bufsize, infile, &bufsize)) {
-            return RET_READ_FAIL;
-        }
-        if (!bufsize) {
-            if (curtoklen) {
+    while (1)
+    {
+        if (fread_checked(midbuf, half_bufsize, infile, &bufsize))
+        { return RET_READ_FAIL; }
+        if (!bufsize)
+        {
+            if (curtoklen)
+            {
                 // corner case
-                if (curtoklen >= max_token_len) {
-                    max_token_len = curtoklen + 1;
-                }
+                if (curtoklen >= max_token_len)
+                { max_token_len = curtoklen + 1; }
                 token_ct++;
             }
             break;
@@ -700,42 +681,34 @@ int32_t scan_token_ct_len(uintptr_t half_bufsize, FILE* infile, char* buf,
         buf_end[1] = '0';
         bufptr = &(buf[half_bufsize - curtoklen]);
         bufptr2 = midbuf;
-        if (curtoklen) {
-            goto scan_token_ct_len_tok_start;
-        }
-        while (1) {
-            while (*bufptr <= ' ') {
-                bufptr++;
-            }
-            if (bufptr >= buf_end) {
+        if (curtoklen) { goto scan_token_ct_len_tok_start; }
+        while (1)
+        {
+            while (*bufptr <= ' ') { bufptr++; }
+            if (bufptr >= buf_end)
+            {
                 curtoklen = 0;
                 break;
             }
             bufptr2 = &(bufptr[1]);
         scan_token_ct_len_tok_start:
-            while (*bufptr2 > ' ') {
-                bufptr2++;
-            }
+            while (*bufptr2 > ' ') { bufptr2++; }
             curtoklen = (uintptr_t)(bufptr2 - bufptr);
-            if ((bufptr2 == buf_end) && (buf_end == &(buf[full_bufsize]))) {
-                if (curtoklen >= half_bufsize) {
-                    return RET_INVALID_FORMAT;
-                }
+            if ((bufptr2 == buf_end) && (buf_end == &(buf[full_bufsize])))
+            {
+                if (curtoklen >= half_bufsize) { return RET_INVALID_FORMAT; }
                 break;
             }
-            if (curtoklen >= max_token_len) {
-                if (curtoklen >= half_bufsize) {
-                    return RET_INVALID_FORMAT;
-                }
+            if (curtoklen >= max_token_len)
+            {
+                if (curtoklen >= half_bufsize) { return RET_INVALID_FORMAT; }
                 max_token_len = curtoklen + 1;
             }
             token_ct++;
             bufptr = &(bufptr2[1]);
         }
     }
-    if (!feof(infile)) {
-        return RET_READ_FAIL;
-    }
+    if (!feof(infile)) { return RET_READ_FAIL; }
     *max_token_len_ptr = max_token_len;
     *token_ct_ptr = token_ct;
     return 0;
@@ -756,13 +729,16 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
     char* bufptr3;
     char* buf_end;
     uintptr_t bufsize;
-    while (1) {
-        if (fread_checked(midbuf, half_bufsize, infile, &bufsize)) {
-            return RET_READ_FAIL;
-        }
-        if (!bufsize) {
-            if (curtoklen) {
-                if (token_idx + 1 == token_ct) {
+    while (1)
+    {
+        if (fread_checked(midbuf, half_bufsize, infile, &bufsize))
+        { return RET_READ_FAIL; }
+        if (!bufsize)
+        {
+            if (curtoklen)
+            {
+                if (token_idx + 1 == token_ct)
+                {
                     memcpyx(&(token_name_buf[token_idx * max_token_len]),
                             bufptr, curtoklen, '\0');
                     return 0;
@@ -775,25 +751,22 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
         *buf_end = ' ';
         buf_end[1] = '0';
         bufptr2 = midbuf;
-        if (curtoklen) {
-            goto read_tokens_tok_start;
-        }
-        while (1) {
-            while (*bufptr <= ' ') {
-                bufptr++;
-            }
-            if (bufptr >= buf_end) {
+        if (curtoklen) { goto read_tokens_tok_start; }
+        while (1)
+        {
+            while (*bufptr <= ' ') { bufptr++; }
+            if (bufptr >= buf_end)
+            {
                 curtoklen = 0;
                 bufptr = midbuf;
                 break;
             }
             bufptr2 = &(bufptr[1]);
         read_tokens_tok_start:
-            while (*bufptr2 > ' ') {
-                bufptr2++;
-            }
+            while (*bufptr2 > ' ') { bufptr2++; }
             curtoklen = (uintptr_t)(bufptr2 - bufptr);
-            if ((bufptr2 == buf_end) && (buf_end == &(buf[full_bufsize]))) {
+            if ((bufptr2 == buf_end) && (buf_end == &(buf[full_bufsize])))
+            {
                 bufptr3 = &(buf[half_bufsize - curtoklen]);
                 memcpy(bufptr3, bufptr, curtoklen);
                 bufptr = bufptr3;
@@ -801,9 +774,7 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
             }
             memcpyx(&(token_name_buf[token_idx * max_token_len]), bufptr,
                     curtoklen, '\0');
-            if (++token_idx == token_ct) {
-                return 0;
-            }
+            if (++token_idx == token_ct) { return 0; }
             bufptr = &(bufptr2[1]);
         }
     }
@@ -811,22 +782,18 @@ int32_t read_tokens(uintptr_t half_bufsize, uintptr_t token_ct,
 
 int32_t gzputs_w4(gzFile gz_outfile, const char* ss)
 {
-    if (!ss[1]) {
-        if (gzputs(gz_outfile, "   ") == -1) {
-            return -1;
-        }
+    if (!ss[1])
+    {
+        if (gzputs(gz_outfile, "   ") == -1) { return -1; }
         return gzputc(gz_outfile, ss[0]);
     }
-    if (!ss[2]) {
-        if (gzputs(gz_outfile, "  ") == -1) {
-            return -1;
-        }
+    if (!ss[2])
+    {
+        if (gzputs(gz_outfile, "  ") == -1) { return -1; }
     }
     else if (!ss[3])
     {
-        if (gzputc(gz_outfile, ' ') == -1) {
-            return -1;
-        }
+        if (gzputc(gz_outfile, ' ') == -1) { return -1; }
     }
     return gzputs(gz_outfile, ss);
 }
@@ -837,9 +804,7 @@ int32_t get_next_noncomment(FILE* fptr, char** lptr_ptr,
     char* lptr;
     do
     {
-        if (!fgets(g_textbuf, MAXLINELEN, fptr)) {
-            return -1;
-        }
+        if (!fgets(g_textbuf, MAXLINELEN, fptr)) { return -1; }
         *line_idx_ptr += 1;
         lptr = skip_initial_spaces(g_textbuf);
     } while (is_eoln_or_comment_kns(*lptr));
@@ -852,10 +817,9 @@ int32_t get_next_noncomment_excl(const uintptr_t* __restrict marker_exclude,
                                  uintptr_t* __restrict line_idx_ptr,
                                  uintptr_t* __restrict marker_uidx_ptr)
 {
-    while (!get_next_noncomment(fptr, lptr_ptr, line_idx_ptr)) {
-        if (!is_set_ul(marker_exclude, *marker_uidx_ptr)) {
-            return 0;
-        }
+    while (!get_next_noncomment(fptr, lptr_ptr, line_idx_ptr))
+    {
+        if (!is_set_ul(marker_exclude, *marker_uidx_ptr)) { return 0; }
         *marker_uidx_ptr += 1;
     }
     return -1;
@@ -872,10 +836,13 @@ void get_top_two_ui(const uint32_t* __restrict uint_arr, uintptr_t uia_size,
     uint32_t second_val = uint_arr[second_idx];
     uintptr_t cur_idx;
     uintptr_t cur_val;
-    for (cur_idx = 2; cur_idx < uia_size; ++cur_idx) {
+    for (cur_idx = 2; cur_idx < uia_size; ++cur_idx)
+    {
         cur_val = uint_arr[cur_idx];
-        if (cur_val > second_val) {
-            if (cur_val > top_val) {
+        if (cur_val > second_val)
+        {
+            if (cur_val > top_val)
+            {
                 second_val = top_val;
                 second_idx = top_idx;
                 top_val = cur_val;
@@ -896,7 +863,8 @@ uint32_t intlen(int32_t num)
 {
     int32_t retval = 1;
     uint32_t absnum;
-    if (num < 0) {
+    if (num < 0)
+    {
         absnum = -num;
         retval++;
     }
@@ -904,14 +872,13 @@ uint32_t intlen(int32_t num)
     {
         absnum = num;
     }
-    while (absnum > 99) {
+    while (absnum > 99)
+    {
         // division by a constant is faster for unsigned ints
         absnum /= 100;
         retval += 2;
     }
-    if (absnum > 9) {
-        retval++;
-    }
+    if (absnum > 9) { retval++; }
     return retval;
 }
 
@@ -923,37 +890,23 @@ int32_t strcmp_se(const char* s_read, const char* s_const, uint32_t s_const_len)
 
 char* next_token(char* sptr)
 {
-    if (!sptr) {
-        return nullptr;
-    }
+    if (!sptr) { return nullptr; }
     unsigned char ucc = *sptr;
-    while (ucc > 32) {
-        ucc = *(++sptr);
-    }
-    while ((ucc == ' ') || (ucc == '\t')) {
-        ucc = *(++sptr);
-    }
+    while (ucc > 32) { ucc = *(++sptr); }
+    while ((ucc == ' ') || (ucc == '\t')) { ucc = *(++sptr); }
     return (ucc > 32) ? sptr : nullptr;
 }
 
 char* next_token_mult(char* sptr, uint32_t ct)
 {
     assert(ct);
-    if (!sptr) {
-        return nullptr;
-    }
+    if (!sptr) { return nullptr; }
     unsigned char ucc = *sptr;
     do
     {
-        while (ucc > 32) {
-            ucc = *(++sptr);
-        }
-        while ((ucc == ' ') || (ucc == '\t')) {
-            ucc = *(++sptr);
-        }
-        if (ucc <= 32) {
-            return nullptr;
-        }
+        while (ucc > 32) { ucc = *(++sptr); }
+        while ((ucc == ' ') || (ucc == '\t')) { ucc = *(++sptr); }
+        if (ucc <= 32) { return nullptr; }
     } while (--ct);
     return sptr;
 }
@@ -961,16 +914,13 @@ char* next_token_mult(char* sptr, uint32_t ct)
 uint32_t count_tokens(const char* bufptr)
 {
     uint32_t token_ct = 0;
-    while ((*bufptr == ' ') || (*bufptr == '\t')) {
-        bufptr++;
-    }
-    while (!is_eoln_kns(*bufptr)) {
+    while ((*bufptr == ' ') || (*bufptr == '\t')) { bufptr++; }
+    while (!is_eoln_kns(*bufptr))
+    {
         token_ct++;
         while (!is_space_or_eoln(*(++bufptr)))
             ;
-        while ((*bufptr == ' ') || (*bufptr == '\t')) {
-            bufptr++;
-        }
+        while ((*bufptr == ' ') || (*bufptr == '\t')) { bufptr++; }
     }
     return token_ct;
 }
@@ -986,9 +936,7 @@ uint32_t count_and_measure_multistr(const char* multistr,
     do
     {
         slen = strlen(multistr) + 1;
-        if (slen > max_slen) {
-            max_slen = slen;
-        }
+        if (slen > max_slen) { max_slen = slen; }
         multistr = &(multistr[slen]);
         ct++;
     } while (*multistr);
@@ -1020,41 +968,39 @@ char* uint32toa(uint32_t uii, char* start)
     // by using a larger lookup table, but on average I doubt that pays off.)
     // Returns a pointer to the end of the integer (not null-terminated).
     uint32_t quotient;
-    if (uii < 1000) {
-        if (uii < 10) {
+    if (uii < 1000)
+    {
+        if (uii < 10)
+        {
             *start++ = '0' + uii;
             return start;
         }
-        if (uii < 100) {
-            goto uint32toa_2;
-        }
+        if (uii < 100) { goto uint32toa_2; }
         quotient = uii / 100;
         *start++ = '0' + quotient;
     }
     else
     {
-        if (uii < 10000000) {
-            if (uii >= 100000) {
-                if (uii < 1000000) {
-                    goto uint32toa_6;
-                }
+        if (uii < 10000000)
+        {
+            if (uii >= 100000)
+            {
+                if (uii < 1000000) { goto uint32toa_6; }
                 quotient = uii / 1000000;
                 *start++ = '0' + quotient;
                 goto uint32toa_6b;
             }
-            if (uii < 10000) {
-                goto uint32toa_4;
-            }
+            if (uii < 10000) { goto uint32toa_4; }
             quotient = uii / 10000;
             *start++ = '0' + quotient;
         }
         else
         {
-            if (uii >= 100000000) {
+            if (uii >= 100000000)
+            {
                 quotient = uii / 100000000;
-                if (uii >= 1000000000) {
-                    start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-                }
+                if (uii >= 1000000000)
+                { start = memcpya(start, &(digit2_table[quotient * 2]), 2); }
                 else
                 {
                     *start++ = '0' + quotient;
@@ -1083,7 +1029,8 @@ uint32toa_2:
 char* int32toa(int32_t ii, char* start)
 {
     uint32_t uii = ii;
-    if (ii < 0) {
+    if (ii < 0)
+    {
         // -INT_MIN is undefined, but negating the unsigned int equivalent works
         *start++ = '-';
         uii = -uii;
@@ -1120,16 +1067,16 @@ char* int64toa(int64_t llii, char* start)
     uint64_t top_digits;
     uint32_t bottom_eight;
     uint32_t middle_eight;
-    if (llii < 0) {
+    if (llii < 0)
+    {
         *start++ = '-';
         ullii = -ullii;
     }
-    if (ullii <= 0xffffffffLLU) {
-        return uint32toa((uint32_t) ullii, start);
-    }
+    if (ullii <= 0xffffffffLLU) { return uint32toa((uint32_t) ullii, start); }
     top_digits = ullii / 100000000;
     bottom_eight = (uint32_t)(ullii - (top_digits * 100000000));
-    if (top_digits <= 0xffffffffLLU) {
+    if (top_digits <= 0xffffffffLLU)
+    {
         start = uint32toa((uint32_t) top_digits, start);
         return uitoa_z8(bottom_eight, start);
     }
@@ -1143,15 +1090,15 @@ char* int64toa(int64_t llii, char* start)
 char* uint32toa_w4(uint32_t uii, char* start)
 {
     uint32_t quotient;
-    if (uii < 1000) {
-        if (uii < 10) {
+    if (uii < 1000)
+    {
+        if (uii < 10)
+        {
             // assumes little-endian
             *((uint32_t*) start) = 0x30202020 + (uii << 24);
             return &(start[4]);
         }
-        if (uii < 100) {
-            memset(start, 32, 2);
-        }
+        if (uii < 100) { memset(start, 32, 2); }
         else
         {
             quotient = uii / 100;
@@ -1172,13 +1119,16 @@ char* uint32toa_w4(uint32_t uii, char* start)
 char* uint32toa_w6(uint32_t uii, char* start)
 {
     uint32_t quotient;
-    if (uii < 1000) {
-        if (uii < 10) {
+    if (uii < 1000)
+    {
+        if (uii < 10)
+        {
             start = memseta(start, 32, 5);
             *start++ = '0' + uii;
             return start;
         }
-        if (uii < 100) {
+        if (uii < 100)
+        {
             start = memseta(start, 32, 4);
             goto uint32toa_w6_2;
         }
@@ -1191,11 +1141,11 @@ char* uint32toa_w6(uint32_t uii, char* start)
     }
     else
     {
-        if (uii < 10000000) {
-            if (uii >= 100000) {
-                if (uii < 1000000) {
-                    goto uint32toa_w6_6;
-                }
+        if (uii < 10000000)
+        {
+            if (uii >= 100000)
+            {
+                if (uii < 1000000) { goto uint32toa_w6_6; }
                 quotient = uii / 1000000;
                 *start++ = '0' + quotient;
                 goto uint32toa_w6_6b;
@@ -1214,11 +1164,11 @@ char* uint32toa_w6(uint32_t uii, char* start)
         }
         else
         {
-            if (uii >= 100000000) {
+            if (uii >= 100000000)
+            {
                 quotient = uii / 100000000;
-                if (uii >= 1000000000) {
-                    start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-                }
+                if (uii >= 1000000000)
+                { start = memcpya(start, &(digit2_table[quotient * 2]), 2); }
                 else
                 {
                     *start++ = '0' + quotient;
@@ -1246,13 +1196,16 @@ uint32toa_w6_2:
 char* uint32toa_w7(uint32_t uii, char* start)
 {
     uint32_t quotient;
-    if (uii < 1000) {
-        if (uii < 10) {
+    if (uii < 1000)
+    {
+        if (uii < 10)
+        {
             start = memseta(start, 32, 6);
             *start++ = '0' + uii;
             return start;
         }
-        if (uii < 100) {
+        if (uii < 100)
+        {
             start = memseta(start, 32, 5);
             goto uint32toa_w7_2;
         }
@@ -1262,9 +1215,12 @@ char* uint32toa_w7(uint32_t uii, char* start)
     }
     else
     {
-        if (uii < 10000000) {
-            if (uii >= 100000) {
-                if (uii >= 1000000) {
+        if (uii < 10000000)
+        {
+            if (uii >= 100000)
+            {
+                if (uii >= 1000000)
+                {
                     quotient = uii / 1000000;
                     *start++ = '0' + quotient;
                     goto uint32toa_w7_6b;
@@ -1286,11 +1242,11 @@ char* uint32toa_w7(uint32_t uii, char* start)
         }
         else
         {
-            if (uii >= 100000000) {
+            if (uii >= 100000000)
+            {
                 quotient = uii / 100000000;
-                if (uii >= 1000000000) {
-                    start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-                }
+                if (uii >= 1000000000)
+                { start = memcpya(start, &(digit2_table[quotient * 2]), 2); }
                 else
                 {
                     *start++ = '0' + quotient;
@@ -1318,8 +1274,10 @@ uint32toa_w7_2:
 char* uint32toa_w8(uint32_t uii, char* start)
 {
     uint32_t quotient;
-    if (uii < 1000) {
-        if (uii < 10) {
+    if (uii < 1000)
+    {
+        if (uii < 10)
+        {
 #ifdef __LP64__
             *((uintptr_t*) start) =
                 0x3020202020202020LLU + (((uintptr_t) uii) << 56);
@@ -1330,7 +1288,8 @@ char* uint32toa_w8(uint32_t uii, char* start)
             return start;
 #endif
         }
-        if (uii < 100) {
+        if (uii < 100)
+        {
             start = memseta(start, 32, 6);
             goto uint32toa_w8_2;
         }
@@ -1340,9 +1299,12 @@ char* uint32toa_w8(uint32_t uii, char* start)
     }
     else
     {
-        if (uii < 10000000) {
-            if (uii >= 100000) {
-                if (uii < 1000000) {
+        if (uii < 10000000)
+        {
+            if (uii >= 100000)
+            {
+                if (uii < 1000000)
+                {
                     start = memseta(start, 32, 2);
                     goto uint32toa_w8_6;
                 }
@@ -1364,11 +1326,11 @@ char* uint32toa_w8(uint32_t uii, char* start)
         }
         else
         {
-            if (uii >= 100000000) {
+            if (uii >= 100000000)
+            {
                 quotient = uii / 100000000;
-                if (uii >= 1000000000) {
-                    start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-                }
+                if (uii >= 1000000000)
+                { start = memcpya(start, &(digit2_table[quotient * 2]), 2); }
                 else
                 {
                     *start++ = '0' + quotient;
@@ -1398,13 +1360,16 @@ char* uint32toa_w10(uint32_t uii, char* start)
     // if we decide to reduce code size and optimize only one field width, this
     // should be it
     uint32_t quotient;
-    if (uii < 1000) {
-        if (uii < 10) {
+    if (uii < 1000)
+    {
+        if (uii < 10)
+        {
             start = memseta(start, 32, 9);
             *start++ = '0' + uii;
             return start;
         }
-        if (uii < 100) {
+        if (uii < 100)
+        {
             start = memseta(start, 32, 8);
             goto uint32toa_w10_2;
         }
@@ -1414,9 +1379,12 @@ char* uint32toa_w10(uint32_t uii, char* start)
     }
     else
     {
-        if (uii < 10000000) {
-            if (uii >= 100000) {
-                if (uii < 1000000) {
+        if (uii < 10000000)
+        {
+            if (uii >= 100000)
+            {
+                if (uii < 1000000)
+                {
                     start = memseta(start, 32, 4);
                     goto uint32toa_w10_6;
                 }
@@ -1438,11 +1406,11 @@ char* uint32toa_w10(uint32_t uii, char* start)
         }
         else
         {
-            if (uii >= 100000000) {
+            if (uii >= 100000000)
+            {
                 quotient = uii / 100000000;
-                if (uii >= 1000000000) {
-                    memcpy(start, &(digit2_table[quotient * 2]), 2);
-                }
+                if (uii >= 1000000000)
+                { memcpy(start, &(digit2_table[quotient * 2]), 2); }
                 else
                 {
                     *start = ' ';
@@ -1478,9 +1446,7 @@ static inline char* uitoa_trunc2(uint32_t uii, char* start)
     // Given 0 < uii < 100, writes uii without *trailing* zeroes.  (I.e. this is
     // for floating-point encoder use.)
     memcpy(start, &(digit2_table[uii * 2]), 2);
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1488,13 +1454,9 @@ static inline char* uitoa_trunc3(uint32_t uii, char* start)
 {
     *start++ = '0' + (uii / 100);
     uii %= 100;
-    if (!uii) {
-        return start;
-    }
+    if (!uii) { return start; }
     memcpy(start, &(digit2_table[uii * 2]), 2);
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1503,13 +1465,12 @@ static inline char* uitoa_trunc4(uint32_t uii, char* start)
     uint32_t quotient = uii / 100;
     memcpy(start, &(digit2_table[quotient * 2]), 2);
     uii -= 100 * quotient;
-    if (uii) {
+    if (uii)
+    {
         start += 2;
         memcpy(start, &(digit2_table[uii * 2]), 2);
     }
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1518,19 +1479,19 @@ static inline char* uitoa_trunc6(uint32_t uii, char* start)
     uint32_t quotient = uii / 10000;
     memcpy(start, &(digit2_table[quotient * 2]), 2);
     uii -= 10000 * quotient;
-    if (uii) {
+    if (uii)
+    {
         quotient = uii / 100;
         start += 2;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         uii -= 100 * quotient;
-        if (uii) {
+        if (uii)
+        {
             start += 2;
             memcpy(start, &(digit2_table[uii * 2]), 2);
         }
     }
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1539,25 +1500,26 @@ static inline char* uitoa_trunc8(uint32_t uii, char* start)
     uint32_t quotient = uii / 1000000;
     memcpy(start, &(digit2_table[quotient * 2]), 2);
     uii -= 1000000 * quotient;
-    if (uii) {
+    if (uii)
+    {
         quotient = uii / 10000;
         start += 2;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         uii -= 10000 * quotient;
-        if (uii) {
+        if (uii)
+        {
             quotient = uii / 100;
             start += 2;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             uii -= 100 * quotient;
-            if (uii) {
+            if (uii)
+            {
                 start += 2;
                 memcpy(start, &(digit2_table[uii * 2]), 2);
             }
         }
     }
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1565,9 +1527,7 @@ static inline char* qrtoa_1p1(uint32_t quotient, uint32_t remainder,
                               char* start)
 {
     start[0] = '0' + quotient;
-    if (!remainder) {
-        return &(start[1]);
-    }
+    if (!remainder) { return &(start[1]); }
     start[1] = '.';
     start[2] = '0' + remainder;
     return &(start[3]);
@@ -1577,14 +1537,10 @@ static inline char* qrtoa_1p2(uint32_t quotient, uint32_t remainder,
                               char* start)
 {
     *start++ = '0' + quotient;
-    if (!remainder) {
-        return start;
-    }
+    if (!remainder) { return start; }
     *start++ = '.';
     memcpy(start, &(digit2_table[remainder * 2]), 2);
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1594,20 +1550,17 @@ static inline char* qrtoa_1p3(uint32_t quotient, uint32_t remainder,
     // quotient = (int32_t)dxx;
     // remainder = ((int32_t)(dxx * 1000)) - (quotient * 1000);
     *start++ = '0' + quotient;
-    if (!remainder) {
-        return start;
-    }
+    if (!remainder) { return start; }
     *start++ = '.';
     quotient = remainder / 10;
     memcpy(start, &(digit2_table[quotient * 2]), 2);
     remainder -= 10 * quotient;
-    if (remainder) {
+    if (remainder)
+    {
         start[2] = '0' + remainder;
         return &(start[3]);
     }
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1615,26 +1568,24 @@ static inline char* qrtoa_1p5(uint32_t quotient, uint32_t remainder,
                               char* start)
 {
     *start++ = '0' + quotient;
-    if (!remainder) {
-        return start;
-    }
+    if (!remainder) { return start; }
     *start++ = '.';
     quotient = remainder / 1000;
     memcpy(start, &(digit2_table[quotient * 2]), 2);
     remainder -= 1000 * quotient;
-    if (remainder) {
+    if (remainder)
+    {
         quotient = remainder / 10;
         start += 2;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         remainder -= 10 * quotient;
-        if (remainder) {
+        if (remainder)
+        {
             start[2] = '0' + remainder;
             return &(start[3]);
         }
     }
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1642,32 +1593,31 @@ static inline char* qrtoa_1p7(uint32_t quotient, uint32_t remainder,
                               char* start)
 {
     *start++ = '0' + quotient;
-    if (!remainder) {
-        return start;
-    }
+    if (!remainder) { return start; }
     *start++ = '.';
     quotient = remainder / 100000;
     memcpy(start, &(digit2_table[quotient * 2]), 2);
     remainder -= 100000 * quotient;
-    if (remainder) {
+    if (remainder)
+    {
         quotient = remainder / 1000;
         start += 2;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         remainder -= 1000 * quotient;
-        if (remainder) {
+        if (remainder)
+        {
             quotient = remainder / 10;
             start += 2;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             remainder -= 10 * quotient;
-            if (remainder) {
+            if (remainder)
+            {
                 start[2] = '0' + remainder;
                 return &(start[3]);
             }
         }
     }
-    if (start[1] != '0') {
-        return &(start[2]);
-    }
+    if (start[1] != '0') { return &(start[2]); }
     return &(start[1]);
 }
 
@@ -1783,49 +1733,45 @@ char* dtoa_so6(double dxx, char* start)
     uint32_t uii;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx < 99.999949999999) {
-        if (dxx < 9.9999949999999) {
+    if (dxx < 99.999949999999)
+    {
+        if (dxx < 9.9999949999999)
+        {
             double_bround5(dxx, banker_round8, &quotient, &remainder);
             return qrtoa_1p5(quotient, remainder, start);
         }
         double_bround4(dxx, banker_round8, &quotient, &remainder);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         quotient = remainder / 100;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         remainder -= 100 * quotient;
-        if (remainder) {
+        if (remainder)
+        {
             start += 2;
         dtoa_so6_pretail:
             memcpy(start, &(digit2_table[remainder * 2]), 2);
         }
     dtoa_so6_tail:
-        if (start[1] != '0') {
-            return &(start[2]);
-        }
+        if (start[1] != '0') { return &(start[2]); }
         return &(start[1]);
     }
     else if (dxx < 9999.9949999999)
     {
-        if (dxx < 999.99949999999) {
+        if (dxx < 999.99949999999)
+        {
             double_bround3(dxx, banker_round8, &uii, &remainder);
             quotient = uii / 100;
             *start++ = '0' + quotient;
             quotient = uii - 100 * quotient;
             start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-            if (!remainder) {
-                return start;
-            }
+            if (!remainder) { return start; }
             *start++ = '.';
             quotient = remainder / 10;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             remainder -= quotient * 10;
-            if (!remainder) {
-                goto dtoa_so6_tail;
-            }
+            if (!remainder) { goto dtoa_so6_tail; }
             start[2] = '0' + remainder;
             return &(start[3]);
         }
@@ -1834,9 +1780,7 @@ char* dtoa_so6(double dxx, char* start)
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         quotient = uii - (100 * quotient);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         goto dtoa_so6_pretail;
     }
@@ -1850,9 +1794,7 @@ char* dtoa_so6(double dxx, char* start)
         start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
         uii = uii - 100 * quotient;
         start = memcpya(start, &(digit2_table[uii * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         *start = '0' + remainder;
         return &(start[1]);
@@ -1932,49 +1874,45 @@ char* ftoa_so6(float fxx, char* start)
     // digit, we have to set this bound to be robust to an addition error of
     // size 6e-7. (possible todo: just brute-force test this on all <2^32
     // possible floats and look for a better threshold)
-    if (fxx < 99.999944) {
-        if (fxx < 9.9999944) {
+    if (fxx < 99.999944)
+    {
+        if (fxx < 9.9999944)
+        {
             float_round5(fxx, &quotient, &remainder);
             return qrtoa_1p5(quotient, remainder, start);
         }
         float_round4(fxx, &quotient, &remainder);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         quotient = remainder / 100;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         remainder -= 100 * quotient;
-        if (remainder) {
+        if (remainder)
+        {
             start += 2;
         ftoa_so6_pretail:
             memcpy(start, &(digit2_table[remainder * 2]), 2);
         }
     ftoa_so6_tail:
-        if (start[1] != '0') {
-            return &(start[2]);
-        }
+        if (start[1] != '0') { return &(start[2]); }
         return &(start[1]);
     }
     else if (fxx < 9999.9944)
     {
-        if (fxx < 999.99944) {
+        if (fxx < 999.99944)
+        {
             float_round3(fxx, &uii, &remainder);
             quotient = uii / 100;
             *start = '0' + quotient;
             quotient = uii - 100 * quotient;
             start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
-            if (!remainder) {
-                return start;
-            }
+            if (!remainder) { return start; }
             *start++ = '.';
             quotient = remainder / 10;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             remainder -= quotient * 10;
-            if (!remainder) {
-                goto ftoa_so6_tail;
-            }
+            if (!remainder) { goto ftoa_so6_tail; }
             start[2] = '0' + remainder;
             return &(start[3]);
         }
@@ -1983,9 +1921,7 @@ char* ftoa_so6(float fxx, char* start)
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         quotient = uii - (100 * quotient);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         goto ftoa_so6_pretail;
     }
@@ -1999,9 +1935,7 @@ char* ftoa_so6(float fxx, char* start)
         start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
         uii = uii - 100 * quotient;
         start = memcpya(start, &(digit2_table[uii * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start = '.';
         start[1] = '0' + remainder;
         return &(start[2]);
@@ -2017,7 +1951,8 @@ char* dtoa_so2(double dxx, char* start)
     // 2 sig fig number, 0.95 <= dxx < 99.5
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx < 9.9499999999999) {
+    if (dxx < 9.9499999999999)
+    {
         double_bround1(dxx, banker_round12, &quotient, &remainder);
         return qrtoa_1p1(quotient, remainder, start);
     }
@@ -2030,16 +1965,16 @@ char* dtoa_so3(double dxx, char* start)
     // 3 sig fig number, 0.995 <= dxx < 999.5
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx < 99.949999999999) {
-        if (dxx < 9.9949999999999) {
+    if (dxx < 99.949999999999)
+    {
+        if (dxx < 9.9949999999999)
+        {
             double_bround2(dxx, banker_round11, &quotient, &remainder);
             return qrtoa_1p2(quotient, remainder, start);
         }
         double_bround1(dxx, banker_round11, &quotient, &remainder);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
     }
     else
@@ -2058,21 +1993,19 @@ char* dtoa_so4(double dxx, char* start)
     uint32_t uii;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx < 99.994999999999) {
-        if (dxx < 9.9994999999999) {
+    if (dxx < 99.994999999999)
+    {
+        if (dxx < 9.9994999999999)
+        {
             double_bround3(dxx, banker_round10, &quotient, &remainder);
             return qrtoa_1p3(quotient, remainder, start);
         }
         double_bround2(dxx, banker_round10, &quotient, &remainder);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         memcpy(start, &(digit2_table[remainder * 2]), 2);
-        if (start[1] != '0') {
-            return &(start[2]);
-        }
+        if (start[1] != '0') { return &(start[2]); }
         return &(start[1]);
     }
     else if (dxx < 999.94999999999)
@@ -2082,9 +2015,7 @@ char* dtoa_so4(double dxx, char* start)
         *start = '0' + quotient;
         quotient = uii - 100 * quotient;
         start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start = '.';
         start[1] = '0' + remainder;
         return &(start[2]);
@@ -2102,64 +2033,59 @@ char* dtoa_so8(double dxx, char* start)
     uint32_t uii;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx < 99.999999499999) {
-        if (dxx < 9.9999999499999) {
+    if (dxx < 99.999999499999)
+    {
+        if (dxx < 9.9999999499999)
+        {
             double_bround7(dxx, banker_round6, &quotient, &remainder);
             return qrtoa_1p7(quotient, remainder, start);
         }
         double_bround6(dxx, banker_round6, &quotient, &remainder);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         quotient = remainder / 10000;
         memcpy(start, &(digit2_table[quotient * 2]), 2);
         remainder -= 10000 * quotient;
-        if (remainder) {
+        if (remainder)
+        {
             start += 2;
         dtoa_so8_pretail4:
             quotient = remainder / 100;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             remainder -= 100 * quotient;
-            if (remainder) {
+            if (remainder)
+            {
                 start += 2;
             dtoa_so8_pretail2:
                 memcpy(start, &(digit2_table[remainder * 2]), 2);
             }
         }
     dtoa_so8_tail:
-        if (start[1] != '0') {
-            return &(start[2]);
-        }
+        if (start[1] != '0') { return &(start[2]); }
         return &(start[1]);
     }
     else if (dxx < 9999.9999499999)
     {
-        if (dxx < 999.99999499999) {
+        if (dxx < 999.99999499999)
+        {
             double_bround5(dxx, banker_round6, &uii, &remainder);
             quotient = uii / 100;
             *start++ = '0' + quotient;
             quotient = uii - 100 * quotient;
             start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-            if (!remainder) {
-                return start;
-            }
+            if (!remainder) { return start; }
             *start++ = '.';
             quotient = remainder / 1000;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             remainder -= quotient * 1000;
-            if (!remainder) {
-                goto dtoa_so8_tail;
-            }
+            if (!remainder) { goto dtoa_so8_tail; }
             start += 2;
         dtoa_so8_pretail3:
             quotient = remainder / 10;
             memcpy(start, &(digit2_table[quotient * 2]), 2);
             remainder -= quotient * 10;
-            if (!remainder) {
-                goto dtoa_so8_tail;
-            }
+            if (!remainder) { goto dtoa_so8_tail; }
             start[2] = '0' + remainder;
             return &(start[3]);
         }
@@ -2168,15 +2094,14 @@ char* dtoa_so8(double dxx, char* start)
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         quotient = uii - (100 * quotient);
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         goto dtoa_so8_pretail4;
     }
     else if (dxx < 999999.99499999)
     {
-        if (dxx < 99999.999499999) {
+        if (dxx < 99999.999499999)
+        {
             double_bround3(dxx, banker_round6, &uii, &remainder);
             quotient = uii / 10000;
             *start = '0' + quotient;
@@ -2185,9 +2110,7 @@ char* dtoa_so8(double dxx, char* start)
             start = memcpya(&(start[1]), &(digit2_table[quotient * 2]), 2);
             uii -= 100 * quotient;
             start = memcpya(start, &(digit2_table[uii * 2]), 2);
-            if (!remainder) {
-                return start;
-            }
+            if (!remainder) { return start; }
             *start++ = '.';
             goto dtoa_so8_pretail3;
         }
@@ -2199,9 +2122,7 @@ char* dtoa_so8(double dxx, char* start)
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uii -= 100 * quotient;
         start = memcpya(start, &(digit2_table[uii * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start++ = '.';
         goto dtoa_so8_pretail2;
     }
@@ -2218,9 +2139,7 @@ char* dtoa_so8(double dxx, char* start)
         start = memcpya(start, &(digit2_table[quotient * 2]), 2);
         uii -= 100 * quotient;
         start = memcpya(start, &(digit2_table[uii * 2]), 2);
-        if (!remainder) {
-            return start;
-        }
+        if (!remainder) { return start; }
         *start = '.';
         start[1] = '0' + remainder;
         return &(start[2]);
@@ -2237,7 +2156,8 @@ char* dtoa_e(double dxx, char* start)
     uint32_t quotient;
     uint32_t remainder;
     char sign;
-    if (dxx != dxx) {
+    if (dxx != dxx)
+    {
         // do this first to avoid generating exception
         return memcpyl3a(start, "nan");
     }
@@ -2246,12 +2166,13 @@ char* dtoa_e(double dxx, char* start)
         *start++ = '-';
         dxx = -dxx;
     }
-    if (dxx >= 9.9999994999999e-1) {
-        if (dxx >= 9.9999994999999e7) {
-            if (dxx >= 9.9999994999999e127) {
-                if (dxx == INFINITY) {
-                    return memcpyl3a(start, "inf");
-                }
+    if (dxx >= 9.9999994999999e-1)
+    {
+        if (dxx >= 9.9999994999999e7)
+        {
+            if (dxx >= 9.9999994999999e127)
+            {
+                if (dxx == INFINITY) { return memcpyl3a(start, "inf"); }
                 else if (dxx >= 9.9999994999999e255)
                 {
                     dxx *= 1.0e-256;
@@ -2263,32 +2184,39 @@ char* dtoa_e(double dxx, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx >= 9.9999994999999e63) {
+            if (dxx >= 9.9999994999999e63)
+            {
                 dxx *= 1.0e-64;
                 xp10 |= 64;
             }
-            if (dxx >= 9.9999994999999e31) {
+            if (dxx >= 9.9999994999999e31)
+            {
                 dxx *= 1.0e-32;
                 xp10 |= 32;
             }
-            if (dxx >= 9.9999994999999e15) {
+            if (dxx >= 9.9999994999999e15)
+            {
                 dxx *= 1.0e-16;
                 xp10 |= 16;
             }
-            if (dxx >= 9.9999994999999e7) {
+            if (dxx >= 9.9999994999999e7)
+            {
                 dxx *= 1.0e-8;
                 xp10 |= 8;
             }
         }
-        if (dxx >= 9.9999994999999e3) {
+        if (dxx >= 9.9999994999999e3)
+        {
             dxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (dxx >= 9.9999994999999e1) {
+        if (dxx >= 9.9999994999999e1)
+        {
             dxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (dxx >= 9.9999994999999) {
+        if (dxx >= 9.9999994999999)
+        {
             dxx *= 1.0e-1;
             xp10++;
         }
@@ -2296,13 +2224,14 @@ char* dtoa_e(double dxx, char* start)
     }
     else
     {
-        if (dxx < 9.9999994999999e-8) {
+        if (dxx < 9.9999994999999e-8)
+        {
             // general case
-            if (dxx < 9.9999994999999e-128) {
-                if (dxx == 0.0) {
-                    return memcpya(start, "0.000000e+00", 12);
-                }
-                if (dxx < 9.9999994999999e-256) {
+            if (dxx < 9.9999994999999e-128)
+            {
+                if (dxx == 0.0) { return memcpya(start, "0.000000e+00", 12); }
+                if (dxx < 9.9999994999999e-256)
+                {
                     dxx *= 1.0e256;
                     xp10 |= 256;
                 }
@@ -2312,32 +2241,39 @@ char* dtoa_e(double dxx, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx < 9.9999994999999e-64) {
+            if (dxx < 9.9999994999999e-64)
+            {
                 dxx *= 1.0e64;
                 xp10 |= 64;
             }
-            if (dxx < 9.9999994999999e-32) {
+            if (dxx < 9.9999994999999e-32)
+            {
                 dxx *= 1.0e32;
                 xp10 |= 32;
             }
-            if (dxx < 9.9999994999999e-16) {
+            if (dxx < 9.9999994999999e-16)
+            {
                 dxx *= 1.0e16;
                 xp10 |= 16;
             }
-            if (dxx < 9.9999994999999e-8) {
+            if (dxx < 9.9999994999999e-8)
+            {
                 dxx *= 100000000;
                 xp10 |= 8;
             }
         }
-        if (dxx < 9.999994999999e-4) {
+        if (dxx < 9.999994999999e-4)
+        {
             dxx *= 10000;
             xp10 |= 4;
         }
-        if (dxx < 9.9999994999999e-2) {
+        if (dxx < 9.9999994999999e-2)
+        {
             dxx *= 100;
             xp10 |= 2;
         }
-        if (dxx < 9.9999994999999e-1) {
+        if (dxx < 9.9999994999999e-1)
+        {
             dxx *= 10;
             xp10++;
         }
@@ -2349,7 +2285,8 @@ char* dtoa_e(double dxx, char* start)
     start = uitoa_z6(remainder, start);
     *start++ = 'e';
     *start++ = sign;
-    if (xp10 >= 100) {
+    if (xp10 >= 100)
+    {
         quotient = xp10 / 100;
         *start++ = '0' + quotient;
         xp10 -= quotient * 100;
@@ -2363,7 +2300,8 @@ char* ftoa_e(float fxx, char* start)
     uint32_t quotient;
     uint32_t remainder;
     char sign;
-    if (fxx != fxx) {
+    if (fxx != fxx)
+    {
         // do this first to avoid generating exception
         return memcpyl3a(start, "nan");
     }
@@ -2372,11 +2310,11 @@ char* ftoa_e(float fxx, char* start)
         *start++ = '-';
         fxx = -fxx;
     }
-    if (fxx >= 9.9999995e-1) {
-        if (fxx >= 9.9999995e15) {
-            if (fxx == INFINITY) {
-                return memcpyl3a(start, "inf");
-            }
+    if (fxx >= 9.9999995e-1)
+    {
+        if (fxx >= 9.9999995e15)
+        {
+            if (fxx == INFINITY) { return memcpyl3a(start, "inf"); }
             else if (fxx >= 9.9999995e31)
             {
                 fxx *= 1.0e-32;
@@ -2388,19 +2326,23 @@ char* ftoa_e(float fxx, char* start)
                 xp10 |= 16;
             }
         }
-        if (fxx >= 9.9999995e7) {
+        if (fxx >= 9.9999995e7)
+        {
             fxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (fxx >= 9.9999995e3) {
+        if (fxx >= 9.9999995e3)
+        {
             fxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (fxx >= 9.9999995e1) {
+        if (fxx >= 9.9999995e1)
+        {
             fxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (fxx >= 9.9999995) {
+        if (fxx >= 9.9999995)
+        {
             fxx *= 1.0e-1;
             xp10++;
         }
@@ -2408,10 +2350,9 @@ char* ftoa_e(float fxx, char* start)
     }
     else
     {
-        if (fxx < 9.9999995e-16) {
-            if (fxx == 0.0) {
-                return memcpya(start, "0.000000e+00", 12);
-            }
+        if (fxx < 9.9999995e-16)
+        {
+            if (fxx == 0.0) { return memcpya(start, "0.000000e+00", 12); }
             else if (fxx < 9.9999995e-32)
             {
                 fxx *= 1.0e32;
@@ -2423,19 +2364,23 @@ char* ftoa_e(float fxx, char* start)
                 xp10 |= 16;
             }
         }
-        if (fxx < 9.9999995e-8) {
+        if (fxx < 9.9999995e-8)
+        {
             fxx *= 100000000;
             xp10 |= 8;
         }
-        if (fxx < 9.9999995e-4) {
+        if (fxx < 9.9999995e-4)
+        {
             fxx *= 10000;
             xp10 |= 4;
         }
-        if (fxx < 9.9999995e-2) {
+        if (fxx < 9.9999995e-2)
+        {
             fxx *= 100;
             xp10 |= 2;
         }
-        if (fxx < 9.9999995e-1) {
+        if (fxx < 9.9999995e-1)
+        {
             fxx *= 10;
             xp10++;
         }
@@ -2455,17 +2400,14 @@ char* dtoa_f_p2(double dxx, char* start)
     const double* br_ptr;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        return memcpyl3a(start, "nan");
-    }
+    if (dxx != dxx) { return memcpyl3a(start, "nan"); }
     else if (dxx < 9.9949999999999)
     {
-        if (dxx < 0) {
+        if (dxx < 0)
+        {
             *start++ = '-';
             dxx = -dxx;
-            if (dxx >= 9.9949999999999) {
-                goto dtoa_f_p2_10;
-            }
+            if (dxx >= 9.9949999999999) { goto dtoa_f_p2_10; }
         }
         double_bround2(dxx, banker_round11, &quotient, &remainder);
         *start++ = '0' + quotient;
@@ -2474,11 +2416,11 @@ char* dtoa_f_p2(double dxx, char* start)
         return memcpya(start, &(digit2_table[remainder * 2]), 2);
     }
 dtoa_f_p2_10:
-    if (dxx < 9999999.9949999) {
-        if (dxx < 999.99499999999) {
-            if (dxx < 99.994999999999) {
-                br_ptr = banker_round10;
-            }
+    if (dxx < 9999999.9949999)
+    {
+        if (dxx < 999.99499999999)
+        {
+            if (dxx < 99.994999999999) { br_ptr = banker_round10; }
             else
             {
                 br_ptr = banker_round9;
@@ -2486,9 +2428,7 @@ dtoa_f_p2_10:
         }
         else if (dxx < 99999.994999999)
         {
-            if (dxx < 9999.9949999999) {
-                br_ptr = banker_round8;
-            }
+            if (dxx < 9999.9949999999) { br_ptr = banker_round8; }
             else
             {
                 br_ptr = banker_round7;
@@ -2506,9 +2446,7 @@ dtoa_f_p2_10:
         start = uint32toa(quotient, start);
         goto dtoa_f_p2_dec;
     }
-    if (dxx == INFINITY) {
-        return memcpyl3a(start, "inf");
-    }
+    if (dxx == INFINITY) { return memcpyl3a(start, "inf"); }
     // just punt larger numbers to glibc for now, this isn't a bottleneck
     start += sprintf(start, "%.2f", dxx);
     return start;
@@ -2519,17 +2457,14 @@ char* dtoa_f_p3(double dxx, char* start)
     const double* br_ptr;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        return memcpyl3a(start, "nan");
-    }
+    if (dxx != dxx) { return memcpyl3a(start, "nan"); }
     else if (dxx < 9.9994999999999)
     {
-        if (dxx < 0) {
+        if (dxx < 0)
+        {
             *start++ = '-';
             dxx = -dxx;
-            if (dxx >= 9.9994999999999) {
-                goto dtoa_f_p3_10;
-            }
+            if (dxx >= 9.9994999999999) { goto dtoa_f_p3_10; }
         }
         double_bround3(dxx, banker_round10, &quotient, &remainder);
         *start++ = '0' + quotient;
@@ -2541,11 +2476,11 @@ char* dtoa_f_p3(double dxx, char* start)
         return memcpya(start, &(digit2_table[remainder * 2]), 2);
     }
 dtoa_f_p3_10:
-    if (dxx < 999999.99949999) {
-        if (dxx < 999.99949999999) {
-            if (dxx < 99.999499999999) {
-                br_ptr = banker_round9;
-            }
+    if (dxx < 999999.99949999)
+    {
+        if (dxx < 999.99949999999)
+        {
+            if (dxx < 99.999499999999) { br_ptr = banker_round9; }
             else
             {
                 br_ptr = banker_round8;
@@ -2553,9 +2488,7 @@ dtoa_f_p3_10:
         }
         else if (dxx < 99999.999499999)
         {
-            if (dxx < 9999.9994999999) {
-                br_ptr = banker_round7;
-            }
+            if (dxx < 9999.9994999999) { br_ptr = banker_round7; }
             else
             {
                 br_ptr = banker_round6;
@@ -2569,9 +2502,7 @@ dtoa_f_p3_10:
         start = uint32toa(quotient, start);
         goto dtoa_f_p3_dec;
     }
-    if (dxx == INFINITY) {
-        return memcpyl3a(start, "inf");
-    }
+    if (dxx == INFINITY) { return memcpyl3a(start, "inf"); }
     start += sprintf(start, "%.3f", dxx);
     return start;
 }
@@ -2580,17 +2511,14 @@ char* dtoa_f_w9p6(double dxx, char* start)
 {
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        return memcpya(start, "      nan", 9);
-    }
+    if (dxx != dxx) { return memcpya(start, "      nan", 9); }
     else if (dxx < 9.9999994999999)
     {
-        if (dxx < 0) {
+        if (dxx < 0)
+        {
             *start++ = '-';
             dxx = -dxx;
-            if (dxx >= 9.9999994999999) {
-                goto dtoa_f_w9p6_10;
-            }
+            if (dxx >= 9.9999994999999) { goto dtoa_f_w9p6_10; }
         }
         else
         {
@@ -2603,16 +2531,15 @@ char* dtoa_f_w9p6(double dxx, char* start)
         return uitoa_z6(remainder, start);
     }
 dtoa_f_w9p6_10:
-    if (dxx < 999.99999949999) {
+    if (dxx < 999.99999949999)
+    {
         double_bround6(dxx,
                        (dxx < 99.999999499999) ? banker_round6 : banker_round5,
                        &quotient, &remainder);
         start = uint32toa(quotient, start);
         goto dtoa_f_w9p6_dec;
     }
-    if (dxx == INFINITY) {
-        return memcpya(start, "      inf", 9);
-    }
+    if (dxx == INFINITY) { return memcpya(start, "      inf", 9); }
     start += sprintf(start, "%.6f", dxx);
     return start;
 }
@@ -2622,17 +2549,14 @@ char* dtoa_f_w7p4(double dxx, char* start)
     const double* br_ptr;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        return memcpya(start, "    nan", 7);
-    }
+    if (dxx != dxx) { return memcpya(start, "    nan", 7); }
     else if (dxx < 9.9999499999999)
     {
-        if (dxx < 0) {
+        if (dxx < 0)
+        {
             *start++ = '-';
             dxx = -dxx;
-            if (dxx >= 9.9999499999999) {
-                goto dtoa_f_w7p4_10;
-            }
+            if (dxx >= 9.9999499999999) { goto dtoa_f_w7p4_10; }
         }
         else
         {
@@ -2648,11 +2572,11 @@ char* dtoa_f_w7p4(double dxx, char* start)
                        &(digit2_table[remainder * 2]), 2);
     }
 dtoa_f_w7p4_10:
-    if (dxx < 99999.999949999) {
-        if (dxx < 999.99994999999) {
-            if (dxx < 99.999949999999) {
-                br_ptr = banker_round8;
-            }
+    if (dxx < 99999.999949999)
+    {
+        if (dxx < 999.99994999999)
+        {
+            if (dxx < 99.999949999999) { br_ptr = banker_round8; }
             else
             {
                 br_ptr = banker_round7;
@@ -2670,9 +2594,7 @@ dtoa_f_w7p4_10:
         start = uint32toa(quotient, start);
         goto dtoa_f_w7p4_dec;
     }
-    if (dxx == INFINITY) {
-        return memcpya(start, "    inf", 7);
-    }
+    if (dxx == INFINITY) { return memcpya(start, "    inf", 7); }
     start += sprintf(start, "%.4f", dxx);
     return start;
 }
@@ -2684,9 +2606,7 @@ char* dtoa_f_w9p6_spaced(double dxx, char* start)
     // abs(dxx) > 2^31 / 10^5.
     double dyy = dxx * 100000 + 0.00000005;
     start = dtoa_f_w9p6(dxx, start);
-    if (dyy - ((double) ((int32_t) dyy)) >= 0.0000001) {
-        return start;
-    }
+    if (dyy - ((double) ((int32_t) dyy)) >= 0.0000001) { return start; }
     trailing_zeroes_to_spaces(start);
     return start;
 }
@@ -2696,9 +2616,7 @@ char* dtoa_f_w9p6_clipped(double dxx, char* start)
     // same conditions as _spaced()
     double dyy = dxx * 100000 + 0.00000005;
     start = dtoa_f_w9p6(dxx, start);
-    if (dyy - ((double) ((int32_t) dyy)) >= 0.0000001) {
-        return start;
-    }
+    if (dyy - ((double) ((int32_t) dyy)) >= 0.0000001) { return start; }
     return clip_trailing_zeroes(start);
 }
 
@@ -2707,19 +2625,21 @@ char* dtoa_g(double dxx, char* start)
     uint32_t xp10 = 0;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        return memcpyl3a(start, "nan");
-    }
+    if (dxx != dxx) { return memcpyl3a(start, "nan"); }
     else if (dxx < 0)
     {
         *start++ = '-';
         dxx = -dxx;
     }
-    if (dxx < 9.9999949999999e-5) {
+    if (dxx < 9.9999949999999e-5)
+    {
         // 6 sig fig exponential notation, small
-        if (dxx < 9.9999949999999e-16) {
-            if (dxx < 9.9999949999999e-128) {
-                if (dxx == 0.0) {
+        if (dxx < 9.9999949999999e-16)
+        {
+            if (dxx < 9.9999949999999e-128)
+            {
+                if (dxx == 0.0)
+                {
                     *start = '0';
                     return &(start[1]);
                 }
@@ -2734,38 +2654,46 @@ char* dtoa_g(double dxx, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx < 9.9999949999999e-64) {
+            if (dxx < 9.9999949999999e-64)
+            {
                 dxx *= 1.0e64;
                 xp10 |= 64;
             }
-            if (dxx < 9.9999949999999e-32) {
+            if (dxx < 9.9999949999999e-32)
+            {
                 dxx *= 1.0e32;
                 xp10 |= 32;
             }
-            if (dxx < 9.9999949999999e-16) {
+            if (dxx < 9.9999949999999e-16)
+            {
                 dxx *= 1.0e16;
                 xp10 |= 16;
             }
         }
-        if (dxx < 9.9999949999999e-8) {
+        if (dxx < 9.9999949999999e-8)
+        {
             dxx *= 100000000;
             xp10 |= 8;
         }
-        if (dxx < 9.9999949999999e-4) {
+        if (dxx < 9.9999949999999e-4)
+        {
             dxx *= 10000;
             xp10 |= 4;
         }
-        if (dxx < 9.9999949999999e-2) {
+        if (dxx < 9.9999949999999e-2)
+        {
             dxx *= 100;
             xp10 |= 2;
         }
-        if (dxx < 9.9999949999999e-1) {
+        if (dxx < 9.9999949999999e-1)
+        {
             dxx *= 10;
             xp10++;
         }
         double_bround5(dxx, banker_round8, &quotient, &remainder);
         start = memcpya(qrtoa_1p5(quotient, remainder, start), "e-", 2);
-        if (xp10 >= 100) {
+        if (xp10 >= 100)
+        {
             quotient = xp10 / 100;
             *start++ = '0' + quotient;
             xp10 -= 100 * quotient;
@@ -2775,11 +2703,11 @@ char* dtoa_g(double dxx, char* start)
     else if (dxx >= 999999.49999999)
     {
         // 6 sig fig exponential notation, large
-        if (dxx >= 9.9999949999999e15) {
-            if (dxx >= 9.9999949999999e127) {
-                if (dxx == INFINITY) {
-                    return memcpyl3a(start, "inf");
-                }
+        if (dxx >= 9.9999949999999e15)
+        {
+            if (dxx >= 9.9999949999999e127)
+            {
+                if (dxx == INFINITY) { return memcpyl3a(start, "inf"); }
                 else if (dxx >= 9.9999949999999e255)
                 {
                     dxx *= 1.0e-256;
@@ -2791,38 +2719,46 @@ char* dtoa_g(double dxx, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx >= 9.9999949999999e63) {
+            if (dxx >= 9.9999949999999e63)
+            {
                 dxx *= 1.0e-64;
                 xp10 |= 64;
             }
-            if (dxx >= 9.9999949999999e31) {
+            if (dxx >= 9.9999949999999e31)
+            {
                 dxx *= 1.0e-32;
                 xp10 |= 32;
             }
-            if (dxx >= 9.9999949999999e15) {
+            if (dxx >= 9.9999949999999e15)
+            {
                 dxx *= 1.0e-16;
                 xp10 |= 16;
             }
         }
-        if (dxx >= 9.9999949999999e7) {
+        if (dxx >= 9.9999949999999e7)
+        {
             dxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (dxx >= 9.9999949999999e3) {
+        if (dxx >= 9.9999949999999e3)
+        {
             dxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (dxx >= 9.9999949999999e1) {
+        if (dxx >= 9.9999949999999e1)
+        {
             dxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (dxx >= 9.9999949999999e0) {
+        if (dxx >= 9.9999949999999e0)
+        {
             dxx *= 1.0e-1;
             xp10++;
         }
         double_bround5(dxx, banker_round8, &quotient, &remainder);
         start = memcpya(qrtoa_1p5(quotient, remainder, start), "e+", 2);
-        if (xp10 >= 100) {
+        if (xp10 >= 100)
+        {
             quotient = xp10 / 100;
             *start++ = '0' + quotient;
             xp10 -= 100 * quotient;
@@ -2837,11 +2773,13 @@ char* dtoa_g(double dxx, char* start)
     {
         // 6 sig fig decimal, no less than ~0.0001
         start = memcpya(start, "0.", 2);
-        if (dxx < 9.9999949999999e-3) {
+        if (dxx < 9.9999949999999e-3)
+        {
             dxx *= 100;
             start = memcpya(start, "00", 2);
         }
-        if (dxx < 9.9999949999999e-2) {
+        if (dxx < 9.9999949999999e-2)
+        {
             dxx *= 10;
             *start++ = '0';
         }
@@ -2854,17 +2792,18 @@ char* ftoa_g(float fxx, char* start)
     uint32_t xp10 = 0;
     uint32_t quotient;
     uint32_t remainder;
-    if (fxx != fxx) {
-        return memcpyl3a(start, "nan");
-    }
+    if (fxx != fxx) { return memcpyl3a(start, "nan"); }
     else if (fxx < 0)
     {
         *start++ = '-';
         fxx = -fxx;
     }
-    if (fxx < 9.9999944e-5) {
-        if (fxx < 9.9999944e-16) {
-            if (fxx == 0.0) {
+    if (fxx < 9.9999944e-5)
+    {
+        if (fxx < 9.9999944e-16)
+        {
+            if (fxx == 0.0)
+            {
                 *start = '0';
                 return &(start[1]);
             }
@@ -2879,19 +2818,23 @@ char* ftoa_g(float fxx, char* start)
                 xp10 |= 16;
             }
         }
-        if (fxx < 9.9999944e-8) {
+        if (fxx < 9.9999944e-8)
+        {
             fxx *= 100000000;
             xp10 |= 8;
         }
-        if (fxx < 9.9999944e-4) {
+        if (fxx < 9.9999944e-4)
+        {
             fxx *= 10000;
             xp10 |= 4;
         }
-        if (fxx < 9.9999944e-2) {
+        if (fxx < 9.9999944e-2)
+        {
             fxx *= 100;
             xp10 |= 2;
         }
-        if (fxx < 9.9999944e-1) {
+        if (fxx < 9.9999944e-1)
+        {
             fxx *= 10;
             xp10++;
         }
@@ -2901,10 +2844,9 @@ char* ftoa_g(float fxx, char* start)
     }
     else if (fxx >= 999999.44)
     {
-        if (fxx >= 9.9999944e15) {
-            if (fxx == INFINITY) {
-                return memcpyl3a(start, "inf");
-            }
+        if (fxx >= 9.9999944e15)
+        {
+            if (fxx == INFINITY) { return memcpyl3a(start, "inf"); }
             else if (fxx >= 9.9999944e31)
             {
                 fxx *= 1.0e-32;
@@ -2916,19 +2858,23 @@ char* ftoa_g(float fxx, char* start)
                 xp10 |= 16;
             }
         }
-        if (fxx >= 9.9999944e7) {
+        if (fxx >= 9.9999944e7)
+        {
             fxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (fxx >= 9.9999944e3) {
+        if (fxx >= 9.9999944e3)
+        {
             fxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (fxx >= 9.9999944e1) {
+        if (fxx >= 9.9999944e1)
+        {
             fxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (fxx >= 9.9999944e0) {
+        if (fxx >= 9.9999944e0)
+        {
             fxx *= 1.0e-1;
             xp10++;
         }
@@ -2944,11 +2890,13 @@ char* ftoa_g(float fxx, char* start)
     {
         // 6 sig fig decimal, no less than ~0.0001
         start = memcpya(start, "0.", 2);
-        if (fxx < 9.9999944e-3) {
+        if (fxx < 9.9999944e-3)
+        {
             fxx *= 100;
             start = memcpya(start, "00", 2);
         }
-        if (fxx < 9.9999944e-2) {
+        if (fxx < 9.9999944e-2)
+        {
             fxx *= 10;
             *start++ = '0';
         }
@@ -2964,7 +2912,8 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
     char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
+    if (dxx != dxx)
+    {
         memcpy(memseta(start, 32, min_width - 4), " nan", 4);
         return &(start[min_width]);
     }
@@ -2973,11 +2922,15 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
         *wpos++ = '-';
         dxx = -dxx;
     }
-    if (dxx < 9.9499999999999e-5) {
+    if (dxx < 9.9499999999999e-5)
+    {
         // 2 sig fig exponential notation, small
-        if (dxx < 9.9499999999999e-16) {
-            if (dxx < 9.9499999999999e-128) {
-                if (dxx == 0.0) {
+        if (dxx < 9.9499999999999e-16)
+        {
+            if (dxx < 9.9499999999999e-128)
+            {
+                if (dxx == 0.0)
+                {
                     memset(start, 32, min_width - 1);
                     start[min_width - 1] = '0';
                     return &(start[min_width]);
@@ -2993,40 +2946,49 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx < 9.9499999999999e-64) {
+            if (dxx < 9.9499999999999e-64)
+            {
                 dxx *= 1.0e64;
                 xp10 |= 64;
             }
-            if (dxx < 9.9499999999999e-32) {
+            if (dxx < 9.9499999999999e-32)
+            {
                 dxx *= 1.0e32;
                 xp10 |= 32;
             }
-            if (dxx < 9.9499999999999e-16) {
+            if (dxx < 9.9499999999999e-16)
+            {
                 dxx *= 1.0e16;
                 xp10 |= 16;
             }
         }
-        if (dxx < 9.9499999999999e-8) {
+        if (dxx < 9.9499999999999e-8)
+        {
             dxx *= 100000000;
             xp10 |= 8;
         }
-        if (dxx < 9.9499999999999e-4) {
+        if (dxx < 9.9499999999999e-4)
+        {
             dxx *= 10000;
             xp10 |= 4;
         }
-        if (dxx < 9.9499999999999e-2) {
+        if (dxx < 9.9499999999999e-2)
+        {
             dxx *= 100;
             xp10 |= 2;
         }
-        if (dxx < 9.9499999999999e-1) {
+        if (dxx < 9.9499999999999e-1)
+        {
             dxx *= 10;
             xp10++;
         }
         double_bround1(dxx, banker_round12, &quotient, &remainder);
         wpos = qrtoa_1p1(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder < min_width - 5) {
+        if (xp10 >= 100)
+        {
+            if (remainder < min_width - 5)
+            {
                 memcpy(memseta(start, 32, min_width - 5 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3041,7 +3003,8 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder < min_width - 4) {
+            if (remainder < min_width - 4)
+            {
                 memcpy(memseta(start, 32, min_width - 4 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3057,13 +3020,14 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
     else if (dxx >= 99.499999999999)
     {
         // 2 sig fig exponential notation, large
-        if (dxx >= 9.9499999999999e15) {
-            if (dxx >= 9.9499999999999e127) {
-                if (dxx == INFINITY) {
+        if (dxx >= 9.9499999999999e15)
+        {
+            if (dxx >= 9.9499999999999e127)
+            {
+                if (dxx == INFINITY)
+                {
                     start = memseta(start, 32, min_width - 4);
-                    if (wpos == wbuf) {
-                        return memcpya(start, " inf", 4);
-                    }
+                    if (wpos == wbuf) { return memcpya(start, " inf", 4); }
                     else
                     {
                         return memcpya(start, "-inf", 4);
@@ -3080,40 +3044,49 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx >= 9.9499999999999e63) {
+            if (dxx >= 9.9499999999999e63)
+            {
                 dxx *= 1.0e-64;
                 xp10 |= 64;
             }
-            if (dxx >= 9.9499999999999e31) {
+            if (dxx >= 9.9499999999999e31)
+            {
                 dxx *= 1.0e-32;
                 xp10 |= 32;
             }
-            if (dxx >= 9.9499999999999e15) {
+            if (dxx >= 9.9499999999999e15)
+            {
                 dxx *= 1.0e-16;
                 xp10 |= 16;
             }
         }
-        if (dxx >= 9.9499999999999e7) {
+        if (dxx >= 9.9499999999999e7)
+        {
             dxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (dxx >= 9.9499999999999e3) {
+        if (dxx >= 9.9499999999999e3)
+        {
             dxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (dxx >= 9.9499999999999e1) {
+        if (dxx >= 9.9499999999999e1)
+        {
             dxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (dxx >= 9.9499999999999e0) {
+        if (dxx >= 9.9499999999999e0)
+        {
             dxx *= 1.0e-1;
             xp10++;
         }
         double_bround1(dxx, banker_round12, &quotient, &remainder);
         wpos = qrtoa_1p1(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder < min_width - 5) {
+        if (xp10 >= 100)
+        {
+            if (remainder < min_width - 5)
+            {
                 memcpy(memseta(start, 32, min_width - 5 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3128,7 +3101,8 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder < min_width - 4) {
+            if (remainder < min_width - 4)
+            {
                 memcpy(memseta(start, 32, min_width - 4 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3143,25 +3117,26 @@ char* dtoa_g_wxp2(double dxx, uint32_t min_width, char* start)
     }
     else
     {
-        if (dxx >= 0.99499999999999) {
-            wpos = dtoa_so2(dxx, wpos);
-        }
+        if (dxx >= 0.99499999999999) { wpos = dtoa_so2(dxx, wpos); }
         else
         {
             // 2 sig fig decimal, no less than ~0.0001
             wpos = memcpya(wpos, "0.", 2);
-            if (dxx < 9.9499999999999e-3) {
+            if (dxx < 9.9499999999999e-3)
+            {
                 dxx *= 100;
                 wpos = memcpya(wpos, "00", 2);
             }
-            if (dxx < 9.9499999999999e-2) {
+            if (dxx < 9.9499999999999e-2)
+            {
                 dxx *= 10;
                 *wpos++ = '0';
             }
             wpos = uitoa_trunc2(double_bround(dxx * 100, banker_round12), wpos);
         }
         remainder = wpos - wbuf;
-        if (remainder < min_width) {
+        if (remainder < min_width)
+        {
             memcpy(memseta(start, 32, min_width - remainder), wbuf, remainder);
             return &(start[min_width]);
         }
@@ -3180,7 +3155,8 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
     char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
+    if (dxx != dxx)
+    {
         memcpy(memseta(start, 32, min_width - 4), " nan", 4);
         return &(start[min_width]);
     }
@@ -3189,11 +3165,15 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
         *wpos++ = '-';
         dxx = -dxx;
     }
-    if (dxx < 9.9949999999999e-5) {
+    if (dxx < 9.9949999999999e-5)
+    {
         // 3 sig fig exponential notation, small
-        if (dxx < 9.9949999999999e-16) {
-            if (dxx < 9.9949999999999e-128) {
-                if (dxx == 0.0) {
+        if (dxx < 9.9949999999999e-16)
+        {
+            if (dxx < 9.9949999999999e-128)
+            {
+                if (dxx == 0.0)
+                {
                     memset(start, 32, min_width - 1);
                     start[min_width - 1] = '0';
                     return &(start[min_width]);
@@ -3209,40 +3189,49 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx < 9.9949999999999e-64) {
+            if (dxx < 9.9949999999999e-64)
+            {
                 dxx *= 1.0e64;
                 xp10 |= 64;
             }
-            if (dxx < 9.9949999999999e-32) {
+            if (dxx < 9.9949999999999e-32)
+            {
                 dxx *= 1.0e32;
                 xp10 |= 32;
             }
-            if (dxx < 9.9949999999999e-16) {
+            if (dxx < 9.9949999999999e-16)
+            {
                 dxx *= 1.0e16;
                 xp10 |= 16;
             }
         }
-        if (dxx < 9.9949999999999e-8) {
+        if (dxx < 9.9949999999999e-8)
+        {
             dxx *= 100000000;
             xp10 |= 8;
         }
-        if (dxx < 9.9949999999999e-4) {
+        if (dxx < 9.9949999999999e-4)
+        {
             dxx *= 10000;
             xp10 |= 4;
         }
-        if (dxx < 9.9949999999999e-2) {
+        if (dxx < 9.9949999999999e-2)
+        {
             dxx *= 100;
             xp10 |= 2;
         }
-        if (dxx < 9.9949999999999e-1) {
+        if (dxx < 9.9949999999999e-1)
+        {
             dxx *= 10;
             xp10++;
         }
         double_bround2(dxx, banker_round11, &quotient, &remainder);
         wpos = qrtoa_1p2(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder < min_width - 5) {
+        if (xp10 >= 100)
+        {
+            if (remainder < min_width - 5)
+            {
                 memcpy(memseta(start, 32, min_width - 5 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3257,7 +3246,8 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder < min_width - 4) {
+            if (remainder < min_width - 4)
+            {
                 memcpy(memseta(start, 32, min_width - 4 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3273,13 +3263,14 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
     else if (dxx >= 999.49999999999)
     {
         // 3 sig fig exponential notation, large
-        if (dxx >= 9.9949999999999e15) {
-            if (dxx >= 9.9949999999999e127) {
-                if (dxx == INFINITY) {
+        if (dxx >= 9.9949999999999e15)
+        {
+            if (dxx >= 9.9949999999999e127)
+            {
+                if (dxx == INFINITY)
+                {
                     start = memseta(start, 32, min_width - 4);
-                    if (wpos == wbuf) {
-                        return memcpya(start, " inf", 4);
-                    }
+                    if (wpos == wbuf) { return memcpya(start, " inf", 4); }
                     else
                     {
                         return memcpya(start, "-inf", 4);
@@ -3296,40 +3287,49 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx >= 9.9949999999999e63) {
+            if (dxx >= 9.9949999999999e63)
+            {
                 dxx *= 1.0e-64;
                 xp10 |= 64;
             }
-            if (dxx >= 9.9949999999999e31) {
+            if (dxx >= 9.9949999999999e31)
+            {
                 dxx *= 1.0e-32;
                 xp10 |= 32;
             }
-            if (dxx >= 9.9949999999999e15) {
+            if (dxx >= 9.9949999999999e15)
+            {
                 dxx *= 1.0e-16;
                 xp10 |= 16;
             }
         }
-        if (dxx >= 9.9949999999999e7) {
+        if (dxx >= 9.9949999999999e7)
+        {
             dxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (dxx >= 9.9949999999999e3) {
+        if (dxx >= 9.9949999999999e3)
+        {
             dxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (dxx >= 9.9949999999999e1) {
+        if (dxx >= 9.9949999999999e1)
+        {
             dxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (dxx >= 9.9949999999999e0) {
+        if (dxx >= 9.9949999999999e0)
+        {
             dxx *= 1.0e-1;
             xp10++;
         }
         double_bround2(dxx, banker_round11, &quotient, &remainder);
         wpos = qrtoa_1p2(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder < min_width - 5) {
+        if (xp10 >= 100)
+        {
+            if (remainder < min_width - 5)
+            {
                 memcpy(memseta(start, 32, min_width - 5 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3344,7 +3344,8 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder < min_width - 4) {
+            if (remainder < min_width - 4)
+            {
                 memcpy(memseta(start, 32, min_width - 4 - remainder), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3359,18 +3360,18 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
     }
     else
     {
-        if (dxx >= 0.99949999999999) {
-            wpos = dtoa_so3(dxx, wpos);
-        }
+        if (dxx >= 0.99949999999999) { wpos = dtoa_so3(dxx, wpos); }
         else
         {
             // 3 sig fig decimal, no less than ~0.001
             wpos = memcpya(wpos, "0.", 2);
-            if (dxx < 9.9949999999999e-3) {
+            if (dxx < 9.9949999999999e-3)
+            {
                 dxx *= 100;
                 wpos = memcpya(wpos, "00", 2);
             }
-            if (dxx < 9.9949999999999e-2) {
+            if (dxx < 9.9949999999999e-2)
+            {
                 dxx *= 10;
                 *wpos++ = '0';
             }
@@ -3378,7 +3379,8 @@ char* dtoa_g_wxp3(double dxx, uint32_t min_width, char* start)
                 uitoa_trunc3(double_bround(dxx * 1000, banker_round11), wpos);
         }
         remainder = wpos - wbuf;
-        if (remainder < min_width) {
+        if (remainder < min_width)
+        {
             memcpy(memseta(start, 32, min_width - remainder), wbuf, remainder);
             return &(start[min_width]);
         }
@@ -3396,10 +3398,9 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
     char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        if (min_width > 3) {
-            start = memseta(start, 32, min_width - 3);
-        }
+    if (dxx != dxx)
+    {
+        if (min_width > 3) { start = memseta(start, 32, min_width - 3); }
         return memcpyl3a(start, "nan");
     }
     else if (dxx < 0)
@@ -3407,11 +3408,15 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
         *wpos++ = '-';
         dxx = -dxx;
     }
-    if (dxx < 9.9994999999999e-5) {
+    if (dxx < 9.9994999999999e-5)
+    {
         // 4 sig fig exponential notation, small
-        if (dxx < 9.9994999999999e-16) {
-            if (dxx < 9.9994999999999e-128) {
-                if (dxx == 0.0) {
+        if (dxx < 9.9994999999999e-16)
+        {
+            if (dxx < 9.9994999999999e-128)
+            {
+                if (dxx == 0.0)
+                {
                     memset(start, 32, min_width - 1);
                     start[min_width - 1] = '0';
                     return &(start[min_width]);
@@ -3427,40 +3432,49 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx < 9.9994999999999e-64) {
+            if (dxx < 9.9994999999999e-64)
+            {
                 dxx *= 1.0e64;
                 xp10 |= 64;
             }
-            if (dxx < 9.9994999999999e-32) {
+            if (dxx < 9.9994999999999e-32)
+            {
                 dxx *= 1.0e32;
                 xp10 |= 32;
             }
-            if (dxx < 9.9994999999999e-16) {
+            if (dxx < 9.9994999999999e-16)
+            {
                 dxx *= 1.0e16;
                 xp10 |= 16;
             }
         }
-        if (dxx < 9.9994999999999e-8) {
+        if (dxx < 9.9994999999999e-8)
+        {
             dxx *= 100000000;
             xp10 |= 8;
         }
-        if (dxx < 9.9994999999999e-4) {
+        if (dxx < 9.9994999999999e-4)
+        {
             dxx *= 10000;
             xp10 |= 4;
         }
-        if (dxx < 9.9994999999999e-2) {
+        if (dxx < 9.9994999999999e-2)
+        {
             dxx *= 100;
             xp10 |= 2;
         }
-        if (dxx < 9.9994999999999e-1) {
+        if (dxx < 9.9994999999999e-1)
+        {
             dxx *= 10;
             xp10++;
         }
         double_bround3(dxx, banker_round10, &quotient, &remainder);
         wpos = qrtoa_1p3(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder + 5 < min_width) {
+        if (xp10 >= 100)
+        {
+            if (remainder + 5 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 5)), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3475,7 +3489,8 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder + 4 < min_width) {
+            if (remainder + 4 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 4)), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3491,15 +3506,15 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
     else if (dxx >= 9999.4999999999)
     {
         // 4 sig fig exponential notation, large
-        if (dxx >= 9.9994999999999e15) {
-            if (dxx >= 9.9994999999999e127) {
-                if (dxx == INFINITY) {
-                    if (min_width > 4) {
-                        start = memseta(start, 32, min_width - 4);
-                    }
-                    if (wpos == wbuf) {
-                        return memcpya(start, " inf", 4);
-                    }
+        if (dxx >= 9.9994999999999e15)
+        {
+            if (dxx >= 9.9994999999999e127)
+            {
+                if (dxx == INFINITY)
+                {
+                    if (min_width > 4)
+                    { start = memseta(start, 32, min_width - 4); }
+                    if (wpos == wbuf) { return memcpya(start, " inf", 4); }
                     else
                     {
                         return memcpya(start, "-inf", 4);
@@ -3516,40 +3531,49 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx >= 9.9994999999999e63) {
+            if (dxx >= 9.9994999999999e63)
+            {
                 dxx *= 1.0e-64;
                 xp10 |= 64;
             }
-            if (dxx >= 9.9994999999999e31) {
+            if (dxx >= 9.9994999999999e31)
+            {
                 dxx *= 1.0e-32;
                 xp10 |= 32;
             }
-            if (dxx >= 9.9994999999999e15) {
+            if (dxx >= 9.9994999999999e15)
+            {
                 dxx *= 1.0e-16;
                 xp10 |= 16;
             }
         }
-        if (dxx >= 9.9994999999999e7) {
+        if (dxx >= 9.9994999999999e7)
+        {
             dxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (dxx >= 9.9994999999999e3) {
+        if (dxx >= 9.9994999999999e3)
+        {
             dxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (dxx >= 9.9994999999999e1) {
+        if (dxx >= 9.9994999999999e1)
+        {
             dxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (dxx >= 9.9994999999999e0) {
+        if (dxx >= 9.9994999999999e0)
+        {
             dxx *= 1.0e-1;
             xp10++;
         }
         double_bround3(dxx, banker_round10, &quotient, &remainder);
         wpos = qrtoa_1p3(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder + 5 < min_width) {
+        if (xp10 >= 100)
+        {
+            if (remainder + 5 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 5)), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3564,7 +3588,8 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder + 4 < min_width) {
+            if (remainder + 4 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 4)), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3579,18 +3604,18 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
     }
     else
     {
-        if (dxx >= 0.99994999999999) {
-            wpos = dtoa_so4(dxx, wpos);
-        }
+        if (dxx >= 0.99994999999999) { wpos = dtoa_so4(dxx, wpos); }
         else
         {
             // 4 sig fig decimal, no less than ~0.0001
             wpos = memcpya(wpos, "0.", 2);
-            if (dxx < 9.9994999999999e-3) {
+            if (dxx < 9.9994999999999e-3)
+            {
                 dxx *= 100;
                 wpos = memcpya(wpos, "00", 2);
             }
-            if (dxx < 9.9994999999999e-2) {
+            if (dxx < 9.9994999999999e-2)
+            {
                 dxx *= 10;
                 *wpos++ = '0';
             }
@@ -3598,7 +3623,8 @@ char* dtoa_g_wxp4(double dxx, uint32_t min_width, char* start)
                 uitoa_trunc4(double_bround(dxx * 10000, banker_round10), wpos);
         }
         remainder = wpos - wbuf;
-        if (remainder < min_width) {
+        if (remainder < min_width)
+        {
             memcpy(memseta(start, 32, min_width - remainder), wbuf, remainder);
             return &(start[min_width]);
         }
@@ -3616,10 +3642,9 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
     char* wpos = wbuf;
     uint32_t quotient;
     uint32_t remainder;
-    if (dxx != dxx) {
-        if (min_width > 3) {
-            start = memseta(start, 32, min_width - 3);
-        }
+    if (dxx != dxx)
+    {
+        if (min_width > 3) { start = memseta(start, 32, min_width - 3); }
         return memcpyl3a(start, "nan");
     }
     else if (dxx < 0)
@@ -3627,11 +3652,15 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
         *wpos++ = '-';
         dxx = -dxx;
     }
-    if (dxx < 9.9999999499999e-5) {
+    if (dxx < 9.9999999499999e-5)
+    {
         // 8 sig fig exponential notation, small
-        if (dxx < 9.9999999499999e-16) {
-            if (dxx < 9.9999999499999e-128) {
-                if (dxx == 0.0) {
+        if (dxx < 9.9999999499999e-16)
+        {
+            if (dxx < 9.9999999499999e-128)
+            {
+                if (dxx == 0.0)
+                {
                     memset(start, 32, min_width - 1);
                     start[min_width - 1] = '0';
                     return &(start[min_width]);
@@ -3647,40 +3676,49 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx < 9.9999999499999e-64) {
+            if (dxx < 9.9999999499999e-64)
+            {
                 dxx *= 1.0e64;
                 xp10 |= 64;
             }
-            if (dxx < 9.9999999499999e-32) {
+            if (dxx < 9.9999999499999e-32)
+            {
                 dxx *= 1.0e32;
                 xp10 |= 32;
             }
-            if (dxx < 9.9999999499999e-16) {
+            if (dxx < 9.9999999499999e-16)
+            {
                 dxx *= 1.0e16;
                 xp10 |= 16;
             }
         }
-        if (dxx < 9.9999999499999e-8) {
+        if (dxx < 9.9999999499999e-8)
+        {
             dxx *= 100000000;
             xp10 |= 8;
         }
-        if (dxx < 9.9999999499999e-4) {
+        if (dxx < 9.9999999499999e-4)
+        {
             dxx *= 10000;
             xp10 |= 4;
         }
-        if (dxx < 9.9999999499999e-2) {
+        if (dxx < 9.9999999499999e-2)
+        {
             dxx *= 100;
             xp10 |= 2;
         }
-        if (dxx < 9.9999999499999e-1) {
+        if (dxx < 9.9999999499999e-1)
+        {
             dxx *= 10;
             xp10++;
         }
         double_bround7(dxx, banker_round6, &quotient, &remainder);
         wpos = qrtoa_1p7(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder + 5 < min_width) {
+        if (xp10 >= 100)
+        {
+            if (remainder + 5 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 5)), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3695,7 +3733,8 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder + 4 < min_width) {
+            if (remainder + 4 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 4)), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3711,15 +3750,15 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
     else if (dxx >= 99999999.499999)
     {
         // 8 sig fig exponential notation, large
-        if (dxx >= 9.9999999499999e15) {
-            if (dxx >= 9.9999999499999e127) {
-                if (dxx == INFINITY) {
-                    if (min_width > 4) {
-                        start = memseta(start, 32, min_width - 4);
-                    }
-                    if (wpos == wbuf) {
-                        return memcpya(start, " inf", 4);
-                    }
+        if (dxx >= 9.9999999499999e15)
+        {
+            if (dxx >= 9.9999999499999e127)
+            {
+                if (dxx == INFINITY)
+                {
+                    if (min_width > 4)
+                    { start = memseta(start, 32, min_width - 4); }
+                    if (wpos == wbuf) { return memcpya(start, " inf", 4); }
                     else
                     {
                         return memcpya(start, "-inf", 4);
@@ -3736,40 +3775,49 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
                     xp10 |= 128;
                 }
             }
-            if (dxx >= 9.9999999499999e63) {
+            if (dxx >= 9.9999999499999e63)
+            {
                 dxx *= 1.0e-64;
                 xp10 |= 64;
             }
-            if (dxx >= 9.9999999499999e31) {
+            if (dxx >= 9.9999999499999e31)
+            {
                 dxx *= 1.0e-32;
                 xp10 |= 32;
             }
-            if (dxx >= 9.9999999499999e15) {
+            if (dxx >= 9.9999999499999e15)
+            {
                 dxx *= 1.0e-16;
                 xp10 |= 16;
             }
         }
-        if (dxx >= 9.9999999499999e7) {
+        if (dxx >= 9.9999999499999e7)
+        {
             dxx *= 1.0e-8;
             xp10 |= 8;
         }
-        if (dxx >= 9.9999999499999e3) {
+        if (dxx >= 9.9999999499999e3)
+        {
             dxx *= 1.0e-4;
             xp10 |= 4;
         }
-        if (dxx >= 9.9999999499999e1) {
+        if (dxx >= 9.9999999499999e1)
+        {
             dxx *= 1.0e-2;
             xp10 |= 2;
         }
-        if (dxx >= 9.9999999499999e0) {
+        if (dxx >= 9.9999999499999e0)
+        {
             dxx *= 1.0e-1;
             xp10++;
         }
         double_bround7(dxx, banker_round6, &quotient, &remainder);
         wpos = qrtoa_1p7(quotient, remainder, wpos);
         remainder = wpos - wbuf;
-        if (xp10 >= 100) {
-            if (remainder + 5 < min_width) {
+        if (xp10 >= 100)
+        {
+            if (remainder + 5 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 5)), wbuf,
                        remainder);
                 start = &(start[min_width - 5]);
@@ -3784,7 +3832,8 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
         }
         else
         {
-            if (remainder + 4 < min_width) {
+            if (remainder + 4 < min_width)
+            {
                 memcpy(memseta(start, 32, min_width - (remainder + 4)), wbuf,
                        remainder);
                 start = &(start[min_width - 4]);
@@ -3799,18 +3848,18 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
     }
     else
     {
-        if (dxx >= 0.99999999499999) {
-            wpos = dtoa_so8(dxx, wpos);
-        }
+        if (dxx >= 0.99999999499999) { wpos = dtoa_so8(dxx, wpos); }
         else
         {
             // 8 sig fig decimal, no less than ~0.0001
             wpos = memcpya(wpos, "0.", 2);
-            if (dxx < 9.9999999499999e-3) {
+            if (dxx < 9.9999999499999e-3)
+            {
                 dxx *= 100;
                 wpos = memcpya(wpos, "00", 2);
             }
-            if (dxx < 9.9999999499999e-2) {
+            if (dxx < 9.9999999499999e-2)
+            {
                 dxx *= 10;
                 *wpos++ = '0';
             }
@@ -3818,7 +3867,8 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
                                 wpos);
         }
         remainder = wpos - wbuf;
-        if (remainder < min_width) {
+        if (remainder < min_width)
+        {
             memcpy(memseta(start, 32, min_width - remainder), wbuf, remainder);
             return &(start[min_width]);
         }
@@ -3832,7 +3882,8 @@ char* dtoa_g_wxp8(double dxx, uint32_t min_width, char* start)
 char* chrom_print_human(uint32_t num, char* buf)
 {
     uint32_t n10;
-    if (num < 10) {
+    if (num < 10)
+    {
         *buf = '0' + num;
         return &(buf[1]);
     }
@@ -3883,12 +3934,15 @@ void magic_num(uint32_t divisor, uint64_t* multp,
     uint32_t ceil_log_2_d;
     uint32_t exponent;
     uint32_t uii;
-    if (divisor & (divisor - 1)) {
+    if (divisor & (divisor - 1))
+    {
         quotient = 0x80000000U / divisor;
         remainder = 0x80000000U - (quotient * divisor);
         ceil_log_2_d = 32 - __builtin_clz(divisor);
-        for (exponent = 0;; exponent++) {
-            if (remainder >= divisor - remainder) {
+        for (exponent = 0;; exponent++)
+        {
+            if (remainder >= divisor - remainder)
+            {
                 quotient = quotient * 2 + 1;
                 remainder = remainder * 2 - divisor;
             }
@@ -3899,16 +3953,16 @@ void magic_num(uint32_t divisor, uint64_t* multp,
             }
             if ((exponent >= ceil_log_2_d)
                 || (divisor - remainder) <= (1U << exponent))
+            { break; }
+            if ((!has_magic_down) && (remainder <= (1U << exponent)))
             {
-                break;
-            }
-            if ((!has_magic_down) && (remainder <= (1U << exponent))) {
                 has_magic_down = 1;
                 down_multiplier = quotient;
                 down_exponent = exponent;
             }
         }
-        if (exponent < ceil_log_2_d) {
+        if (exponent < ceil_log_2_d)
+        {
             *multp = quotient + 1;
             *pre_shiftp = 0;
             *post_shiftp = 32 + exponent;
@@ -3947,7 +4001,8 @@ void fill_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
     uintptr_t maj_start = loc_start / BITCT;
     uintptr_t maj_end = (loc_start + len) / BITCT;
     uintptr_t minor;
-    if (maj_start == maj_end) {
+    if (maj_start == maj_end)
+    {
         bitarr[maj_start] |= (ONELU << ((loc_start + len) % BITCT))
                              - (ONELU << (loc_start % BITCT));
     }
@@ -3956,9 +4011,7 @@ void fill_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
         bitarr[maj_start] |= ~((ONELU << (loc_start % BITCT)) - ONELU);
         fill_ulong_one(maj_end - maj_start - 1, &(bitarr[maj_start + 1]));
         minor = (loc_start + len) % BITCT;
-        if (minor) {
-            bitarr[maj_end] |= (ONELU << minor) - ONELU;
-        }
+        if (minor) { bitarr[maj_end] |= (ONELU << minor) - ONELU; }
     }
 }
 
@@ -3968,7 +4021,8 @@ void clear_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
     uintptr_t maj_start = loc_start / BITCT;
     uintptr_t maj_end = (loc_start + len) / BITCT;
     uintptr_t minor;
-    if (maj_start == maj_end) {
+    if (maj_start == maj_end)
+    {
         bitarr[maj_start] &= ~((ONELU << ((loc_start + len) % BITCT))
                                - (ONELU << (loc_start % BITCT)));
     }
@@ -3977,9 +4031,7 @@ void clear_bits(uintptr_t loc_start, uintptr_t len, uintptr_t* bitarr)
         bitarr[maj_start] &= ((ONELU << (loc_start % BITCT)) - ONELU);
         fill_ulong_zero(maj_end - maj_start - 1, &(bitarr[maj_start + 1]));
         minor = (loc_start + len) % BITCT;
-        if (minor) {
-            bitarr[maj_end] &= ~((ONELU << minor) - ONELU);
-        }
+        if (minor) { bitarr[maj_end] &= ~((ONELU << minor) - ONELU); }
     }
 }
 
@@ -3987,9 +4039,7 @@ uint32_t next_unset_unsafe(const uintptr_t* bitarr, uint32_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
-    if (ulii) {
-        return loc + CTZLU(ulii);
-    }
+    if (ulii) { return loc + CTZLU(ulii); }
     do
     {
         ulii = *(++bitarr_ptr);
@@ -4002,9 +4052,7 @@ uintptr_t next_unset_ul_unsafe(const uintptr_t* bitarr, uintptr_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
-    if (ulii) {
-        return loc + CTZLU(ulii);
-    }
+    if (ulii) { return loc + CTZLU(ulii); }
     do
     {
         ulii = *(++bitarr_ptr);
@@ -4020,16 +4068,15 @@ uint32_t next_unset(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil)
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
-    if (ulii) {
+    if (ulii)
+    {
         loc += CTZLU(ulii);
         return MINV(loc, ceil);
     }
     bitarr_last = &(bitarr[(ceil - 1) / BITCT]);
     do
     {
-        if (bitarr_ptr >= bitarr_last) {
-            return ceil;
-        }
+        if (bitarr_ptr >= bitarr_last) { return ceil; }
         ulii = *(++bitarr_ptr);
     } while (ulii == ~ZEROLU);
     loc = ((uintptr_t)(bitarr_ptr - bitarr)) * BITCT + CTZLU(~ulii);
@@ -4042,16 +4089,15 @@ uintptr_t next_unset_ul(const uintptr_t* bitarr, uintptr_t loc, uintptr_t ceil)
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (~(*bitarr_ptr)) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
-    if (ulii) {
+    if (ulii)
+    {
         ulii = loc + CTZLU(ulii);
         return MINV(ulii, ceil);
     }
     bitarr_last = &(bitarr[(ceil - 1) / BITCT]);
     do
     {
-        if (bitarr_ptr >= bitarr_last) {
-            return ceil;
-        }
+        if (bitarr_ptr >= bitarr_last) { return ceil; }
         ulii = *(++bitarr_ptr);
     } while (ulii == ~ZEROLU);
     ulii = ((uintptr_t)(bitarr_ptr - bitarr)) * BITCT + CTZLU(~ulii);
@@ -4063,9 +4109,7 @@ uint32_t next_set_unsafe(const uintptr_t* bitarr, uint32_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
-    if (ulii) {
-        return loc + CTZLU(ulii);
-    }
+    if (ulii) { return loc + CTZLU(ulii); }
     do
     {
         ulii = *(++bitarr_ptr);
@@ -4078,9 +4122,7 @@ uintptr_t next_set_ul_unsafe(const uintptr_t* bitarr, uintptr_t loc)
 {
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
-    if (ulii) {
-        return loc + CTZLU(ulii);
-    }
+    if (ulii) { return loc + CTZLU(ulii); }
     do
     {
         ulii = *(++bitarr_ptr);
@@ -4095,16 +4137,15 @@ uint32_t next_set(const uintptr_t* bitarr, uint32_t loc, uint32_t ceil)
     uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
     uint32_t rval;
-    if (ulii) {
+    if (ulii)
+    {
         rval = loc + CTZLU(ulii);
         return MINV(rval, ceil);
     }
     bitarr_last = &(bitarr[(ceil - 1) / BITCT]);
     do
     {
-        if (bitarr_ptr >= bitarr_last) {
-            return ceil;
-        }
+        if (bitarr_ptr >= bitarr_last) { return ceil; }
         ulii = *(++bitarr_ptr);
     } while (!ulii);
     rval = ((uintptr_t)(bitarr_ptr - bitarr)) * BITCT + CTZLU(ulii);
@@ -4117,16 +4158,15 @@ uintptr_t next_set_ul(const uintptr_t* bitarr, uintptr_t loc, uintptr_t ceil)
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uintptr_t ulii = (*bitarr_ptr) >> (loc % BITCT);
     const uintptr_t* bitarr_last;
-    if (ulii) {
+    if (ulii)
+    {
         ulii = loc + CTZLU(ulii);
         return MINV(ulii, ceil);
     }
     bitarr_last = &(bitarr[(ceil - 1) / BITCT]);
     do
     {
-        if (bitarr_ptr >= bitarr_last) {
-            return ceil;
-        }
+        if (bitarr_ptr >= bitarr_last) { return ceil; }
         ulii = *(++bitarr_ptr);
     } while (!ulii);
     ulii = ((uintptr_t)(bitarr_ptr - bitarr)) * BITCT + CTZLU(ulii);
@@ -4141,7 +4181,8 @@ int32_t last_set_bit(const uintptr_t* bitarr, uint32_t word_ct)
     do
     {
         ulii = *(--bitarr_ptr);
-        if (ulii) {
+        if (ulii)
+        {
             return ((uintptr_t)(bitarr_ptr - bitarr)) * BITCT + BITCT - 1
                    - CLZLU(ulii);
         }
@@ -4155,15 +4196,16 @@ int32_t last_clear_bit(const uintptr_t* bitarr, uint32_t ceil)
     const uintptr_t* bitarr_ptr = &(bitarr[ceil / BITCT]);
     uint32_t remainder = ceil % BITCT;
     uintptr_t ulii;
-    if (remainder) {
+    if (remainder)
+    {
         ulii = (~(*bitarr_ptr)) & ((ONELU << remainder) - ONELU);
-        if (ulii) {
-            return (ceil | (BITCT - 1)) - CLZLU(ulii);
-        }
+        if (ulii) { return (ceil | (BITCT - 1)) - CLZLU(ulii); }
     }
-    while (bitarr_ptr > bitarr) {
+    while (bitarr_ptr > bitarr)
+    {
         ulii = ~(*(--bitarr_ptr));
-        if (ulii) {
+        if (ulii)
+        {
             return ((uintptr_t)(bitarr_ptr - bitarr)) * BITCT + BITCT - 1
                    - CLZLU(ulii);
         }
@@ -4178,11 +4220,10 @@ uint32_t prev_unset_unsafe(const uintptr_t* bitarr, uint32_t loc)
     const uintptr_t* bitarr_ptr = &(bitarr[loc / BITCT]);
     uint32_t remainder = loc % BITCT;
     uintptr_t ulii;
-    if (remainder) {
+    if (remainder)
+    {
         ulii = (~(*bitarr_ptr)) & ((ONELU << remainder) - ONELU);
-        if (ulii) {
-            return (loc | (BITCT - 1)) - CLZLU(ulii);
-        }
+        if (ulii) { return (loc | (BITCT - 1)) - CLZLU(ulii); }
     }
     do
     {
@@ -4220,9 +4261,7 @@ uint32_t prev_unset(uintptr_t* bitarr, uint32_t loc, uint32_t floor) {
 int32_t bigstack_calloc_uc(uintptr_t ct, unsigned char** ucp_ptr)
 {
     *ucp_ptr = (unsigned char*) bigstack_alloc(ct);
-    if (!(*ucp_ptr)) {
-        return 1;
-    }
+    if (!(*ucp_ptr)) { return 1; }
     memset(*ucp_ptr, 0, ct);
     return 0;
 }
@@ -4230,9 +4269,7 @@ int32_t bigstack_calloc_uc(uintptr_t ct, unsigned char** ucp_ptr)
 int32_t bigstack_calloc_d(uintptr_t ct, double** dp_ptr)
 {
     *dp_ptr = (double*) bigstack_alloc(ct * sizeof(double));
-    if (!(*dp_ptr)) {
-        return 1;
-    }
+    if (!(*dp_ptr)) { return 1; }
     fill_double_zero(ct, *dp_ptr);
     return 0;
 }
@@ -4240,9 +4277,7 @@ int32_t bigstack_calloc_d(uintptr_t ct, double** dp_ptr)
 int32_t bigstack_calloc_f(uintptr_t ct, float** fp_ptr)
 {
     *fp_ptr = (float*) bigstack_alloc(ct * sizeof(float));
-    if (!(*fp_ptr)) {
-        return 1;
-    }
+    if (!(*fp_ptr)) { return 1; }
     fill_float_zero(ct, *fp_ptr);
     return 0;
 }
@@ -4250,9 +4285,7 @@ int32_t bigstack_calloc_f(uintptr_t ct, float** fp_ptr)
 int32_t bigstack_calloc_ui(uintptr_t ct, uint32_t** uip_ptr)
 {
     *uip_ptr = (uint32_t*) bigstack_alloc(ct * sizeof(int32_t));
-    if (!(*uip_ptr)) {
-        return 1;
-    }
+    if (!(*uip_ptr)) { return 1; }
     fill_uint_zero(ct, *uip_ptr);
     return 0;
 }
@@ -4260,9 +4293,7 @@ int32_t bigstack_calloc_ui(uintptr_t ct, uint32_t** uip_ptr)
 int32_t bigstack_calloc_ul(uintptr_t ct, uintptr_t** ulp_ptr)
 {
     *ulp_ptr = (uintptr_t*) bigstack_alloc(ct * sizeof(intptr_t));
-    if (!(*ulp_ptr)) {
-        return 1;
-    }
+    if (!(*ulp_ptr)) { return 1; }
     fill_ulong_zero(ct, *ulp_ptr);
     return 0;
 }
@@ -4270,9 +4301,7 @@ int32_t bigstack_calloc_ul(uintptr_t ct, uintptr_t** ulp_ptr)
 int32_t bigstack_calloc_ull(uintptr_t ct, uint64_t** ullp_ptr)
 {
     *ullp_ptr = (uint64_t*) bigstack_alloc(ct * sizeof(int64_t));
-    if (!(*ullp_ptr)) {
-        return 1;
-    }
+    if (!(*ullp_ptr)) { return 1; }
     fill_ull_zero(ct, *ullp_ptr);
     return 0;
 }
@@ -4280,9 +4309,7 @@ int32_t bigstack_calloc_ull(uintptr_t ct, uint64_t** ullp_ptr)
 int32_t bigstack_end_calloc_uc(uintptr_t ct, unsigned char** ucp_ptr)
 {
     *ucp_ptr = (unsigned char*) bigstack_end_alloc(ct);
-    if (!(*ucp_ptr)) {
-        return 1;
-    }
+    if (!(*ucp_ptr)) { return 1; }
     memset(*ucp_ptr, 0, ct);
     return 0;
 }
@@ -4290,9 +4317,7 @@ int32_t bigstack_end_calloc_uc(uintptr_t ct, unsigned char** ucp_ptr)
 int32_t bigstack_end_calloc_d(uintptr_t ct, double** dp_ptr)
 {
     *dp_ptr = (double*) bigstack_end_alloc(ct * sizeof(double));
-    if (!(*dp_ptr)) {
-        return 1;
-    }
+    if (!(*dp_ptr)) { return 1; }
     fill_double_zero(ct, *dp_ptr);
     return 0;
 }
@@ -4300,9 +4325,7 @@ int32_t bigstack_end_calloc_d(uintptr_t ct, double** dp_ptr)
 int32_t bigstack_end_calloc_f(uintptr_t ct, float** fp_ptr)
 {
     *fp_ptr = (float*) bigstack_end_alloc(ct * sizeof(float));
-    if (!(*fp_ptr)) {
-        return 1;
-    }
+    if (!(*fp_ptr)) { return 1; }
     fill_float_zero(ct, *fp_ptr);
     return 0;
 }
@@ -4310,9 +4333,7 @@ int32_t bigstack_end_calloc_f(uintptr_t ct, float** fp_ptr)
 int32_t bigstack_end_calloc_ui(uintptr_t ct, uint32_t** uip_ptr)
 {
     *uip_ptr = (uint32_t*) bigstack_end_alloc(ct * sizeof(int32_t));
-    if (!(*uip_ptr)) {
-        return 1;
-    }
+    if (!(*uip_ptr)) { return 1; }
     fill_uint_zero(ct, *uip_ptr);
     return 0;
 }
@@ -4320,9 +4341,7 @@ int32_t bigstack_end_calloc_ui(uintptr_t ct, uint32_t** uip_ptr)
 int32_t bigstack_end_calloc_ul(uintptr_t ct, uintptr_t** ulp_ptr)
 {
     *ulp_ptr = (uintptr_t*) bigstack_end_alloc(ct * sizeof(intptr_t));
-    if (!(*ulp_ptr)) {
-        return 1;
-    }
+    if (!(*ulp_ptr)) { return 1; }
     fill_ulong_zero(ct, *ulp_ptr);
     return 0;
 }
@@ -4330,9 +4349,7 @@ int32_t bigstack_end_calloc_ul(uintptr_t ct, uintptr_t** ulp_ptr)
 int32_t bigstack_end_calloc_ull(uintptr_t ct, uint64_t** ullp_ptr)
 {
     *ullp_ptr = (uint64_t*) bigstack_end_alloc(ct * sizeof(int64_t));
-    if (!(*ullp_ptr)) {
-        return 1;
-    }
+    if (!(*ullp_ptr)) { return 1; }
     fill_ull_zero(ct, *ullp_ptr);
     return 0;
 }
@@ -4380,7 +4397,8 @@ uint32_t murmurhash3_32(const void* key, uint32_t len)
 
     int32_t i;
     uint32_t k1;
-    for (i = -nblocks; i; i++) {
+    for (i = -nblocks; i; i++)
+    {
         k1 = getblock32(blocks, i);
 
         k1 *= c1;
@@ -4401,11 +4419,9 @@ uint32_t murmurhash3_32(const void* key, uint32_t len)
 
     switch (len & 3)
     {
-    case 3:
-        k1 ^= tail[2] << 16;
+    case 3: k1 ^= tail[2] << 16;
     // fall through
-    case 2:
-        k1 ^= tail[1] << 8;
+    case 2: k1 ^= tail[1] << 8;
     // fall through
     case 1:
         k1 ^= tail[0];
@@ -4429,14 +4445,11 @@ uint32_t is_composite6(uintptr_t num)
     // can speed this up by ~50% by hardcoding avoidance of multiples of 5/7,
     // but this isn't currently a bottleneck so I'll keep this simple
     uintptr_t divisor = 5;
-    while (divisor * divisor <= num) {
-        if (!(num % divisor)) {
-            return 1;
-        }
+    while (divisor * divisor <= num)
+    {
+        if (!(num % divisor)) { return 1; }
         divisor += 2;
-        if (!(num % divisor)) {
-            return 1;
-        }
+        if (!(num % divisor)) { return 1; }
         divisor += 4;
     }
     return 0;
@@ -4447,19 +4460,16 @@ uintptr_t geqprime(uintptr_t floor)
     // assumes floor is odd and greater than 1.  Returns 5 if floor = 3,
     // otherwise returns the first prime >= floor.
     uintptr_t ulii = floor % 3;
-    if (!ulii) {
-        floor += 2;
-    }
+    if (!ulii) { floor += 2; }
     else if (ulii == 1)
     {
         goto geqprime_1mod6;
     }
-    while (is_composite6(floor)) {
+    while (is_composite6(floor))
+    {
         floor += 2;
     geqprime_1mod6:
-        if (!is_composite6(floor)) {
-            return floor;
-        }
+        if (!is_composite6(floor)) { return floor; }
         floor += 4;
     }
     return floor;
@@ -4496,16 +4506,20 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
     uint32_t hash_result;
     uint32_t cur_dup;
     fill_uint_one(id_htable_size, id_htable);
-    if (!store_dups) {
-        for (; item_idx < item_ct; item_uidx++, item_idx++) {
+    if (!store_dups)
+    {
+        for (; item_idx < item_ct; item_uidx++, item_idx++)
+        {
             next_unset_ul_unsafe_ck(exclude_arr, &item_uidx);
             sptr = &(item_ids[item_uidx * max_id_len]);
             slen = strlen(sptr);
             hashval = murmurhash3_32(sptr, slen) % id_htable_size;
             next_incr = 1;
-            while (1) {
+            while (1)
+            {
                 hash_result = id_htable[hashval];
-                if (hash_result == 0xffffffffU) {
+                if (hash_result == 0xffffffffU)
+                {
                     id_htable[hashval] = item_uidx;
                     break;
                 }
@@ -4519,9 +4533,7 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
                 }
                 // defend against overflow
                 top_diff = id_htable_size - hashval;
-                if (top_diff > next_incr) {
-                    hashval += next_incr;
-                }
+                if (top_diff > next_incr) { hashval += next_incr; }
                 else
                 {
                     hashval = next_incr - top_diff;
@@ -4534,9 +4546,8 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
     {
         cur_bigstack_left = bigstack_left();
 #ifdef __LP64__
-        if (cur_bigstack_left >= 0x400000000LLU) {
-            max_extra_alloc = 0xfffffffeU;
-        }
+        if (cur_bigstack_left >= 0x400000000LLU)
+        { max_extra_alloc = 0xfffffffeU; }
         else
         {
             max_extra_alloc = cur_bigstack_left / sizeof(int32_t);
@@ -4544,22 +4555,26 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
 #else
         max_extra_alloc = cur_bigstack_left / sizeof(int32_t);
 #endif
-        for (; item_idx < item_ct; item_uidx++, item_idx++) {
+        for (; item_idx < item_ct; item_uidx++, item_idx++)
+        {
             next_unset_ul_unsafe_ck(exclude_arr, &item_uidx);
             sptr = &(item_ids[item_uidx * max_id_len]);
             slen = strlen(sptr);
             hashval = murmurhash3_32(sptr, slen) % id_htable_size;
             next_incr = 1;
-            while (1) {
+            while (1)
+            {
                 hash_result = id_htable[hashval];
-                if (hash_result == 0xffffffffU) {
+                if (hash_result == 0xffffffffU)
+                {
                     id_htable[hashval] = item_uidx;
                     break;
                 }
                 else
                 {
                     cur_dup = hash_result >> 31;
-                    if (cur_dup) {
+                    if (cur_dup)
+                    {
                         prev_llidx = hash_result << 1;
                         prev_uidx = extra_alloc_base[prev_llidx];
                     }
@@ -4570,11 +4585,11 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
                     if (!memcmp(sptr, &(item_ids[prev_uidx * max_id_len]),
                                 slen + 1))
                     {
-                        if (extra_alloc + 4 > max_extra_alloc) {
-                            return RET_NOMEM;
-                        }
+                        if (extra_alloc + 4 > max_extra_alloc)
+                        { return RET_NOMEM; }
                         // point to linked list entry instead
-                        if (!cur_dup) {
+                        if (!cur_dup)
+                        {
                             extra_alloc_base[extra_alloc] = hash_result;
                             extra_alloc_base[extra_alloc + 1] =
                                 0xffffffffU; // list end
@@ -4589,9 +4604,7 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
                     }
                 }
                 top_diff = id_htable_size - hashval;
-                if (top_diff > next_incr) {
-                    hashval += next_incr;
-                }
+                if (top_diff > next_incr) { hashval += next_incr; }
                 else
                 {
                     hashval = next_incr - top_diff;
@@ -4599,9 +4612,7 @@ int32_t populate_id_htable(uintptr_t unfiltered_ct,
                 next_incr += 2;
             }
         }
-        if (extra_alloc) {
-            bigstack_alloc(extra_alloc * sizeof(int32_t));
-        }
+        if (extra_alloc) { bigstack_alloc(extra_alloc * sizeof(int32_t)); }
     }
     return 0;
 }
@@ -4612,27 +4623,21 @@ uint32_t id_htable_find(const char* id_buf, uintptr_t cur_id_len,
 {
     // assumes no duplicate entries, and nonzero id_htable_size
     // returns 0xffffffffU on failure
-    if (cur_id_len >= max_id_len) {
-        return 0xffffffffU;
-    }
+    if (cur_id_len >= max_id_len) { return 0xffffffffU; }
     uint32_t hashval = murmurhash3_32(id_buf, cur_id_len) % id_htable_size;
     uint32_t next_incr = 1;
     const char* sptr;
     uint32_t hash_result;
     uint32_t top_diff;
-    while (1) {
+    while (1)
+    {
         hash_result = id_htable[hashval];
-        if (hash_result == 0xffffffffU) {
-            return 0xffffffffU;
-        }
+        if (hash_result == 0xffffffffU) { return 0xffffffffU; }
         sptr = &(item_ids[hash_result * max_id_len]);
-        if ((!memcmp(id_buf, sptr, cur_id_len)) && (!sptr[cur_id_len])) {
-            return hash_result;
-        }
+        if ((!memcmp(id_buf, sptr, cur_id_len)) && (!sptr[cur_id_len]))
+        { return hash_result; }
         top_diff = id_htable_size - hashval;
-        if (top_diff > next_incr) {
-            hashval += next_incr;
-        }
+        if (top_diff > next_incr) { hashval += next_incr; }
         else
         {
             hashval = next_incr - top_diff;
@@ -4648,7 +4653,8 @@ void fill_idx_to_uidx(const uintptr_t* exclude_arr,
     uint32_t* idx_to_uidx_end = &(idx_to_uidx[item_ct]);
     uint32_t item_uidx = 0;
     uint32_t item_uidx_stop;
-    while (idx_to_uidx < idx_to_uidx_end) {
+    while (idx_to_uidx < idx_to_uidx_end)
+    {
         item_uidx = next_unset_unsafe(exclude_arr, item_uidx);
         item_uidx_stop = next_set(exclude_arr, item_uidx, unfiltered_item_ct);
         do
@@ -4665,7 +4671,8 @@ void fill_idx_to_uidx_incl(const uintptr_t* include_arr,
     uint32_t* idx_to_uidx_end = &(idx_to_uidx[item_ct]);
     uint32_t item_uidx = 0;
     uint32_t item_uidx_stop;
-    while (idx_to_uidx < idx_to_uidx_end) {
+    while (idx_to_uidx < idx_to_uidx_end)
+    {
         item_uidx = next_set_unsafe(include_arr, item_uidx);
         item_uidx_stop = next_unset(include_arr, item_uidx, unfiltered_item_ct);
         do
@@ -4682,7 +4689,8 @@ void fill_uidx_to_idx(const uintptr_t* exclude_arr, uint32_t unfiltered_item_ct,
     uint32_t item_idx = 0;
     uint32_t* uidx_to_idx_ptr;
     uint32_t* uidx_to_idx_stop;
-    while (item_idx < item_ct) {
+    while (item_idx < item_ct)
+    {
         item_uidx = next_unset_unsafe(exclude_arr, item_uidx);
         uidx_to_idx_ptr = &(uidx_to_idx[item_uidx]);
         item_uidx = next_set(exclude_arr, item_uidx, unfiltered_item_ct);
@@ -4702,7 +4710,8 @@ void fill_uidx_to_idx_incl(const uintptr_t* include_arr,
     uint32_t item_idx = 0;
     uint32_t* uidx_to_idx_ptr;
     uint32_t* uidx_to_idx_stop;
-    while (item_idx < item_ct) {
+    while (item_idx < item_ct)
+    {
         item_uidx = next_set_unsafe(include_arr, item_uidx);
         uidx_to_idx_ptr = &(uidx_to_idx[item_uidx]);
         item_uidx = next_unset(include_arr, item_uidx, unfiltered_item_ct);
@@ -4725,11 +4734,11 @@ void fill_midx_to_idx(const uintptr_t* exclude_arr_orig,
     uint32_t item_uidx = next_unset_unsafe(exclude_arr_orig, 0);
     uint32_t item_idx = 0;
     uint32_t item_midx;
-    for (item_midx = 0; item_idx < item_ct; item_uidx++, item_midx++) {
+    for (item_midx = 0; item_idx < item_ct; item_uidx++, item_midx++)
+    {
         next_unset_unsafe_ck(exclude_arr_orig, &item_uidx);
-        if (!IS_SET(exclude_arr, item_uidx)) {
-            midx_to_idx[item_midx] = item_idx++;
-        }
+        if (!IS_SET(exclude_arr, item_uidx))
+        { midx_to_idx[item_midx] = item_idx++; }
     }
 }
 
@@ -4741,12 +4750,12 @@ void fill_quatervec_55(uint32_t ct, uintptr_t* quatervec)
     __m128i* vecp = (__m128i*) quatervec;
     __m128i* vec_end = (__m128i*) (&(quatervec[2 * (ct / BITCT)]));
     uintptr_t* second_to_last;
-    while (vecp < vec_end) {
-        *vecp++ = m1;
-    }
-    if (rem) {
+    while (vecp < vec_end) { *vecp++ = m1; }
+    if (rem)
+    {
         second_to_last = (uintptr_t*) vecp;
-        if (rem > BITCT2) {
+        if (rem > BITCT2)
+        {
             second_to_last[0] = FIVEMASK;
             second_to_last[1] = FIVEMASK >> ((BITCT - rem) * 2);
         }
@@ -4758,11 +4767,11 @@ void fill_quatervec_55(uint32_t ct, uintptr_t* quatervec)
     }
 #else
     uintptr_t* vec_end = &(quatervec[2 * (ct / BITCT)]);
-    while (quatervec < vec_end) {
-        *quatervec++ = FIVEMASK;
-    }
-    if (rem) {
-        if (rem > BITCT2) {
+    while (quatervec < vec_end) { *quatervec++ = FIVEMASK; }
+    if (rem)
+    {
+        if (rem > BITCT2)
+        {
             quatervec[0] = FIVEMASK;
             quatervec[1] = FIVEMASK >> ((BITCT - rem) * 2);
         }
@@ -4789,7 +4798,8 @@ void quaterarr_collapse_init(const uintptr_t* __restrict unfiltered_bitarr,
     uint32_t write_bit = 0;
     uint32_t item_idx = 0;
     uint32_t item_uidx_stop;
-    while (item_idx < filtered_ct) {
+    while (item_idx < filtered_ct)
+    {
         item_uidx = next_set_unsafe(filter_bitarr, item_uidx);
         item_uidx_stop = next_unset(filter_bitarr, item_uidx, unfiltered_ct);
         item_idx += item_uidx_stop - item_uidx;
@@ -4799,19 +4809,16 @@ void quaterarr_collapse_init(const uintptr_t* __restrict unfiltered_bitarr,
                 ((unfiltered_bitarr[item_uidx / BITCT] >> (item_uidx % BITCT))
                  & 1)
                 << (write_bit * 2);
-            if (++write_bit == BITCT2) {
+            if (++write_bit == BITCT2)
+            {
                 *output_quaterarr++ = cur_write;
                 cur_write = 0;
                 write_bit = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
-    if (write_bit) {
-        *output_quaterarr++ = cur_write;
-    }
-    if ((filtered_ct + (BITCT2 - 1)) & BITCT2) {
-        *output_quaterarr = 0;
-    }
+    if (write_bit) { *output_quaterarr++ = cur_write; }
+    if ((filtered_ct + (BITCT2 - 1)) & BITCT2) { *output_quaterarr = 0; }
 }
 
 void quaterarr_collapse_init_exclude(
@@ -4824,7 +4831,8 @@ void quaterarr_collapse_init_exclude(
     uint32_t write_bit = 0;
     uint32_t item_idx = 0;
     uint32_t item_uidx_stop;
-    while (item_idx < filtered_ct) {
+    while (item_idx < filtered_ct)
+    {
         item_uidx = next_unset_unsafe(filter_exclude_bitarr, item_uidx);
         item_uidx_stop =
             next_set(filter_exclude_bitarr, item_uidx, unfiltered_ct);
@@ -4835,19 +4843,16 @@ void quaterarr_collapse_init_exclude(
                 ((unfiltered_bitarr[item_uidx / BITCT] >> (item_uidx % BITCT))
                  & 1)
                 << (write_bit * 2);
-            if (++write_bit == BITCT2) {
+            if (++write_bit == BITCT2)
+            {
                 *output_quaterarr++ = cur_write;
                 cur_write = 0;
                 write_bit = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
-    if (write_bit) {
-        *output_quaterarr++ = cur_write;
-    }
-    if ((filtered_ct + (BITCT2 - 1)) & BITCT2) {
-        *output_quaterarr = 0;
-    }
+    if (write_bit) { *output_quaterarr++ = cur_write; }
+    if ((filtered_ct + (BITCT2 - 1)) & BITCT2) { *output_quaterarr = 0; }
 }
 
 uint32_t alloc_collapsed_haploid_filters(
@@ -4858,26 +4863,28 @@ uint32_t alloc_collapsed_haploid_filters(
     uintptr_t** sample_male_include_quatervec_ptr)
 {
     uintptr_t sample_ctv2 = QUATERCT_TO_ALIGNED_WORDCT(sample_ct);
-    if (hh_exists & (Y_FIX_NEEDED | NXMHH_EXISTS)) {
+    if (hh_exists & (Y_FIX_NEEDED | NXMHH_EXISTS))
+    {
         // if already allocated, we assume this is fully initialized
-        if (!(*sample_include_quatervec_ptr)) {
-            if (bigstack_alloc_ul(sample_ctv2, sample_include_quatervec_ptr)) {
-                return 1;
-            }
+        if (!(*sample_include_quatervec_ptr))
+        {
+            if (bigstack_alloc_ul(sample_ctv2, sample_include_quatervec_ptr))
+            { return 1; }
             fill_quatervec_55(sample_ct, *sample_include_quatervec_ptr);
         }
     }
-    if (hh_exists & (XMHH_EXISTS | Y_FIX_NEEDED)) {
+    if (hh_exists & (XMHH_EXISTS | Y_FIX_NEEDED))
+    {
         // if already allocated, we assume it's been bigstack_end_alloc'd but
         // not initialized
-        if (!(*sample_male_include_quatervec_ptr)) {
+        if (!(*sample_male_include_quatervec_ptr))
+        {
             if (bigstack_alloc_ul(sample_ctv2,
                                   sample_male_include_quatervec_ptr))
-            {
-                return 1;
-            }
+            { return 1; }
         }
-        if (is_include) {
+        if (is_include)
+        {
             quaterarr_collapse_init(sex_male, unfiltered_sample_ct,
                                     sample_bitarr, sample_ct,
                                     *sample_male_include_quatervec_ptr);
@@ -4901,7 +4908,8 @@ void sample_delim_convert(uintptr_t unfiltered_sample_ct,
     uintptr_t sample_uidx = 0;
     uint32_t sample_idx;
     char* nptr;
-    for (sample_idx = 0; sample_idx < sample_ct; sample_uidx++, sample_idx++) {
+    for (sample_idx = 0; sample_idx < sample_ct; sample_uidx++, sample_idx++)
+    {
         next_unset_ul_unsafe_ck(sample_exclude, &sample_uidx);
         nptr = (char*) memchr(&(sample_ids[sample_uidx * max_sample_id_len]),
                               (unsigned char) oldc, max_sample_id_len);
@@ -4917,8 +4925,10 @@ void get_set_wrange_align(const uintptr_t* __restrict bitarr, uintptr_t word_ct,
     const uintptr_t* bitarr_end = &(bitarr[word_ct]);
 #ifdef __LP64__
     const uintptr_t* bitarr_end2 = &(bitarr[word_ct & (~ONELU)]);
-    while (bitarr_ptr < bitarr_end2) {
-        if (bitarr_ptr[0] || bitarr_ptr[1]) {
+    while (bitarr_ptr < bitarr_end2)
+    {
+        if (bitarr_ptr[0] || bitarr_ptr[1])
+        {
             *firstw_ptr = (uintptr_t)(bitarr_ptr - bitarr);
             while (!(*(--bitarr_end)))
                 ;
@@ -4927,14 +4937,17 @@ void get_set_wrange_align(const uintptr_t* __restrict bitarr, uintptr_t word_ct,
         }
         bitarr_ptr = &(bitarr_ptr[2]);
     }
-    if ((bitarr_end2 != bitarr_end) && (*bitarr_end2)) {
+    if ((bitarr_end2 != bitarr_end) && (*bitarr_end2))
+    {
         *firstw_ptr = word_ct - 1;
         *wlen_ptr = 1;
         return;
     }
 #else
-    while (bitarr_ptr < bitarr_end) {
-        if (*bitarr_ptr) {
+    while (bitarr_ptr < bitarr_end)
+    {
+        if (*bitarr_ptr)
+        {
             *firstw_ptr = (uintptr_t)(bitarr_ptr - bitarr);
             while (!(*(--bitarr_end)))
                 ;
@@ -4957,19 +4970,14 @@ uint32_t unklen_id_htable_find(const char* cur_id, const char* const* item_ids,
 {
     // returns 0xffffffffU on failure
     uint32_t next_incr = 1;
-    while (1) {
+    while (1)
+    {
         const uint32_t hash_result = id_htable[hashval];
-        if (hash_result == 0xffffffffU) {
-            return 0xffffffffU;
-        }
+        if (hash_result == 0xffffffffU) { return 0xffffffffU; }
         const char* htable_entry = item_ids[hash_result];
-        if (!strcmp(cur_id, htable_entry)) {
-            return hash_result;
-        }
+        if (!strcmp(cur_id, htable_entry)) { return hash_result; }
         const uint32_t top_diff = id_htable_size - hashval;
-        if (top_diff > next_incr) {
-            hashval += next_incr;
-        }
+        if (top_diff > next_incr) { hashval += next_incr; }
         else
         {
             hashval = next_incr - top_diff;
@@ -5019,9 +5027,7 @@ int32_t init_chrom_info(Chrom_info* chrom_info_ptr)
     chrom_info_ptr->incl_excl_name_stack = nullptr;
     if (aligned_malloc(vecs_required * VEC_BYTES,
                        &(chrom_info_ptr->chrom_mask)))
-    {
-        return RET_NOMEM;
-    }
+    { return RET_NOMEM; }
     uintptr_t* alloc_iter =
         &(chrom_info_ptr
               ->chrom_mask[BITCT_TO_VECCT(MAX_POSSIBLE_CHROM) * VEC_WORDS]);
@@ -5072,7 +5078,8 @@ void init_species(uint32_t species_code, Chrom_info* chrom_info_ptr)
     chrom_info_ptr->is_include_stack = 0;
     g_species_singular = species_singular_constants[species_code];
     g_species_plural = species_plural_constants[species_code];
-    if (species_code != SPECIES_UNKNOWN) {
+    if (species_code != SPECIES_UNKNOWN)
+    {
         // these are assumed to be already initialized in the SPECIES_UNKNOWN
         // case
 
@@ -5112,7 +5119,8 @@ void init_species(uint32_t species_code, Chrom_info* chrom_info_ptr)
 
 void init_default_chrom_mask(Chrom_info* chrom_info_ptr)
 {
-    if (chrom_info_ptr->species != SPECIES_UNKNOWN) {
+    if (chrom_info_ptr->species != SPECIES_UNKNOWN)
+    {
         fill_all_bits(chrom_info_ptr->max_code + 1, chrom_info_ptr->chrom_mask);
     }
     else
@@ -5120,9 +5128,11 @@ void init_default_chrom_mask(Chrom_info* chrom_info_ptr)
         fill_all_bits(chrom_info_ptr->autosome_ct + 1,
                       chrom_info_ptr->chrom_mask);
         // --chr-set support
-        for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
+        for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx)
+        {
             int32_t cur_code = chrom_info_ptr->xymt_codes[xymt_idx];
-            if (cur_code != -1) {
+            if (cur_code != -1)
+            {
                 set_bit(chrom_info_ptr->xymt_codes[xymt_idx],
                         chrom_info_ptr->chrom_mask);
             }
@@ -5134,7 +5144,8 @@ void forget_extra_chrom_names(uint32_t reinitialize, Chrom_info* chrom_info_ptr)
 {
     const uint32_t name_ct = chrom_info_ptr->name_ct;
     // guard against init_species() not being called yet
-    if (name_ct) {
+    if (name_ct)
+    {
         char** nonstd_names = chrom_info_ptr->nonstd_names;
         const uint32_t chrom_idx_last = chrom_info_ptr->max_code + name_ct;
         for (uint32_t chrom_idx = chrom_info_ptr->max_code + 1;
@@ -5143,7 +5154,8 @@ void forget_extra_chrom_names(uint32_t reinitialize, Chrom_info* chrom_info_ptr)
             free(nonstd_names[chrom_idx]);
             nonstd_names[chrom_idx] = nullptr;
         }
-        if (reinitialize) {
+        if (reinitialize)
+        {
             fill_uint_one(CHROM_NAME_HTABLE_SIZE,
                           chrom_info_ptr->nonstd_id_htable);
             chrom_info_ptr->name_ct = 0;
@@ -5167,15 +5179,15 @@ int32_t finalize_chrom_info(Chrom_info* chrom_info_ptr)
     uint32_t final_vecs_required =
         2 * chrom_code_bitvec_ct + chrom_ct_int32vec_ct
         + chrom_ct_p1_int32vec_ct + chrom_code_end_int32vec_ct;
-    if (name_ct) {
+    if (name_ct)
+    {
         final_vecs_required +=
             chrom_code_end_wordvec_ct
             + (CHROM_NAME_HTABLE_SIZE + (VEC_INT32 - 1)) / VEC_INT32;
     }
     uintptr_t* new_alloc;
-    if (aligned_malloc(final_vecs_required * VEC_BYTES, &new_alloc)) {
-        return RET_NOMEM;
-    }
+    if (aligned_malloc(final_vecs_required * VEC_BYTES, &new_alloc))
+    { return RET_NOMEM; }
     uintptr_t* old_alloc = chrom_info_ptr->chrom_mask;
     uintptr_t* new_alloc_iter = new_alloc;
 
@@ -5203,7 +5215,8 @@ int32_t finalize_chrom_info(Chrom_info* chrom_info_ptr)
            chrom_code_end_int32vec_ct * VEC_BYTES);
     chrom_info_ptr->chrom_idx_to_foidx = (uint32_t*) new_alloc_iter;
 
-    if (!name_ct) {
+    if (!name_ct)
+    {
         chrom_info_ptr->nonstd_names = nullptr;
         chrom_info_ptr->nonstd_id_htable = nullptr;
     }
@@ -5228,7 +5241,8 @@ int32_t finalize_chrom_info(Chrom_info* chrom_info_ptr)
 
 void cleanup_chrom_info(Chrom_info* chrom_info_ptr)
 {
-    if (chrom_info_ptr->chrom_mask) {
+    if (chrom_info_ptr->chrom_mask)
+    {
         // bugfix: this must happened before aligned_free() call
         forget_extra_chrom_names(0, chrom_info_ptr);
 
@@ -5236,7 +5250,8 @@ void cleanup_chrom_info(Chrom_info* chrom_info_ptr)
         chrom_info_ptr->chrom_mask = nullptr;
     }
     Ll_str* ll_str_ptr = chrom_info_ptr->incl_excl_name_stack;
-    while (ll_str_ptr) {
+    while (ll_str_ptr)
+    {
         Ll_str* next_ptr = ll_str_ptr->next;
         free(ll_str_ptr);
         ll_str_ptr = next_ptr;
@@ -5248,12 +5263,13 @@ char* chrom_name_std(const Chrom_info* chrom_info_ptr, uint32_t chrom_idx,
                      char* buf)
 {
     const uint32_t output_encoding = chrom_info_ptr->output_encoding;
-    if (output_encoding & (CHR_OUTPUT_PREFIX | CHR_OUTPUT_0M)) {
-        if (output_encoding == CHR_OUTPUT_0M) {
+    if (output_encoding & (CHR_OUTPUT_PREFIX | CHR_OUTPUT_0M))
+    {
+        if (output_encoding == CHR_OUTPUT_0M)
+        {
             // force two chars
-            if (chrom_idx <= chrom_info_ptr->autosome_ct) {
-                buf = (char*) memcpya(buf, &(digit2_table[chrom_idx * 2]), 2);
-            }
+            if (chrom_idx <= chrom_info_ptr->autosome_ct)
+            { buf = (char*) memcpya(buf, &(digit2_table[chrom_idx * 2]), 2); }
             else if ((int32_t) chrom_idx
                      == chrom_info_ptr->xymt_codes[XY_OFFSET])
             {
@@ -5263,9 +5279,7 @@ char* chrom_name_std(const Chrom_info* chrom_info_ptr, uint32_t chrom_idx,
             {
                 *buf++ = '0';
                 if ((int32_t) chrom_idx == chrom_info_ptr->xymt_codes[X_OFFSET])
-                {
-                    *buf++ = 'X';
-                }
+                { *buf++ = 'X'; }
                 else
                 {
                     // assumes only X/Y/XY/MT defined
@@ -5281,9 +5295,7 @@ char* chrom_name_std(const Chrom_info* chrom_info_ptr, uint32_t chrom_idx,
     }
     if ((!(output_encoding & (CHR_OUTPUT_M | CHR_OUTPUT_MT)))
         || (chrom_idx <= chrom_info_ptr->autosome_ct))
-    {
-        return uint32toa(chrom_idx, buf);
-    }
+    { return uint32toa(chrom_idx, buf); }
     else if ((int32_t) chrom_idx == chrom_info_ptr->xymt_codes[X_OFFSET])
     {
         *buf++ = 'X';
@@ -5299,9 +5311,7 @@ char* chrom_name_std(const Chrom_info* chrom_info_ptr, uint32_t chrom_idx,
     else
     {
         *buf++ = 'M';
-        if (output_encoding & CHR_OUTPUT_MT) {
-            *buf++ = 'T';
-        }
+        if (output_encoding & CHR_OUTPUT_MT) { *buf++ = 'T'; }
     }
     return buf;
 }
@@ -5310,7 +5320,8 @@ char* chrom_name_write(const Chrom_info* chrom_info_ptr, uint32_t chrom_idx,
                        char* buf)
 {
     // assumes chrom_idx is valid
-    if (!chrom_idx) {
+    if (!chrom_idx)
+    {
         *buf++ = '0';
         return buf;
     }
@@ -5335,12 +5346,11 @@ char* chrom_name_buf5w4write(const Chrom_info* chrom_info_ptr,
 {
     uint32_t slen;
     *chrom_name_len_ptr = 4;
-    if (!chrom_idx) {
-        memcpy(buf5, "   0", 4);
-    }
+    if (!chrom_idx) { memcpy(buf5, "   0", 4); }
     else if (chrom_idx <= chrom_info_ptr->max_code)
     {
-        if (chrom_info_ptr->output_encoding & CHR_OUTPUT_PREFIX) {
+        if (chrom_info_ptr->output_encoding & CHR_OUTPUT_PREFIX)
+        {
             *chrom_name_len_ptr = (uintptr_t)(
                 chrom_name_std(chrom_info_ptr, chrom_idx, buf5) - buf5);
         }
@@ -5357,7 +5367,8 @@ char* chrom_name_buf5w4write(const Chrom_info* chrom_info_ptr,
     else
     {
         slen = strlen(chrom_info_ptr->nonstd_names[chrom_idx]);
-        if (slen < 4) {
+        if (slen < 4)
+        {
             fw_strcpyn(4, slen, chrom_info_ptr->nonstd_names[chrom_idx], buf5);
         }
         else
@@ -5375,24 +5386,21 @@ uint32_t get_max_chrom_slen(const Chrom_info* chrom_info_ptr)
     // can be overestimate
     // if more functions start calling this, it should just be built into
     // load_bim() instead
-    if (chrom_info_ptr->zero_extra_chroms) {
-        return 3 + MAX_CHROM_TEXTNUM_SLEN;
-    }
+    if (chrom_info_ptr->zero_extra_chroms)
+    { return 3 + MAX_CHROM_TEXTNUM_SLEN; }
     const uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
     const uint32_t max_code = chrom_info_ptr->max_code;
     uint32_t max_chrom_slen = 3 + MAX_CHROM_TEXTNUM_SLEN;
-    for (uint32_t chrom_fo_idx = 0; chrom_fo_idx < chrom_ct; chrom_fo_idx++) {
+    for (uint32_t chrom_fo_idx = 0; chrom_fo_idx < chrom_ct; chrom_fo_idx++)
+    {
         const uint32_t chrom_idx =
             chrom_info_ptr->chrom_file_order[chrom_fo_idx];
-        if (!is_set(chrom_info_ptr->chrom_mask, chrom_idx)) {
-            continue;
-        }
-        if (chrom_idx > max_code) {
+        if (!is_set(chrom_info_ptr->chrom_mask, chrom_idx)) { continue; }
+        if (chrom_idx > max_code)
+        {
             const uint32_t name_slen =
                 strlen(chrom_info_ptr->nonstd_names[chrom_idx]);
-            if (name_slen > max_chrom_slen) {
-                max_chrom_slen = name_slen;
-            }
+            if (name_slen > max_chrom_slen) { max_chrom_slen = name_slen; }
         }
     }
     return max_chrom_slen;
@@ -5402,10 +5410,9 @@ uint32_t haploid_chrom_present(const Chrom_info* chrom_info_ptr)
 {
     const uintptr_t* chrom_mask = chrom_info_ptr->chrom_mask;
     const uintptr_t* haploid_mask = chrom_info_ptr->haploid_mask;
-    for (uint32_t widx = 0; widx < CHROM_MASK_INITIAL_WORDS; widx++) {
-        if (chrom_mask[widx] & haploid_mask[widx]) {
-            return 1;
-        }
+    for (uint32_t widx = 0; widx < CHROM_MASK_INITIAL_WORDS; widx++)
+    {
+        if (chrom_mask[widx] & haploid_mask[widx]) { return 1; }
     }
     return 0;
 }
@@ -5413,9 +5420,7 @@ uint32_t haploid_chrom_present(const Chrom_info* chrom_info_ptr)
 static inline int32_t single_letter_chrom(uint32_t letter)
 {
     letter &= 0xdf;
-    if (letter == 'X') {
-        return CHROM_X;
-    }
+    if (letter == 'X') { return CHROM_X; }
     else if (letter == 'Y')
     {
         return CHROM_Y;
@@ -5438,7 +5443,8 @@ int32_t get_chrom_code_raw(const char* sptr)
     // assumes MAX_CHROM_TEXTNUM_SLEN == 2
     uint32_t first_char_code = (unsigned char) sptr[0];
     uint32_t second_char_code = (unsigned char) sptr[1];
-    if ((first_char_code & 0xdf) == 'C') {
+    if ((first_char_code & 0xdf) == 'C')
+    {
         if (((second_char_code & 0xdf) == 'H')
             && ((((unsigned char) sptr[2]) & 0xdf) == 'R'))
         {
@@ -5451,16 +5457,15 @@ int32_t get_chrom_code_raw(const char* sptr)
             return -1;
         }
     }
-    if (second_char_code > ' ') {
-        if (sptr[2] > ' ') {
-            return -1;
-        }
+    if (second_char_code > ' ')
+    {
+        if (sptr[2] > ' ') { return -1; }
         const uint32_t first_char_toi = first_char_code - '0';
-        if (first_char_toi < 10) {
+        if (first_char_toi < 10)
+        {
             const uint32_t second_char_toi = second_char_code - '0';
-            if (second_char_toi < 10) {
-                return first_char_toi * 10 + second_char_toi;
-            }
+            if (second_char_toi < 10)
+            { return first_char_toi * 10 + second_char_toi; }
             else if (!first_char_toi)
             {
                 // accept '0X', '0Y', '0M' emitted by Oxford software
@@ -5470,25 +5475,22 @@ int32_t get_chrom_code_raw(const char* sptr)
         else
         {
             first_char_code &= 0xdf;
-            if (first_char_code == 'X') {
-                if ((second_char_code == 'Y') || (second_char_code == 'y')) {
-                    return CHROM_XY;
-                }
+            if (first_char_code == 'X')
+            {
+                if ((second_char_code == 'Y') || (second_char_code == 'y'))
+                { return CHROM_XY; }
             }
             else if (first_char_code == 'M')
             {
-                if ((second_char_code == 'T') || (second_char_code == 't')) {
-                    return CHROM_MT;
-                }
+                if ((second_char_code == 'T') || (second_char_code == 't'))
+                { return CHROM_MT; }
             }
         }
     }
     else
     {
         const uint32_t first_char_toi = first_char_code - '0';
-        if (first_char_toi < 10) {
-            return first_char_toi;
-        }
+        if (first_char_toi < 10) { return first_char_toi; }
         else
         {
             return single_letter_chrom(first_char_code);
@@ -5506,19 +5508,18 @@ int32_t get_chrom_code(const char* chrom_name, const Chrom_info* chrom_info_ptr,
     // does not perform exhaustive error-checking
     // -1 = --allow-extra-chr ok, -2 = total fail
     const int32_t chrom_code_raw = get_chrom_code_raw(chrom_name);
-    if (((const uint32_t) chrom_code_raw) <= chrom_info_ptr->max_code) {
-        return chrom_code_raw;
-    }
-    if (chrom_code_raw != -1) {
-        if (chrom_code_raw >= MAX_POSSIBLE_CHROM) {
+    if (((const uint32_t) chrom_code_raw) <= chrom_info_ptr->max_code)
+    { return chrom_code_raw; }
+    if (chrom_code_raw != -1)
+    {
+        if (chrom_code_raw >= MAX_POSSIBLE_CHROM)
+        {
             return chrom_info_ptr
                 ->xymt_codes[chrom_code_raw - MAX_POSSIBLE_CHROM];
         }
         return -2;
     }
-    if (!chrom_info_ptr->name_ct) {
-        return -1;
-    }
+    if (!chrom_info_ptr->name_ct) { return -1; }
     // 0xffffffffU gets casted to -1
     return (int32_t) nonstd_chrom_name_htable_find(
         chrom_name, (const char* const*) chrom_info_ptr->nonstd_names,
@@ -5544,11 +5545,11 @@ uint32_t get_variant_chrom_fo_idx(const Chrom_info* chrom_info_ptr,
     const uint32_t* variant_binsearch = chrom_info_ptr->chrom_fo_vidx_start;
     uint32_t chrom_fo_min = 0;
     uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
-    while (chrom_ct - chrom_fo_min > 1) {
+    while (chrom_ct - chrom_fo_min > 1)
+    {
         const uint32_t chrom_fo_cur = (chrom_ct + chrom_fo_min) / 2;
-        if (variant_binsearch[chrom_fo_cur] > variant_uidx) {
-            chrom_ct = chrom_fo_cur;
-        }
+        if (variant_binsearch[chrom_fo_cur] > variant_uidx)
+        { chrom_ct = chrom_fo_cur; }
         else
         {
             chrom_fo_min = chrom_fo_cur;
@@ -5564,7 +5565,8 @@ void chrom_error(const char* chrom_name, const char* file_descrip,
     // assumes chrom_name is null-terminated
     const int32_t raw_code = get_chrom_code_raw(chrom_name);
     logprint("\n");
-    if (line_idx) {
+    if (line_idx)
+    {
         LOGERRPRINTFWW("Error: Invalid chromosome code '%s' on line %" PRIuPTR
                        " of %s.\n",
                        chrom_name, line_idx, file_descrip);
@@ -5578,8 +5580,10 @@ void chrom_error(const char* chrom_name, const char* file_descrip,
         && ((raw_code <= MAX_CHROM_TEXTNUM + XYMT_OFFSET_CT)
             || (raw_code >= MAX_POSSIBLE_CHROM)))
     {
-        if (chrom_info_ptr->species != SPECIES_UNKNOWN) {
-            if (chrom_info_ptr->species == SPECIES_HUMAN) {
+        if (chrom_info_ptr->species != SPECIES_UNKNOWN)
+        {
+            if (chrom_info_ptr->species == SPECIES_HUMAN)
+            {
                 logerrprint("(This is disallowed for humans.  Check if the "
                             "problem is with your data, or if\nyou forgot to "
                             "define a different chromosome set with e.g. "
@@ -5616,7 +5620,8 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
     // assumes chrom_name is nonstandard (i.e. not "2", "chr2", "chrX", etc.)
     // requires chrom_name to be null-terminated
     // assumes chrom_idx currently has the return value of get_chrom_code()
-    if ((!allow_extra_chroms) || ((*chrom_idx_ptr) == -2)) {
+    if ((!allow_extra_chroms) || ((*chrom_idx_ptr) == -2))
+    {
         chrom_error(chrom_name, file_descrip, chrom_info_ptr, line_idx,
                     *chrom_idx_ptr);
         return RET_MALFORMED_INPUT;
@@ -5624,16 +5629,19 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
 
     // quasi-bugfix: remove redundant hash table check
 
-    if (chrom_name[0] == '#') {
+    if (chrom_name[0] == '#')
+    {
         // redundant with some of the comment-skipping loaders, but this isn't
         // performance-critical
         logprint("\n");
         logerrprint("Error: Chromosome/contig names may not begin with '#'.\n");
         return RET_MALFORMED_INPUT;
     }
-    if (name_slen > MAX_ID_SLEN) {
+    if (name_slen > MAX_ID_SLEN)
+    {
         logprint("\n");
-        if (line_idx) {
+        if (line_idx)
+        {
             LOGERRPRINTFWW("Error: Line %" PRIuPTR " of %s has an excessively "
                            "long chromosome/contig "
                            "name. (The " PROG_NAME_CAPS
@@ -5652,26 +5660,28 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
     const uint32_t max_code_p1 = chrom_info_ptr->max_code + 1;
     const uint32_t name_ct = chrom_info_ptr->name_ct;
     const uint32_t chrom_code_end = max_code_p1 + name_ct;
-    if (chrom_code_end == MAX_POSSIBLE_CHROM) {
+    if (chrom_code_end == MAX_POSSIBLE_CHROM)
+    {
         logprint("\n");
         logerrprint(
             "Error: Too many distinct nonstandard chromosome/contig names.\n");
         return RET_MALFORMED_INPUT;
     }
-    if (!name_ct) {
+    if (!name_ct)
+    {
         // lazy initialization
         fill_uint_one(CHROM_NAME_HTABLE_SIZE, chrom_info_ptr->nonstd_id_htable);
     }
     char** nonstd_names = chrom_info_ptr->nonstd_names;
     nonstd_names[chrom_code_end] = (char*) malloc(name_slen + 1);
-    if (!nonstd_names[chrom_code_end]) {
-        return RET_NOMEM;
-    }
+    if (!nonstd_names[chrom_code_end]) { return RET_NOMEM; }
     Ll_str* name_stack_ptr = chrom_info_ptr->incl_excl_name_stack;
     uint32_t in_name_stack = 0;
-    while (name_stack_ptr) {
+    while (name_stack_ptr)
+    {
         // there shouldn't be many of these, so sorting is unimportant
-        if (!strcmp(chrom_name, name_stack_ptr->ss)) {
+        if (!strcmp(chrom_name, name_stack_ptr->ss))
+        {
             in_name_stack = 1;
             break;
         }
@@ -5681,9 +5691,8 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
         || ((!in_name_stack) && (!chrom_info_ptr->is_include_stack)))
     {
         SET_BIT(chrom_code_end, chrom_info_ptr->chrom_mask);
-        if (chrom_info_ptr->haploid_mask[0] & 1) {
-            SET_BIT(chrom_code_end, chrom_info_ptr->haploid_mask);
-        }
+        if (chrom_info_ptr->haploid_mask[0] & 1)
+        { SET_BIT(chrom_code_end, chrom_info_ptr->haploid_mask); }
     }
     memcpy(nonstd_names[chrom_code_end], chrom_name, name_slen + 1);
     *chrom_idx_ptr = (int32_t) chrom_code_end;
@@ -5692,16 +5701,17 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
     uint32_t hashval =
         murmurhash3_32(chrom_name, name_slen) % CHROM_NAME_HTABLE_SIZE;
     uint32_t next_incr = 1;
-    while (1) {
-        if (id_htable[hashval] == 0xffffffffU) {
+    while (1)
+    {
+        if (id_htable[hashval] == 0xffffffffU)
+        {
             id_htable[hashval] = chrom_code_end;
             return 0;
         }
         // no overflow danger here
         hashval += next_incr;
-        if (hashval >= CHROM_NAME_HTABLE_SIZE) {
-            hashval -= CHROM_NAME_HTABLE_SIZE;
-        }
+        if (hashval >= CHROM_NAME_HTABLE_SIZE)
+        { hashval -= CHROM_NAME_HTABLE_SIZE; }
         next_incr += 2; // quadratic probing
     }
 }
@@ -5709,15 +5719,12 @@ int32_t try_to_add_chrom_name(const char* chrom_name, const char* file_descrip,
 uint32_t allele_set(const char* newval, uint32_t slen, char** allele_ptr)
 {
     char* newptr;
-    if (slen == 1) {
-        newptr = (char*) (&(g_one_char_strs[((unsigned char) *newval) * 2]));
-    }
+    if (slen == 1)
+    { newptr = (char*) (&(g_one_char_strs[((unsigned char) *newval) * 2])); }
     else
     {
         newptr = (char*) malloc(slen + 1);
-        if (!newptr) {
-            return 1;
-        }
+        if (!newptr) { return 1; }
         memcpyx(newptr, newval, slen, '\0');
     }
     *allele_ptr = newptr;
@@ -5727,20 +5734,15 @@ uint32_t allele_set(const char* newval, uint32_t slen, char** allele_ptr)
 uint32_t allele_reset(const char* newval, uint32_t slen, char** allele_ptr)
 {
     char* newptr;
-    if (slen == 1) {
-        newptr = (char*) (&(g_one_char_strs[((uint8_t) *newval) * 2]));
-    }
+    if (slen == 1)
+    { newptr = (char*) (&(g_one_char_strs[((uint8_t) *newval) * 2])); }
     else
     {
         newptr = (char*) malloc(slen + 1);
-        if (!newptr) {
-            return 1;
-        }
+        if (!newptr) { return 1; }
         memcpyx(newptr, newval, slen, '\0');
     }
-    if (allele_ptr[0][1]) {
-        free(*allele_ptr);
-    }
+    if (allele_ptr[0][1]) { free(*allele_ptr); }
     *allele_ptr = newptr;
     return 0;
 }
@@ -5749,15 +5751,16 @@ void cleanup_allele_storage(uint32_t max_allele_slen,
                             uintptr_t allele_storage_entry_ct,
                             char** allele_storage)
 {
-    if (allele_storage && (max_allele_slen > 1)) {
+    if (allele_storage && (max_allele_slen > 1))
+    {
         const uintptr_t one_char_strs_addr = (uintptr_t) g_one_char_strs;
-        for (uintptr_t idx = 0; idx < allele_storage_entry_ct; ++idx) {
+        for (uintptr_t idx = 0; idx < allele_storage_entry_ct; ++idx)
+        {
             char* cur_entry = allele_storage[idx];
             assert(cur_entry);
             // take advantage of unsigned wraparound
-            if ((((uintptr_t) cur_entry) - one_char_strs_addr) >= 512) {
-                free(cur_entry);
-            }
+            if ((((uintptr_t) cur_entry) - one_char_strs_addr) >= 512)
+            { free(cur_entry); }
         }
     }
 }
@@ -5775,7 +5778,8 @@ void refresh_chrom_info(const Chrom_info* chrom_info_ptr, uintptr_t marker_uidx,
     // assumes marker_uidx < unfiltered_marker_ct
     *chrom_end_ptr =
         chrom_info_ptr->chrom_fo_vidx_start[(*chrom_fo_idx_ptr) + 1];
-    while (marker_uidx >= (*chrom_end_ptr)) {
+    while (marker_uidx >= (*chrom_end_ptr))
+    {
         *chrom_end_ptr =
             chrom_info_ptr->chrom_fo_vidx_start[(++(*chrom_fo_idx_ptr)) + 1];
     }
@@ -5805,10 +5809,9 @@ int32_t single_chrom_start(const Chrom_info* chrom_info_ptr,
 
 double get_dmedian(const double* sorted_arr, uintptr_t len)
 {
-    if (len) {
-        if (len % 2) {
-            return sorted_arr[len / 2];
-        }
+    if (len)
+    {
+        if (len % 2) { return sorted_arr[len / 2]; }
         else
         {
             return (sorted_arr[len / 2] + sorted_arr[(len / 2) - 1]) * 0.5;
@@ -5823,13 +5826,12 @@ double get_dmedian(const double* sorted_arr, uintptr_t len)
 #ifdef __cplusplus
 double destructive_get_dmedian(uintptr_t len, double* unsorted_arr)
 {
-    if (!len) {
-        return 0.0;
-    }
+    if (!len) { return 0.0; }
     uintptr_t len_d2 = len / 2;
     std::nth_element(unsorted_arr, &(unsorted_arr[len_d2]),
                      &(unsorted_arr[len]));
-    if (!(len % 2)) {
+    if (!(len % 2))
+    {
         std::nth_element(unsorted_arr, &(unsorted_arr[len_d2 - 1]),
                          &(unsorted_arr[len_d2]));
         return (unsorted_arr[len_d2 - 1] + unsorted_arr[len_d2]) * 0.5;
@@ -5884,9 +5886,7 @@ int32_t strcmp_natural_scan_forward(const unsigned char* s1,
     {
         c1 = *(++s1);
         c2 = *(++s2);
-        if (is_not_digit(c1)) {
-            return -1;
-        }
+        if (is_not_digit(c1)) { return -1; }
     } while (is_digit(c2));
     return 1;
 }
@@ -5905,19 +5905,15 @@ int32_t strcmp_natural_tiebroken(const unsigned char* s1,
     // assumes ties should be broken in favor of s2.
     unsigned char c1 = *(++s1);
     unsigned char c2 = *(++s2);
-    while (is_not_nzdigit(c1) && is_not_nzdigit(c2)) {
+    while (is_not_nzdigit(c1) && is_not_nzdigit(c2))
+    {
     // state 2
     strcmp_natural_tiebroken_state_2:
-        if (c1 != c2) {
-            if ((c1 >= 'a') && (c1 <= 'z')) {
-                c1 -= 32;
-            }
-            if ((c2 >= 'a') && (c2 <= 'z')) {
-                c2 -= 32;
-            }
-            if (c1 < c2) {
-                return -1;
-            }
+        if (c1 != c2)
+        {
+            if ((c1 >= 'a') && (c1 <= 'z')) { c1 -= 32; }
+            if ((c2 >= 'a') && (c2 <= 'z')) { c2 -= 32; }
+            if (c1 < c2) { return -1; }
             else if (c1 > c2)
             {
                 return 1;
@@ -5930,17 +5926,15 @@ int32_t strcmp_natural_tiebroken(const unsigned char* s1,
         c1 = *(++s1);
         c2 = *(++s2);
     }
-    if (is_not_nzdigit(c1) || is_not_nzdigit(c2)) {
-        return (c1 < c2) ? -1 : 1;
-    }
+    if (is_not_nzdigit(c1) || is_not_nzdigit(c2)) { return (c1 < c2) ? -1 : 1; }
     do
     {
         // state 3
-        if (c1 != c2) {
-            if (is_digit(c2)) {
-                if (c1 < c2) {
-                    return strcmp_natural_scan_forward(s1, s2);
-                }
+        if (c1 != c2)
+        {
+            if (is_digit(c2))
+            {
+                if (c1 < c2) { return strcmp_natural_scan_forward(s1, s2); }
                 else
                 {
                     return -strcmp_natural_scan_forward(s2, s1);
@@ -5951,9 +5945,7 @@ int32_t strcmp_natural_tiebroken(const unsigned char* s1,
         c1 = *(++s1);
         c2 = *(++s2);
     } while (is_digit(c1));
-    if (is_digit(c2)) {
-        return -1;
-    }
+    if (is_digit(c2)) { return -1; }
     // skip the while (is_not_digit...) check
     goto strcmp_natural_tiebroken_state_2;
 }
@@ -5963,14 +5955,15 @@ static inline int32_t strcmp_natural_uncasted(const unsigned char* s1,
 {
     unsigned char c1 = *s1;
     unsigned char c2 = *s2;
-    while (is_not_nzdigit(c1) && is_not_nzdigit(c2)) {
+    while (is_not_nzdigit(c1) && is_not_nzdigit(c2))
+    {
     // state 0
     strcmp_natural_uncasted_state_0:
-        if (c1 != c2) {
-            if ((c1 >= 'a') && (c1 <= 'z')) {
-                if (c2 + 32 == c1) {
-                    return -strcmp_natural_tiebroken(s2, s1);
-                }
+        if (c1 != c2)
+        {
+            if ((c1 >= 'a') && (c1 <= 'z'))
+            {
+                if (c2 + 32 == c1) { return -strcmp_natural_tiebroken(s2, s1); }
                 else if ((c2 < 'a') || (c2 > 'z'))
                 {
                     c1 -= 32;
@@ -5979,9 +5972,7 @@ static inline int32_t strcmp_natural_uncasted(const unsigned char* s1,
             else if ((c2 >= 'a') && (c2 <= 'z'))
             {
                 c2 -= 32;
-                if (c1 == c2) {
-                    return strcmp_natural_tiebroken(s1, s2);
-                }
+                if (c1 == c2) { return strcmp_natural_tiebroken(s1, s2); }
             }
             return (c1 < c2) ? -1 : 1;
         }
@@ -5992,17 +5983,15 @@ static inline int32_t strcmp_natural_uncasted(const unsigned char* s1,
         c1 = *(++s1);
         c2 = *(++s2);
     }
-    if (is_not_nzdigit(c1) || is_not_nzdigit(c2)) {
-        return (c1 < c2) ? -1 : 1;
-    }
+    if (is_not_nzdigit(c1) || is_not_nzdigit(c2)) { return (c1 < c2) ? -1 : 1; }
     do
     {
         // state 1
-        if (c1 != c2) {
-            if (is_digit(c2)) {
-                if (c1 < c2) {
-                    return strcmp_natural_scan_forward(s1, s2);
-                }
+        if (c1 != c2)
+        {
+            if (is_digit(c2))
+            {
+                if (c1 < c2) { return strcmp_natural_scan_forward(s1, s2); }
                 else
                 {
                     return -strcmp_natural_scan_forward(s2, s1);
@@ -6013,9 +6002,7 @@ static inline int32_t strcmp_natural_uncasted(const unsigned char* s1,
         c1 = *(++s1);
         c2 = *(++s2);
     } while (is_digit(c1));
-    if (is_digit(c2)) {
-        return -1;
-    }
+    if (is_digit(c2)) { return -1; }
     goto strcmp_natural_uncasted_state_0;
 }
 
@@ -6042,14 +6029,12 @@ int32_t get_uidx_from_unsorted(const char* idstr, const uintptr_t* exclude_arr,
     uintptr_t id_uidx = 0;
     uintptr_t slen_p1 = strlen(idstr) + 1;
     uint32_t id_idx;
-    if (slen_p1 > max_id_len) {
-        return -1;
-    }
-    for (id_idx = 0; id_idx < id_ct; id_uidx++, id_idx++) {
+    if (slen_p1 > max_id_len) { return -1; }
+    for (id_idx = 0; id_idx < id_ct; id_uidx++, id_idx++)
+    {
         id_uidx = next_unset_ul_unsafe(exclude_arr, id_uidx);
-        if (!memcmp(idstr, &(unsorted_ids[id_uidx * max_id_len]), slen_p1)) {
-            return (int32_t)((uint32_t) id_uidx);
-        }
+        if (!memcmp(idstr, &(unsorted_ids[id_uidx * max_id_len]), slen_p1))
+        { return (int32_t)((uint32_t) id_uidx); }
     }
     return -1;
 }
@@ -6059,12 +6044,11 @@ char* scan_for_duplicate_ids(char* sorted_ids, uintptr_t id_ct,
 {
     uintptr_t id_idx;
     id_ct--;
-    for (id_idx = 0; id_idx < id_ct; id_idx++) {
+    for (id_idx = 0; id_idx < id_ct; id_idx++)
+    {
         if (!strcmp(&(sorted_ids[id_idx * max_id_len]),
                     &(sorted_ids[(id_idx + 1) * max_id_len])))
-        {
-            return &(sorted_ids[id_idx * max_id_len]);
-        }
+        { return &(sorted_ids[id_idx * max_id_len]); }
     }
     return nullptr;
 }
@@ -6085,22 +6069,21 @@ char* scan_for_duplicate_or_overlap_ids(char* sorted_ids, uintptr_t id_ct,
     const char* nonoverlap_id_ptr;
     char* other_id_ptr;
     int32_t ii;
-    while (1) {
-        if (nonoverlap_id_idx == nonoverlap_id_ct) {
+    while (1)
+    {
+        if (nonoverlap_id_idx == nonoverlap_id_ct)
+        {
             return scan_for_duplicate_ids(cur_id_ptr, id_ct - id_idx,
                                           max_id_len);
         }
         nonoverlap_id_ptr =
             &(sorted_nonoverlap_ids[nonoverlap_id_idx * max_nonoverlap_id_len]);
         ii = strcmp(cur_id_ptr, nonoverlap_id_ptr);
-        if (ii < 0) {
-            if (++id_idx == id_ct) {
-                return nullptr;
-            }
+        if (ii < 0)
+        {
+            if (++id_idx == id_ct) { return nullptr; }
             other_id_ptr = &(cur_id_ptr[max_id_len]);
-            if (!strcmp(cur_id_ptr, other_id_ptr)) {
-                return cur_id_ptr;
-            }
+            if (!strcmp(cur_id_ptr, other_id_ptr)) { return cur_id_ptr; }
             cur_id_ptr = other_id_ptr;
             continue;
         }
@@ -6122,9 +6105,7 @@ int32_t eval_affection(const char* bufptr, double missing_phenod)
     // this used to be an integer read, but that could do the wrong thing if
     // e.g. all phenotypes were -9.xxx...
     dxx = strtod(bufptr, &ss);
-    if ((ss == bufptr) || (dxx == missing_phenod)) {
-        return 1;
-    }
+    if ((ss == bufptr) || (dxx == missing_phenod)) { return 1; }
     return ((bufptr[0] == '0') || (bufptr[0] == '1') || (bufptr[0] == '2'))
            && is_space_or_eoln(bufptr[1]);
 }
@@ -6136,22 +6117,17 @@ uint32_t triangle_divide(int64_t cur_prod, int32_t modif)
     // lack of a divide by two; cur_prod should also be double its "true" value
     // as a result.)
     int64_t vv;
-    if (cur_prod == 0) {
-        if (modif < 0) {
-            return -modif;
-        }
+    if (cur_prod == 0)
+    {
+        if (modif < 0) { return -modif; }
         else
         {
             return 0;
         }
     }
     vv = (int64_t) sqrt((double) cur_prod);
-    while ((vv - 1) * (vv + modif - 1) >= cur_prod) {
-        vv--;
-    }
-    while (vv * (vv + modif) < cur_prod) {
-        vv++;
-    }
+    while ((vv - 1) * (vv + modif - 1) >= cur_prod) { vv--; }
+    while (vv * (vv + modif) < cur_prod) { vv++; }
     return vv;
 }
 
@@ -6189,17 +6165,15 @@ void triangle_fill(uint32_t ct, uint32_t pieces, uint32_t parallel_idx,
     target_arr[pieces] = ubound;
     cur_prod = ((int64_t) lbound) * (lbound + modif);
     ct_tr = (((int64_t) ubound) * (ubound + modif) - cur_prod) / pieces;
-    while (cur_piece < pieces) {
+    while (cur_piece < pieces)
+    {
         cur_prod += ct_tr;
         lbound = triangle_divide(cur_prod, modif);
         uii = (lbound - ((int32_t) start)) & align_m1;
-        if ((uii) && (uii != align_m1)) {
-            lbound = start + ((lbound - ((int32_t) start)) | align_m1);
-        }
+        if ((uii) && (uii != align_m1))
+        { lbound = start + ((lbound - ((int32_t) start)) | align_m1); }
         // lack of this check caused a nasty bug earlier
-        if (((uint32_t) lbound) > ct) {
-            lbound = ct;
-        }
+        if (((uint32_t) lbound) > ct) { lbound = ct; }
         target_arr[cur_piece++] = lbound;
     }
 }
@@ -6228,9 +6202,7 @@ int32_t distance_req(const char* read_dists_fname, uint64_t calculation_type)
 int32_t double_cmp(const void* aa, const void* bb)
 {
     double cc = *((const double*) aa) - *((const double*) bb);
-    if (cc > 0.0) {
-        return 1;
-    }
+    if (cc > 0.0) { return 1; }
     else if (cc < 0.0)
     {
         return -1;
@@ -6244,9 +6216,7 @@ int32_t double_cmp(const void* aa, const void* bb)
 int32_t double_cmp_decr(const void* aa, const void* bb)
 {
     double cc = *((const double*) aa) - *((const double*) bb);
-    if (cc < 0.0) {
-        return 1;
-    }
+    if (cc < 0.0) { return 1; }
     else if (cc > 0.0)
     {
         return -1;
@@ -6260,9 +6230,7 @@ int32_t double_cmp_decr(const void* aa, const void* bb)
 int32_t double_cmp_deref(const void* aa, const void* bb)
 {
     double cc = **((const double**) aa) - **((const double**) bb);
-    if (cc > 0.0) {
-        return 1;
-    }
+    if (cc > 0.0) { return 1; }
     else if (cc < 0.0)
     {
         return -1;
@@ -6285,9 +6253,7 @@ int32_t intcmp(const void* aa, const void* bb)
 
 int32_t uintcmp(const void* aa, const void* bb)
 {
-    if (*((const uint32_t*) aa) < *((const uint32_t*) bb)) {
-        return -1;
-    }
+    if (*((const uint32_t*) aa) < *((const uint32_t*) bb)) { return -1; }
     else
     {
         return (*((const uint32_t*) aa) > *((const uint32_t*) bb));
@@ -6296,9 +6262,7 @@ int32_t uintcmp(const void* aa, const void* bb)
 
 int32_t intcmp2(const void* aa, const void* bb)
 {
-    if (*((const int32_t*) aa) < *((const int32_t*) bb)) {
-        return -1;
-    }
+    if (*((const int32_t*) aa) < *((const int32_t*) bb)) { return -1; }
     else
     {
         return (*((const int32_t*) aa) > *((const int32_t*) bb));
@@ -6308,13 +6272,9 @@ int32_t intcmp2(const void* aa, const void* bb)
 int32_t intcmp3_decr(const void* aa, const void* bb)
 {
     int32_t ii = *((const int32_t*) bb) - *((const int32_t*) aa);
-    if (ii) {
-        return ii;
-    }
+    if (ii) { return ii; }
     ii = ((const int32_t*) bb)[1] - ((const int32_t*) aa)[1];
-    if (ii) {
-        return ii;
-    }
+    if (ii) { return ii; }
     return ((const int32_t*) bb)[2] - ((const int32_t*) aa)[2];
 }
 
@@ -6322,9 +6282,7 @@ int32_t intcmp3_decr(const void* aa, const void* bb)
 int32_t llcmp(const void* aa, const void* bb)
 {
     int64_t diff = *((const int64_t*) aa) - *((const int64_t*) bb);
-    if (diff > 0) {
-        return 1;
-    }
+    if (diff > 0) { return 1; }
     else if (diff < 0)
     {
         return -1;
@@ -6346,21 +6304,24 @@ void qsort_ext2(char* main_arr, uintptr_t arr_length, uintptr_t item_length,
                 char* proxy_arr, uintptr_t proxy_len)
 {
     uintptr_t ulii;
-    for (ulii = 0; ulii < arr_length; ulii++) {
+    for (ulii = 0; ulii < arr_length; ulii++)
+    {
         *(char**) (&(proxy_arr[ulii * proxy_len])) =
             &(main_arr[ulii * item_length]);
         memcpy(&(proxy_arr[ulii * proxy_len + sizeof(void*)]),
                &(secondary_arr[ulii * secondary_item_len]), secondary_item_len);
     }
     qsort(proxy_arr, arr_length, proxy_len, comparator_deref);
-    for (ulii = 0; ulii < arr_length; ulii++) {
+    for (ulii = 0; ulii < arr_length; ulii++)
+    {
         memcpy(&(secondary_arr[ulii * secondary_item_len]),
                &(proxy_arr[ulii * proxy_len + sizeof(void*)]),
                secondary_item_len);
         memcpy(&(proxy_arr[ulii * proxy_len]),
                *(char**) (&(proxy_arr[ulii * proxy_len])), item_length);
     }
-    for (ulii = 0; ulii < arr_length; ulii++) {
+    for (ulii = 0; ulii < arr_length; ulii++)
+    {
         memcpy(&(main_arr[ulii * item_length]), &(proxy_arr[ulii * proxy_len]),
                item_length);
     }
@@ -6388,15 +6349,9 @@ int32_t qsort_ext(char* main_arr, uintptr_t arr_length, uintptr_t item_length,
     uintptr_t proxy_len = secondary_item_len + sizeof(void*);
     unsigned char* bigstack_mark = g_bigstack_base;
     char* proxy_arr;
-    if (!arr_length) {
-        return 0;
-    }
-    if (proxy_len < item_length) {
-        proxy_len = item_length;
-    }
-    if (bigstack_alloc_c(arr_length * proxy_len, &proxy_arr)) {
-        return -1;
-    }
+    if (!arr_length) { return 0; }
+    if (proxy_len < item_length) { proxy_len = item_length; }
+    if (bigstack_alloc_c(arr_length * proxy_len, &proxy_arr)) { return -1; }
     qsort_ext2(main_arr, arr_length, item_length, comparator_deref,
                secondary_arr, secondary_item_len, proxy_arr, proxy_len);
     bigstack_reset(bigstack_mark);
@@ -6421,11 +6376,11 @@ int32_t sort_item_ids_noalloc(uintptr_t unfiltered_ct,
     char* dup_id;
     char* tptr;
     uint32_t ujj;
-    if (!item_ct) {
-        return 0;
-    }
-    if (!collapse_idxs) {
-        for (ujj = 0; ujj < item_ct; uii++, ujj++) {
+    if (!item_ct) { return 0; }
+    if (!collapse_idxs)
+    {
+        for (ujj = 0; ujj < item_ct; uii++, ujj++)
+        {
             next_unset_unsafe_ck(exclude_arr, &uii);
             memcpy(&(sorted_ids[ujj * max_id_len]),
                    &(item_ids[uii * max_id_len]), max_id_len);
@@ -6434,7 +6389,8 @@ int32_t sort_item_ids_noalloc(uintptr_t unfiltered_ct,
     }
     else
     {
-        for (ujj = 0; ujj < item_ct; uii++, ujj++) {
+        for (ujj = 0; ujj < item_ct; uii++, ujj++)
+        {
             next_unset_unsafe_ck(exclude_arr, &uii);
             memcpy(&(sorted_ids[ujj * max_id_len]),
                    &(item_ids[uii * max_id_len]), max_id_len);
@@ -6443,16 +6399,14 @@ int32_t sort_item_ids_noalloc(uintptr_t unfiltered_ct,
     }
     if (qsort_ext(sorted_ids, item_ct, max_id_len, comparator_deref,
                   (char*) id_map, sizeof(int32_t)))
+    { return RET_NOMEM; }
+    if (!allow_dups)
     {
-        return RET_NOMEM;
-    }
-    if (!allow_dups) {
         dup_id = scan_for_duplicate_ids(sorted_ids, item_ct, max_id_len);
-        if (dup_id) {
+        if (dup_id)
+        {
             tptr = strchr(dup_id, '\t');
-            if (tptr) {
-                *tptr = ' ';
-            }
+            if (tptr) { *tptr = ' '; }
             LOGERRPRINTFWW("Error: Duplicate ID '%s'.\n", dup_id);
             return RET_INVALID_FORMAT;
         }
@@ -6471,9 +6425,7 @@ int32_t sort_item_ids(uintptr_t unfiltered_ct, const uintptr_t* exclude_arr,
     // id_map on bottom because --indiv-sort frees *sorted_ids_ptr
     if (bigstack_alloc_ui(item_ct, id_map_ptr)
         || bigstack_alloc_c(item_ct * max_id_len, sorted_ids_ptr))
-    {
-        return RET_NOMEM;
-    }
+    { return RET_NOMEM; }
     return sort_item_ids_noalloc(
         unfiltered_ct, exclude_arr, item_ct, item_ids, max_id_len, allow_dups,
         collapse_idxs, comparator_deref, *sorted_ids_ptr, *id_map_ptr);
@@ -6492,19 +6444,16 @@ uint32_t uint32arr_greater_than(const uint32_t* sorted_uint32_arr,
     // sorted_uint32_arr[max_idx].  Signed integer since it could become -1.
     int32_t max_idx = arr_length - 1;
     uint32_t mid_idx;
-    while (min_idx < max_idx) {
+    while (min_idx < max_idx)
+    {
         mid_idx = (((uint32_t) min_idx) + ((uint32_t) max_idx)) / 2;
-        if (uii > sorted_uint32_arr[mid_idx]) {
-            min_idx = mid_idx + 1;
-        }
+        if (uii > sorted_uint32_arr[mid_idx]) { min_idx = mid_idx + 1; }
         else
         {
             max_idx = mid_idx - 1;
         }
     }
-    if (uii > sorted_uint32_arr[((uint32_t) min_idx)]) {
-        return (min_idx + 1);
-    }
+    if (uii > sorted_uint32_arr[((uint32_t) min_idx)]) { return (min_idx + 1); }
     else
     {
         return min_idx;
@@ -6517,19 +6466,16 @@ uint32_t int32arr_greater_than(const int32_t* sorted_int32_arr,
     int32_t min_idx = 0;
     int32_t max_idx = arr_length - 1;
     uint32_t mid_idx;
-    while (min_idx < max_idx) {
+    while (min_idx < max_idx)
+    {
         mid_idx = (((uint32_t) min_idx) + ((uint32_t) max_idx)) / 2;
-        if (ii > sorted_int32_arr[mid_idx]) {
-            min_idx = mid_idx + 1;
-        }
+        if (ii > sorted_int32_arr[mid_idx]) { min_idx = mid_idx + 1; }
         else
         {
             max_idx = mid_idx - 1;
         }
     }
-    if (ii > sorted_int32_arr[((uint32_t) min_idx)]) {
-        return (min_idx + 1);
-    }
+    if (ii > sorted_int32_arr[((uint32_t) min_idx)]) { return (min_idx + 1); }
     else
     {
         return min_idx;
@@ -6542,19 +6488,17 @@ uintptr_t uint64arr_greater_than(const uint64_t* sorted_uint64_arr,
     intptr_t min_idx = 0;
     intptr_t max_idx = arr_length - 1;
     uintptr_t mid_idx;
-    while (min_idx < max_idx) {
+    while (min_idx < max_idx)
+    {
         mid_idx = (((uintptr_t) min_idx) + ((uintptr_t) max_idx)) / 2;
-        if (ullii > sorted_uint64_arr[mid_idx]) {
-            min_idx = mid_idx + 1;
-        }
+        if (ullii > sorted_uint64_arr[mid_idx]) { min_idx = mid_idx + 1; }
         else
         {
             max_idx = mid_idx - 1;
         }
     }
-    if (ullii > sorted_uint64_arr[((uintptr_t) min_idx)]) {
-        return (min_idx + 1);
-    }
+    if (ullii > sorted_uint64_arr[((uintptr_t) min_idx)])
+    { return (min_idx + 1); }
     else
     {
         return min_idx;
@@ -6569,19 +6513,16 @@ uintptr_t doublearr_greater_than(const double* sorted_dbl_arr,
     intptr_t min_idx = 0;
     intptr_t max_idx = arr_length - 1;
     uintptr_t mid_idx;
-    while (min_idx < max_idx) {
+    while (min_idx < max_idx)
+    {
         mid_idx = (((uintptr_t) min_idx) + ((uintptr_t) max_idx)) / 2;
-        if (dxx > sorted_dbl_arr[mid_idx]) {
-            min_idx = mid_idx + 1;
-        }
+        if (dxx > sorted_dbl_arr[mid_idx]) { min_idx = mid_idx + 1; }
         else
         {
             max_idx = mid_idx - 1;
         }
     }
-    if (dxx > sorted_dbl_arr[((uintptr_t) min_idx)]) {
-        return (min_idx + 1);
-    }
+    if (dxx > sorted_dbl_arr[((uintptr_t) min_idx)]) { return (min_idx + 1); }
     else
     {
         return min_idx;
@@ -6597,19 +6538,17 @@ uintptr_t nonincr_doublearr_leq_stride(const double* nonincr_dbl_arr,
     intptr_t min_idx = 0;
     intptr_t max_idx = arr_length - 1;
     uintptr_t mid_idx;
-    while (min_idx < max_idx) {
+    while (min_idx < max_idx)
+    {
         mid_idx = (((uintptr_t) min_idx) + ((uintptr_t) max_idx)) / 2;
-        if (dxx <= nonincr_dbl_arr[mid_idx * stride]) {
-            min_idx = mid_idx + 1;
-        }
+        if (dxx <= nonincr_dbl_arr[mid_idx * stride]) { min_idx = mid_idx + 1; }
         else
         {
             max_idx = mid_idx - 1;
         }
     }
-    if (dxx <= nonincr_dbl_arr[((uintptr_t) min_idx) * stride]) {
-        return (min_idx + 1);
-    }
+    if (dxx <= nonincr_dbl_arr[((uintptr_t) min_idx) * stride])
+    { return (min_idx + 1); }
     else
     {
         return min_idx;
@@ -6625,15 +6564,12 @@ int32_t bsearch_str(const char* id_buf, uintptr_t cur_id_len, const char* lptr,
     uintptr_t start_idx = 0;
     uintptr_t mid_idx;
     int32_t ii;
-    if (cur_id_len >= max_id_len) {
-        return -1;
-    }
-    while (start_idx < end_idx) {
+    if (cur_id_len >= max_id_len) { return -1; }
+    while (start_idx < end_idx)
+    {
         mid_idx = (start_idx + end_idx) / 2;
         ii = memcmp(id_buf, &(lptr[mid_idx * max_id_len]), cur_id_len);
-        if (ii > 0) {
-            start_idx = mid_idx + 1;
-        }
+        if (ii > 0) { start_idx = mid_idx + 1; }
         else if ((ii < 0) || lptr[mid_idx * max_id_len + cur_id_len])
         {
             end_idx = mid_idx;
@@ -6654,12 +6590,11 @@ int32_t bsearch_str_natural(const char* id_buf, const char* lptr,
     uintptr_t start_idx = 0;
     uintptr_t mid_idx;
     int32_t ii;
-    while (start_idx < end_idx) {
+    while (start_idx < end_idx)
+    {
         mid_idx = (start_idx + end_idx) / 2;
         ii = strcmp_natural(id_buf, &(lptr[mid_idx * max_id_len]));
-        if (ii > 0) {
-            start_idx = mid_idx + 1;
-        }
+        if (ii > 0) { start_idx = mid_idx + 1; }
         else if (ii < 0)
         {
             end_idx = mid_idx;
@@ -6679,14 +6614,12 @@ uintptr_t bsearch_str_lb(const char* id_buf, uintptr_t cur_id_len,
     // returns number of elements in lptr[] less than id_buf.
     uintptr_t start_idx = 0;
     uintptr_t mid_idx;
-    if (cur_id_len > max_id_len) {
-        cur_id_len = max_id_len;
-    }
-    while (start_idx < end_idx) {
+    if (cur_id_len > max_id_len) { cur_id_len = max_id_len; }
+    while (start_idx < end_idx)
+    {
         mid_idx = (start_idx + end_idx) / 2;
-        if (memcmp(id_buf, &(lptr[mid_idx * max_id_len]), cur_id_len) > 0) {
-            start_idx = mid_idx + 1;
-        }
+        if (memcmp(id_buf, &(lptr[mid_idx * max_id_len]), cur_id_len) > 0)
+        { start_idx = mid_idx + 1; }
         else
         {
             end_idx = mid_idx;
@@ -6713,15 +6646,13 @@ uint32_t bsearch_read_fam_indiv(char* __restrict read_ptr,
     uintptr_t slen_final;
     slen_fid = strlen_se(read_ptr);
     iid_ptr = skip_initial_spaces(&(read_ptr[slen_fid]));
-    if (is_eoln_kns(*iid_ptr)) {
-        return 1;
-    }
+    if (is_eoln_kns(*iid_ptr)) { return 1; }
     slen_iid = strlen_se(iid_ptr);
-    if (read_pp_new) {
-        *read_pp_new = skip_initial_spaces(&(iid_ptr[slen_iid]));
-    }
+    if (read_pp_new)
+    { *read_pp_new = skip_initial_spaces(&(iid_ptr[slen_iid])); }
     slen_final = slen_fid + slen_iid + 1;
-    if (slen_final >= max_id_len) {
+    if (slen_final >= max_id_len)
+    {
         // avoid buffer overflow
         *retval_ptr = -1;
         return 0;
@@ -6742,25 +6673,17 @@ void bsearch_fam(const char* __restrict fam_id, const char* __restrict lptr,
     uint32_t slen;
     uint32_t fidx;
     uint32_t loff;
-    if (!filter_line_ct) {
-        goto bsearch_fam_ret_null;
-    }
+    if (!filter_line_ct) { goto bsearch_fam_ret_null; }
     slen = strlen_se(fam_id);
-    if (slen + 3 > max_id_len) {
-        goto bsearch_fam_ret_null;
-    }
+    if (slen + 3 > max_id_len) { goto bsearch_fam_ret_null; }
     memcpy(id_buf, fam_id, slen);
     id_buf[slen] = '\t';
     fidx = bsearch_str_lb(id_buf, slen + 1, lptr, max_id_len, filter_line_ct);
-    if (fidx == filter_line_ct) {
-        goto bsearch_fam_ret_null;
-    }
+    if (fidx == filter_line_ct) { goto bsearch_fam_ret_null; }
     id_buf[slen] = ' ';
     loff = bsearch_str_lb(id_buf, slen + 1, &(lptr[fidx * max_id_len]),
                           max_id_len, filter_line_ct - fidx);
-    if (!loff) {
-        goto bsearch_fam_ret_null;
-    }
+    if (!loff) { goto bsearch_fam_ret_null; }
     *first_idx_ptr = fidx;
     *last_idx_ptr = fidx + loff;
     return;
@@ -6772,23 +6695,22 @@ bsearch_fam_ret_null:
 void bitarr_invert(uintptr_t bit_ct, uintptr_t* bitarr)
 {
     uintptr_t* bitarr_stop = &(bitarr[bit_ct / BITCT]);
-    while (bitarr < bitarr_stop) {
+    while (bitarr < bitarr_stop)
+    {
         *bitarr = ~(*bitarr);
         bitarr++;
     }
-    if (bit_ct % BITCT) {
-        *bitarr = (~(*bitarr)) & ((ONELU << (bit_ct % BITCT)) - ONELU);
-    }
+    if (bit_ct % BITCT)
+    { *bitarr = (~(*bitarr)) & ((ONELU << (bit_ct % BITCT)) - ONELU); }
 }
 
 void bitarr_invert_copy(const uintptr_t* input_bitarr, uintptr_t bit_ct,
                         uintptr_t* output_bitarr)
 {
     const uintptr_t* input_stop = &(input_bitarr[bit_ct / BITCT]);
-    while (input_bitarr < input_stop) {
-        *output_bitarr++ = ~(*input_bitarr++);
-    }
-    if (bit_ct % BITCT) {
+    while (input_bitarr < input_stop) { *output_bitarr++ = ~(*input_bitarr++); }
+    if (bit_ct % BITCT)
+    {
         *output_bitarr =
             (~(*input_bitarr)) & ((ONELU << (bit_ct % BITCT)) - ONELU);
     }
@@ -6802,19 +6724,19 @@ void bitvec_and(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
     __m128i* vv128 = (__m128i*) main_bitvec;
     const __m128i* iv128 = (const __m128i*) arg_bitvec;
     __m128i* vv128_end = &(vv128[word_ct / 2]);
-    while (vv128 < vv128_end) {
+    while (vv128 < vv128_end)
+    {
         *vv128 = _mm_and_si128(*iv128++, *vv128);
         vv128++;
     }
-    if (word_ct & 1) {
+    if (word_ct & 1)
+    {
         word_ct--;
         main_bitvec[word_ct] &= arg_bitvec[word_ct];
     }
 #else
     uintptr_t* bitvec_end = &(main_bitvec[word_ct]);
-    while (main_bitvec < bitvec_end) {
-        *main_bitvec++ &= *arg_bitvec++;
-    }
+    while (main_bitvec < bitvec_end) { *main_bitvec++ &= *arg_bitvec++; }
 #endif
 }
 
@@ -6827,19 +6749,19 @@ void bitvec_andnot(const uintptr_t* __restrict exclude_bitvec,
     __m128i* vv128 = (__m128i*) main_bitvec;
     const __m128i* ev128 = (const __m128i*) exclude_bitvec;
     __m128i* vv128_end = &(vv128[word_ct / 2]);
-    while (vv128 < vv128_end) {
+    while (vv128 < vv128_end)
+    {
         *vv128 = _mm_andnot_si128(*ev128++, *vv128);
         vv128++;
     }
-    if (word_ct & 1) {
+    if (word_ct & 1)
+    {
         word_ct--;
         main_bitvec[word_ct] &= ~(exclude_bitvec[word_ct]);
     }
 #else
     uintptr_t* bitvec_end = &(main_bitvec[word_ct]);
-    while (main_bitvec < bitvec_end) {
-        *main_bitvec++ &= ~(*exclude_bitvec++);
-    }
+    while (main_bitvec < bitvec_end) { *main_bitvec++ &= ~(*exclude_bitvec++); }
 #endif
 }
 
@@ -6852,18 +6774,21 @@ void bitvec_andnot_reversed_args(const uintptr_t* __restrict include_bitvec,
     __m128i* vv128 = (__m128i*) main_bitvec;
     const __m128i* iv128 = (const __m128i*) include_bitvec;
     __m128i* vv128_end = &(vv128[word_ct / 2]);
-    while (vv128 < vv128_end) {
+    while (vv128 < vv128_end)
+    {
         *vv128 = _mm_andnot_si128(*vv128, *iv128++);
         vv128++;
     }
-    if (word_ct & 1) {
+    if (word_ct & 1)
+    {
         word_ct--;
         main_bitvec[word_ct] =
             (~main_bitvec[word_ct]) & include_bitvec[word_ct];
     }
 #else
     uintptr_t* bitvec_end = &(main_bitvec[word_ct]);
-    while (main_bitvec < bitvec_end) {
+    while (main_bitvec < bitvec_end)
+    {
         *main_bitvec = (~(*main_bitvec)) & (*include_bitvec++);
         main_bitvec++;
     }
@@ -6878,19 +6803,19 @@ void bitvec_or(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
     __m128i* vv128 = (__m128i*) main_bitvec;
     const __m128i* ov128 = (const __m128i*) arg_bitvec;
     __m128i* vv128_end = &(vv128[word_ct / 2]);
-    while (vv128 < vv128_end) {
+    while (vv128 < vv128_end)
+    {
         *vv128 = _mm_or_si128(*ov128++, *vv128);
         vv128++;
     }
-    if (word_ct & 1) {
+    if (word_ct & 1)
+    {
         word_ct--;
         main_bitvec[word_ct] |= arg_bitvec[word_ct];
     }
 #else
     uintptr_t* vec_end = &(main_bitvec[word_ct]);
-    while (main_bitvec < vec_end) {
-        *main_bitvec++ |= *arg_bitvec++;
-    }
+    while (main_bitvec < vec_end) { *main_bitvec++ |= *arg_bitvec++; }
 #endif
 }
 
@@ -6903,19 +6828,19 @@ void bitvec_xor(const uintptr_t* __restrict arg_bitvec, uintptr_t word_ct,
     __m128i* bitv128 = (__m128i*) main_bitvec;
     __m128i* xorv128 = (__m128i*) arg_bitvec;
     __m128i* bitv128_end = &(bitv128[word_ct / 2]);
-    while (bitv128 < bitv128_end) {
+    while (bitv128 < bitv128_end)
+    {
         *bitv128 = _mm_xor_si128(*xorv128++, *bitv128);
         bitv128++;
     }
-    if (word_ct & 1) {
+    if (word_ct & 1)
+    {
         word_ct--;
         main_bitvec[word_ct] ^= arg_bitvec[word_ct];
     }
 #else
     uintptr_t* main_bitvec_end = &(main_bitvec[word_ct]);
-    while (main_bitvec < main_bitvec_end) {
-        *main_bitvec++ ^= *arg_bitvec++;
-    }
+    while (main_bitvec < main_bitvec_end) { *main_bitvec++ ^= *arg_bitvec++; }
 #endif
 }
 
@@ -6923,10 +6848,9 @@ uint32_t is_monomorphic_a2(const uintptr_t* geno_arr, uint32_t sample_ct)
 {
     const uintptr_t* loop_end = &(geno_arr[sample_ct / BITCT2]);
     uint32_t sample_rem = sample_ct % BITCT2;
-    for (; geno_arr < loop_end; geno_arr++) {
-        if ((~(*geno_arr)) & FIVEMASK) {
-            return 0;
-        }
+    for (; geno_arr < loop_end; geno_arr++)
+    {
+        if ((~(*geno_arr)) & FIVEMASK) { return 0; }
     }
     return (sample_rem
             && ((~(*geno_arr)) & (FIVEMASK >> (BITCT - sample_rem * 2))))
@@ -6940,23 +6864,26 @@ uint32_t is_monomorphic(const uintptr_t* geno_arr, uint32_t sample_ct)
     uint32_t sample_rem = sample_ct % BITCT2;
     uintptr_t ulii;
     uintptr_t uljj;
-    while (sample_ctd2) {
+    while (sample_ctd2)
+    {
         ulii = *geno_arr++;
         uljj = (ulii >> 1) & FIVEMASK;
         ulii = ~ulii;
         // now ulii & FIVEMASK = low bit zero, uljj = high bit one
-        if (uljj) {
-            if (uljj & ulii) {
+        if (uljj)
+        {
+            if (uljj & ulii)
+            {
                 // heterozygote observed
                 return 0;
             }
             // homozyg A2 observed
-            while (1) {
+            while (1)
+            {
                 // 00 and 10 now both demonstrate marker is polymorphic
-                if (ulii & FIVEMASK) {
-                    return 0;
-                }
-                if (!(--sample_ctd2)) {
+                if (ulii & FIVEMASK) { return 0; }
+                if (!(--sample_ctd2))
+                {
                     return (sample_rem
                             && ((~(*geno_arr))
                                 & (FIVEMASK >> (BITCT - sample_rem * 2))))
@@ -6970,7 +6897,8 @@ uint32_t is_monomorphic(const uintptr_t* geno_arr, uint32_t sample_ct)
         {
             do
             {
-                if (!(--sample_ctd2)) {
+                if (!(--sample_ctd2))
+                {
                     return (sample_rem
                             && ((*geno_arr)
                                 & (AAAAMASK >> (BITCT - sample_rem * 2))))
@@ -6983,16 +6911,15 @@ uint32_t is_monomorphic(const uintptr_t* geno_arr, uint32_t sample_ct)
         }
         sample_ctd2--;
     }
-    if (sample_rem) {
+    if (sample_rem)
+    {
         ulii = *geno_arr;
         uljj = (ulii >> 1) & FIVEMASK;
         ulii = ~ulii;
         if ((uljj & ulii)
             || (uljj
                 && (ulii & (~uljj) & (FIVEMASK >> (BITCT - sample_rem * 2)))))
-        {
-            return 0;
-        }
+        { return 0; }
     }
     return 1;
 }
@@ -7005,19 +6932,22 @@ uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
     uintptr_t uljj;
     uintptr_t ulkk;
     uint32_t distinct_genotype_ct;
-    while (sample_ctd2) {
+    while (sample_ctd2)
+    {
         ulii = *geno_arr++;
         uljj = (ulii >> 1) & FIVEMASK;
         ulkk = ~ulii;
-        if (uljj) {
-            if (uljj & ulii) {
+        if (uljj)
+        {
+            if (uljj & ulii)
+            {
                 // homozygote major observed; either 00 or 10 now demonstrate
                 // marker is polymorphic
-                while (1) {
-                    if (ulkk & FIVEMASK) {
-                        return 0;
-                    }
-                    if (!(--sample_ctd2)) {
+                while (1)
+                {
+                    if (ulkk & FIVEMASK) { return 0; }
+                    if (!(--sample_ctd2))
+                    {
                         return (sample_rem
                                 && ((~(*geno_arr))
                                     & (FIVEMASK >> (BITCT - sample_rem * 2))))
@@ -7031,18 +6961,18 @@ uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
             {
                 // heterozygote observed; either 00 or 11 now means we have 2+
                 // genotypes
-                while (1) {
+                while (1)
+                {
                     ulii = ~(*geno_arr++);
-                    if (!(--sample_ctd2)) {
+                    if (!(--sample_ctd2))
+                    {
                         return (sample_rem
                                 && (((~ulii) ^ (ulii >> 1))
                                     & (FIVEMASK >> (BITCT - sample_rem * 2))))
                                    ? 0
                                    : 1;
                     }
-                    if (((~ulii) ^ (ulii >> 1)) & FIVEMASK) {
-                        return 0;
-                    }
+                    if (((~ulii) ^ (ulii >> 1)) & FIVEMASK) { return 0; }
                 }
             }
         }
@@ -7052,7 +6982,8 @@ uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
             // is polymorphic
             do
             {
-                if (!(--sample_ctd2)) {
+                if (!(--sample_ctd2))
+                {
                     return (sample_rem
                             && ((*geno_arr)
                                 & (AAAAMASK >> (BITCT - sample_rem * 2))))
@@ -7065,7 +6996,8 @@ uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
         }
         sample_ctd2--;
     }
-    if (sample_rem) {
+    if (sample_rem)
+    {
         ulii = *geno_arr;
         uljj = (ulii >> 1) & FIVEMASK;
         ulkk = ~ulii;
@@ -7076,9 +7008,7 @@ uint32_t less_than_two_genotypes(const uintptr_t* geno_arr, uint32_t sample_ct)
         distinct_genotype_ct += (uljj & ulkk) ? 1 : 0;
         // homozygous major present?
         distinct_genotype_ct += (uljj & ulii) ? 1 : 0;
-        if (distinct_genotype_ct > 1) {
-            return 0;
-        }
+        if (distinct_genotype_ct > 1) { return 0; }
     }
     return 1;
 }
@@ -7148,7 +7078,8 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
     __m128i half2;
     __univec acc;
 
-    while (ct >= 30) {
+    while (ct >= 30)
+    {
         ct -= 30;
         vend = &(vptr[30]);
     popcount_vecs_main_loop:
@@ -7188,7 +7119,8 @@ static inline uintptr_t popcount_vecs(const __m128i* vptr, uintptr_t ct)
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (ct) {
+    if (ct)
+    {
         vend = &(vptr[ct]);
         ct = 0;
         goto popcount_vecs_main_loop;
@@ -7210,7 +7142,8 @@ static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
     __m128i count2;
     __univec acc;
 
-    while (ct >= 30) {
+    while (ct >= 30)
+    {
         ct -= 30;
         vend = &(vptr[30]);
     popcount2_vecs_main_loop:
@@ -7261,7 +7194,8 @@ static inline uintptr_t popcount2_vecs(const __m128i* vptr, uintptr_t ct)
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (ct) {
+    if (ct)
+    {
         vend = &(vptr[ct]);
         ct = 0;
         goto popcount2_vecs_main_loop;
@@ -7283,7 +7217,8 @@ popcount_vecs_exclude(const __m128i* __restrict vptr,
     __m128i count1, count2, half1, half2;
     __univec acc;
 
-    while (ct >= 30) {
+    while (ct >= 30)
+    {
         ct -= 30;
         vend = &(vptr[30]);
     popcount_vecs_exclude_main_loop:
@@ -7318,7 +7253,8 @@ popcount_vecs_exclude(const __m128i* __restrict vptr,
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (ct) {
+    if (ct)
+    {
         vend = &(vptr[ct]);
         ct = 0;
         goto popcount_vecs_exclude_main_loop;
@@ -7340,7 +7276,8 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
     __m128i count1, count2, half1, half2;
     __univec acc;
 
-    while (ct >= 30) {
+    while (ct >= 30)
+    {
         ct -= 30;
         vend1 = &(vptr1[30]);
     popcount_vecs_intersect_main_loop:
@@ -7374,7 +7311,8 @@ static inline uintptr_t popcount_vecs_intersect(const __m128i* __restrict vptr1,
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (ct) {
+    if (ct)
+    {
         vend1 = &(vptr1[ct]);
         ct = 0;
         goto popcount_vecs_intersect_main_loop;
@@ -7410,7 +7348,8 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct)
     uintptr_t ulii;
     uintptr_t uljj;
     lptr_six_end = &(lptr[word_ct - (word_ct % 6)]);
-    while (lptr < lptr_six_end) {
+    while (lptr < lptr_six_end)
+    {
         loader = *lptr++;
         ulii = loader - ((loader >> 1) & FIVEMASK);
         loader = *lptr++;
@@ -7439,9 +7378,7 @@ uintptr_t popcount_longs(const uintptr_t* lptr, uintptr_t word_ct)
         tot += (tmp_stor * 0x01010101) >> 24;
     }
 #endif
-    while (lptr < lptr_end) {
-        tot += popcount_long(*lptr++);
-    }
+    while (lptr < lptr_end) { tot += popcount_long(*lptr++); }
     return tot;
 }
 
@@ -7464,7 +7401,8 @@ uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct)
     uintptr_t ulii;
     uintptr_t uljj;
     lptr_six_end = &(lptr[word_ct - (word_ct % 6)]);
-    while (lptr < lptr_six_end) {
+    while (lptr < lptr_six_end)
+    {
         loader1 = *lptr++;
         loader2 = *lptr++;
         ulii = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
@@ -7486,9 +7424,7 @@ uintptr_t popcount2_longs(const uintptr_t* lptr, uintptr_t word_ct)
         tot += (ulii * 0x01010101) >> 24;
     }
 #endif
-    while (lptr < lptr_end) {
-        tot += popcount2_long(*lptr++);
-    }
+    while (lptr < lptr_end) { tot += popcount2_long(*lptr++); }
     return tot;
 }
 
@@ -7500,19 +7436,16 @@ uintptr_t popcount_bit_idx(const uintptr_t* lptr, uintptr_t start_idx,
     uintptr_t end_idxl = end_idx / BITCT;
     uintptr_t end_idxlr = end_idx & (BITCT - 1);
     uintptr_t ct = 0;
-    if (start_idxl == end_idxl) {
+    if (start_idxl == end_idxl)
+    {
         return popcount_long(lptr[start_idxl]
                              & ((ONELU << end_idxlr) - (ONELU << start_idxlr)));
     }
-    if (start_idxlr) {
-        ct = popcount_long(lptr[start_idxl++] >> start_idxlr);
-    }
-    if (end_idxl > start_idxl) {
-        ct += popcount_longs_nzbase(lptr, start_idxl, end_idxl);
-    }
-    if (end_idxlr) {
-        ct += popcount_long(lptr[end_idxl] & ((ONELU << end_idxlr) - ONELU));
-    }
+    if (start_idxlr) { ct = popcount_long(lptr[start_idxl++] >> start_idxlr); }
+    if (end_idxl > start_idxl)
+    { ct += popcount_longs_nzbase(lptr, start_idxl, end_idxl); }
+    if (end_idxlr)
+    { ct += popcount_long(lptr[end_idxl] & ((ONELU << end_idxlr) - ONELU)); }
     return ct;
 }
 
@@ -7527,9 +7460,7 @@ uint32_t chrom_window_max(const uint32_t* marker_pos,
     // version was O(n^2) instead of O(n); sure, it didn't really matter because
     // the main calculation was more expensive, but still, ugh).
 
-    if (cur_window_max >= ct_max) {
-        return ct_max;
-    }
+    if (cur_window_max >= ct_max) { return ct_max; }
     // assumes chrom_idx exists
     uint32_t chrom_fo_idx = chrom_info_ptr->chrom_idx_to_foidx[chrom_idx];
     uint32_t chrom_end = chrom_info_ptr->chrom_fo_vidx_start[chrom_fo_idx + 1];
@@ -7539,25 +7470,23 @@ uint32_t chrom_window_max(const uint32_t* marker_pos,
     uint32_t marker_ct =
         chrom_end - marker_uidx
         - popcount_bit_idx(marker_exclude, marker_uidx, chrom_end);
-    if (marker_ct <= cur_window_max) {
-        return cur_window_max;
-    }
+    if (marker_ct <= cur_window_max) { return cur_window_max; }
     uint32_t window_idx_first = 0;
     uint32_t window_uidx_first = marker_uidx;
     uint32_t window_pos_first = marker_pos[marker_uidx];
     uint32_t marker_idx;
     uint32_t marker_pos_thresh;
-    for (marker_idx = 0; marker_idx < marker_ct; marker_uidx++, marker_idx++) {
+    for (marker_idx = 0; marker_idx < marker_ct; marker_uidx++, marker_idx++)
+    {
         next_unset_unsafe_ck(marker_exclude, &marker_uidx);
         marker_pos_thresh = marker_pos[marker_uidx];
-        if (marker_pos_thresh < bp_max) {
-            marker_pos_thresh = 0;
-        }
+        if (marker_pos_thresh < bp_max) { marker_pos_thresh = 0; }
         else
         {
             marker_pos_thresh -= bp_max;
         }
-        if (marker_pos_thresh > window_pos_first) {
+        if (marker_pos_thresh > window_pos_first)
+        {
             do
             {
                 window_uidx_first++;
@@ -7568,9 +7497,7 @@ uint32_t chrom_window_max(const uint32_t* marker_pos,
         }
         else if (marker_idx - window_idx_first == cur_window_max)
         {
-            if (++cur_window_max == ct_max) {
-                return cur_window_max;
-            }
+            if (++cur_window_max == ct_max) { return cur_window_max; }
         }
     }
     return cur_window_max;
@@ -7586,7 +7513,8 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
     // Finds the earliest location which is within count_max sites, bp_max bps,
     // and (if marker_cms != nullptr) cm_max centimorgans.
     // count_max must be positive.
-    if (marker_uidx_min == marker_uidx_start) {
+    if (marker_uidx_min == marker_uidx_start)
+    {
         // special-case this since it happens frequently
         *window_trail_ct_ptr = 0;
         return marker_uidx_min;
@@ -7602,21 +7530,18 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
     uint32_t ujj;
     uint32_t ukk;
     marker_uwidx_cur *= BITCT;
-    if (bp_max <= marker_pos[marker_uidx_start]) {
-        min_pos = marker_pos[marker_uidx_start] - bp_max;
-    }
-    if (!uii) {
-        goto window_back_zstart;
-    }
+    if (bp_max <= marker_pos[marker_uidx_start])
+    { min_pos = marker_pos[marker_uidx_start] - bp_max; }
+    if (!uii) { goto window_back_zstart; }
     cur_word = (~(*marker_exclude_cur)) & ((ONELU << uii) - ONELU);
-    while (1) {
-        if (marker_uwidx_cur <= marker_uidx_min) {
+    while (1)
+    {
+        if (marker_uwidx_cur <= marker_uidx_min)
+        {
             cur_word &= ~((ONELU << (marker_uidx_min % BITCT)) - ONELU);
             marker_uwidx_cur = marker_uidx_min;
             uii = popcount_long(cur_word);
-            if (uii >= remaining_count) {
-                goto window_back_count;
-            }
+            if (uii >= remaining_count) { goto window_back_count; }
             else if ((marker_pos[marker_uwidx_cur] < min_pos)
                      || (marker_cms && (marker_cms[marker_uwidx_cur] < min_cm)))
             {
@@ -7628,10 +7553,12 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
             }
         }
         uii = popcount_long(cur_word);
-        if (uii >= remaining_count) {
+        if (uii >= remaining_count)
+        {
         window_back_count:
             uii -= remaining_count; // now a count of number of bits to advance
-            while (uii) {
+            while (uii)
+            {
                 cur_word &= cur_word - 1;
                 uii--;
             }
@@ -7642,9 +7569,7 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
                 (marker_uwidx_cur & (~(BITCT - ONELU))) + CTZLU(cur_word);
             if ((marker_pos[marker_uwidx_cur] < min_pos)
                 || (marker_cms && (marker_cms[marker_uwidx_cur] < min_cm)))
-            {
-                goto window_back_find_first_pos;
-            }
+            { goto window_back_find_first_pos; }
             *window_trail_ct_ptr = count_max;
             return marker_uwidx_cur;
         }
@@ -7655,18 +7580,16 @@ uint32_t window_back(const uint32_t* __restrict marker_pos,
             ujj = uint32arr_greater_than(&(marker_pos[marker_uwidx_cur]),
                                          marker_uidx_last - marker_uwidx_cur,
                                          min_pos);
-            if (marker_cms) {
+            if (marker_cms)
+            {
                 ukk = doublearr_greater_than(
                     &(marker_cms[marker_uwidx_cur]),
                     marker_uidx_last - marker_uwidx_cur, min_cm);
-                if (ujj < ukk) {
-                    ujj = ukk;
-                }
+                if (ujj < ukk) { ujj = ukk; }
             }
             marker_uwidx_cur += ujj;
-            if (marker_uwidx_cur > marker_uidx_min) {
-                next_unset_unsafe_ck(marker_exclude, &marker_uwidx_cur);
-            }
+            if (marker_uwidx_cur > marker_uidx_min)
+            { next_unset_unsafe_ck(marker_exclude, &marker_uwidx_cur); }
         window_back_min:
             *window_trail_ct_ptr =
                 marker_uidx_start - marker_uwidx_cur
@@ -7690,7 +7613,8 @@ uint32_t window_forward(const uint32_t* __restrict marker_pos,
                         uint32_t* __restrict window_lead_ct_ptr)
 {
     // window_lead_ct_ptr currently cannot be nullptr
-    if (marker_uidx_start == marker_uidx_last) {
+    if (marker_uidx_start == marker_uidx_last)
+    {
         *window_lead_ct_ptr = 0;
         return marker_uidx_start;
     }
@@ -7706,19 +7630,18 @@ uint32_t window_forward(const uint32_t* __restrict marker_pos,
     uint32_t ukk;
     marker_uwidx_cur *= BITCT;
     cur_word = ~((*marker_exclude_cur) | ((ONELU << uii) - ONELU));
-    while (1) {
+    while (1)
+    {
         uii = popcount_long(cur_word);
-        if (uii >= remaining_count) {
-            while (--remaining_count) {
-                cur_word &= cur_word - 1;
-            }
+        if (uii >= remaining_count)
+        {
+            while (--remaining_count) { cur_word &= cur_word - 1; }
             marker_uwidx_cur += CTZLU(cur_word);
-            if (marker_uwidx_cur <= marker_uidx_last) {
+            if (marker_uwidx_cur <= marker_uidx_last)
+            {
                 if ((marker_pos[marker_uwidx_cur] > max_pos)
                     || (marker_cms && (marker_cms[marker_uwidx_cur] > max_cm)))
-                {
-                    break;
-                }
+                { break; }
                 *window_lead_ct_ptr = count_max;
                 return marker_uwidx_cur;
             }
@@ -7732,7 +7655,8 @@ uint32_t window_forward(const uint32_t* __restrict marker_pos,
             break;
         }
         marker_uwidx_cur += BITCT;
-        if (marker_uwidx_cur >= marker_uidx_last) {
+        if (marker_uwidx_cur >= marker_uidx_last)
+        {
             if ((marker_pos[marker_uidx_last] <= max_pos)
                 && ((!marker_cms) || (marker_cms[marker_uidx_last] <= max_cm)))
             {
@@ -7754,13 +7678,12 @@ uint32_t window_forward(const uint32_t* __restrict marker_pos,
     ujj = uint32arr_greater_than(&(marker_pos[marker_uwidx_prev]),
                                  marker_uwidx_cur - marker_uwidx_prev,
                                  max_pos + 1);
-    if (marker_cms) {
+    if (marker_cms)
+    {
         ukk = doublearr_greater_than(&(marker_cms[marker_uwidx_prev]),
                                      marker_uwidx_cur - marker_uwidx_prev,
                                      max_cm * (1 + SMALL_EPSILON));
-        if (ujj > ukk) {
-            ujj = ukk;
-        }
+        if (ujj > ukk) { ujj = ukk; }
     }
     marker_uwidx_prev += ujj;
     prev_unset_unsafe_ck(marker_exclude, &marker_uwidx_prev);
@@ -7787,13 +7710,16 @@ uintptr_t jump_forward_unset_unsafe(const uintptr_t* bitvec, uintptr_t cur_pos,
 #ifdef __LP64__
     const __m128i* vptr;
 #endif
-    if (ulii) {
+    if (ulii)
+    {
         uljj = (~(*bptr)) >> ulii;
         ulkk = popcount_long(uljj);
-        if (ulkk >= forward_ct) {
+        if (ulkk >= forward_ct)
+        {
         jump_forward_unset_unsafe_finish:
             ulkk = CTZLU(uljj);
-            while (--forward_ct) {
+            while (--forward_ct)
+            {
                 uljj &= uljj - 1;
                 ulkk = CTZLU(uljj);
             }
@@ -7805,38 +7731,39 @@ uintptr_t jump_forward_unset_unsafe(const uintptr_t* bitvec, uintptr_t cur_pos,
     }
     ulii = 0;
 #ifdef __LP64__
-    if (widx & 1) {
+    if (widx & 1)
+    {
         uljj = ~(*bptr);
         ulkk = popcount_long(uljj);
-        if (ulkk >= forward_ct) {
-            goto jump_forward_unset_unsafe_finish;
-        }
+        if (ulkk >= forward_ct) { goto jump_forward_unset_unsafe_finish; }
         forward_ct -= ulkk;
         bptr++;
     }
     vptr = (const __m128i*) bptr;
-    while (forward_ct > BITCT * 6) {
+    while (forward_ct > BITCT * 6)
+    {
         uljj = ((forward_ct - 1) / (BITCT * 6)) * 3;
         ulkk = popcount_vecs(vptr, uljj);
         vptr = &(vptr[uljj]);
         forward_ct -= uljj * BITCT * 2 - ulkk;
     }
     bptr = (const uintptr_t*) vptr;
-    while (forward_ct > BITCT) {
-        forward_ct -= popcount_long(~(*bptr++));
-    }
+    while (forward_ct > BITCT) { forward_ct -= popcount_long(~(*bptr++)); }
 #else
-    while (forward_ct > BITCT) {
+    while (forward_ct > BITCT)
+    {
         uljj = (forward_ct - 1) / BITCT;
         ulkk = popcount_longs(bptr, uljj);
         bptr = &(bptr[uljj]);
         forward_ct -= uljj * BITCT - ulkk;
     }
 #endif
-    while (1) {
+    while (1)
+    {
         uljj = ~(*bptr);
         ulkk = popcount_long(uljj);
-        if (ulkk >= forward_ct) {
+        if (ulkk >= forward_ct)
+        {
             widx = (uintptr_t)(bptr - bitvec);
             goto jump_forward_unset_unsafe_finish;
         }
@@ -7866,7 +7793,8 @@ uintptr_t popcount_longs_exclude(const uintptr_t* __restrict lptr,
     uintptr_t ulii;
     uintptr_t uljj;
     lptr_six_end = &(lptr[end_idx - (end_idx % 6)]);
-    while (lptr < lptr_six_end) {
+    while (lptr < lptr_six_end)
+    {
         loader = (*lptr++) & (~(*exclude_arr++));
         ulii = loader - ((loader >> 1) & FIVEMASK);
         loader = (*lptr++) & (~(*exclude_arr++));
@@ -7895,9 +7823,8 @@ uintptr_t popcount_longs_exclude(const uintptr_t* __restrict lptr,
         tot += (tmp_stor * 0x01010101) >> 24;
     }
 #endif
-    while (lptr < lptr_end) {
-        tot += popcount_long((*lptr++) & (~(*exclude_arr++)));
-    }
+    while (lptr < lptr_end)
+    { tot += popcount_long((*lptr++) & (~(*exclude_arr++))); }
     return tot;
 }
 
@@ -7920,7 +7847,8 @@ uintptr_t popcount_longs_intersect(const uintptr_t* __restrict lptr1,
     uintptr_t ulii;
     uintptr_t uljj;
     lptr1_six_end = &(lptr1[word_ct - (word_ct % 6)]);
-    while (lptr1 < lptr1_six_end) {
+    while (lptr1 < lptr1_six_end)
+    {
         loader = (*lptr1++) & (*lptr2++);
         ulii = loader - ((loader >> 1) & FIVEMASK);
         loader = (*lptr1++) & (*lptr2++);
@@ -7949,9 +7877,7 @@ uintptr_t popcount_longs_intersect(const uintptr_t* __restrict lptr1,
         tot += (tmp_stor * 0x01010101) >> 24;
     }
 #endif
-    while (lptr1 < lptr1_end) {
-        tot += popcount_long((*lptr1++) & (*lptr2++));
-    }
+    while (lptr1 < lptr1_end) { tot += popcount_long((*lptr1++) & (*lptr2++)); }
     return tot;
 }
 
@@ -7962,9 +7888,11 @@ void vertical_bitct_subtract(const uintptr_t* bitarr, uint32_t item_ct,
     uintptr_t cur_word;
     uint32_t idx_offset;
     uint32_t last_set_bit;
-    for (idx_offset = 0; idx_offset < item_ct; idx_offset += BITCT) {
+    for (idx_offset = 0; idx_offset < item_ct; idx_offset += BITCT)
+    {
         cur_word = *bitarr++;
-        while (cur_word) {
+        while (cur_word)
+        {
             last_set_bit = CTZLU(cur_word);
             sum_arr[idx_offset + last_set_bit] -= 1;
             cur_word &= cur_word - ONELU;
@@ -8845,7 +8773,8 @@ uintptr_t count_01_vecs(const __m128i* vptr, uintptr_t vct)
     __m128i count2;
     __univec acc;
 
-    while (vct >= 60) {
+    while (vct >= 60)
+    {
         vct -= 60;
         vend = &(vptr[60]);
     count_01_vecs_main_loop:
@@ -8894,7 +8823,8 @@ uintptr_t count_01_vecs(const __m128i* vptr, uintptr_t vct)
                                _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
         tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
     }
-    if (vct) {
+    if (vct)
+    {
         vend = &(vptr[vct]);
         vct = 0;
         goto count_01_vecs_main_loop;
@@ -9342,7 +9272,8 @@ void genovec_set_freq(const uintptr_t* __restrict geno_vec,
     uintptr_t cur_decr = 60;
     const uintptr_t* geno_vec_6x_end;
     sample_ctl2 -= sample_ctl2 % 6;
-    while (sample_ctl2 >= 60) {
+    while (sample_ctl2 >= 60)
+    {
     genovec_set_freq_loop:
         geno_vec_6x_end = &(geno_vec[cur_decr]);
         count_set_freq_60v((const __m128i*) geno_vec,
@@ -9352,20 +9283,23 @@ void genovec_set_freq(const uintptr_t* __restrict geno_vec,
         include_quatervec = &(include_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
-    if (sample_ctl2) {
+    if (sample_ctl2)
+    {
         cur_decr = sample_ctl2;
         goto genovec_set_freq_loop;
     }
 #else
     const uintptr_t* geno_vec_six_end =
         &(geno_vec[sample_ctl2 - (sample_ctl2 % 6)]);
-    while (geno_vec < geno_vec_six_end) {
+    while (geno_vec < geno_vec_six_end)
+    {
         count_set_freq_6(geno_vec, include_quatervec, &acc, &accm);
         geno_vec = &(geno_vec[6]);
         include_quatervec = &(include_quatervec[6]);
     }
 #endif
-    while (geno_vec < geno_vec_end) {
+    while (geno_vec < geno_vec_end)
+    {
         loader = *geno_vec++;
         loader2 = *include_quatervec++;
         missing_incr = popcount2_long(loader & (~(loader >> 1)) & loader2);
@@ -9396,7 +9330,8 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
     uintptr_t cur_decr = 60;
     const uintptr_t* geno_vec_6x_end;
     sample_ctl2 -= sample_ctl2 % 6;
-    while (sample_ctl2 >= 60) {
+    while (sample_ctl2 >= 60)
+    {
     genovec_set_freq_x_loop:
         geno_vec_6x_end = &(geno_vec[cur_decr]);
         count_set_freq_x_60v((const __m128i*) geno_vec,
@@ -9408,14 +9343,16 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
         male_quatervec = &(male_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
-    if (sample_ctl2) {
+    if (sample_ctl2)
+    {
         cur_decr = sample_ctl2;
         goto genovec_set_freq_x_loop;
     }
 #else
     const uintptr_t* geno_vec_six_end =
         &(geno_vec[sample_ctl2 - (sample_ctl2 % 6)]);
-    while (geno_vec < geno_vec_six_end) {
+    while (geno_vec < geno_vec_six_end)
+    {
         count_set_freq_x_6(geno_vec, include_quatervec, male_quatervec, &acc,
                            &accm);
         geno_vec = &(geno_vec[6]);
@@ -9423,7 +9360,8 @@ void genovec_set_freq_x(const uintptr_t* __restrict geno_vec,
         male_quatervec = &(male_quatervec[6]);
     }
 #endif
-    while (geno_vec < geno_vec_end) {
+    while (geno_vec < geno_vec_end)
+    {
         loader = *geno_vec++;
         loader2 = loader >> 1;
         loader3 = *include_quatervec++;
@@ -9458,7 +9396,8 @@ void genovec_set_freq_y(const uintptr_t* __restrict geno_vec,
     uintptr_t cur_decr = 120;
     const uintptr_t* geno_vec_12x_end;
     sample_ctl2 -= sample_ctl2 % 12;
-    while (sample_ctl2 >= 120) {
+    while (sample_ctl2 >= 120)
+    {
     genovec_set_freq_y_loop:
         geno_vec_12x_end = &(geno_vec[cur_decr]);
         count_set_freq_y_120v((__m128i*) geno_vec, (__m128i*) geno_vec_12x_end,
@@ -9469,14 +9408,16 @@ void genovec_set_freq_y(const uintptr_t* __restrict geno_vec,
         nonmale_quatervec = &(nonmale_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
-    if (sample_ctl2) {
+    if (sample_ctl2)
+    {
         cur_decr = sample_ctl2;
         goto genovec_set_freq_y_loop;
     }
 #else
     const uintptr_t* geno_vec_twelve_end =
         &(geno_vec[sample_ctl2 - (sample_ctl2 % 12)]);
-    while (geno_vec < geno_vec_twelve_end) {
+    while (geno_vec < geno_vec_twelve_end)
+    {
         count_set_freq_y_12(geno_vec, include_quatervec, nonmale_quatervec,
                             &acc, &accm);
         geno_vec = &(geno_vec[12]);
@@ -9484,7 +9425,8 @@ void genovec_set_freq_y(const uintptr_t* __restrict geno_vec,
         nonmale_quatervec = &(nonmale_quatervec[12]);
     }
 #endif
-    while (geno_vec < geno_vec_end) {
+    while (geno_vec < geno_vec_end)
+    {
         loader = *geno_vec++;
         loader2 = loader >> 1;
         loader3 = *include_quatervec++;
@@ -9514,7 +9456,8 @@ void genovec_3freq(const uintptr_t* __restrict geno_vec,
     uintptr_t cur_decr = 120;
     const uintptr_t* geno_vec_12x_end;
     sample_ctl2 -= sample_ctl2 % 12;
-    while (sample_ctl2 >= 120) {
+    while (sample_ctl2 >= 120)
+    {
     genovec_3freq_loop:
         geno_vec_12x_end = &(geno_vec[cur_decr]);
         count_3freq_1920b(
@@ -9524,21 +9467,24 @@ void genovec_3freq(const uintptr_t* __restrict geno_vec,
         include_quatervec = &(include_quatervec[cur_decr]);
         sample_ctl2 -= cur_decr;
     }
-    if (sample_ctl2) {
+    if (sample_ctl2)
+    {
         cur_decr = sample_ctl2;
         goto genovec_3freq_loop;
     }
 #else
     const uintptr_t* geno_vec_twelve_end =
         &(geno_vec[sample_ctl2 - (sample_ctl2 % 12)]);
-    while (geno_vec < geno_vec_twelve_end) {
+    while (geno_vec < geno_vec_twelve_end)
+    {
         count_3freq_48b(geno_vec, include_quatervec, &acc_even, &acc_odd,
                         &acc_and);
         geno_vec = &(geno_vec[12]);
         include_quatervec = &(include_quatervec[12]);
     }
 #endif
-    while (geno_vec < geno_vec_end) {
+    while (geno_vec < geno_vec_end)
+    {
         loader = *geno_vec++;
         loader2 = *include_quatervec++;
         loader3 = loader2 & (loader >> 1);
@@ -9566,12 +9512,14 @@ uintptr_t count_01(const uintptr_t* quatervec, uintptr_t word_ct)
     const uintptr_t* quatervec_twelve_end =
         &(quatervec[word_ct - (word_ct % 12)]);
     uintptr_t acc = 0;
-    while (quatervec < quatervec_twelve_end) {
+    while (quatervec < quatervec_twelve_end)
+    {
         acc += count_01_12(quatervec);
         quatervec = &(quatervec[12]);
     }
 #endif
-    while (quatervec < quatervec_end) {
+    while (quatervec < quatervec_end)
+    {
         loader = *quatervec++;
         acc += popcount2_long(loader & (~(loader >> 1)) & FIVEMASK);
     }
@@ -9585,9 +9533,7 @@ void fill_all_bits(uintptr_t ct, uintptr_t* bitarr)
     uintptr_t quotient = ct / BITCT;
     uintptr_t remainder = ct % BITCT;
     fill_ulong_one(quotient, bitarr);
-    if (remainder) {
-        bitarr[quotient] = (ONELU << remainder) - ONELU;
-    }
+    if (remainder) { bitarr[quotient] = (ONELU << remainder) - ONELU; }
 }
 
 uint32_t numeric_range_list_to_bitarr(const Range_list* range_list_ptr,
@@ -9604,22 +9550,20 @@ uint32_t numeric_range_list_to_bitarr(const Range_list* range_list_ptr,
     uint32_t name_idx;
     uint32_t idx1;
     uint32_t idx2;
-    for (name_idx = 0; name_idx < name_ct; name_idx++) {
+    for (name_idx = 0; name_idx < name_ct; name_idx++)
+    {
         if (scan_uint_capped(&(names[name_idx * name_max_len]), idx_max, &idx1))
         {
-            if (ignore_overflow) {
-                continue;
-            }
+            if (ignore_overflow) { continue; }
             return 1;
         }
-        if (starts_range[name_idx]) {
+        if (starts_range[name_idx])
+        {
             name_idx++;
             if (scan_uint_capped(&(names[name_idx * name_max_len]), idx_max,
                                  &idx2))
             {
-                if (!ignore_overflow) {
-                    return 1;
-                }
+                if (!ignore_overflow) { return 1; }
                 idx2 = idx_max - 1;
             }
             fill_bits(idx1 - offset, (idx2 - idx1) + 1, bitarr);
@@ -9649,20 +9593,25 @@ int32_t string_range_list_to_bitarr(
     char* bufptr;
     uint32_t cmdline_pos;
     int32_t ii;
-    while (1) {
+    while (1)
+    {
         bufptr = token_endnn(header_line);
         ii = bsearch_str(header_line, (uintptr_t)(bufptr - header_line),
                          sorted_ids, max_id_len, name_ct);
-        if (ii != -1) {
+        if (ii != -1)
+        {
             cmdline_pos = id_map[(uint32_t) ii];
-            if (seen_idxs[cmdline_pos] != -1) {
+            if (seen_idxs[cmdline_pos] != -1)
+            {
                 sprintf(g_logbuf, "Error: Duplicate --%s token in %s.\n",
                         range_list_flag, file_descrip);
                 goto string_range_list_to_bitarr_ret_INVALID_FORMAT_2;
             }
             seen_idxs[cmdline_pos] = item_idx;
-            if (cmdline_pos && range_list_ptr->starts_range[cmdline_pos - 1]) {
-                if (seen_idxs[cmdline_pos - 1] == -1) {
+            if (cmdline_pos && range_list_ptr->starts_range[cmdline_pos - 1])
+            {
+                if (seen_idxs[cmdline_pos - 1] == -1)
+                {
                     LOGPREPRINTFWW("Error: Second element of --%s range "
                                    "appears before first element in %s.\n",
                                    range_list_flag, file_descrip);
@@ -9676,23 +9625,20 @@ int32_t string_range_list_to_bitarr(
                 SET_BIT(item_idx, bitarr);
             }
         }
-        if (++item_idx == item_ct) {
-            break;
-        }
-        if (fixed_len) {
-            header_line = &(header_line[fixed_len]);
-        }
+        if (++item_idx == item_ct) { break; }
+        if (fixed_len) { header_line = &(header_line[fixed_len]); }
         else
         {
             header_line = skip_initial_spaces(&(bufptr[1]));
         }
     }
-    for (cmdline_pos = 0; cmdline_pos < name_ct; cmdline_pos++) {
-        if (seen_idxs[cmdline_pos] == -1) {
-            goto string_range_list_to_bitarr_ret_INVALID_CMDLINE_3;
-        }
+    for (cmdline_pos = 0; cmdline_pos < name_ct; cmdline_pos++)
+    {
+        if (seen_idxs[cmdline_pos] == -1)
+        { goto string_range_list_to_bitarr_ret_INVALID_CMDLINE_3; }
     }
-    while (0) {
+    while (0)
+    {
     string_range_list_to_bitarr_ret_INVALID_CMDLINE_3:
         sprintf(g_logbuf, "Error: Missing --%s token in %s.\n", range_list_flag,
                 file_descrip);
@@ -9723,17 +9669,13 @@ int32_t string_range_list_to_bitarr_alloc(
     uint32_t* id_map;
     if (bigstack_calloc_ul(item_ctl, bitarr_ptr)
         || bigstack_alloc_i(name_ct, &seen_idxs))
-    {
-        return RET_NOMEM;
-    }
+    { return RET_NOMEM; }
     // kludge to use sort_item_ids()
     fill_ulong_zero(BITCT_TO_WORDCT(name_ct), (uintptr_t*) seen_idxs);
     if (sort_item_ids(name_ct, (uintptr_t*) seen_idxs, 0, range_list_ptr->names,
                       range_list_ptr->name_max_len, 0, 0, strcmp_deref,
                       &sorted_ids, &id_map))
-    {
-        return RET_NOMEM;
-    }
+    { return RET_NOMEM; }
     fill_int_one(name_ct, seen_idxs);
     retval = string_range_list_to_bitarr(
         header_line, item_ct, fixed_len, range_list_ptr, sorted_ids, id_map,
@@ -9761,22 +9703,23 @@ int32_t string_range_list_to_bitarr2(
     uint32_t item_uidx;
     uint32_t item_uidx2;
     int32_t ii;
-    for (param_idx = 0; param_idx < name_ct; param_idx++) {
+    for (param_idx = 0; param_idx < name_ct; param_idx++)
+    {
         bufptr = &(names[param_idx * name_max_len]);
         ii = bsearch_str_nl(bufptr, sorted_ids, max_id_len, item_ct);
-        if (ii == -1) {
-            goto string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3;
-        }
+        if (ii == -1)
+        { goto string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3; }
         item_uidx = id_map[(uint32_t) ii];
-        if (starts_range[param_idx]) {
+        if (starts_range[param_idx])
+        {
             param_idx++;
             bufptr = &(names[param_idx * name_max_len]);
             ii = bsearch_str_nl(bufptr, sorted_ids, max_id_len, item_ct);
-            if (ii == -1) {
-                goto string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3;
-            }
+            if (ii == -1)
+            { goto string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3; }
             item_uidx2 = id_map[(uint32_t) ii];
-            if (item_uidx2 < item_uidx) {
+            if (item_uidx2 < item_uidx)
+            {
                 sprintf(g_logbuf,
                         "Error: Second element of --%s range appears before "
                         "first.\n",
@@ -9790,7 +9733,8 @@ int32_t string_range_list_to_bitarr2(
             clear_bit(item_uidx, bitfield_excl);
         }
     }
-    while (0) {
+    while (0)
+    {
     string_range_list_to_bitarr2_ret_INVALID_CMDLINE_3:
         sprintf(g_logbuf, "Error: --%s ID not found.\n", range_list_flag);
     string_range_list_to_bitarr2_ret_INVALID_CMDLINE_2:
@@ -9811,15 +9755,12 @@ uint32_t count_non_autosomal_markers(const Chrom_info* chrom_info_ptr,
     const int32_t y_code = chrom_info_ptr->xymt_codes[Y_OFFSET];
     const int32_t mt_code = chrom_info_ptr->xymt_codes[MT_OFFSET];
     uint32_t ct = 0;
-    if (count_x && (x_code != -1)) {
-        ct += count_chrom_markers(chrom_info_ptr, marker_exclude, x_code);
-    }
-    if (y_code != -1) {
-        ct += count_chrom_markers(chrom_info_ptr, marker_exclude, y_code);
-    }
-    if (count_mt && (mt_code != -1)) {
-        ct += count_chrom_markers(chrom_info_ptr, marker_exclude, mt_code);
-    }
+    if (count_x && (x_code != -1))
+    { ct += count_chrom_markers(chrom_info_ptr, marker_exclude, x_code); }
+    if (y_code != -1)
+    { ct += count_chrom_markers(chrom_info_ptr, marker_exclude, y_code); }
+    if (count_mt && (mt_code != -1))
+    { ct += count_chrom_markers(chrom_info_ptr, marker_exclude, mt_code); }
     return ct;
 }
 
@@ -9837,45 +9778,48 @@ int32_t conditional_allocate_non_autosomal_markers(
     const int32_t* xymt_codes = chrom_info_ptr->xymt_codes;
     uint32_t xymt_cts[XYMT_OFFSET_CT];
     fill_uint_zero(XYMT_OFFSET_CT, xymt_cts);
-    if (is_set(chrom_info_ptr->haploid_mask, 0)) {
-        *newly_excluded_ct_ptr = marker_ct;
-    }
+    if (is_set(chrom_info_ptr->haploid_mask, 0))
+    { *newly_excluded_ct_ptr = marker_ct; }
     else
     {
-        if (count_x && (xymt_codes[X_OFFSET] != -1)) {
+        if (count_x && (xymt_codes[X_OFFSET] != -1))
+        {
             xymt_cts[X_OFFSET] = count_chrom_markers(
                 chrom_info_ptr, marker_exclude_orig, xymt_codes[X_OFFSET]);
         }
-        if (xymt_codes[Y_OFFSET] != -1) {
+        if (xymt_codes[Y_OFFSET] != -1)
+        {
             xymt_cts[Y_OFFSET] = count_chrom_markers(
                 chrom_info_ptr, marker_exclude_orig, xymt_codes[Y_OFFSET]);
         }
-        if (count_mt && (xymt_codes[MT_OFFSET] != -1)) {
+        if (count_mt && (xymt_codes[MT_OFFSET] != -1))
+        {
             xymt_cts[MT_OFFSET] = count_chrom_markers(
                 chrom_info_ptr, marker_exclude_orig, xymt_codes[MT_OFFSET]);
         }
         *newly_excluded_ct_ptr =
             xymt_cts[X_OFFSET] + xymt_cts[Y_OFFSET] + xymt_cts[MT_OFFSET];
     }
-    if (*newly_excluded_ct_ptr) {
+    if (*newly_excluded_ct_ptr)
+    {
         LOGPRINTF("Excluding %u variant%s on non-autosomes from %s.\n",
                   *newly_excluded_ct_ptr,
                   (*newly_excluded_ct_ptr == 1) ? "" : "s", calc_descrip);
     }
-    if (*newly_excluded_ct_ptr == marker_ct) {
+    if (*newly_excluded_ct_ptr == marker_ct)
+    {
         logerrprint("Error: No variants remaining.\n");
         return RET_INVALID_CMDLINE;
     }
-    if (!(*newly_excluded_ct_ptr)) {
-        return 0;
-    }
-    if (bigstack_alloc_ul(unfiltered_marker_ctl, marker_exclude_ptr)) {
-        return RET_NOMEM;
-    }
+    if (!(*newly_excluded_ct_ptr)) { return 0; }
+    if (bigstack_alloc_ul(unfiltered_marker_ctl, marker_exclude_ptr))
+    { return RET_NOMEM; }
     memcpy(*marker_exclude_ptr, marker_exclude_orig,
            unfiltered_marker_ctl * sizeof(intptr_t));
-    for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx) {
-        if (xymt_cts[xymt_idx]) {
+    for (uint32_t xymt_idx = 0; xymt_idx < XYMT_OFFSET_CT; ++xymt_idx)
+    {
+        if (xymt_cts[xymt_idx])
+        {
             const uint32_t chrom_fo_idx =
                 chrom_info_ptr->chrom_idx_to_foidx[xymt_codes[xymt_idx]];
             fill_bits(chrom_info_ptr->chrom_fo_vidx_start[chrom_fo_idx],
@@ -9894,20 +9838,19 @@ uint32_t get_max_chrom_size(const Chrom_info* chrom_info_ptr,
     const uint32_t chrom_ct = chrom_info_ptr->chrom_ct;
     uint32_t max_chrom_size = 0;
     uint32_t last_chrom_fo_idx = 0;
-    for (uint32_t chrom_fo_idx = 0; chrom_fo_idx < chrom_ct; chrom_fo_idx++) {
+    for (uint32_t chrom_fo_idx = 0; chrom_fo_idx < chrom_ct; chrom_fo_idx++)
+    {
         const uint32_t cur_chrom_size =
             count_chrom_markers(chrom_info_ptr, marker_exclude,
                                 chrom_info_ptr->chrom_file_order[chrom_fo_idx]);
-        if (cur_chrom_size) {
+        if (cur_chrom_size)
+        {
             last_chrom_fo_idx = chrom_fo_idx;
-            if (cur_chrom_size > max_chrom_size) {
-                max_chrom_size = cur_chrom_size;
-            }
+            if (cur_chrom_size > max_chrom_size)
+            { max_chrom_size = cur_chrom_size; }
         }
     }
-    if (last_chrom_fo_idx_ptr) {
-        *last_chrom_fo_idx_ptr = last_chrom_fo_idx;
-    }
+    if (last_chrom_fo_idx_ptr) { *last_chrom_fo_idx_ptr = last_chrom_fo_idx; }
     return max_chrom_size;
 }
 
@@ -9928,7 +9871,8 @@ void count_genders(const uintptr_t* __restrict sex_nm,
     uintptr_t ulii;
     uintptr_t uljj;
     uintptr_t sample_bidx;
-    for (sample_bidx = 0; sample_bidx < unfiltered_sample_ctld; sample_bidx++) {
+    for (sample_bidx = 0; sample_bidx < unfiltered_sample_ctld; sample_bidx++)
+    {
         ulii = ~(*sample_exclude++);
     count_genders_last_loop:
         uljj = *sex_nm++;
@@ -9938,7 +9882,8 @@ void count_genders(const uintptr_t* __restrict sex_nm,
         male_ct += popcount_long(ulii & uljj);
         female_ct += popcount_long(ulii & (~uljj));
     }
-    if (unfiltered_sample_ct_rem) {
+    if (unfiltered_sample_ct_rem)
+    {
         ulii = (~(*sample_exclude))
                & ((ONELU << unfiltered_sample_ct_rem) - ONELU);
         unfiltered_sample_ct_rem = 0;
@@ -9967,10 +9912,12 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
     __m128i vjj;
     // todo: use this vector loop even when loadbuf is unaligned, so stuff like
     // recode_load_to() is faster
-    if (!(((uintptr_t) loadbuf) & 15)) {
+    if (!(((uintptr_t) loadbuf) & 15))
+    {
         loadbuf_alias = (__m128i*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             vii = *loadbuf_alias;
             // we want to exchange 00 and 11, and leave 01/10 untouched.  So
             // make vjj := 11 iff vii is 00/11, and vjj := 00 otherwise; then
@@ -9986,7 +9933,8 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
     {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *loadbuf_alias32;
             ujj = 0x55555555 & (~(uii ^ (uii >> 1)));
             ujj *= 3;
@@ -9995,10 +9943,12 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
         loadbuf = (unsigned char*) loadbuf_alias32;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3)) {
+    if (!(((uintptr_t) loadbuf) & 3))
+    {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *loadbuf_alias32;
             ujj = 0x55555555 & (~(uii ^ (uii >> 1)));
             ujj *= 3;
@@ -10007,16 +9957,15 @@ void reverse_loadbuf(uintptr_t unfiltered_sample_ct, unsigned char* loadbuf)
         loadbuf = (unsigned char*) loadbuf_alias32;
     }
 #endif
-    for (; loadbuf < loadbuf_end;) {
+    for (; loadbuf < loadbuf_end;)
+    {
         ucc = *loadbuf;
         ucc2 = 0x55 & (~(ucc ^ (ucc >> 1)));
         ucc2 *= 3;
         *loadbuf++ = ucc ^ ucc2;
     }
     uii = unfiltered_sample_ct & 3;
-    if (uii) {
-        loadbuf[-1] &= (0xff >> (8 - 2 * uii));
-    }
+    if (uii) { loadbuf[-1] &= (0xff >> (8 - 2 * uii)); }
 }
 
 // deprecated, try to just use copy_quaterarr_nonempty_subset()
@@ -10033,27 +9982,33 @@ void copy_quaterarr_nonempty_subset_excl(
     const uint32_t word_write_halfshift_end = subset_size % BITCT2;
     uint32_t word_write_halfshift = 0;
     // if < 2/3-filled, use sparse copy algorithm
-    if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU)) {
+    if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU))
+    {
         const uint32_t subset_excl_widx_last = raw_quaterarr_size / BITCT;
         uint32_t subset_excl_widx = 0;
-        while (1) {
+        while (1)
+        {
             uintptr_t cur_include_word = ~subset_excl[subset_excl_widx];
 
             // this, kiddies, is why exclude masks were a mistake.
-            if (subset_excl_widx == subset_excl_widx_last) {
+            if (subset_excl_widx == subset_excl_widx_last)
+            {
                 cur_include_word &=
                     (ONELU << (raw_quaterarr_size % BITCT)) - ONELU;
             }
 
-            if (cur_include_word) {
+            if (cur_include_word)
+            {
                 uint32_t wordhalf_idx = 0;
 #ifdef __LP64__
                 uint32_t cur_include_halfword = (uint32_t) cur_include_word;
 #else
                 uint32_t cur_include_halfword = (uint16_t) cur_include_word;
 #endif
-                while (1) {
-                    if (cur_include_halfword) {
+                while (1)
+                {
+                    if (cur_include_halfword)
+                    {
                         uintptr_t raw_quaterarr_word =
                             raw_quaterarr[subset_excl_widx * 2 + wordhalf_idx];
                         do
@@ -10064,7 +10019,8 @@ void copy_quaterarr_nonempty_subset_excl(
                                 ((raw_quaterarr_word >> (rqa_idx_lowbits * 2))
                                  & 3)
                                 << (word_write_halfshift * 2);
-                            if (++word_write_halfshift == BITCT2) {
+                            if (++word_write_halfshift == BITCT2)
+                            {
                                 *output_quaterarr++ = cur_output_word;
                                 word_write_halfshift = 0;
                                 cur_output_word = 0;
@@ -10072,9 +10028,7 @@ void copy_quaterarr_nonempty_subset_excl(
                             cur_include_halfword &= cur_include_halfword - 1;
                         } while (cur_include_halfword);
                     }
-                    if (wordhalf_idx) {
-                        break;
-                    }
+                    if (wordhalf_idx) { break; }
                     wordhalf_idx++;
 #ifdef __LP64__
                     cur_include_halfword = cur_include_word >> 32;
@@ -10082,11 +10036,12 @@ void copy_quaterarr_nonempty_subset_excl(
                     cur_include_halfword = cur_include_word >> 16;
 #endif
                 }
-                if (output_quaterarr == output_quaterarr_last) {
-                    if (word_write_halfshift == word_write_halfshift_end) {
-                        if (word_write_halfshift_end) {
-                            *output_quaterarr_last = cur_output_word;
-                        }
+                if (output_quaterarr == output_quaterarr_last)
+                {
+                    if (word_write_halfshift == word_write_halfshift_end)
+                    {
+                        if (word_write_halfshift_end)
+                        { *output_quaterarr_last = cur_output_word; }
                         return;
                     }
                 }
@@ -10097,9 +10052,11 @@ void copy_quaterarr_nonempty_subset_excl(
     // blocked copy
     const uintptr_t* subset_excl_last =
         &(subset_excl[raw_quaterarr_size / BITCT]);
-    while (1) {
+    while (1)
+    {
         uintptr_t cur_include_word = ~(*subset_excl);
-        if (subset_excl == subset_excl_last) {
+        if (subset_excl == subset_excl_last)
+        {
             cur_include_word &= (ONELU << (raw_quaterarr_size % BITCT)) - ONELU;
         }
         subset_excl++;
@@ -10109,9 +10066,11 @@ void copy_quaterarr_nonempty_subset_excl(
 #else
         uint32_t cur_include_halfword = (uint16_t) cur_include_word;
 #endif
-        while (1) {
+        while (1)
+        {
             uintptr_t raw_quaterarr_word = *raw_quaterarr++;
-            while (cur_include_halfword) {
+            while (cur_include_halfword)
+            {
                 uint32_t rqa_idx_lowbits = CTZLU(cur_include_halfword);
                 uintptr_t halfword_invshifted =
                     (~cur_include_halfword) >> rqa_idx_lowbits;
@@ -10121,7 +10080,8 @@ void copy_quaterarr_nonempty_subset_excl(
                 uint32_t block_len_limit = BITCT2 - word_write_halfshift;
                 cur_output_word |= raw_quaterarr_curblock_unmasked
                                    << (2 * word_write_halfshift);
-                if (rqa_block_len < block_len_limit) {
+                if (rqa_block_len < block_len_limit)
+                {
                     word_write_halfshift += rqa_block_len;
                     cur_output_word &=
                         (ONELU << (word_write_halfshift * 2)) - ONELU;
@@ -10139,9 +10099,7 @@ void copy_quaterarr_nonempty_subset_excl(
                 cur_include_halfword &=
                     (~(ONELU << (rqa_block_len + rqa_idx_lowbits))) + ONELU;
             }
-            if (wordhalf_idx) {
-                break;
-            }
+            if (wordhalf_idx) { break; }
             wordhalf_idx++;
 #ifdef __LP64__
             cur_include_halfword = cur_include_word >> 32;
@@ -10149,11 +10107,12 @@ void copy_quaterarr_nonempty_subset_excl(
             cur_include_halfword = cur_include_word >> 16;
 #endif
         }
-        if (output_quaterarr == output_quaterarr_last) {
-            if (word_write_halfshift == word_write_halfshift_end) {
-                if (word_write_halfshift_end) {
-                    *output_quaterarr_last = cur_output_word;
-                }
+        if (output_quaterarr == output_quaterarr_last)
+        {
+            if (word_write_halfshift == word_write_halfshift_end)
+            {
+                if (word_write_halfshift_end)
+                { *output_quaterarr_last = cur_output_word; }
                 return;
             }
         }
@@ -10168,13 +10127,11 @@ uint32_t load_and_collapse(uint32_t unfiltered_sample_ct, uint32_t sample_ct,
 {
     assert(unfiltered_sample_ct);
     uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
-    if (unfiltered_sample_ct == sample_ct) {
-        rawbuf = mainbuf;
-    }
-    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
-        return RET_READ_FAIL;
-    }
-    if (unfiltered_sample_ct != sample_ct) {
+    if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
+    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf))
+    { return RET_READ_FAIL; }
+    if (unfiltered_sample_ct != sample_ct)
+    {
         copy_quaterarr_nonempty_subset_excl(
             rawbuf, sample_exclude, unfiltered_sample_ct, sample_ct, mainbuf);
     }
@@ -10182,9 +10139,7 @@ uint32_t load_and_collapse(uint32_t unfiltered_sample_ct, uint32_t sample_ct,
     {
         rawbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
     }
-    if (do_reverse) {
-        reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
-    }
+    if (do_reverse) { reverse_loadbuf(sample_ct, (unsigned char*) mainbuf); }
     return 0;
 }
 
@@ -10205,19 +10160,24 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
     const uint32_t word_write_halfshift_end = subset_size % BITCT2;
     uint32_t word_write_halfshift = 0;
     // if < 2/3-filled, use sparse copy algorithm
-    if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU)) {
+    if (subset_size * (3 * ONELU) < raw_quaterarr_size * (2 * ONELU))
+    {
         uint32_t subset_mask_widx = 0;
-        while (1) {
+        while (1)
+        {
             const uintptr_t cur_include_word = subset_mask[subset_mask_widx];
-            if (cur_include_word) {
+            if (cur_include_word)
+            {
                 uint32_t wordhalf_idx = 0;
 #ifdef __LP64__
                 uint32_t cur_include_halfword = (uint32_t) cur_include_word;
 #else
                 uint32_t cur_include_halfword = (uint16_t) cur_include_word;
 #endif
-                while (1) {
-                    if (cur_include_halfword) {
+                while (1)
+                {
+                    if (cur_include_halfword)
+                    {
                         uintptr_t raw_quaterarr_word =
                             raw_quaterarr[subset_mask_widx * 2 + wordhalf_idx];
                         do
@@ -10228,7 +10188,8 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                                 ((raw_quaterarr_word >> (rqa_idx_lowbits * 2))
                                  & 3)
                                 << (word_write_halfshift * 2);
-                            if (++word_write_halfshift == BITCT2) {
+                            if (++word_write_halfshift == BITCT2)
+                            {
                                 *output_quaterarr++ = cur_output_word;
                                 word_write_halfshift = 0;
                                 cur_output_word = 0;
@@ -10236,9 +10197,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                             cur_include_halfword &= cur_include_halfword - 1;
                         } while (cur_include_halfword);
                     }
-                    if (wordhalf_idx) {
-                        break;
-                    }
+                    if (wordhalf_idx) { break; }
                     wordhalf_idx++;
 #ifdef __LP64__
                     cur_include_halfword = cur_include_word >> 32;
@@ -10246,11 +10205,12 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                     cur_include_halfword = cur_include_word >> 16;
 #endif
                 }
-                if (output_quaterarr == output_quaterarr_last) {
-                    if (word_write_halfshift == word_write_halfshift_end) {
-                        if (word_write_halfshift_end) {
-                            *output_quaterarr_last = cur_output_word;
-                        }
+                if (output_quaterarr == output_quaterarr_last)
+                {
+                    if (word_write_halfshift == word_write_halfshift_end)
+                    {
+                        if (word_write_halfshift_end)
+                        { *output_quaterarr_last = cur_output_word; }
                         return;
                     }
                 }
@@ -10259,7 +10219,8 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
         }
     }
     // blocked copy
-    while (1) {
+    while (1)
+    {
         const uintptr_t cur_include_word = *subset_mask++;
         uint32_t wordhalf_idx = 0;
 #ifdef __LP64__
@@ -10267,9 +10228,11 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
 #else
         uint32_t cur_include_halfword = (uint16_t) cur_include_word;
 #endif
-        while (1) {
+        while (1)
+        {
             uintptr_t raw_quaterarr_word = *raw_quaterarr++;
-            while (cur_include_halfword) {
+            while (cur_include_halfword)
+            {
                 uint32_t rqa_idx_lowbits = CTZLU(cur_include_halfword);
                 uintptr_t halfword_invshifted =
                     (~cur_include_halfword) >> rqa_idx_lowbits;
@@ -10279,7 +10242,8 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                 uint32_t block_len_limit = BITCT2 - word_write_halfshift;
                 cur_output_word |= raw_quaterarr_curblock_unmasked
                                    << (2 * word_write_halfshift);
-                if (rqa_block_len < block_len_limit) {
+                if (rqa_block_len < block_len_limit)
+                {
                     word_write_halfshift += rqa_block_len;
                     cur_output_word &=
                         (ONELU << (word_write_halfshift * 2)) - ONELU;
@@ -10289,7 +10253,8 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                     // no need to mask, extra bits vanish off the high end
                     *output_quaterarr++ = cur_output_word;
                     word_write_halfshift = rqa_block_len - block_len_limit;
-                    if (word_write_halfshift) {
+                    if (word_write_halfshift)
+                    {
                         cur_output_word =
                             (raw_quaterarr_curblock_unmasked
                              >> (2 * block_len_limit))
@@ -10304,9 +10269,7 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
                 cur_include_halfword &=
                     (~(ONELU << (rqa_block_len + rqa_idx_lowbits))) + ONELU;
             }
-            if (wordhalf_idx) {
-                break;
-            }
+            if (wordhalf_idx) { break; }
             wordhalf_idx++;
 #ifdef __LP64__
             cur_include_halfword = cur_include_word >> 32;
@@ -10314,11 +10277,12 @@ void copy_quaterarr_nonempty_subset(const uintptr_t* __restrict raw_quaterarr,
             cur_include_halfword = cur_include_word >> 16;
 #endif
         }
-        if (output_quaterarr == output_quaterarr_last) {
-            if (word_write_halfshift == word_write_halfshift_end) {
-                if (word_write_halfshift_end) {
-                    *output_quaterarr_last = cur_output_word;
-                }
+        if (output_quaterarr == output_quaterarr_last)
+        {
+            if (word_write_halfshift == word_write_halfshift_end)
+            {
+                if (word_write_halfshift_end)
+                { *output_quaterarr_last = cur_output_word; }
                 return;
             }
         }
@@ -10461,13 +10425,11 @@ uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
 {
     assert(unfiltered_sample_ct);
     uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
-    if (unfiltered_sample_ct == sample_ct) {
-        rawbuf = mainbuf;
-    }
-    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
-        return RET_READ_FAIL;
-    }
-    if (unfiltered_sample_ct != sample_ct) {
+    if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
+    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf))
+    { return RET_READ_FAIL; }
+    if (unfiltered_sample_ct != sample_ct)
+    {
         copy_quaterarr_nonempty_subset(
             rawbuf, sample_include, unfiltered_sample_ct, sample_ct, mainbuf);
     }
@@ -10475,9 +10437,7 @@ uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
     {
         mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
     }
-    if (do_reverse) {
-        reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
-    }
+    if (do_reverse) { reverse_loadbuf(sample_ct, (unsigned char*) mainbuf); }
     return 0;
 }
 
@@ -10522,21 +10482,25 @@ uint32_t load_and_split(uint32_t unfiltered_sample_ct,
     uint32_t read_shift;
     uintptr_t read_word;
     uintptr_t ulii;
-    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf)) {
-        return RET_READ_FAIL;
-    }
-    while (1) {
-        while (rawbuf < rawbuf_end) {
+    if (load_raw(unfiltered_sample_ct4, bedfile, rawbuf))
+    { return RET_READ_FAIL; }
+    while (1)
+    {
+        while (rawbuf < rawbuf_end)
+        {
             read_word = *rawbuf++;
             for (read_shift = 0; read_shift < read_shift_max;
                  sample_uidx++, read_shift++)
             {
-                if (is_set(pheno_nm, sample_uidx)) {
+                if (is_set(pheno_nm, sample_uidx))
+                {
                     ulii = read_word & 3;
-                    if (is_set(pheno_c, sample_uidx)) {
+                    if (is_set(pheno_c, sample_uidx))
+                    {
                         case_word |= ulii << case_shift2;
                         case_shift2 += 2;
-                        if (case_shift2 == BITCT) {
+                        if (case_shift2 == BITCT)
+                        {
                             *casebuf++ = case_word;
                             case_word = 0;
                             case_shift2 = 0;
@@ -10546,7 +10510,8 @@ uint32_t load_and_split(uint32_t unfiltered_sample_ct,
                     {
                         ctrl_word |= ulii << ctrl_shift2;
                         ctrl_shift2 += 2;
-                        if (ctrl_shift2 == BITCT) {
+                        if (ctrl_shift2 == BITCT)
+                        {
                             *ctrlbuf++ = ctrl_word;
                             ctrl_word = 0;
                             ctrl_shift2 = 0;
@@ -10556,13 +10521,10 @@ uint32_t load_and_split(uint32_t unfiltered_sample_ct,
                 read_word >>= 2;
             }
         }
-        if (sample_uidx == unfiltered_sample_ct) {
-            if (case_shift2) {
-                *casebuf = case_word;
-            }
-            if (ctrl_shift2) {
-                *ctrlbuf = ctrl_word;
-            }
+        if (sample_uidx == unfiltered_sample_ct)
+        {
+            if (case_shift2) { *casebuf = case_word; }
+            if (ctrl_shift2) { *ctrlbuf = ctrl_word; }
             return 0;
         }
         rawbuf_end++;
@@ -10581,18 +10543,21 @@ void init_quaterarr_from_bitarr(const uintptr_t* __restrict bitarr,
     uintptr_t ulkk;
     uintptr_t ulmm;
     uint32_t bit_idx;
-    while (unfiltered_sample_ctl) {
+    while (unfiltered_sample_ctl)
+    {
         ulii = ~(*bitarr++);
         ulkk = FIVEMASK;
         ulmm = FIVEMASK;
-        if (ulii) {
+        if (ulii)
+        {
             uljj = ulii >> BITCT2;
 #ifdef __LP64__
             ulii &= 0xffffffffLLU;
 #else
             ulii &= 0xffffLU;
 #endif
-            if (ulii) {
+            if (ulii)
+            {
                 do
                 {
                     bit_idx = CTZLU(ulii);
@@ -10600,7 +10565,8 @@ void init_quaterarr_from_bitarr(const uintptr_t* __restrict bitarr,
                     ulii &= ulii - 1;
                 } while (ulii);
             }
-            if (uljj) {
+            if (uljj)
+            {
                 do
                 {
                     bit_idx = CTZLU(uljj);
@@ -10614,11 +10580,10 @@ void init_quaterarr_from_bitarr(const uintptr_t* __restrict bitarr,
         --unfiltered_sample_ctl;
     }
     ulii = unfiltered_sample_ct & (BITCT - 1);
-    if (ulii) {
+    if (ulii)
+    {
         new_quaterarr--;
-        if (ulii < BITCT2) {
-            *new_quaterarr-- = 0;
-        }
+        if (ulii < BITCT2) { *new_quaterarr-- = 0; }
         else
         {
             ulii -= BITCT2;
@@ -10638,18 +10603,21 @@ void init_quaterarr_from_inverted_bitarr(
     uintptr_t ulkk;
     uintptr_t ulmm;
     uint32_t bit_idx;
-    while (unfiltered_sample_ctl) {
+    while (unfiltered_sample_ctl)
+    {
         ulii = *inverted_bitarr++;
         ulkk = FIVEMASK;
         ulmm = FIVEMASK;
-        if (ulii) {
+        if (ulii)
+        {
             uljj = ulii >> BITCT2;
 #ifdef __LP64__
             ulii &= 0xffffffffLLU;
 #else
             ulii &= 0xffffLU;
 #endif
-            if (ulii) {
+            if (ulii)
+            {
                 do
                 {
                     bit_idx = CTZLU(ulii);
@@ -10657,7 +10625,8 @@ void init_quaterarr_from_inverted_bitarr(
                     ulii &= ulii - 1;
                 } while (ulii);
             }
-            if (uljj) {
+            if (uljj)
+            {
                 do
                 {
                     bit_idx = CTZLU(uljj);
@@ -10671,11 +10640,10 @@ void init_quaterarr_from_inverted_bitarr(
         --unfiltered_sample_ctl;
     }
     ulii = unfiltered_sample_ct & (BITCT - 1);
-    if (ulii) {
+    if (ulii)
+    {
         new_quaterarr--;
-        if (ulii < BITCT2) {
-            *new_quaterarr-- = 0;
-        }
+        if (ulii < BITCT2) { *new_quaterarr-- = 0; }
         else
         {
             ulii -= BITCT2;
@@ -10698,14 +10666,12 @@ void quatervec_01_init_invert(const uintptr_t* __restrict source_quatervec,
     __m128i* sptr = (__m128i*) source_quatervec;
     __m128i* tptr_end = (__m128i*) (&(target_quatervec[vec_wsize]));
     uintptr_t* second_to_last;
-    while (tptr < tptr_end) {
-        *tptr++ = _mm_andnot_si128(*sptr++, m1);
-    }
-    if (rem) {
+    while (tptr < tptr_end) { *tptr++ = _mm_andnot_si128(*sptr++, m1); }
+    if (rem)
+    {
         second_to_last = &(((uintptr_t*) tptr_end)[-2]);
-        if (rem > BITCT2) {
-            second_to_last[1] &= (~ZEROLU) >> ((BITCT - rem) * 2);
-        }
+        if (rem > BITCT2)
+        { second_to_last[1] &= (~ZEROLU) >> ((BITCT - rem) * 2); }
         else
         {
             *second_to_last &= (~ZEROLU) >> ((BITCT2 - rem) * 2);
@@ -10714,13 +10680,12 @@ void quatervec_01_init_invert(const uintptr_t* __restrict source_quatervec,
     }
 #else
     uintptr_t* tptr_end = &(target_quatervec[vec_wsize]);
-    while (target_quatervec < tptr_end) {
-        *target_quatervec++ = FIVEMASK & (~(*source_quatervec++));
-    }
-    if (rem) {
-        if (rem > BITCT2) {
-            target_quatervec[-1] &= (~ZEROLU) >> ((BITCT - rem) * 2);
-        }
+    while (target_quatervec < tptr_end)
+    { *target_quatervec++ = FIVEMASK & (~(*source_quatervec++)); }
+    if (rem)
+    {
+        if (rem > BITCT2)
+        { target_quatervec[-1] &= (~ZEROLU) >> ((BITCT - rem) * 2); }
         else
         {
             target_quatervec[-2] &= (~ZEROLU) >> ((BITCT2 - rem) * 2);
@@ -10768,18 +10733,21 @@ void apply_bitarr_mask_to_quaterarr_01(const uintptr_t* __restrict mask_bitarr,
     uintptr_t ulkk;
     uintptr_t ulmm;
     uint32_t bit_idx;
-    while (unfiltered_sample_ctl) {
+    while (unfiltered_sample_ctl)
+    {
         ulii = ~(*mask_bitarr++);
         ulkk = *main_quaterarr;
         ulmm = main_quaterarr[1];
-        if (ulii) {
+        if (ulii)
+        {
             uljj = ulii >> BITCT2;
 #ifdef __LP64__
             ulii &= 0xffffffffLLU;
 #else
             ulii &= 0xffffLU;
 #endif
-            if (ulii) {
+            if (ulii)
+            {
                 do
                 {
                     bit_idx = CTZLU(ulii);
@@ -10787,7 +10755,8 @@ void apply_bitarr_mask_to_quaterarr_01(const uintptr_t* __restrict mask_bitarr,
                     ulii &= ulii - 1;
                 } while (ulii);
             }
-            if (uljj) {
+            if (uljj)
+            {
                 do
                 {
                     bit_idx = CTZLU(uljj);
@@ -10818,14 +10787,16 @@ void apply_bitarr_excl_to_quaterarr_01(const uintptr_t* __restrict excl_bitarr,
         ulii = *excl_bitarr++;
         ulkk = *main_quaterarr;
         ulmm = main_quaterarr[1];
-        if (ulii) {
+        if (ulii)
+        {
             uljj = ulii >> BITCT2;
 #ifdef __LP64__
             ulii &= 0xffffffffLLU;
 #else
             ulii &= 0xffffLU;
 #endif
-            if (ulii) {
+            if (ulii)
+            {
                 do
                 {
                     bit_idx = CTZLU(ulii);
@@ -10833,7 +10804,8 @@ void apply_bitarr_excl_to_quaterarr_01(const uintptr_t* __restrict excl_bitarr,
                     ulii &= ulii - 1;
                 } while (ulii);
             }
-            if (uljj) {
+            if (uljj)
+            {
                 do
                 {
                     bit_idx = CTZLU(uljj);
@@ -10864,14 +10836,16 @@ void apply_excl_intersect_to_quaterarr_01(
         ulii = (*excl_bitarr_1++) & (*excl_bitarr_2++);
         ulkk = *main_quaterarr;
         ulmm = main_quaterarr[1];
-        if (ulii) {
+        if (ulii)
+        {
             uljj = ulii >> BITCT2;
 #ifdef __LP64__
             ulii &= 0xffffffffLLU;
 #else
             ulii &= 0xffffLU;
 #endif
-            if (ulii) {
+            if (ulii)
+            {
                 do
                 {
                     bit_idx = CTZLU(ulii);
@@ -10879,7 +10853,8 @@ void apply_excl_intersect_to_quaterarr_01(
                     ulii &= ulii - 1;
                 } while (ulii);
             }
-            if (uljj) {
+            if (uljj)
+            {
                 do
                 {
                     bit_idx = CTZLU(uljj);
@@ -10932,24 +10907,26 @@ void quatervec_01_invert(uintptr_t unfiltered_sample_ct,
     const __m128i m1 = {FIVEMASK, FIVEMASK};
     __m128i* vec2_128 = (__m128i*) main_quatervec;
     __m128i* vec2_last128 = &(vec2_128[unfiltered_sample_ct / BITCT]);
-    while (vec2_128 < vec2_last128) {
+    while (vec2_128 < vec2_last128)
+    {
         *vec2_128 = _mm_xor_si128(*vec2_128, m1);
         vec2_128++;
     }
     main_quatervec = (uintptr_t*) vec2_128;
-    if (main_quatervec != vec2_last) {
+    if (main_quatervec != vec2_last)
+    {
         *main_quatervec = (*main_quatervec) ^ FIVEMASK;
         main_quatervec++;
     }
 #else
-    while (main_quatervec != vec2_last) {
+    while (main_quatervec != vec2_last)
+    {
         *main_quatervec = (*main_quatervec) ^ FIVEMASK;
         main_quatervec++;
     }
 #endif
-    if (remainder) {
-        *vec2_last = *vec2_last ^ (FIVEMASK >> (2 * (BITCT2 - remainder)));
-    }
+    if (remainder)
+    { *vec2_last = *vec2_last ^ (FIVEMASK >> (2 * (BITCT2 - remainder))); }
 }
 
 void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
@@ -10973,8 +10950,10 @@ void vec_datamask(uintptr_t unfiltered_sample_ct, uint32_t matchval,
         &(data_ptr[QUATERCT_TO_ALIGNED_WORDCT(unfiltered_sample_ct)]);
     uintptr_t loader;
 #endif
-    if (matchval) {
-        if (matchval == 2) {
+    if (matchval)
+    {
+        if (matchval == 2)
+        {
 #ifdef __LP64__
             do
             {
@@ -11091,19 +11070,23 @@ void extract_collapsed_missing_bitfield(uintptr_t* lptr,
     uint32_t woffset;
     uint32_t widx;
     uint32_t uii;
-    if (unfiltered_sample_ct == sample_ct) {
+    if (unfiltered_sample_ct == sample_ct)
+    {
         cur_write = 0;
         woffset = 0;
-        for (widx = 0; widx < word_ct; widx++) {
+        for (widx = 0; widx < word_ct; widx++)
+        {
             cur_word = *lptr++;
             cur_word =
                 cur_word & ((~cur_word) >> 1) & (*sample_include_quaterarr++);
-            while (cur_word) {
+            while (cur_word)
+            {
                 uii = CTZLU(cur_word) / 2;
                 cur_write |= ONELU << (woffset + uii);
                 cur_word &= cur_word - 1;
             }
-            if (woffset) {
+            if (woffset)
+            {
                 *missing_bitfield++ = cur_write;
                 cur_write = 0;
                 woffset = 0;
@@ -11113,21 +11096,23 @@ void extract_collapsed_missing_bitfield(uintptr_t* lptr,
                 woffset = BITCT2;
             }
         }
-        if (woffset) {
-            *missing_bitfield++ = cur_write;
-        }
+        if (woffset) { *missing_bitfield++ = cur_write; }
     }
     else
     {
         fill_ulong_zero(BITCT_TO_WORDCT(sample_ct), missing_bitfield);
         sample_idx = 0;
-        for (widx = 0; sample_idx < sample_ct; widx++, lptr++) {
+        for (widx = 0; sample_idx < sample_ct; widx++, lptr++)
+        {
             cur_mask = *sample_include_quaterarr++;
-            if (cur_mask) {
+            if (cur_mask)
+            {
                 cur_word = *lptr;
                 cur_word = cur_word & ((~cur_word) >> 1) & cur_mask;
-                if (cur_mask == FIVEMASK) {
-                    if (cur_word) {
+                if (cur_mask == FIVEMASK)
+                {
+                    if (cur_word)
+                    {
                         uii = sample_idx;
                         do
                         {
@@ -11140,13 +11125,13 @@ void extract_collapsed_missing_bitfield(uintptr_t* lptr,
                 }
                 else
                 {
-                    if (cur_word) {
+                    if (cur_word)
+                    {
                         do
                         {
                             uii = CTZLU(cur_mask);
-                            if ((cur_word >> uii) & 1) {
-                                set_bit_ul(sample_idx, missing_bitfield);
-                            }
+                            if ((cur_word >> uii) & 1)
+                            { set_bit_ul(sample_idx, missing_bitfield); }
                             sample_idx++;
                             cur_mask &= cur_mask - 1;
                         } while (cur_mask);
@@ -11179,11 +11164,13 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     __m128i* iivp;
     __m128i vii;
     __m128i vjj;
-    if (!(((uintptr_t) loadbuf) & 15)) {
+    if (!(((uintptr_t) loadbuf) & 15))
+    {
         loadbuf_alias = (__m128i*) loadbuf;
         iivp = (__m128i*) sample_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             vii = *loadbuf_alias;
             vjj = _mm_and_si128(_mm_andnot_si128(vii, _mm_srli_epi64(vii, 1)),
                                 *iivp++);
@@ -11197,7 +11184,8 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         loadbuf_alias32 = (uint32_t*) loadbuf;
         sample_include_quaterarr_alias32 = (uint32_t*) sample_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *loadbuf_alias32;
             ujj = ((uii >> 1) & (~uii)) & (*sample_include_quaterarr_alias32++);
             *loadbuf_alias32++ = uii - ujj;
@@ -11210,10 +11198,12 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         iicp = (unsigned char*) sample_include_quaterarr;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3)) {
+    if (!(((uintptr_t) loadbuf) & 3))
+    {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *loadbuf_alias32;
             ujj = ((uii >> 1) & (~uii)) & (*sample_include_quaterarr++);
             *loadbuf_alias32++ = uii - ujj;
@@ -11222,7 +11212,8 @@ void hh_reset(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     }
     iicp = (unsigned char*) sample_include_quaterarr;
 #endif
-    for (; loadbuf < loadbuf_end;) {
+    for (; loadbuf < loadbuf_end;)
+    {
         ucc = *loadbuf;
         ucc2 = ((ucc >> 1) & (~ucc)) & (*iicp++);
         *loadbuf++ = ucc - ucc2;
@@ -11255,12 +11246,14 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     __m128i vii;
     __m128i vjj;
     __m128i vkk;
-    if (!(((uintptr_t) loadbuf) & 15)) {
+    if (!(((uintptr_t) loadbuf) & 15))
+    {
         loadbuf_alias = (__m128i*) loadbuf;
         iivp = (__m128i*) sample_include_quaterarr;
         imivp = (__m128i*) sample_male_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             // sample_include_quaterarr & ~sample_male_include_quaterarr: force
             // to 01 sample_male_include_quaterarr: convert 10 to 01, keep
             // everything else
@@ -11286,7 +11279,8 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         sample_male_include_quaterarr_alias32 =
             (uint32_t*) sample_male_include_quaterarr;
         unfiltered_sample_ctd = unfiltered_sample_ct / 16;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *sample_male_include_quaterarr_alias32++;
             ujj = *sample_include_quaterarr_alias32++;
             ukk = (*loadbuf_alias32) & (uii * 3);
@@ -11303,10 +11297,12 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
         imicp = (unsigned char*) sample_male_include_quaterarr;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3)) {
+    if (!(((uintptr_t) loadbuf) & 3))
+    {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / 16;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *sample_male_include_quaterarr++;
             ujj = *sample_include_quaterarr++;
             ukk = (*loadbuf_alias32) & (uii * 3);
@@ -11318,7 +11314,8 @@ void hh_reset_y(unsigned char* loadbuf, uintptr_t* sample_include_quaterarr,
     iicp = (unsigned char*) sample_include_quaterarr;
     imicp = (unsigned char*) sample_male_include_quaterarr;
 #endif
-    for (; loadbuf < loadbuf_end;) {
+    for (; loadbuf < loadbuf_end;)
+    {
         ucc = *imicp++;
         ucc2 = *iicp++;
         ucc3 = (*loadbuf) & (ucc * 3);
@@ -11336,13 +11333,13 @@ alloc_raw_haploid_filters(uint32_t unfiltered_sample_ct, uint32_t hh_exists,
     uintptr_t unfiltered_sample_ctv2 =
         QUATERCT_TO_ALIGNED_WORDCT(unfiltered_sample_ct);
     uintptr_t* sample_raw_male_include_quatervec;
-    if (hh_exists & (Y_FIX_NEEDED | NXMHH_EXISTS)) {
+    if (hh_exists & (Y_FIX_NEEDED | NXMHH_EXISTS))
+    {
         if (bigstack_alloc_ul(unfiltered_sample_ctv2,
                               sample_raw_include_quatervec_ptr))
+        { return 1; }
+        if (is_include)
         {
-            return 1;
-        }
-        if (is_include) {
             init_quaterarr_from_bitarr(sample_bitarr, unfiltered_sample_ct,
                                        *sample_raw_include_quatervec_ptr);
         }
@@ -11353,22 +11350,23 @@ alloc_raw_haploid_filters(uint32_t unfiltered_sample_ct, uint32_t hh_exists,
                 *sample_raw_include_quatervec_ptr);
         }
     }
-    if (hh_exists & (XMHH_EXISTS | Y_FIX_NEEDED)) {
+    if (hh_exists & (XMHH_EXISTS | Y_FIX_NEEDED))
+    {
         if (bigstack_alloc_ul(unfiltered_sample_ctv2,
                               sample_raw_male_include_quatervec_ptr))
-        {
-            return 1;
-        }
+        { return 1; }
         sample_raw_male_include_quatervec =
             *sample_raw_male_include_quatervec_ptr;
-        if (hh_exists & (Y_FIX_NEEDED | NXMHH_EXISTS)) {
+        if (hh_exists & (Y_FIX_NEEDED | NXMHH_EXISTS))
+        {
             memcpy(sample_raw_male_include_quatervec,
                    *sample_raw_include_quatervec_ptr,
                    unfiltered_sample_ctv2 * sizeof(intptr_t));
         }
         else
         {
-            if (is_include) {
+            if (is_include)
+            {
                 init_quaterarr_from_bitarr(sample_bitarr, unfiltered_sample_ct,
                                            sample_raw_male_include_quatervec);
             }
@@ -11405,7 +11403,8 @@ void haploid_fix_multiple(
     uintptr_t chrom_end;
     uintptr_t marker_idx_chrom_end;
 
-    while (marker_idx < marker_ct) {
+    while (marker_idx < marker_ct)
+    {
         chrom_idx = chrom_info_ptr->chrom_file_order[chrom_fo_idx];
         chrom_end = chrom_info_ptr->chrom_fo_vidx_start[chrom_fo_idx + 1];
         is_x = (chrom_info_ptr->xymt_codes[X_OFFSET] == (int32_t) chrom_idx);
@@ -11415,13 +11414,16 @@ void haploid_fix_multiple(
         marker_idx_chrom_end =
             marker_idx + chrom_end - marker_uidx
             - popcount_bit_idx(marker_exclude, marker_uidx, chrom_end);
-        if (marker_idx_chrom_end > marker_ct) {
-            marker_idx_chrom_end = marker_ct;
-        }
-        if (is_haploid && set_hh_missing) {
-            if (is_x) {
-                if (hh_exists & XMHH_EXISTS) {
-                    for (; marker_idx < marker_idx_chrom_end; marker_idx++) {
+        if (marker_idx_chrom_end > marker_ct)
+        { marker_idx_chrom_end = marker_ct; }
+        if (is_haploid && set_hh_missing)
+        {
+            if (is_x)
+            {
+                if (hh_exists & XMHH_EXISTS)
+                {
+                    for (; marker_idx < marker_idx_chrom_end; marker_idx++)
+                    {
                         hh_reset(&(loadbuf[marker_idx * byte_ct_per_marker]),
                                  sample_raw_male_include2,
                                  unfiltered_sample_ct);
@@ -11430,8 +11432,10 @@ void haploid_fix_multiple(
             }
             else if (is_y)
             {
-                if (hh_exists & Y_FIX_NEEDED) {
-                    for (; marker_idx < marker_idx_chrom_end; marker_idx++) {
+                if (hh_exists & Y_FIX_NEEDED)
+                {
+                    for (; marker_idx < marker_idx_chrom_end; marker_idx++)
+                    {
                         hh_reset_y(&(loadbuf[marker_idx * byte_ct_per_marker]),
                                    sample_raw_include2,
                                    sample_raw_male_include2,
@@ -11441,7 +11445,8 @@ void haploid_fix_multiple(
             }
             else if (hh_exists & NXMHH_EXISTS)
             {
-                for (; marker_idx < marker_idx_chrom_end; marker_idx++) {
+                for (; marker_idx < marker_idx_chrom_end; marker_idx++)
+                {
                     hh_reset(&(loadbuf[marker_idx * byte_ct_per_marker]),
                              sample_raw_include2, unfiltered_sample_ct);
                 }
@@ -11449,7 +11454,8 @@ void haploid_fix_multiple(
         }
         else if (is_mt && set_mixed_mt_missing)
         {
-            for (; marker_idx < marker_idx_chrom_end; marker_idx++) {
+            for (; marker_idx < marker_idx_chrom_end; marker_idx++)
+            {
                 hh_reset(&(loadbuf[marker_idx * byte_ct_per_marker]),
                          sample_raw_include2, unfiltered_sample_ct);
             }
@@ -11477,11 +11483,13 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
     __m128i* fmivp;
     __m128i vii;
     __m128i vjj;
-    if (!(((uintptr_t) loadbuf) & 15)) {
+    if (!(((uintptr_t) loadbuf) & 15))
+    {
         loadbuf_alias = (__m128i*) loadbuf;
         fmivp = (__m128i*) force_missing_include2;
         unfiltered_sample_ctd = unfiltered_sample_ct / 64;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             vii = *loadbuf_alias;
             vjj = *fmivp++;
             vii = _mm_or_si128(vii, vjj);
@@ -11496,7 +11504,8 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
         loadbuf_alias32 = (uint32_t*) loadbuf;
         force_missing_include2_alias32 = (uint32_t*) force_missing_include2;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *loadbuf_alias32;
             ujj = *force_missing_include2_alias32++;
             uii |= ujj;
@@ -11511,10 +11520,12 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
         fmicp = (unsigned char*) force_missing_include2;
     }
 #else
-    if (!(((uintptr_t) loadbuf) & 3)) {
+    if (!(((uintptr_t) loadbuf) & 3))
+    {
         loadbuf_alias32 = (uint32_t*) loadbuf;
         unfiltered_sample_ctd = unfiltered_sample_ct / BITCT2;
-        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++) {
+        for (; sample_bidx < unfiltered_sample_ctd; sample_bidx++)
+        {
             uii = *loadbuf_alias32;
             ujj = *force_missing_include2++;
             uii |= ujj;
@@ -11525,7 +11536,8 @@ void force_missing(unsigned char* loadbuf, uintptr_t* force_missing_include2,
     }
     fmicp = (unsigned char*) force_missing_include2;
 #endif
-    for (; loadbuf < loadbuf_end;) {
+    for (; loadbuf < loadbuf_end;)
+    {
         ucc = *loadbuf;
         ucc2 = *fmicp++;
         ucc |= ucc2;
@@ -11545,35 +11557,31 @@ int32_t open_and_size_string_list(char* fname, FILE** infile_ptr,
     int32_t retval = 0;
     char* bufptr;
     uint32_t cur_len;
-    if (fopen_checked(fname, "r", infile_ptr)) {
-        goto open_and_size_string_list_ret_OPEN_FAIL;
-    }
+    if (fopen_checked(fname, "r", infile_ptr))
+    { goto open_and_size_string_list_ret_OPEN_FAIL; }
     g_textbuf[MAXLINELEN - 1] = ' ';
-    while (fgets(g_textbuf, MAXLINELEN, *infile_ptr)) {
+    while (fgets(g_textbuf, MAXLINELEN, *infile_ptr))
+    {
         line_idx++;
-        if (!g_textbuf[MAXLINELEN - 1]) {
+        if (!g_textbuf[MAXLINELEN - 1])
+        {
             LOGERRPRINTFWW("Error: Line %" PRIuPTR
                            " of %s is pathologically long.\n",
                            line_idx, fname);
             goto open_and_size_string_list_ret_INVALID_FORMAT;
         }
         bufptr = skip_initial_spaces(g_textbuf);
-        if (is_eoln_kns(*bufptr)) {
-            continue;
-        }
+        if (is_eoln_kns(*bufptr)) { continue; }
         // don't complain about more than one entry on a line for now
         list_len++;
         cur_len = strlen_se(bufptr);
-        if (cur_len >= max_len) {
-            max_len = cur_len + 1;
-        }
+        if (cur_len >= max_len) { max_len = cur_len + 1; }
     }
-    if (!feof(*infile_ptr)) {
-        goto open_and_size_string_list_ret_READ_FAIL;
-    }
+    if (!feof(*infile_ptr)) { goto open_and_size_string_list_ret_READ_FAIL; }
     *list_len_ptr = list_len;
     *max_str_len_ptr = max_len;
-    while (0) {
+    while (0)
+    {
     open_and_size_string_list_ret_OPEN_FAIL:
         retval = RET_OPEN_FAIL;
         break;
@@ -11596,20 +11604,18 @@ int32_t load_string_list(FILE** infile_ptr, uintptr_t max_str_len,
     char* bufptr;
     uint32_t cur_len;
     rewind(*infile_ptr);
-    while (fgets(g_textbuf, MAXLINELEN, *infile_ptr)) {
+    while (fgets(g_textbuf, MAXLINELEN, *infile_ptr))
+    {
         bufptr = skip_initial_spaces(g_textbuf);
-        if (is_eoln_kns(*bufptr)) {
-            continue;
-        }
+        if (is_eoln_kns(*bufptr)) { continue; }
         cur_len = strlen_se(bufptr);
         memcpy(str_list, bufptr, cur_len);
         str_list[cur_len] = '\0';
         str_list = &(str_list[max_str_len]);
     }
-    if (!feof(*infile_ptr)) {
-        goto load_string_list_ret_READ_FAIL;
-    }
-    while (0) {
+    if (!feof(*infile_ptr)) { goto load_string_list_ret_READ_FAIL; }
+    while (0)
+    {
     load_string_list_ret_READ_FAIL:
         retval = RET_READ_FAIL;
         break;
@@ -11623,12 +11629,13 @@ int32_t open_and_skip_first_lines(FILE** infile_ptr, char* fname, char* loadbuf,
 {
     uint32_t line_idx;
     loadbuf[loadbuf_size - 1] = ' ';
-    if (fopen_checked(fname, "r", infile_ptr)) {
-        return RET_OPEN_FAIL;
-    }
-    for (line_idx = 1; line_idx <= lines_to_skip; line_idx++) {
-        if (!fgets(loadbuf, loadbuf_size, *infile_ptr)) {
-            if (feof(*infile_ptr)) {
+    if (fopen_checked(fname, "r", infile_ptr)) { return RET_OPEN_FAIL; }
+    for (line_idx = 1; line_idx <= lines_to_skip; line_idx++)
+    {
+        if (!fgets(loadbuf, loadbuf_size, *infile_ptr))
+        {
+            if (feof(*infile_ptr))
+            {
                 LOGERRPRINTFWW("Error: Fewer lines than expected in %s.\n",
                                fname);
                 return RET_INVALID_FORMAT;
@@ -11638,7 +11645,8 @@ int32_t open_and_skip_first_lines(FILE** infile_ptr, char* fname, char* loadbuf,
                 return RET_READ_FAIL;
             }
         }
-        if (!(loadbuf[loadbuf_size - 1])) {
+        if (!(loadbuf[loadbuf_size - 1]))
+        {
             if ((loadbuf_size == MAXLINELEN) || (loadbuf_size == MAXLINEBUFLEN))
             {
                 LOGERRPRINTFWW("Error: Line %u of %s is pathologically long.\n",
@@ -11660,9 +11668,11 @@ int32_t load_to_first_token(FILE* infile, uintptr_t loadbuf_size,
                             uintptr_t* line_idx_ptr)
 {
     uintptr_t line_idx = 0;
-    while (fgets(loadbuf, loadbuf_size, infile)) {
+    while (fgets(loadbuf, loadbuf_size, infile))
+    {
         line_idx++;
-        if (!(loadbuf[loadbuf_size - 1])) {
+        if (!(loadbuf[loadbuf_size - 1]))
+        {
             // PLINK 1.9 has two text line loading modes: "regular" and "long".
             // * "Regular" mode limits lines to about MAXLINELEN (about 128k as
             // of
@@ -11687,16 +11697,16 @@ int32_t load_to_first_token(FILE* infile, uintptr_t loadbuf_size,
             }
         }
         *bufptr_ptr = skip_initial_spaces(loadbuf);
-        if (!is_eoln_kns(**bufptr_ptr)) {
-            if ((**bufptr_ptr) != comment_char) {
+        if (!is_eoln_kns(**bufptr_ptr))
+        {
+            if ((**bufptr_ptr) != comment_char)
+            {
                 *line_idx_ptr = line_idx;
                 return 0;
             }
         }
     }
-    if (!feof(infile)) {
-        return RET_READ_FAIL;
-    }
+    if (!feof(infile)) { return RET_READ_FAIL; }
     LOGERRPRINTF("Error: Empty %s.\n", file_descrip);
     return RET_INVALID_FORMAT;
 }
@@ -11707,9 +11717,7 @@ int32_t open_and_load_to_first_token(FILE** infile_ptr, char* fname,
                                      char** bufptr_ptr, uintptr_t* line_idx_ptr)
 {
     loadbuf[loadbuf_size - 1] = ' ';
-    if (fopen_checked(fname, "r", infile_ptr)) {
-        return RET_OPEN_FAIL;
-    }
+    if (fopen_checked(fname, "r", infile_ptr)) { return RET_OPEN_FAIL; }
     return load_to_first_token(*infile_ptr, loadbuf_size, comment_char,
                                file_descrip, loadbuf, bufptr_ptr, line_idx_ptr);
 }
@@ -11734,19 +11742,16 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
     uintptr_t cur_str_len;
     uintptr_t line_idx;
     int32_t retval;
-    if (loadbuf_size > MAXLINEBUFLEN) {
-        loadbuf_size = MAXLINEBUFLEN;
-    }
+    if (loadbuf_size > MAXLINEBUFLEN) { loadbuf_size = MAXLINEBUFLEN; }
     else if (loadbuf_size <= MAXLINELEN)
     {
         goto scan_max_strlen_ret_NOMEM;
     }
     retval = open_and_skip_first_lines(&infile, fname, loadbuf, loadbuf_size,
                                        headerskip);
-    if (retval) {
-        goto scan_max_strlen_ret_1;
-    }
-    if (colnum < colnum2) {
+    if (retval) { goto scan_max_strlen_ret_1; }
+    if (colnum < colnum2)
+    {
         max_str2_len = *max_str2_len_ptr;
         colmin = colnum - 1;
         coldiff = colnum2 - colnum;
@@ -11765,10 +11770,13 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
         colnum2 = 0xffffffffU;
     }
     line_idx = headerskip;
-    while (fgets(loadbuf, loadbuf_size, infile)) {
+    while (fgets(loadbuf, loadbuf_size, infile))
+    {
         line_idx++;
-        if (!(loadbuf[loadbuf_size - 1])) {
-            if (loadbuf_size == MAXLINEBUFLEN) {
+        if (!(loadbuf[loadbuf_size - 1]))
+        {
+            if (loadbuf_size == MAXLINEBUFLEN)
+            {
                 LOGPREPRINTFWW("Error: Line %" PRIuPTR
                                " of %s is pathologically long.\n",
                                line_idx, fname);
@@ -11781,12 +11789,11 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
         }
         str1_ptr = skip_initial_spaces(loadbuf);
         cc = *str1_ptr;
-        if (is_eoln_kns(cc) || (cc == skipchar)) {
-            continue;
-        }
+        if (is_eoln_kns(cc) || (cc == skipchar)) { continue; }
         str1_ptr = next_token_multz(str1_ptr, colmin);
         str2_ptr = next_token_multz(str1_ptr, coldiff);
-        if (no_more_tokens_kns(str2_ptr)) {
+        if (no_more_tokens_kns(str2_ptr))
+        {
             // probably want option for letting this slide in the future
             LOGPREPRINTFWW("Error: Line %" PRIuPTR
                            " of %s has fewer tokens than expected.\n",
@@ -11794,31 +11801,26 @@ int32_t scan_max_strlen(char* fname, uint32_t colnum, uint32_t colnum2,
             goto scan_max_strlen_ret_INVALID_FORMAT_2;
         }
         cur_str_len = strlen_se(str1_ptr);
-        if (cur_str_len >= max_str_len) {
-            max_str_len = cur_str_len + 1;
-        }
-        if (coldiff) {
+        if (cur_str_len >= max_str_len) { max_str_len = cur_str_len + 1; }
+        if (coldiff)
+        {
             cur_str_len = strlen_se(str2_ptr);
-            if (cur_str_len >= max_str2_len) {
-                max_str2_len = cur_str_len + 1;
-            }
+            if (cur_str_len >= max_str2_len) { max_str2_len = cur_str_len + 1; }
         }
     }
-    if (!feof(infile)) {
-        goto scan_max_strlen_ret_READ_FAIL;
-    }
-    if (colnum < colnum2) {
+    if (!feof(infile)) { goto scan_max_strlen_ret_READ_FAIL; }
+    if (colnum < colnum2)
+    {
         *max_str_len_ptr = max_str_len;
-        if (coldiff) {
-            *max_str2_len_ptr = max_str2_len;
-        }
+        if (coldiff) { *max_str2_len_ptr = max_str2_len; }
     }
     else
     {
         *max_str_len_ptr = max_str2_len;
         *max_str2_len_ptr = max_str_len;
     }
-    while (0) {
+    while (0)
+    {
     scan_max_strlen_ret_NOMEM:
         retval = RET_NOMEM;
         break;
@@ -11851,22 +11853,21 @@ int32_t scan_max_fam_indiv_strlen(char* fname, uint32_t colnum,
     uintptr_t cur_sample_id_len;
     int32_t retval;
     colnum--;
-    if (loadbuf_size > MAXLINEBUFLEN) {
-        loadbuf_size = MAXLINEBUFLEN;
-    }
+    if (loadbuf_size > MAXLINEBUFLEN) { loadbuf_size = MAXLINEBUFLEN; }
     else if (loadbuf_size <= MAXLINELEN)
     {
         goto scan_max_fam_indiv_strlen_ret_NOMEM;
     }
     retval =
         open_and_skip_first_lines(&infile, fname, loadbuf, loadbuf_size, 0);
-    if (retval) {
-        goto scan_max_fam_indiv_strlen_ret_1;
-    }
-    while (fgets(loadbuf, loadbuf_size, infile)) {
+    if (retval) { goto scan_max_fam_indiv_strlen_ret_1; }
+    while (fgets(loadbuf, loadbuf_size, infile))
+    {
         line_idx++;
-        if (!(loadbuf[loadbuf_size - 1])) {
-            if (loadbuf_size == MAXLINEBUFLEN) {
+        if (!(loadbuf[loadbuf_size - 1]))
+        {
+            if (loadbuf_size == MAXLINEBUFLEN)
+            {
                 LOGPREPRINTFWW("Error: Line %" PRIuPTR
                                " of %s is pathologically long.\n",
                                line_idx, fname);
@@ -11878,27 +11879,24 @@ int32_t scan_max_fam_indiv_strlen(char* fname, uint32_t colnum,
             }
         }
         bufptr = skip_initial_spaces(loadbuf);
-        if (is_eoln_kns(*bufptr)) {
-            continue;
-        }
+        if (is_eoln_kns(*bufptr)) { continue; }
         bufptr = next_token_multz(bufptr, colnum);
         bufptr2 = next_token(bufptr);
-        if (no_more_tokens_kns(bufptr2)) {
+        if (no_more_tokens_kns(bufptr2))
+        {
             LOGPREPRINTFWW("Error: Line %" PRIuPTR
                            " of %s has fewer tokens than expected.\n",
                            line_idx, fname);
             goto scan_max_fam_indiv_strlen_ret_INVALID_FORMAT_2;
         }
         cur_sample_id_len = strlen_se(bufptr) + strlen_se(bufptr2) + 2;
-        if (cur_sample_id_len > max_sample_id_len) {
-            max_sample_id_len = cur_sample_id_len;
-        }
+        if (cur_sample_id_len > max_sample_id_len)
+        { max_sample_id_len = cur_sample_id_len; }
     }
-    if (!feof(infile)) {
-        goto scan_max_fam_indiv_strlen_ret_READ_FAIL;
-    }
+    if (!feof(infile)) { goto scan_max_fam_indiv_strlen_ret_READ_FAIL; }
     *max_sample_id_len_ptr = max_sample_id_len;
-    while (0) {
+    while (0)
+    {
     scan_max_fam_indiv_strlen_ret_NOMEM:
         retval = RET_NOMEM;
         break;
@@ -11932,12 +11930,11 @@ filtered_ct) { return;
 void inplace_collapse_uint32_incl(uint32_t* item_arr, uint32_t unfiltered_ct,
                                   uintptr_t* incl_arr, uint32_t filtered_ct)
 {
-    if (unfiltered_ct == filtered_ct) {
-        return;
-    }
+    if (unfiltered_ct == filtered_ct) { return; }
     uint32_t item_uidx = next_unset_unsafe(incl_arr, 0);
     uint32_t item_idx = item_uidx;
-    for (; item_idx < filtered_ct; item_idx++, item_uidx++) {
+    for (; item_idx < filtered_ct; item_idx++, item_uidx++)
+    {
         next_set_unsafe_ck(incl_arr, &item_uidx);
         item_arr[item_idx] = item_arr[item_uidx];
     }
@@ -11954,15 +11951,12 @@ char* alloc_and_init_collapsed_arr(char* item_arr, uintptr_t item_len,
     char* wptr_end;
     uintptr_t item_uidx_stop;
     uintptr_t delta;
-    if (read_only && (unfiltered_ct == filtered_ct)) {
-        return item_arr;
-    }
-    if (bigstack_alloc_c(filtered_ct * item_len, &new_arr)) {
-        return nullptr;
-    }
+    if (read_only && (unfiltered_ct == filtered_ct)) { return item_arr; }
+    if (bigstack_alloc_c(filtered_ct * item_len, &new_arr)) { return nullptr; }
     wptr = new_arr;
     wptr_end = &(new_arr[filtered_ct * item_len]);
-    while (wptr < wptr_end) {
+    while (wptr < wptr_end)
+    {
         item_uidx = next_unset_ul_unsafe(exclude_arr, item_uidx);
         item_uidx_stop = next_set_ul(exclude_arr, item_uidx, unfiltered_ct);
         delta = item_uidx_stop - item_uidx;
@@ -11985,12 +11979,8 @@ char* alloc_and_init_collapsed_arr_incl(char* item_arr, uintptr_t item_len,
     char* wptr_end;
     uintptr_t item_uidx_stop;
     uintptr_t delta;
-    if (read_only && (unfiltered_ct == filtered_ct)) {
-        return item_arr;
-    }
-    if (bigstack_alloc_c(filtered_ct * item_len, &new_arr)) {
-        return nullptr;
-    }
+    if (read_only && (unfiltered_ct == filtered_ct)) { return item_arr; }
+    if (bigstack_alloc_c(filtered_ct * item_len, &new_arr)) { return nullptr; }
     wptr = new_arr;
     wptr_end = &(new_arr[filtered_ct * item_len]);
     do
@@ -12021,16 +12011,13 @@ void inplace_delta_collapse_arr(char* item_arr, uintptr_t item_len,
     uintptr_t uljj;
     uint32_t read_uidx;
     uint32_t ujj;
-    if (filtered_ct_new == filtered_ct_orig) {
-        return;
-    }
+    if (filtered_ct_new == filtered_ct_orig) { return; }
     // find location of first newly excluded item
-    while (1) {
+    while (1)
+    {
         ulii = *exclude_orig;
         uljj = *exclude_new;
-        if (ulii != uljj) {
-            break;
-        }
+        if (ulii != uljj) { break; }
         uii += popcount_long(ulii);
         exclude_orig++;
         exclude_new++;
@@ -12045,11 +12032,10 @@ void inplace_delta_collapse_arr(char* item_arr, uintptr_t item_len,
     item_arr = &(item_arr[uii * item_len]);
     write_ptr = item_arr;
     read_uidx++;
-    for (; write_ptr < write_end; read_uidx++, read_idx++) {
+    for (; write_ptr < write_end; read_uidx++, read_idx++)
+    {
         next_unset_unsafe_ck(exclude_orig_start, &read_uidx);
-        if (IS_SET(exclude_new, read_uidx)) {
-            continue;
-        }
+        if (IS_SET(exclude_new, read_uidx)) { continue; }
         memcpy(write_ptr, &(item_arr[read_idx * item_len]), item_len);
         write_ptr = &(write_ptr[item_len]);
     }
@@ -12068,27 +12054,29 @@ void inplace_delta_collapse_bitfield(uintptr_t* read_ptr,
     uint32_t item_uidx = 0;
     uint32_t item_mwidx = 0;
     uint32_t item_idx = 0;
-    for (; item_idx < filtered_ct_new; item_uidx++) {
+    for (; item_idx < filtered_ct_new; item_uidx++)
+    {
         next_unset_unsafe_ck(exclude_orig, &item_uidx);
-        if (!is_set(exclude_new, item_uidx)) {
-            if ((readw >> item_mwidx) & 1) {
-                writew |= ONELU << (item_idx % BITCT);
-            }
-            if (!((++item_idx) % BITCT)) {
+        if (!is_set(exclude_new, item_uidx))
+        {
+            if ((readw >> item_mwidx) & 1)
+            { writew |= ONELU << (item_idx % BITCT); }
+            if (!((++item_idx) % BITCT))
+            {
                 *write_ptr++ = writew;
                 writew = 0;
             }
         }
-        if (++item_mwidx == BITCT) {
+        if (++item_mwidx == BITCT)
+        {
             item_mwidx = 0;
             readw = *read_ptr++;
         }
     }
-    if (write_ptr < read_ptr) {
+    if (write_ptr < read_ptr)
+    {
         *write_ptr++ = writew;
-        if (write_ptr < read_ptr) {
-            *write_ptr = 0;
-        }
+        if (write_ptr < read_ptr) { *write_ptr = 0; }
     }
 }
 
@@ -12102,14 +12090,16 @@ void copy_bitarr_subset_excl(const uintptr_t* __restrict raw_bitarr,
     uint32_t write_bit = 0;
     uint32_t item_idx = 0;
     uint32_t item_uidx_stop;
-    if (!subset_excl[0]) {
+    if (!subset_excl[0])
+    {
         item_uidx = next_set(subset_excl, 0, raw_bitarr_size & (~(BITCT - 1)))
                     & (~(BITCT - 1));
         memcpy(output_bitarr, raw_bitarr, item_uidx / 8);
         item_idx = item_uidx;
         output_bitarr = &(output_bitarr[item_uidx / BITCT]);
     }
-    while (item_idx < subset_size) {
+    while (item_idx < subset_size)
+    {
         item_uidx = next_unset_unsafe(subset_excl, item_uidx);
         item_uidx_stop = next_set(subset_excl, item_uidx, raw_bitarr_size);
         item_idx += item_uidx_stop - item_uidx;
@@ -12118,16 +12108,15 @@ void copy_bitarr_subset_excl(const uintptr_t* __restrict raw_bitarr,
             cur_write |=
                 ((raw_bitarr[item_uidx / BITCT] >> (item_uidx % BITCT)) & 1)
                 << write_bit;
-            if (++write_bit == BITCT) {
+            if (++write_bit == BITCT)
+            {
                 *output_bitarr++ = cur_write;
                 cur_write = 0;
                 write_bit = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
-    if (write_bit) {
-        *output_bitarr = cur_write;
-    }
+    if (write_bit) { *output_bitarr = cur_write; }
 }
 
 void copy_bitarr_subset(const uintptr_t* __restrict raw_bitarr,
@@ -12142,14 +12131,16 @@ void copy_bitarr_subset(const uintptr_t* __restrict raw_bitarr,
     uint32_t word_write_shift = 0;
     uint32_t item_idx = 0;
     uint32_t item_uidx_stop;
-    if (!(~subset_mask[0])) {
+    if (!(~subset_mask[0]))
+    {
         item_uidx = next_unset(subset_mask, 0, raw_bitarr_size & (~(BITCT - 1)))
                     & (~(BITCT - 1));
         memcpy(output_bitarr, raw_bitarr, item_uidx / 8);
         item_idx = item_uidx;
         output_bitarr = &(output_bitarr[item_uidx / BITCT]);
     }
-    while (item_idx < subset_size) {
+    while (item_idx < subset_size)
+    {
         item_uidx = next_set_unsafe(subset_mask, item_uidx);
 
         // can speed this up a bit once we have a guaranteed unset bit at the
@@ -12162,16 +12153,15 @@ void copy_bitarr_subset(const uintptr_t* __restrict raw_bitarr,
             cur_output_word |=
                 ((raw_bitarr[item_uidx / BITCT] >> (item_uidx % BITCT)) & 1)
                 << word_write_shift;
-            if (++word_write_shift == BITCT) {
+            if (++word_write_shift == BITCT)
+            {
                 *output_bitarr++ = cur_output_word;
                 cur_output_word = 0;
                 word_write_shift = 0;
             }
         } while (++item_uidx < item_uidx_stop);
     }
-    if (word_write_shift) {
-        *output_bitarr = cur_output_word;
-    }
+    if (word_write_shift) { *output_bitarr = cur_output_word; }
 }
 
 void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
@@ -12188,25 +12178,29 @@ void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
     uint32_t write_bit;
     uintptr_t cur_write;
     uintptr_t cur_read = 0;
-    if (!exclude_arr[0]) {
+    if (!exclude_arr[0])
+    {
         // copy-with-possible-offset is substantially slower, so treat initial
         // lack of offset as a special case
-        for (cur_read = 0; cur_read < unfiltered_ctl; cur_read++) {
+        for (cur_read = 0; cur_read < unfiltered_ctl; cur_read++)
+        {
             *output_exclude_arr++ = ~(*collapsed_include_arr++);
-            if (*(++exclude_arr)) {
-                break;
-            }
+            if (*(++exclude_arr)) { break; }
         }
     }
-    while (output_exclude_arr < output_exclude_end) {
+    while (output_exclude_arr < output_exclude_end)
+    {
         cur_write = *exclude_arr++;
         // want efficient handling of all-zeroes and all-ones here
-        if (cur_write) {
+        if (cur_write)
+        {
             cur_read = ~cur_write;
         uncollapse_copy_flip_include_arr_loop:
-            while (cur_read) {
+            while (cur_read)
+            {
                 write_bit = CTZLU(cur_read);
-                if (read_bit == BITCT) {
+                if (read_bit == BITCT)
+                {
                     cea_read = ~(*collapsed_include_arr++);
                     read_bit = 0;
                 }
@@ -12219,9 +12213,8 @@ void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
         }
         else
         {
-            if (read_bit == BITCT) {
-                *output_exclude_arr = ~(*collapsed_include_arr++);
-            }
+            if (read_bit == BITCT)
+            { *output_exclude_arr = ~(*collapsed_include_arr++); }
             else
             {
                 cur_write = cea_read;
@@ -12233,7 +12226,8 @@ void uncollapse_copy_flip_include_arr(uintptr_t* collapsed_include_arr,
         }
         output_exclude_arr++;
     }
-    if (output_exclude_arr < output_exclude_true_end) {
+    if (output_exclude_arr < output_exclude_true_end)
+    {
         cur_write = *exclude_arr++;
         cur_read = (~cur_write) & ((ONELU << (unfiltered_ct % BITCT)) - ONELU);
         goto uncollapse_copy_flip_include_arr_loop;
@@ -12251,7 +12245,8 @@ void copy_when_nonmissing(uintptr_t* loadbuf, char* source, uintptr_t elem_size,
     uintptr_t cur_word;
     uintptr_t new_missing_idx;
     uintptr_t diff;
-    if (!missing_ct) {
+    if (!missing_ct)
+    {
         memcpy(dest, source, unfiltered_sample_ct * elem_size);
         return;
     }
@@ -12259,10 +12254,12 @@ void copy_when_nonmissing(uintptr_t* loadbuf, char* source, uintptr_t elem_size,
     {
         cur_word = *loadbuf++;
         cur_word = cur_word & (~(cur_word >> 1)) & FIVEMASK;
-        while (cur_word) {
+        while (cur_word)
+        {
             new_missing_idx = sample_idx_offset + (CTZLU(cur_word) / 2);
             diff = new_missing_idx - last_missing_p1;
-            if (diff) {
+            if (diff)
+            {
                 dest = memcpya(dest, &(source[last_missing_p1 * elem_size]),
                                diff * elem_size);
             }
@@ -12272,7 +12269,8 @@ void copy_when_nonmissing(uintptr_t* loadbuf, char* source, uintptr_t elem_size,
         sample_idx_offset += BITCT2;
     } while (loadbuf < loadbuf_end);
     diff = unfiltered_sample_ct - last_missing_p1;
-    if (diff) {
+    if (diff)
+    {
         memcpy(dest, &(source[last_missing_p1 * elem_size]), diff * elem_size);
     }
 }
@@ -12286,21 +12284,20 @@ uint32_t collapse_duplicate_ids(char* sorted_ids, uintptr_t id_ct,
     // Returns id_ct of collapsed array.
     uintptr_t read_idx;
     uintptr_t write_idx;
-    if (!id_ct) {
-        return 0;
-    }
-    if (id_starts) {
+    if (!id_ct) { return 0; }
+    if (id_starts)
+    {
         id_starts[0] = 0;
-        for (read_idx = 1; read_idx < id_ct; read_idx++) {
+        for (read_idx = 1; read_idx < id_ct; read_idx++)
+        {
             if (!strcmp(&(sorted_ids[(read_idx - 1) * max_id_len]),
                         &(sorted_ids[read_idx * max_id_len])))
-            {
-                break;
-            }
+            { break; }
             id_starts[read_idx] = read_idx;
         }
         write_idx = read_idx;
-        while (++read_idx < id_ct) {
+        while (++read_idx < id_ct)
+        {
             if (strcmp(&(sorted_ids[(write_idx - 1) * max_id_len]),
                        &(sorted_ids[read_idx * max_id_len])))
             {
@@ -12312,15 +12309,15 @@ uint32_t collapse_duplicate_ids(char* sorted_ids, uintptr_t id_ct,
     }
     else
     {
-        for (read_idx = 1; read_idx < id_ct; read_idx++) {
+        for (read_idx = 1; read_idx < id_ct; read_idx++)
+        {
             if (!strcmp(&(sorted_ids[(read_idx - 1) * max_id_len]),
                         &(sorted_ids[read_idx * max_id_len])))
-            {
-                break;
-            }
+            { break; }
         }
         write_idx = read_idx;
-        while (++read_idx < id_ct) {
+        while (++read_idx < id_ct)
+        {
             if (strcmp(&(sorted_ids[(write_idx - 1) * max_id_len]),
                        &(sorted_ids[read_idx * max_id_len])))
             {
@@ -12384,7 +12381,8 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
     double adiv3 = coef_a * (1.0 / 3.0);
     double sq;
     double dxx;
-    if (r2 < q3) {
+    if (r2 < q3)
+    {
         // three real roots
         sq = sqrt(qq);
         dxx = acos(rr / (qq * sq)) * (1.0 / 3.0);
@@ -12393,10 +12391,12 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
         solutions[1] = sq * cos(dxx + (2.0 * PI / 3.0)) - adiv3;
         solutions[2] = sq * cos(dxx - (2.0 * PI / 3.0)) - adiv3;
         // now sort and check for within-epsilon equality
-        if (solutions[0] > solutions[1]) {
+        if (solutions[0] > solutions[1])
+        {
             dxx = solutions[0];
             solutions[0] = solutions[1];
-            if (dxx > solutions[2]) {
+            if (dxx > solutions[2])
+            {
                 solutions[1] = solutions[2];
                 solutions[2] = dxx;
             }
@@ -12404,7 +12404,8 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
             {
                 solutions[1] = dxx;
             }
-            if (solutions[0] > solutions[1]) {
+            if (solutions[0] > solutions[1])
+            {
                 dxx = solutions[0];
                 solutions[0] = solutions[1];
                 solutions[1] = dxx;
@@ -12416,27 +12417,26 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
             solutions[1] = solutions[2];
             solutions[2] = dxx;
         }
-        if (solutions[1] - solutions[0] < EPSILON) {
+        if (solutions[1] - solutions[0] < EPSILON)
+        {
             solutions[1] = solutions[2];
             return (solutions[1] - solutions[0] < EPSILON) ? 1 : 2;
         }
         return (solutions[2] - solutions[1] < EPSILON) ? 2 : 3;
     }
     dxx = -pow(fabs(rr) + sqrt(r2 - q3), 1.0 / 3.0);
-    if (dxx == 0.0) {
+    if (dxx == 0.0)
+    {
         solutions[0] = -adiv3;
         return 1;
     }
-    if (rr < 0.0) {
-        dxx = -dxx;
-    }
+    if (rr < 0.0) { dxx = -dxx; }
     sq = qq / dxx;
     solutions[0] = dxx + sq - adiv3;
     // use of regular epsilon here has actually burned us
-    if (fabs(dxx - sq) >= (EPSILON * 8)) {
-        return 1;
-    }
-    if (dxx >= 0.0) {
+    if (fabs(dxx - sq) >= (EPSILON * 8)) { return 1; }
+    if (dxx >= 0.0)
+    {
         solutions[1] = solutions[0];
         solutions[0] = -dxx - adiv3;
     }
@@ -12449,18 +12449,13 @@ uint32_t cubic_real_roots(double coef_a, double coef_b, double coef_c,
 
 void join_threads(pthread_t* threads, uint32_t ctp1)
 {
-    if (!(--ctp1)) {
-        return;
-    }
+    if (!(--ctp1)) { return; }
 #ifdef _WIN32
     WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
-    for (uint32_t uii = 0; uii < ctp1; ++uii) {
-        CloseHandle(threads[uii]);
-    }
+    for (uint32_t uii = 0; uii < ctp1; ++uii) { CloseHandle(threads[uii]); }
 #else
-    for (uint32_t uii = 0; uii < ctp1; uii++) {
-        pthread_join(threads[uii], nullptr);
-    }
+    for (uint32_t uii = 0; uii < ctp1; uii++)
+    { pthread_join(threads[uii], nullptr); }
 #endif
 }
 
@@ -12473,14 +12468,14 @@ int32_t spawn_threads(pthread_t* threads, void* (*start_routine)(void*),
 #endif
 {
     uintptr_t ulii;
-    if (ct == 1) {
-        return 0;
-    }
-    for (ulii = 1; ulii < ct; ulii++) {
+    if (ct == 1) { return 0; }
+    for (ulii = 1; ulii < ct; ulii++)
+    {
 #ifdef _WIN32
         threads[ulii - 1] = (HANDLE) _beginthreadex(
             nullptr, 4096, start_routine, (void*) ulii, 0, nullptr);
-        if (!threads[ulii - 1]) {
+        if (!threads[ulii - 1])
+        {
             join_threads(threads, ulii);
             return -1;
         }
@@ -12577,10 +12572,10 @@ void THREAD_BLOCK_FINISH(uintptr_t tidx)
 {
     uintptr_t initial_spawn_ct = g_thread_spawn_ct;
     pthread_mutex_lock(&g_thread_sync_mutex);
-    if (!(--g_thread_active_ct)) {
-        pthread_cond_signal(&g_thread_cur_block_done_condvar);
-    }
-    while (g_thread_spawn_ct == initial_spawn_ct) {
+    if (!(--g_thread_active_ct))
+    { pthread_cond_signal(&g_thread_cur_block_done_condvar); }
+    while (g_thread_spawn_ct == initial_spawn_ct)
+    {
         // spurious wakeup guard
         pthread_cond_wait(&g_thread_start_next_condvar, &g_thread_sync_mutex);
     }
@@ -12592,22 +12587,26 @@ static uint32_t g_thread_mutex_initialized = 0;
 void join_threads2(pthread_t* threads, uint32_t ctp1, uint32_t is_last_block)
 {
     uint32_t uii;
-    if (!(--ctp1)) {
-        if (is_last_block) {
+    if (!(--ctp1))
+    {
+        if (is_last_block)
+        {
             // allow another multithreaded function to be called later
             g_thread_mutex_initialized = 0;
         }
         return;
     }
 #ifdef _WIN32
-    if (!is_last_block) {
+    if (!is_last_block)
+    {
         WaitForMultipleObjects(ctp1, g_thread_cur_block_done_events, 1,
                                INFINITE);
     }
     else
     {
         WaitForMultipleObjects(ctp1, threads, 1, INFINITE);
-        for (uii = 0; uii < ctp1; uii++) {
+        for (uii = 0; uii < ctp1; uii++)
+        {
             CloseHandle(threads[uii]);
             CloseHandle(g_thread_start_next_event[uii]);
             CloseHandle(g_thread_cur_block_done_events[uii]);
@@ -12615,9 +12614,11 @@ void join_threads2(pthread_t* threads, uint32_t ctp1, uint32_t is_last_block)
         g_thread_mutex_initialized = 0;
     }
 #else
-    if (!is_last_block) {
+    if (!is_last_block)
+    {
         pthread_mutex_lock(&g_thread_sync_mutex);
-        while (g_thread_active_ct) {
+        while (g_thread_active_ct)
+        {
             pthread_cond_wait(&g_thread_cur_block_done_condvar,
                               &g_thread_sync_mutex);
         }
@@ -12625,9 +12626,8 @@ void join_threads2(pthread_t* threads, uint32_t ctp1, uint32_t is_last_block)
     }
     else
     {
-        for (uii = 0; uii < ctp1; uii++) {
-            pthread_join(threads[uii], nullptr);
-        }
+        for (uii = 0; uii < ctp1; uii++)
+        { pthread_join(threads[uii], nullptr); }
         // slightly inefficient if there are multiple multithreaded commands
         // being run, but if different commands require different numbers of
         // threads, optimizing this sort of thing away could introduce bugs...
@@ -12651,38 +12651,44 @@ int32_t spawn_threads2(pthread_t* threads, void* (*start_routine)(void*),
     uintptr_t ulii;
     // this needs to go before the ct == 1 check since start_routine() might
     // need it
-    if (g_is_last_thread_block != is_last_block) {
+    if (g_is_last_thread_block != is_last_block)
+    {
         // might save us an unnecessary memory write that confuses the cache
         // coherency logic?
         g_is_last_thread_block = is_last_block;
     }
 #ifdef _WIN32
-    if (!g_thread_mutex_initialized) {
+    if (!g_thread_mutex_initialized)
+    {
         g_thread_spawn_ct = 0;
         g_thread_mutex_initialized = 1;
-        if (ct == 1) {
-            return 0;
-        }
-        for (ulii = 1; ulii < ct; ulii++) {
+        if (ct == 1) { return 0; }
+        for (ulii = 1; ulii < ct; ulii++)
+        {
             g_thread_start_next_event[ulii - 1] =
                 CreateEvent(nullptr, FALSE, FALSE, nullptr);
             g_thread_cur_block_done_events[ulii - 1] =
                 CreateEvent(nullptr, FALSE, FALSE, nullptr);
         }
-        for (ulii = 1; ulii < ct; ulii++) {
+        for (ulii = 1; ulii < ct; ulii++)
+        {
             threads[ulii - 1] = (HANDLE) _beginthreadex(
                 nullptr, 4096, start_routine, (void*) ulii, 0, nullptr);
-            if (!threads[ulii - 1]) {
-                if (ulii > 1) {
+            if (!threads[ulii - 1])
+            {
+                if (ulii > 1)
+                {
                     join_threads2(threads, ulii, is_last_block);
-                    if (!is_last_block) {
-                        for (uintptr_t uljj = 0; uljj < ulii - 1; ++uljj) {
-                            CloseHandle(threads[uljj]);
-                        }
+                    if (!is_last_block)
+                    {
+                        for (uintptr_t uljj = 0; uljj < ulii - 1; ++uljj)
+                        { CloseHandle(threads[uljj]); }
                     }
                 }
-                if ((!is_last_block) || (ulii == 1)) {
-                    for (uint32_t uii = 0; uii < ct - 1; ++uii) {
+                if ((!is_last_block) || (ulii == 1))
+                {
+                    for (uint32_t uii = 0; uii < ct - 1; ++uii)
+                    {
                         CloseHandle(g_thread_start_next_event[uii]);
                         CloseHandle(g_thread_cur_block_done_events[uii]);
                     }
@@ -12695,39 +12701,36 @@ int32_t spawn_threads2(pthread_t* threads, void* (*start_routine)(void*),
     else
     {
         g_thread_spawn_ct++;
-        for (ulii = 1; ulii < ct; ulii++) {
-            SetEvent(g_thread_start_next_event[ulii - 1]);
-        }
+        for (ulii = 1; ulii < ct; ulii++)
+        { SetEvent(g_thread_start_next_event[ulii - 1]); }
     }
 #else
-    if (!is_last_block) {
-        g_thread_active_ct = ct - 1;
-    }
-    if (!g_thread_mutex_initialized) {
+    if (!is_last_block) { g_thread_active_ct = ct - 1; }
+    if (!g_thread_mutex_initialized)
+    {
         g_thread_spawn_ct = 0; // tidx 0 may need to know modulus
         g_thread_mutex_initialized = 1;
-        if (ct == 1) {
-            return 0;
-        }
+        if (ct == 1) { return 0; }
         if (pthread_mutex_init(&g_thread_sync_mutex, nullptr)
             || pthread_cond_init(&g_thread_cur_block_done_condvar, nullptr)
             || pthread_cond_init(&g_thread_start_next_condvar, nullptr))
+        { return -1; }
+        for (ulii = 1; ulii < ct; ulii++)
         {
-            return -1;
-        }
-        for (ulii = 1; ulii < ct; ulii++) {
             if (pthread_create(&(threads[ulii - 1]), nullptr, start_routine,
                                (void*) ulii))
             {
-                if (ulii > 1) {
+                if (ulii > 1)
+                {
                     join_threads2(threads, ulii, is_last_block);
-                    if (!is_last_block) {
-                        for (uintptr_t uljj = 0; uljj < ulii - 1; ++uljj) {
-                            pthread_cancel(threads[uljj]);
-                        }
+                    if (!is_last_block)
+                    {
+                        for (uintptr_t uljj = 0; uljj < ulii - 1; ++uljj)
+                        { pthread_cancel(threads[uljj]); }
                     }
                 }
-                if ((!is_last_block) || (ulii == 1)) {
+                if ((!is_last_block) || (ulii == 1))
+                {
                     pthread_mutex_destroy(&g_thread_sync_mutex);
                     pthread_cond_destroy(&g_thread_cur_block_done_condvar);
                     pthread_cond_destroy(&g_thread_start_next_condvar);
@@ -12740,9 +12743,7 @@ int32_t spawn_threads2(pthread_t* threads, void* (*start_routine)(void*),
     else
     {
         g_thread_spawn_ct++;
-        if (ct == 1) {
-            return 0;
-        }
+        if (ct == 1) { return 0; }
         // still holding mutex
         pthread_mutex_unlock(&g_thread_sync_mutex);
         pthread_cond_broadcast(&g_thread_start_next_condvar);

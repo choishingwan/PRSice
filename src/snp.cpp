@@ -27,7 +27,8 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
 
         // chr first such that SNPs within the same chromosome will
         // be processed together
-        if (input[i1].m_chr == input[i2].m_chr) {
+        if (input[i1].m_chr == input[i2].m_chr)
+        {
             if (misc::logically_equal(input[i1].m_p_value, input[i2].m_p_value))
             {
                 // in theory, we can also add in the stat and se,

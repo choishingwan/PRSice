@@ -29,9 +29,9 @@
 class GenomeFactory
 {
 private:
-    const std::unordered_map<std::string, int> file_type{{"bed", 0},
-                                                         {"ped", 1},
-                                                         {"bgen", 2}};
+    const std::unordered_map<std::string, int> file_type {{"bed", 0},
+                                                          {"ped", 1},
+                                                          {"bgen", 2}};
 
 public:
     Genotype* createGenotype(const Commander& commander, Reporter& reporter,
@@ -40,9 +40,8 @@ public:
         const std::string type =
             (is_ref) ? commander.ref_type() : commander.target_type();
         int code = 0;
-        if (file_type.find(type) != file_type.end()) {
-            code = file_type.at(type);
-        }
+        if (file_type.find(type) != file_type.end())
+        { code = file_type.at(type); }
         else
         {
             throw std::invalid_argument("ERROR: Only support bgen and bed");
@@ -51,7 +50,8 @@ public:
         {
         case 0:
         {
-            if (is_ref) {
+            if (is_ref)
+            {
                 return new BinaryPlink(
                     commander.ref_list(), commander.ref_name(),
                     commander.thread(), commander.ignore_fid(),
@@ -69,7 +69,8 @@ public:
         }
         case 2:
         {
-            if (is_ref) {
+            if (is_ref)
+            {
                 // for reference bgen, we ALWAYS hard code it. so we don't
                 // really use the hard_coded flag
                 return new BinaryGen(

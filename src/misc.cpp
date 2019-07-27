@@ -27,7 +27,8 @@ double dnorm(double x, double mu, double sigma, bool log)
 #endif
     if (!(std::isfinite(sigma))) return 0.0;
     if (!(std::isfinite(x)) && mu == x) throw std::runtime_error("NA produced");
-    if (sigma <= 0) {
+    if (sigma <= 0)
+    {
         if (sigma < 0) throw std::runtime_error("Negative sigma not allowed");
         return (x == mu) ? std::numeric_limits<double>::infinity() : 0.0;
     }

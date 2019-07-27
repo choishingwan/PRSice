@@ -47,8 +47,10 @@ void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
 
     double resvar = rss / static_cast<double>(rdf);
     long se_index = intercept;
-    for (long ind = 0; ind < beta.rows(); ++ind) {
-        if (z.colsPermutation().indices()(ind) == intercept) {
+    for (long ind = 0; ind < beta.rows(); ++ind)
+    {
+        if (z.colsPermutation().indices()(ind) == intercept)
+        {
             se_index = ind;
             break;
         }
@@ -80,7 +82,8 @@ Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta)
     long n = eta.rows();
     double etai, opexp;
     const double limit = std::numeric_limits<double>::epsilon();
-    for (long i = 0; i < n; ++i) {
+    for (long i = 0; i < n; ++i)
+    {
         etai = eta(i);
         opexp = 1 + exp(etai);
         ans(i) =
@@ -94,7 +97,8 @@ Eigen::VectorXd logit_linkinv(const Eigen::VectorXd& eta)
     Eigen::VectorXd ans = eta;
     long n = eta.rows();
     double etai, temp;
-    for (long i = 0; i < n; ++i) {
+    for (long i = 0; i < n; ++i)
+    {
         etai = eta(i);
         temp = (etai < -30)
                    ? std::numeric_limits<double>::epsilon()
@@ -113,7 +117,8 @@ void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
     gprime = eta;
     double etai, temp, opexp;
     const double limit = std::numeric_limits<double>::epsilon();
-    for (long i = 0; i < n; ++i) {
+    for (long i = 0; i < n; ++i)
+    {
         etai = eta(i);
         temp = (etai < -30) ? limit : ((etai > 30) ? 1 / limit : exp(etai));
         g(i) = temp / (1.0 + temp);
@@ -130,21 +135,25 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     Eigen::Index n = y.rows();
     Eigen::Index lmu = mu.rows(), lwt = wt.rows();
     Eigen::VectorXd ans = y;
-    if (lmu != n && lmu != 1) {
+    if (lmu != n && lmu != 1)
+    {
         std::string error_message =
             "Argument mu must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
-    if (lwt != n && lwt != 1) {
+    if (lwt != n && lwt != 1)
+    {
         std::string error_message =
             "Argument wt must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
     double mui, yi;
-    if (lmu > 1) {
-        for (Eigen::Index i = 0; i < n; ++i) {
+    if (lmu > 1)
+    {
+        for (Eigen::Index i = 0; i < n; ++i)
+        {
             mui = mu(i);
             yi = y(i);
             ans(i) = 2 * wt((lwt > 1) ? i : 0)
@@ -154,7 +163,8 @@ Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
     else
     {
         mui = mu[0];
-        for (Eigen::Index i = 0; i < n; ++i) {
+        for (Eigen::Index i = 0; i < n; ++i)
+        {
             yi = y(i);
             ans(i) = 2 * wt((lwt > 1) ? i : 0)
                      * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
@@ -173,21 +183,25 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
     const Eigen::Index n = y.rows();
     const Eigen::Index lmu = mu.rows(), lwt = wt.rows();
     double ans = 0.0;
-    if (lmu != n && lmu != 1) {
+    if (lmu != n && lmu != 1)
+    {
         std::string error_message =
             "Argument mu must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
-    if (lwt != n && lwt != 1) {
+    if (lwt != n && lwt != 1)
+    {
         std::string error_message =
             "Argument wt must be a numeric vector of length 1 or length "
             + std::to_string(n);
         throw std::runtime_error(error_message);
     }
     double mui, yi;
-    if (lmu > 1) {
-        for (Eigen::Index i = 0; i < n; ++i) {
+    if (lmu > 1)
+    {
+        for (Eigen::Index i = 0; i < n; ++i)
+        {
             mui = mu(i);
             yi = y(i);
             ans += 2 * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
@@ -198,7 +212,8 @@ double binomial_dev_resids_sum(const Eigen::VectorXd& y,
     else
     {
         mui = mu[0];
-        for (Eigen::Index i = 0; i < n; ++i) {
+        for (Eigen::Index i = 0; i < n; ++i)
+        {
             yi = y(i);
             ans += 2 * (y_log_y(yi, mui) + y_log_y(1 - yi, 1 - mui));
             // ans += 2 * wt((lwt > 1) ? i : 0) * (y_log_y(yi, mui) + y_log_y(1
@@ -234,7 +249,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     qr.setThreshold(
         std::min(1e-7, std::numeric_limits<double>::epsilon() / 1000));
     double mu_eta_val_store, mu_store;
-    for (size_t iter = 0; iter < max_iter; ++iter) {
+    for (size_t iter = 0; iter < max_iter; ++iter)
+    {
         mu_eta_val = logit_mu_eta(eta);
         // we can ignore weight array check because we don't allow weighted glm
         // at the moment. So all weight must be 1
@@ -245,7 +261,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         Eigen::Index start_block = 0;
         Eigen::Index prev_block = 0;
         bool has_block = false;
-        if ((good.array() > 0).all()) {
+        if ((good.array() > 0).all())
+        {
             z = (eta).array() + (y - mu).array() / mu_eta_val.array();
             w = (mu_eta_val.array().square()
                  / (mu.array() * (1 - mu.array())).array())
@@ -257,7 +274,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
             for (Eigen::Index i_weights = 0; i_weights < good.rows();
                  ++i_weights)
             {
-                if (good(i_weights) > 0) {
+                if (good(i_weights) > 0)
+                {
                     // because offset is 0, we ignore it
                     mu_eta_val_store = mu_eta_val(i_weights);
                     mu_store = mu(i_weights);
@@ -265,7 +283,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
                                 + (y(i_weights) - mu_store) / mu_eta_val_store;
                     w(i_good) = std::sqrt(mu_eta_val_store * mu_eta_val_store
                                           / (mu_store * (1 - mu_store)));
-                    if (!has_block) {
+                    if (!has_block)
+                    {
                         has_block = true;
                         start_block = i_weights;
                     }
@@ -273,7 +292,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
                 }
                 else if (has_block)
                 {
-                    if (prev_block != start_block) {
+                    if (prev_block != start_block)
+                    {
                         A.block(prev_block, 0, i_weights - start_block, nvars) =
                             A.block(start_block, 0, i_weights - start_block,
                                     nvars);
@@ -288,7 +308,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         }
         qr.compute(w.asDiagonal() * A);
         start = qr.solve(Eigen::MatrixXd(z.array() * w.array()));
-        if (nobs < qr.rank()) {
+        if (nobs < qr.rank())
+        {
             std::string error_message =
                 "X matrix has rank " + std::to_string(qr.rank()) + "but only "
                 + std::to_string(nobs) + " observations";
@@ -298,7 +319,8 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
         mu = logit_linkinv(eta);
         dev = binomial_dev_resids_sum(y, mu, weights);
         // R only use 1e-8 here
-        if (fabs(dev - devold) / (0.1 + fabs(dev)) < 1e-8) {
+        if (fabs(dev - devold) / (0.1 + fabs(dev)) < 1e-8)
+        {
             converge = true;
             break;
         }
@@ -332,8 +354,10 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
     r2 = (1.0 - std::exp((dev - nulldev) / static_cast<double>(nobs)))
          / (1 - std::exp(-nulldev / static_cast<double>(nobs)));
     Eigen::Index se_index = intercept;
-    for (Eigen::Index ind = 0; ind < start.rows(); ++ind) {
-        if (qr.colsPermutation().indices()(ind) == intercept) {
+    for (Eigen::Index ind = 0; ind < start.rows(); ++ind)
+    {
+        if (qr.colsPermutation().indices()(ind) == intercept)
+        {
             se_index = ind;
             break;
         }

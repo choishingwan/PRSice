@@ -133,35 +133,31 @@ public:
                          std::string& alt, bool& flipped)
     {
         // should be trimmed
-        if (chr != -1 && m_chr != -1 && chr != m_chr) {
-            return false;
-        }
-        if (loc != -1 && m_loc != -1 && loc != m_loc) {
-            return false;
-        }
+        if (chr != -1 && m_chr != -1 && chr != m_chr) { return false; }
+        if (loc != -1 && m_loc != -1 && loc != m_loc) { return false; }
         flipped = false;
-        if (m_ref == ref) {
-            if (!m_alt.empty() && !alt.empty()) {
-                return (m_alt == alt);
-            }
+        if (m_ref == ref)
+        {
+            if (!m_alt.empty() && !alt.empty()) { return (m_alt == alt); }
             else
                 return true;
         }
         else if (complement(m_ref) == ref)
         {
-            if (!m_alt.empty() && !alt.empty()) {
-                return (complement(m_alt) == alt);
-            }
+            if (!m_alt.empty() && !alt.empty())
+            { return (complement(m_alt) == alt); }
             else
                 return true;
         }
         else if (!m_alt.empty() && !alt.empty())
         {
-            if ((m_ref == alt) && (m_alt == ref)) {
+            if ((m_ref == alt) && (m_alt == ref))
+            {
                 flipped = true;
                 return true;
             }
-            if ((complement(m_ref) == alt) && (complement(m_alt) == ref)) {
+            if ((complement(m_ref) == alt) && (complement(m_alt) == ref))
+            {
                 flipped = true;
                 return true;
             }
@@ -241,10 +237,12 @@ public:
         bool completed = false;
         // if we want to use proxy, and that our r2 is higher than
         // the proxy threshold, we will do the proxy clumping
-        if (use_proxy && r2 > proxy) {
+        if (use_proxy && r2 > proxy)
+        {
             // If the observed R2 is higher than the proxy clumping threshold,
             // we will capture the flag of the target SNP (using |= )
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            {
                 // two become one
                 m_flags[i_flag] |= target.m_flags[i_flag];
             }
@@ -256,7 +254,8 @@ public:
         else
         {
             // otherwise, we will just do noraml clumping
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag) {
+            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            {
                 // For normal clumping, we will remove set identity from the
                 // target SNP whenever both SNPs are within the same set.
                 // i.e. if flag of SNP A (current) is 11011 and SNP B (target)
@@ -270,7 +269,8 @@ public:
                 completed = (target.m_flags[i_flag] == 0);
             }
         }
-        if (completed) {
+        if (completed)
+        {
             // if the target SNP no longer represent any gene set, it is
             // considered as clumped and can be removed
             target.set_clumped();
@@ -312,7 +312,8 @@ public:
     bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
                     size_t& missing, const bool use_ref_maf) const
     {
-        if (use_ref_maf) {
+        if (use_ref_maf)
+        {
             homcom = m_ref_homcom;
             het = m_ref_het;
             homrar = m_ref_homrar;
@@ -352,9 +353,11 @@ public:
         uintptr_t bitset;
         std::vector<size_t> out;
         out.reserve(num_sets);
-        for (size_t k = 0; k < m_max_flag_index; ++k) {
+        for (size_t k = 0; k < m_max_flag_index; ++k)
+        {
             bitset = m_flags[k];
-            while (bitset != 0) {
+            while (bitset != 0)
+            {
                 uint64_t t = bitset & -bitset;
                 size_t r = CTZLU(bitset);
                 out.push_back(k * BITCT + r);
@@ -368,7 +371,8 @@ public:
     void set_ref_counts(size_t homcom, size_t het, size_t homrar,
                         size_t missing)
     {
-        if (m_ref_flipped) {
+        if (m_ref_flipped)
+        {
             // we flip the count here so that the count will be
             // identical to the allele identity in target
             // we process the score, we only need to consider

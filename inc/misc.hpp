@@ -66,18 +66,16 @@ public:
     vec2d() {}
     vec2d(size_t row, size_t col, T def)
     {
-        if (row == 0 || col == 0) {
-            throw std::invalid_argument("Dimension of 2d vector must be >0");
-        }
+        if (row == 0 || col == 0)
+        { throw std::invalid_argument("Dimension of 2d vector must be >0"); }
         m_storage.resize(row * col, def);
         m_row = row;
         m_col = col;
     };
     vec2d(size_t row, size_t col)
     {
-        if (row == 0 || col == 0) {
-            throw std::invalid_argument("Dimension of 2d vector must be >0");
-        }
+        if (row == 0 || col == 0)
+        { throw std::invalid_argument("Dimension of 2d vector must be >0"); }
         m_storage.resize(row * col);
         m_row = row;
         m_col = col;
@@ -138,8 +136,10 @@ inline int getValue()
     int result = -1;
     char line[128];
 
-    while (fgets(line, 128, file) != NULL) {
-        if (strncmp(line, "VmSize:", 7) == 0) {
+    while (fgets(line, 128, file) != NULL)
+    {
+        if (strncmp(line, "VmSize:", 7) == 0)
+        {
             result = parseLine(line);
             break;
         }
@@ -159,9 +159,7 @@ inline size_t current_ram_usage()
     if (KERN_SUCCESS
         != task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info,
                      &t_info_count))
-    {
-        throw std::runtime_error("Unable to determine memory used");
-    }
+    { throw std::runtime_error("Unable to determine memory used"); }
     return t_info.resident_size;
 #elif defined _WIN32
     PROCESS_MEMORY_COUNTERS_EX memCounter;
@@ -206,9 +204,7 @@ inline size_t total_ram_available()
            * ((size_t) sysconf(_SC_PAGESIZE)) / 1048576;
 #endif
 #endif
-    if (!llxx) {
-        default_alloc_mb = BIGSTACK_DEFAULT_MB;
-    }
+    if (!llxx) { default_alloc_mb = BIGSTACK_DEFAULT_MB; }
     else if (llxx < (BIGSTACK_MIN_MB * 2))
     {
         default_alloc_mb = BIGSTACK_MIN_MB;
@@ -217,31 +213,26 @@ inline size_t total_ram_available()
     {
         default_alloc_mb = llxx / 2;
     }
-    if (!malloc_size_mb) {
-        malloc_size_mb = default_alloc_mb;
-    }
+    if (!malloc_size_mb) { malloc_size_mb = default_alloc_mb; }
     else if (malloc_size_mb < BIGSTACK_MIN_MB)
     {
         malloc_size_mb = BIGSTACK_MIN_MB;
     }
     std::string message = "";
 #ifndef __LP64__
-    if (malloc_size_mb > 2047) {
-        malloc_size_mb = 2047;
-    }
+    if (malloc_size_mb > 2047) { malloc_size_mb = 2047; }
 #endif
     bigstack_ua =
         (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
     // if fail, return nullptr which will then get into the while loop
-    while (!bigstack_ua) {
+    while (!bigstack_ua)
+    {
         malloc_size_mb = (malloc_size_mb * 3) / 4;
-        if (malloc_size_mb < BIGSTACK_MIN_MB) {
-            malloc_size_mb = BIGSTACK_MIN_MB;
-        }
+        if (malloc_size_mb < BIGSTACK_MIN_MB)
+        { malloc_size_mb = BIGSTACK_MIN_MB; }
         bigstack_ua =
             (unsigned char*) malloc(malloc_size_mb * 1048576 * sizeof(char));
-        if (bigstack_ua) {
-        }
+        if (bigstack_ua) {}
         else if (malloc_size_mb == BIGSTACK_MIN_MB)
         {
             throw std::runtime_error("Failed to allocate required memory");
@@ -304,7 +295,8 @@ inline std::vector<std::string> split(const std::string& seq,
 {
     std::size_t prev = 0, pos;
     std::vector<std::string> result;
-    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
+    {
         if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
         prev = pos + 1;
     }
@@ -318,7 +310,8 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
 {
     std::size_t prev = 0, pos;
     result.clear();
-    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos) {
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
+    {
         if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
         prev = pos + 1;
     }
@@ -332,9 +325,8 @@ inline T convert(const std::string& str)
     T obj;
     iss >> obj;
 
-    if (!iss.eof() || iss.fail()) {
-        throw std::runtime_error("Unable to convert the input");
-    }
+    if (!iss.eof() || iss.fail())
+    { throw std::runtime_error("Unable to convert the input"); }
     return obj;
 }
 template <typename T>
@@ -400,7 +392,8 @@ inline T remove_extension(T const& filename)
 inline void replace_substring(std::string& s, const std::string& search,
                               const std::string& replace)
 {
-    for (size_t pos = 0;; pos += replace.length()) {
+    for (size_t pos = 0;; pos += replace.length())
+    {
         // Locate the substring to replace
         pos = s.find(search, pos);
         if (pos == std::string::npos) break;
@@ -482,26 +475,21 @@ inline double betacf_slow(double aa, double bb, double xx)
     double qam = aa - 1.0;
     double cc = 1.0;
     double dd = 1.0 - qab * xx / qap;
-    if (fabs(dd) < kLentzFpmin) {
-        dd = kLentzFpmin;
-    }
+    if (fabs(dd) < kLentzFpmin) { dd = kLentzFpmin; }
     dd = 1.0 / dd;
     double hh = dd;
     // evaluate 1 / (1 + d_1 / (1 + d_2 / (1 + d_3 / (...))))
-    for (double mm = 1.0; mm <= 100.0; mm += 1.0) {
+    for (double mm = 1.0; mm <= 100.0; mm += 1.0)
+    {
         double m2 = 2 * mm;
 
         // d_{2m}
         double tmp_aa = mm * (bb - mm) * xx / ((qam + m2) * (aa + m2));
 
         dd = 1.0 + tmp_aa * dd;
-        if (fabs(dd) < kLentzFpmin) {
-            dd = kLentzFpmin;
-        }
+        if (fabs(dd) < kLentzFpmin) { dd = kLentzFpmin; }
         cc = 1.0 + tmp_aa / cc;
-        if (fabs(cc) < kLentzFpmin) {
-            cc = kLentzFpmin;
-        }
+        if (fabs(cc) < kLentzFpmin) { cc = kLentzFpmin; }
         dd = 1.0 / dd;
         hh *= dd * cc;
 
@@ -509,19 +497,13 @@ inline double betacf_slow(double aa, double bb, double xx)
         tmp_aa = -(aa + mm) * (qab + mm) * xx / ((aa + m2) * (qap + m2));
 
         dd = 1.0 + tmp_aa * dd;
-        if (fabs(dd) < kLentzFpmin) {
-            dd = kLentzFpmin;
-        }
+        if (fabs(dd) < kLentzFpmin) { dd = kLentzFpmin; }
         cc = 1.0 + tmp_aa / cc;
-        if (fabs(cc) < kLentzFpmin) {
-            cc = kLentzFpmin;
-        }
+        if (fabs(cc) < kLentzFpmin) { cc = kLentzFpmin; }
         dd = 1.0 / dd;
         double del = dd * cc;
         hh *= del;
-        if (fabs(del - 1.0) < 3.0e-7) {
-            return hh;
-        }
+        if (fabs(del - 1.0) < 3.0e-7) { return hh; }
     }
     // don't detect failure for now
     return hh;
@@ -529,20 +511,14 @@ inline double betacf_slow(double aa, double bb, double xx)
 
 inline double betai_slow(double aa, double bb, double xx)
 {
-    if ((xx < 0.0) || (xx > 1.0)) {
-        return -9;
-    }
+    if ((xx < 0.0) || (xx > 1.0)) { return -9; }
     uint32_t do_invert = (xx * (aa + bb + 2.0)) >= (aa + 1.0);
-    if ((xx == 0.0) || (xx == 1.0)) {
-        return (double) ((int32_t) do_invert);
-    }
+    if ((xx == 0.0) || (xx == 1.0)) { return (double) ((int32_t) do_invert); }
     // this is very expensive
     double bt = exp(lgamma(aa + bb) - lgamma(aa) - lgamma(bb) + aa * log(xx)
                     + bb * log(1.0 - xx));
 
-    if (!do_invert) {
-        return bt * betacf_slow(aa, bb, xx) / aa;
-    }
+    if (!do_invert) { return bt * betacf_slow(aa, bb, xx) / aa; }
     return 1.0 - bt * betacf_slow(bb, aa, 1.0 - xx) / bb;
 }
 
@@ -551,9 +527,7 @@ inline double calc_tprob(double tt, double df)
     // must be thread-safe, so dcdflib won't cut it.
     // move this to plink2_stats once it's ready (and probably just eliminate
     // dcdflib entirely)
-    if (!realnum(tt)) {
-        return -9;
-    }
+    if (!realnum(tt)) { return -9; }
     return betai_slow(df * 0.5, 0.5, df / (df + tt * tt));
 }
 
@@ -588,28 +562,21 @@ inline double upper_gamma_fraction(double a1, double z1)
 
     double hh = cur_b;
     const double a0 = a1 - 1.0;
-    if (fabs(hh) < kLentzFpmin) {
-        hh = kLentzFpmin;
-    }
+    if (fabs(hh) < kLentzFpmin) { hh = kLentzFpmin; }
     double cc = hh;
     double dd = 0.0;
-    for (double kk = 2.0; kk <= 100.0; kk += 1.0) {
+    for (double kk = 2.0; kk <= 100.0; kk += 1.0)
+    {
         const double cur_a = kk * (a1 - kk);
         cur_b += 2.0;
         dd = cur_b + cur_a * dd;
-        if (fabs(dd) < kLentzFpmin) {
-            dd = kLentzFpmin;
-        }
+        if (fabs(dd) < kLentzFpmin) { dd = kLentzFpmin; }
         cc = cur_b + cur_a / cc;
-        if (fabs(cc) < kLentzFpmin) {
-            cc = kLentzFpmin;
-        }
+        if (fabs(cc) < kLentzFpmin) { cc = kLentzFpmin; }
         dd = 1.0 / dd;
         const double delta = cc * dd;
         hh *= delta;
-        if (fabs(delta - 1.0) < 3.0e-7) {
-            break;
-        }
+        if (fabs(delta - 1.0) < 3.0e-7) { break; }
     }
     const double cont_frac = a0 / hh;
     return 1 / (z1 - a1 + 1 + cont_frac);
@@ -646,14 +613,10 @@ inline double tgamma_small_upper_part_df1(double xx, uint32_t invert,
     result -= pp;
     result *= 2;
     pp += 1;
-    if (p_derivative) {
-        *p_derivative = pp / ((*pgam) * exp(xx));
-    }
+    if (p_derivative) { *p_derivative = pp / ((*pgam) * exp(xx)); }
     const double init_value = invert ? (*pgam) : 0;
     result = -pp * small_gamma2_series(0.5, xx, (init_value - result) / pp);
-    if (invert) {
-        result = -result;
-    }
+    if (invert) { result = -result; }
     return result;
 }
 
@@ -678,19 +641,19 @@ inline double finite_half_gamma_q(double aa, double xx, double* p_derivative)
     // a is in {0.5, 1.5, ..., 29.5}; max(0.2, a-1) < x < log_max_value
     const double sqrt_x = sqrt(xx);
     double ee = erfc_fast(sqrt_x);
-    if ((ee != 0) && (aa > 1)) {
+    if ((ee != 0) && (aa > 1))
+    {
         double term = exp(-xx) / (kSqrtPi * sqrt_x);
         term *= xx * 2;
         double sum = term;
-        for (double nn = 1.5; nn < aa; nn += 1.0) {
+        for (double nn = 1.5; nn < aa; nn += 1.0)
+        {
             term /= nn;
             term *= xx;
             sum += term;
         }
         ee += sum;
-        if (p_derivative) {
-            *p_derivative = 0;
-        }
+        if (p_derivative) { *p_derivative = 0; }
     }
     else if (p_derivative)
     {
@@ -704,19 +667,17 @@ inline double finite_gamma_q(uint32_t aa, double xx, double* p_derivative)
     // a is a positive integer < 30; max(0.6, a-1) < x < log_max_value
     // (e^{-x})(1 + x + x^2/2 + x^3/3! + x^4/4! + ... + x^{a-1}/(a-1)!)
     const double ee = exp(-xx);
-    if (ee == 0.0) {
-        return 0;
-    }
+    if (ee == 0.0) { return 0; }
     double sum = ee;
     double term = sum;
-    for (uint32_t nn = 1; nn < aa; ++nn) {
+    for (uint32_t nn = 1; nn < aa; ++nn)
+    {
         term /= (double) ((int32_t) nn);
         term *= xx;
         sum += term;
     }
-    if (p_derivative) {
-        *p_derivative = ee * pow(xx, (int32_t) aa) / kFactorials[aa - 1];
-    }
+    if (p_derivative)
+    { *p_derivative = ee * pow(xx, (int32_t) aa) / kFactorials[aa - 1]; }
     return sum;
 }
 
@@ -724,10 +685,12 @@ inline double lanczos_sum_expg_scaled_recip(double zz)
 {
     double s1;
     double s2;
-    if (zz <= 1) {
+    if (zz <= 1)
+    {
         s1 = kLanczosSumExpgNumer[5];
         s2 = kLanczosSumExpgDenom[5];
-        for (int32_t ii = 4; ii >= 0; --ii) {
+        for (int32_t ii = 4; ii >= 0; --ii)
+        {
             s1 *= zz;
             s2 *= zz;
             s1 += kLanczosSumExpgNumer[(uint32_t) ii];
@@ -739,7 +702,8 @@ inline double lanczos_sum_expg_scaled_recip(double zz)
         zz = 1 / zz;
         s1 = kLanczosSumExpgNumer[0];
         s2 = kLanczosSumExpgDenom[0];
-        for (uint32_t uii = 1; uii < 6; ++uii) {
+        for (uint32_t uii = 1; uii < 6; ++uii)
+        {
             s1 *= zz;
             s2 *= zz;
             s1 += kLanczosSumExpgNumer[uii];
@@ -755,7 +719,8 @@ inline double log1pmx(double xx)
     // log(1+x) - x
     // assumes abs(xx) < 0.95
     const double aa = fabs(xx);
-    if (aa < (kBigEpsilon / kSqrt2)) { // 2^{-21.5}
+    if (aa < (kBigEpsilon / kSqrt2))
+    { // 2^{-21.5}
         return -xx * xx * 0.5;
     }
     double kk = 1.0; // skip first term of usual log(1+x) series
@@ -779,14 +744,13 @@ inline double regularized_gamma_prefix(double aa, double zz)
 {
     // assumes a == 0.5 if a < 1.  assumes z > 0.
     // we are fine with float-level precision, so lanczos_n=6, kLanczosG=5.581
-    if (aa < 1) {
-        return sqrt(zz) * exp(-zz) * (1.0 / kSqrtPi);
-    }
+    if (aa < 1) { return sqrt(zz) * exp(-zz) * (1.0 / kSqrtPi); }
     const double agh = aa + kLanczosG - 0.5;
     const double agh_recip = 1.0 / agh;
     const double dd = ((zz - aa) - (kLanczosG - 0.5)) * agh_recip;
     double prefix;
-    if ((fabs(dd * dd * aa) <= 100) && (aa > 150)) {
+    if ((fabs(dd * dd * aa) <= 100) && (aa > 150))
+    {
         // abs(dd) < sqrt(2/3) < 0.95
         prefix = aa * log1pmx(dd) + zz * (0.5 - kLanczosG) * agh_recip;
         prefix = exp(prefix);
@@ -796,7 +760,8 @@ inline double regularized_gamma_prefix(double aa, double zz)
         const double alz = aa * log(zz * agh_recip);
         const double amz = aa - zz;
         const double cur_minv = MINV(alz, amz);
-        if ((cur_minv <= log_min_value) || (MAXV(alz, amz) >= log_max_value)) {
+        if ((cur_minv <= log_min_value) || (MAXV(alz, amz) >= log_max_value))
+        {
             const double amza = amz / aa;
             double sq;
             if ((cur_minv > 2 * log_min_value)
@@ -840,9 +805,7 @@ inline double igamma_temme_large(double aa, double xx)
     const double sqrt_phi = sqrt(phi);
     const double yy = aa * phi;
     double zz = kSqrt2 * sqrt_phi;
-    if (xx < aa) {
-        zz = -zz;
-    }
+    if (xx < aa) { zz = -zz; }
     double workspace[3];
     workspace[0] = (((((kTemmeC0[6] * zz + kTemmeC0[5]) * zz + kTemmeC0[4]) * zz
                       + kTemmeC0[3])
@@ -861,9 +824,7 @@ inline double igamma_temme_large(double aa, double xx)
     double result =
         (workspace[2] * a_recip + workspace[1]) * a_recip + workspace[0];
     result *= exp(-yy) / ((kSqrt2 * kSqrtPi) * sqrt_a);
-    if (xx < aa) {
-        result = -result;
-    }
+    if (xx < aa) { result = -result; }
     result += erfc_fast(sqrt_a * sqrt_phi) * 0.5;
     return result;
 }
@@ -878,12 +839,14 @@ inline double gamma_incomplete_imp2(uint32_t df, double xx, uint32_t invert,
         (df < 60) && (aa <= xx + 1) && (xx < log_max_value);
     uint32_t is_int = 0;
     uint32_t is_half_int = 0;
-    if (is_small_a) {
+    if (is_small_a)
+    {
         is_half_int = df % 2;
         is_int = !is_half_int;
     }
     uint32_t eval_method;
-    if (is_int && (xx > 0.6)) {
+    if (is_int && (xx > 0.6))
+    {
         invert = !invert;
         eval_method = 0;
     }
@@ -918,10 +881,12 @@ inline double gamma_incomplete_imp2(uint32_t df, double xx, uint32_t invert,
     {
         const double x_minus_a = xx - aa;
         uint32_t use_temme = 0;
-        if (aa > 20) {
+        if (aa > 20)
+        {
             // sigma = abs((x - a) / a);
             // igamma_temme_large() assumes abs(sigma) < 0.95
-            if (aa > 200) {
+            if (aa > 200)
+            {
                 // abs(sigma) < sqrt(20 / a) < 0.316...
                 use_temme = (20 * aa > x_minus_a * x_minus_a);
             }
@@ -932,18 +897,14 @@ inline double gamma_incomplete_imp2(uint32_t df, double xx, uint32_t invert,
                 use_temme = (sigma_times_a < 0.4 * aa);
             }
         }
-        if (use_temme) {
-            eval_method = 5;
-        }
+        if (use_temme) { eval_method = 5; }
         else
         {
             // x - (1 / (3 * x)) < a
             // x * x - (1/3) < a * x
             // x * x - a * x < 1/3
             // x * (x - a) < 1/3
-            if (xx * x_minus_a < (1.0 / 3.0)) {
-                eval_method = 2;
-            }
+            if (xx * x_minus_a < (1.0 / 3.0)) { eval_method = 2; }
             else
             {
                 eval_method = 4;
@@ -959,25 +920,25 @@ inline double gamma_incomplete_imp2(uint32_t df, double xx, uint32_t invert,
         // previously used erfc, but that was up to ~3x as slow as dcdflib (e.g.
         // chiprob_p(2.706, 1) case).
         result = finite_half_gamma_q(aa, xx, p_derivative);
-        if (p_derivative && (*p_derivative == 0)) {
-            *p_derivative = regularized_gamma_prefix(aa, xx);
-        }
+        if (p_derivative && (*p_derivative == 0))
+        { *p_derivative = regularized_gamma_prefix(aa, xx); }
         break;
     case 2:
         result = regularized_gamma_prefix(aa, xx);
-        if (p_derivative) {
-            *p_derivative = result;
-        }
-        if (result != 0) {
+        if (p_derivative) { *p_derivative = result; }
+        if (result != 0)
+        {
             // uint32_t optimized_invert = 0;
             double init_value = 0;
-            if (invert) {
+            if (invert)
+            {
                 init_value = -aa / result;
                 // optimized_invert = 1;
             }
             result *= lower_gamma_series(aa, xx, init_value) / aa;
             // if (optimized_invert) {
-            if (invert) {
+            if (invert)
+            {
                 invert = 0;
                 result = -result;
             }
@@ -994,30 +955,20 @@ inline double gamma_incomplete_imp2(uint32_t df, double xx, uint32_t invert,
     break;
     case 4:
         result = regularized_gamma_prefix(aa, xx);
-        if (p_derivative) {
-            *p_derivative = result;
-        }
-        if (result != 0) {
-            result *= upper_gamma_fraction(aa, xx);
-        }
+        if (p_derivative) { *p_derivative = result; }
+        if (result != 0) { result *= upper_gamma_fraction(aa, xx); }
         break;
     case 5:
         result = igamma_temme_large(aa, xx);
-        if (xx >= aa) {
-            invert = !invert;
-        }
-        if (p_derivative) {
-            *p_derivative = regularized_gamma_prefix(aa, xx);
-        }
+        if (xx >= aa) { invert = !invert; }
+        if (p_derivative) { *p_derivative = regularized_gamma_prefix(aa, xx); }
     }
-    if (result > 1) {
-        result = 1;
-    }
-    if (invert) {
-        result = 1 - result;
-    }
-    if (p_derivative) {
-        if ((xx < 1) && (DBL_MAX * xx < (*p_derivative))) {
+    if (result > 1) { result = 1; }
+    if (invert) { result = 1 - result; }
+    if (p_derivative)
+    {
+        if ((xx < 1) && (DBL_MAX * xx < (*p_derivative)))
+        {
             *p_derivative = DBL_MAX / 2; // overflow; do we really need this?
         }
         else
@@ -1070,7 +1021,8 @@ inline int string_to_int(const char* p)
 {
     int x = 0;
     bool neg = false;
-    if (*p == '-') {
+    if (*p == '-')
+    {
         neg = true;
         ++p;
     }
@@ -1082,13 +1034,12 @@ inline int string_to_int(const char* p)
     {
         throw std::runtime_error("Error: Not an integer\n");
     }
-    while (*p >= '0' && *p <= '9') {
+    while (*p >= '0' && *p <= '9')
+    {
         x = (x * 10) + (*p - '0');
         ++p;
     }
-    if (neg) {
-        x = -x;
-    }
+    if (neg) { x = -x; }
     return x;
 }
 }

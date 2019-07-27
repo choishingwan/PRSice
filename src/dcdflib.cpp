@@ -310,19 +310,23 @@ S20:
     w = w0;
     znm1 = z;
     zn = z2;
-    for (n = 2; n <= num; n += 2) {
+    for (n = 2; n <= num; n += 2)
+    {
         hn = h2 * hn;
         a0[n - 1] = 2.0e0 * r0 * (1.0e0 + h * hn) / ((double) n + 2.0e0);
         np1 = n + 1;
         s += hn;
         a0[np1 - 1] = 2.0e0 * r1 * s / ((double) n + 3.0e0);
-        for (i = n; i <= np1; i++) {
+        for (i = n; i <= np1; i++)
+        {
             r = -(0.5e0 * ((double) i + 1.0e0));
             b0[0] = r * a0[0];
-            for (m = 2; m <= i; m++) {
+            for (m = 2; m <= i; m++)
+            {
                 bsum = 0.0e0;
                 mm1 = m - 1;
-                for (j = 1; j <= mm1; j++) {
+                for (j = 1; j <= mm1; j++)
+                {
                     mmj = m - j;
                     bsum += (((double) j * r - (double) mmj) * a0[j - 1]
                              * b0[mmj - 1]);
@@ -332,7 +336,8 @@ S20:
             c[i - 1] = b0[i - 1] / ((double) i + 1.0e0);
             dsum = 0.0e0;
             im1 = i - 1;
-            for (j = 1; j <= im1; j++) {
+            for (j = 1; j <= im1; j++)
+            {
                 imj = i - j;
                 dsum += (d[imj - 1] * c[j - 1]);
             }
@@ -460,7 +465,8 @@ S40:
     if (b > 1000.0e0) goto S80;
     n = (int) (a - 1.0e0);
     w = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         a -= 1.0e0;
         h = a / b;
         w *= (h / (1.0e0 + h));
@@ -475,7 +481,8 @@ S60:
     */
     n = (int) (b - 1.0e0);
     z = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         b -= 1.0e0;
         z *= (b / (a + b));
     }
@@ -487,7 +494,8 @@ S80:
     */
     n = (int) (a - 1.0e0);
     w = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         a -= 1.0e0;
         w *= (a / (1.0e0 + a / b));
     }
@@ -626,7 +634,8 @@ S20:
     sum = j;
     t = cn = 1.0e0;
     n2 = 0.0e0;
-    for (n = 1; n <= 30; n++) {
+    for (n = 1; n <= 30; n++)
+    {
         bp2n = *b + n2;
         j = (bp2n * (bp2n + 1.0e0) * j + (z + bp2n + 1.0e0) * t) * v;
         n2 += 2.0e0;
@@ -637,7 +646,8 @@ S20:
         if (n == 1) goto S40;
         nm1 = n - 1;
         coef = *b - (double) n;
-        for (i = 1; i <= nm1; i++) {
+        for (i = 1; i <= nm1; i++)
+        {
             s += (coef * c[i - 1] * d[n - i - 1]);
             coef += *b;
         }
@@ -716,7 +726,8 @@ S40:
     m = (int) (b0 - 1.0e0);
     if (m < 1) goto S60;
     c = 1.0e0;
-    for (i = 1; i <= m; i++) {
+    for (i = 1; i <= m; i++)
+    {
         b0 -= 1.0e0;
         c *= (b0 / (a0 + b0));
     }
@@ -1073,7 +1084,8 @@ S70:
     n = (int) (b0 - 1.0e0);
     if (n < 1) goto S90;
     c = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         b0 -= 1.0e0;
         c *= (b0 / (a0 + b0));
     }
@@ -1214,7 +1226,8 @@ S70:
     n = (int) (b0 - 1.0e0);
     if (n < 1) goto S90;
     c = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         b0 -= 1.0e0;
         c *= (b0 / (a0 + b0));
     }
@@ -1329,7 +1342,8 @@ S30:
     /*
               ADD THE INCREASING TERMS OF THE SERIES
     */
-    for (i = 1; i <= k; i++) {
+    for (i = 1; i <= k; i++)
+    {
         l = i - 1;
         d = (apb + l) / (ap1 + l) * *x * d;
         w += d;
@@ -1340,7 +1354,8 @@ S50:
               ADD THE REMAINING TERMS OF THE SERIES
     */
     kp1 = k + 1;
-    for (i = kp1; i <= nm1; i++) {
+    for (i = kp1; i <= nm1; i++)
+    {
         l = i - 1;
         d = (apb + l) / (ap1 + l) * *x * d;
         w += d;
@@ -1596,7 +1611,8 @@ S300:
          Select the minimum of P or Q
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P and Q
         */
@@ -1967,7 +1983,8 @@ S320:
          Select the minimum of P or Q
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P
         */
@@ -2284,13 +2301,15 @@ S210:
     /*
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P and Q
         */
         *status = 0;
         cumchi(x, df, p, q);
-        if (porq > 1.5e0) {
+        if (porq > 1.5e0)
+        {
             *status = 10;
             return;
         }
@@ -2547,7 +2566,8 @@ S120:
     /*
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P and Q
         */
@@ -2849,7 +2869,8 @@ S200:
          Select the minimum of P or Q
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P
         */
@@ -3157,7 +3178,8 @@ S140:
     /*
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P
         */
@@ -3506,7 +3528,8 @@ S230:
     /*
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P
         */
@@ -3522,7 +3545,8 @@ S230:
         */
         T2 = -1.0e0;
         gaminv(shape, &xx, &T2, p, q, &ierr);
-        if (ierr < 0.0e0) {
+        if (ierr < 0.0e0)
+        {
             *status = 10;
             return;
         }
@@ -3581,7 +3605,8 @@ S230:
         */
         T9 = -1.0e0;
         gaminv(shape, &xx, &T9, p, q, &ierr);
-        if (ierr < 0.0e0) {
+        if (ierr < 0.0e0)
+        {
             *status = 10;
             return;
         }
@@ -3840,7 +3865,8 @@ S300:
          Select the minimum of P or Q
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P
         */
@@ -4142,7 +4168,8 @@ S160:
     /*
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Computing P
         */
@@ -4349,7 +4376,8 @@ S180:
          Select the minimum of P or Q
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Calculating P
         */
@@ -4595,7 +4623,8 @@ S160:
          Select the minimum of P or Q
          Calculate ANSWERS
     */
-    if (1 == *which) {
+    if (1 == *which)
+    {
         /*
              Computing P and Q
         */
@@ -5158,7 +5187,8 @@ S10:
     */
     dsum = *dfd + prod;
     xx = *dfd / dsum;
-    if (xx > half) {
+    if (xx > half)
+    {
         yy = prod / dsum;
         xx = done - yy;
     }
@@ -5279,7 +5309,8 @@ S20:
     prod = *dfn * *f;
     dsum = *dfd + prod;
     yy = *dfd / dsum;
-    if (yy > half) {
+    if (yy > half)
+    {
         xx = prod / dsum;
         yy = done - xx;
     }
@@ -5597,7 +5628,8 @@ void cumnor(double* arg, double* result, double* ccum)
     min = spmpar(&K2);
     x = *arg;
     y = fabs(x);
-    if (y <= thrsh) {
+    if (y <= thrsh)
+    {
         /*
         ------------------------------------------------------------------
           Evaluate  anorm  for  |X| <= 0.66291
@@ -5607,7 +5639,8 @@ void cumnor(double* arg, double* result, double* ccum)
         if (y > eps) xsq = x * x;
         xnum = a[4] * xsq;
         xden = xsq;
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < 3; i++)
+        {
             xnum = (xnum + a[i]) * xsq;
             xden = (xden + b[i]) * xsq;
         }
@@ -5625,7 +5658,8 @@ void cumnor(double* arg, double* result, double* ccum)
     {
         xnum = c[8] * y;
         xden = y;
-        for (i = 0; i < 7; i++) {
+        for (i = 0; i < 7; i++)
+        {
             xnum = (xnum + c[i]) * y;
             xden = (xden + d[i]) * y;
         }
@@ -5634,7 +5668,8 @@ void cumnor(double* arg, double* result, double* ccum)
         del = (y - xsq) * (y + xsq);
         *result = exp(-(xsq * xsq * half)) * exp(-(del * half)) * *result;
         *ccum = one - *result;
-        if (x > zero) {
+        if (x > zero)
+        {
             temp = *result;
             *result = *ccum;
             *ccum = temp;
@@ -5651,7 +5686,8 @@ void cumnor(double* arg, double* result, double* ccum)
         xsq = one / (x * x);
         xnum = p[5] * xsq;
         xden = xsq;
-        for (i = 0; i < 4; i++) {
+        for (i = 0; i < 4; i++)
+        {
             xnum = (xnum + p[i]) * xsq;
             xden = (xden + q[i]) * xsq;
         }
@@ -5661,7 +5697,8 @@ void cumnor(double* arg, double* result, double* ccum)
         del = (x - xsq) * (x + xsq);
         *result = exp(-(xsq * xsq * half)) * exp(-(del * half)) * *result;
         *ccum = one - *result;
-        if (x > zero) {
+        if (x > zero)
+        {
             temp = *result;
             *result = *ccum;
             *ccum = temp;
@@ -6003,7 +6040,8 @@ S20:
     /*
          NEWTON INTERATIONS
     */
-    for (i = 1; i <= maxit; i++) {
+    for (i = 1; i <= maxit; i++)
+    {
         cumnor(&xcur, &cum, &ccum);
         dx = (cum - pp) / dennor(xcur);
         xcur -= dx;
@@ -6629,7 +6667,8 @@ S40:
     if (b > 1000.0e0) goto S80;
     n = (int) (a - 1.0e0);
     w = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         a -= 1.0e0;
         h = a / b;
         w *= (h / (1.0e0 + h));
@@ -6644,7 +6683,8 @@ S60:
     */
     n = (int) (b - 1.0e0);
     z = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         b -= 1.0e0;
         z *= (b / (a + b));
     }
@@ -6656,7 +6696,8 @@ S80:
     */
     n = (int) (a - 1.0e0);
     w = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         a -= 1.0e0;
         w *= (a / (1.0e0 + a / b));
     }
@@ -6748,7 +6789,8 @@ S20:
     n = (int) (*a - 1.25e0);
     t = *a;
     w = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         t -= 1.0e0;
         w = t * w;
     }
@@ -6877,7 +6919,8 @@ double dt1(double* p, double* q, double* df)
     xx = x * x;
     sum = x;
     denpow = 1.0e0;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 4; i++)
+    {
         term = devlpl(&coef[i][0], &ideg[i], &xx) * x;
         denpow *= *df;
         sum += (term / (denpow * denom[i]));
@@ -7943,7 +7986,8 @@ S20:
     n = (int) (*a - 1.25e0);
     t = *a;
     w = 1.0e0;
-    for (i = 1; i <= n; i++) {
+    for (i = 1; i <= n; i++)
+    {
         t -= 1.0e0;
         w = t * w;
     }
@@ -8074,7 +8118,8 @@ double Xgamm(double* a)
     else
         goto S10;
 S10:
-    for (j = 1; j <= m; j++) {
+    for (j = 1; j <= m; j++)
+    {
         x -= 1.0e0;
         t = x * t;
     }
@@ -8089,7 +8134,8 @@ S40:
     if (*a > 0.0e0) goto S70;
     m = -m - 1;
     if (m == 0) goto S60;
-    for (j = 1; j <= m; j++) {
+    for (j = 1; j <= m; j++)
+    {
         x += 1.0e0;
         t = x * t;
     }
@@ -8112,7 +8158,8 @@ S80:
     */
     top = p[0];
     bot = q[0];
-    for (i = 1; i < 7; i++) {
+    for (i = 1; i < 7; i++)
+    {
         top = p[i] + x * top;
         bot = q[i] + x * bot;
     }
@@ -8417,7 +8464,8 @@ S50:
     apn = *a + 1.0e0;
     t = *x / apn;
     wk[0] = t;
-    for (n = 2; n <= 20; n++) {
+    for (n = 2; n <= 20; n++)
+    {
         apn += 1.0e0;
         t *= (*x / apn);
         if (t <= 1.e-3) goto S70;
@@ -8433,7 +8481,8 @@ S80:
     sum += t;
     if (t > tol) goto S80;
     max = n - 1;
-    for (m = 1; m <= max; m++) {
+    for (m = 1; m <= max; m++)
+    {
         n -= 1;
         sum += wk[n - 1];
     }
@@ -8447,7 +8496,8 @@ S100:
     amn = *a - 1.0e0;
     t = amn / *x;
     wk[0] = t;
-    for (n = 2; n <= 20; n++) {
+    for (n = 2; n <= 20; n++)
+    {
         amn -= 1.0e0;
         t *= (amn / *x);
         if (fabs(t) <= 1.e-3) goto S120;
@@ -8464,7 +8514,8 @@ S130:
     goto S130;
 S140:
     max = n - 1;
-    for (m = 1; m <= max; m++) {
+    for (m = 1; m <= max; m++)
+    {
         n -= 1;
         sum += wk[n - 1];
     }
@@ -8917,7 +8968,8 @@ S50:
     */
     den = x;
     upper = p1[0] * x;
-    for (i = 1; i <= 5; i++) {
+    for (i = 1; i <= 5; i++)
+    {
         den = (den + q1[i - 1]) * x;
         upper = (upper + p1[i + 1 - 1]) * x;
     }
@@ -8940,7 +8992,8 @@ S70:
     w = 1.0e0 / (x * x);
     den = w;
     upper = p2[0] * w;
-    for (i = 1; i <= 3; i++) {
+    for (i = 1; i <= 3; i++)
+    {
         den = (den + q2[i - 1]) * w;
         upper = (upper + p2[i + 1 - 1]) * w;
     }
@@ -9687,8 +9740,6 @@ double chiprob_p(double xx, double df)
     double pp;
     double qq;
     cdfchi(&ww, &pp, &qq, &xx, &df, &st, &bnd);
-    if (st) {
-        return -9;
-    }
+    if (st) { return -9; }
     return qq;
 }

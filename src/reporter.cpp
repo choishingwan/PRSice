@@ -39,7 +39,8 @@ void Reporter::report(const std::string& input, bool wrap)
     split(paragraph, input.c_str(), '\n');
     std::string list_prefix;
     size_t space_pad = 0;
-    for (auto&& message : paragraph) {
+    for (auto&& message : paragraph)
+    {
         check_list.clear();
         // go through each paragraph
         // red for error, yellow for warnings
@@ -49,21 +50,25 @@ void Reporter::report(const std::string& input, bool wrap)
         bool is_warning =
             !message.compare(0, m_warning_prefix_size, m_warning_prefix);
         bool is_list = false;
-        if (!is_error && !is_warning) {
+        if (!is_error && !is_warning)
+        {
             // check if there are any list in this paragraph
             // list shouldn't be included in error or warning messages
             // list is assumed to be in paragraph format
             // (no in line list allowed)
             split(check_list, message.c_str(), ')');
-            if (check_list.size() > 1) {
-                if (misc::isNumeric(check_list.front())) {
+            if (check_list.size() > 1)
+            {
+                if (misc::isNumeric(check_list.front()))
+                {
                     is_list = true;
                     list_prefix = check_list.front() + ")";
                     space_pad = list_prefix.size() + 1;
                 }
             }
         }
-        if (is_error) {
+        if (is_error)
+        {
             std::cerr << m_error_color_start;
             space_pad = m_error_prefix_size + 1;
         }
@@ -72,7 +77,8 @@ void Reporter::report(const std::string& input, bool wrap)
             std::cerr << m_warning_color_start;
             space_pad = m_warning_prefix_size + 1;
         }
-        if (!wrap) {
+        if (!wrap)
+        {
             std::cerr << message;
             m_log_file << message;
         }
@@ -82,8 +88,10 @@ void Reporter::report(const std::string& input, bool wrap)
             // out nicely
             split(line, message.c_str(), ' ');
             size_t cur_length = 0;
-            for (auto&& word : line) {
-                if (word.length() + cur_length >= m_width) {
+            for (auto&& word : line)
+            {
+                if (word.length() + cur_length >= m_width)
+                {
                     // word is too long, so display on the next line
                     cur_length = word.length() + 1 + space_pad;
                     std::cerr << '\n';
