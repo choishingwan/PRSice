@@ -280,6 +280,8 @@ m_help_message =
        "                            seed and same input is provided, same result\n"
        "                            can be generated\n"
        "    --thread        | -n    Number of thread use\n"
+       "    --use-ref-maf           When specified, missingness imputation will be\n"
+       "                            performed based on the reference samples\n"
        "    --x-range               Range of SNPs to be excluded from the whole\n"
        "                            analysis. It can either be a single bed file\n"
        "                            or a comma seperated list of range. Range must\n"
