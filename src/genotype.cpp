@@ -2073,7 +2073,7 @@ void Genotype::build_membership_matrix(
     {
         // not PRSet. We know the membership is 1:num_snp
         region_start_idx.push_back(0);
-        region_start_idx.push_back(1);
+        region_start_idx.push_back(m_existed_snps.size());
         if (print_snps)
         {
             for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
