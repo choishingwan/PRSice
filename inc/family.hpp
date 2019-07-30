@@ -7,19 +7,33 @@ class Family
 public:
     Family() {}
     virtual ~Family() {}
-    virtual Eigen::VectorXd variance(const Eigen::VectorXd& /*mu*/) const {}
-    virtual Eigen::VectorXd mu_eta(const Eigen::VectorXd& /*eta*/) const {}
-    virtual Eigen::VectorXd linkinv(const Eigen::VectorXd& /*eta*/) const {}
+    virtual Eigen::VectorXd variance(const Eigen::VectorXd& /*mu*/) const
+    {
+        return Eigen::VectorXd();
+    }
+    virtual Eigen::VectorXd mu_eta(const Eigen::VectorXd& /*eta*/) const
+    {
+        return Eigen::VectorXd();
+    }
+    virtual Eigen::VectorXd linkinv(const Eigen::VectorXd& /*eta*/) const
+    {
+        return Eigen::VectorXd();
+    }
     virtual Eigen::VectorXd initialize(const Eigen::VectorXd& /*y*/,
                                        const Eigen::VectorXd /*weights*/) const
     {
+        return Eigen::VectorXd();
     }
-    virtual Eigen::VectorXd link(const Eigen::VectorXd& /*mu_start*/) const {}
+    virtual Eigen::VectorXd link(const Eigen::VectorXd& /*mu_start*/) const
+    {
+        return Eigen::VectorXd();
+    }
 
     virtual double dev_resids_sum(const Eigen::VectorXd& /*y*/,
                                   const Eigen::VectorXd& /*mu*/,
                                   const Eigen::VectorXd& /*wt*/) const
     {
+        return 0.0;
     }
     virtual double var_res() { return 1; }
     virtual bool valideta(const Eigen::VectorXd& /*eta*/) const { return true; }
