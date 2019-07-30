@@ -249,8 +249,8 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
                             m_independent_variables.topRightCorner(
                                 m_independent_variables.rows(),
                                 m_independent_variables.cols() - 1),
-                            m_null_p, m_null_r2, m_null_coeff, m_null_se, 25,
-                            n_thread, true);
+                            m_null_p, m_null_r2, m_null_coeff, m_null_se,
+                            n_thread);
         }
         else
         {
@@ -1252,7 +1252,7 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         try
         {
             Regression::glm(m_phenotype, m_independent_variables, p_value, r2,
-                            coefficient, se, 25, thread, true);
+                            coefficient, se, thread);
         }
         catch (const std::runtime_error& error)
         {
@@ -1282,7 +1282,6 @@ void PRSice::regress_score(Genotype& target, const double threshold,
                                       p_value, r2, r2_adjust, coefficient, se,
                                       thread, true);
     }
-
     // If this is the best r2, then we will add it
     int best_index = m_best_index;
     if (prs_result_idx == 0 || best_index < 0
@@ -1430,7 +1429,7 @@ void PRSice::run_null_perm_no_thread(
             print_progress();
             // run the logistic regression on the permuted phenotype
             Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
-                            coefficient, se, 25, 1, true);
+                            coefficient, se, 1);
             obs_t = std::fabs(coefficient / se);
             // note that for us to calculate the p-value from logistic
             // regression, we take the square of obs_t, but abs should give us
@@ -1559,7 +1558,7 @@ void PRSice::consume_null_pheno(
             // and the second entry is the index. We will pass the phenotype for
             // GLM analysis if required
             Regression::glm(std::get<0>(input), m_independent_variables, obs_p,
-                            r2, coefficient, se_res, 25, 1, true);
+                            r2, coefficient, se_res, 1);
             obs_t = std::fabs(coefficient / se_res);
             // although the obs_t^2 is used for calculation of p-value, abs
             // should give us similar result and allow us to use the same
@@ -2100,7 +2099,7 @@ void PRSice::null_set_no_thread(
             if (is_binary)
             {
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
-                                coefficient, se, 25, 1, true);
+                                coefficient, se, 1);
                 t_value = std::fabs(coefficient / se);
                 // in GLM, p_value is calculated by t_value^2, so to mimic that,
                 // we also do t_value^2, though this should give the same result
@@ -2231,7 +2230,7 @@ void PRSice::consume_prs(
         if (is_binary)
         {
             Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
-                            se, 25, 1, true);
+                            se, 1);
         }
         else
         {
