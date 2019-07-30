@@ -88,6 +88,9 @@
     <a class="current" href="./">PRSice</a>
     <ul class="subnav">
             
+    <li class="toctree-l3"><a href="#background">Background</a></li>
+    
+
     <li class="toctree-l3"><a href="#input-data">Input Data</a></li>
     
         <ul>
@@ -229,16 +232,20 @@
           <div role="main">
             <div class="section">
               
-                <h1 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h1>
+                <h1 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h1>
+<p>You will need to have basic understanding of Genome Wide Association Studies (GWAS) in order to be able to 
+perform Polygenic risk score (PRS) analyses.
+If you are unfamiliar with GWAS, you can consider reading <a href="https://www.ncbi.nlm.nih.gov/pubmed/29484742">this paper</a>.</p>
+<h1 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h1>
 <p>Here, we briefly discuss different input files required by PRSice:</p>
 <h2 id="base-dataset">Base Dataset<a class="headerlink" href="#base-dataset" title="Permanent link">&para;</a></h2>
 <p>Base (i.e. GWAS) data must be provided as a whitespace delimited file containing association analysis results for SNPs on the base phenotype.
-PRSice has no problem reading in a gzipped base file.</p>
-<p>PLINK output is used, then please make sure there is a column for the effective allele (A1) and specify it with <code>--A1</code> option. 
-On the other hand, if the base data follows other formats, then the column headers can be provided using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--se</code>, <code>--pvalue</code> options</p>
+PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz</strong> suffix).</p>
+<p>If PLINK output is used, then please make sure there is a column for the effective allele (A1) and specify it with <code>--A1</code> option. </p>
+<p>If your base data follows other formats, then the column headers can be provided using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--se</code>, <code>--pvalue</code> options</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>PRSice requires the base file to contain information of the effective allele (--A1), effect size estimates (--stat), p-value for association (--pvalue), and the SNP ID (--snp).</p>
+<p>PRSice requires the base file to contain information of the effective allele (<code>--A1</code>), effect size estimates (<code>--stat</code>), p-value for association (<code>--pvalue</code>), and the SNP ID (<code>--snp</code>).</p>
 </div>
 <p>If the input file does not contain a column header, the column can be specified using their index (start counting from 0) with the <code>--index</code> flag.</p>
 <p>For example, with the following input format:</p>
@@ -300,9 +307,9 @@ SNPs based on their INFO score and MAF respectively.</p>
 <div class="codehilite"><pre><span></span>--maf-base &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;
 </pre></div>
 
-<p>By default, PRSice will look for the following column names automatically from the base file header if <code>--index</code> was not provided:</p>
+<p>By default, PRSice will look for the following column names automatically from the base file header if <code>--index</code> was not provided or if the column name of the specific arguement(s) were not provided:</p>
 <blockquote>
-<p>CHR, BP, A1, A2, SNP, P, INFO, SE (case sensitive) and OR / BETA (case insensitive)</p>
+<p>CHR, BP, A1, A2, SNP, P, INFO (case sensitive) and OR / BETA (case insensitive)</p>
 </blockquote>
 <p><code>--no-default</code> can be used to disable all the defaults of PRSice.</p>
 <div class="admonition note">
@@ -336,10 +343,20 @@ PRSice will automatically substitute # with 1-22</p>
 </div>
 <p>Alternatively, if your PLINK files do not have a unified prefix, you can use <code>--target-list</code> to provide a file containing all
 prefix to PRSice. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><strong>.pgen</strong> files are not currently supported</p>
+</div>
 <h3 id="bgen">BGEN<a class="headerlink" href="#bgen" title="Permanent link">&para;</a></h3>
 <p>PRSice currently support BGEN v1.1 and v1.2. To specify a BGEN file, simply add the <code>--type bgen</code> or <code>--ld-type bgen</code> to the PRSice command</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In theory, we can support BGEN v1.3, but that will require us to include zstd library, developed by facebook. 
+You can enable the support by including the zstd library and changing the <em>bgen_lib</em> files.</p>
+</div>
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
-a phenotype file (<code>--pheno-file</code>) for PRSice to run. Alternatively, the sample file can be provided using</p>
+a phenotype file (<code>--pheno</code>). Alternatively, if you have a sample file containing the phenotype information, you can 
+provide it with</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The sample file is required even if <code>--no-regress</code> is set as the sample ID is required for output. This requirement might be losen in future versions</p>
@@ -348,21 +365,19 @@ a phenotype file (<code>--pheno-file</code>) for PRSice to run. Alternatively, t
 <ul>
 <li>
 <p><code>--hard</code>: Normally, with BGEN format, PRS is calculated using the dosage information.
-But hard-thresholding can be performed by using the <code>--hard</code> option. SNPs will then coded as the genotype (0,1 or 2) with
-probability larger than threshold specified by <code>--hard-thres</code>. If no such genotype is presented, the SNP will be
+But hard-thresholding can be performed by using the <code>--hard</code> option. SNPs will then coded as the genotype (0,1 or 2) and filtered
+according to threshold set by <code>--hard-thres</code>. If no such genotype is presented, the SNP will be
 coded as missing</p>
 </li>
 <li>
-<p><code>--hard-thres</code>: The genotype probability threshold. SNPs with no genotype having a probability larger than this
-threshold will be treated as missing</p>
+<p><code>--hard-thres</code>: A hardcall is saved when the distance to the nearest hardcall is less than the hardcall threshold. See <a href="../command_detail/#dosage">here</a> for more detail. </p>
 </li>
 </ul>
 <p>To perform clumping on BGEN file, we need to repeatly decompress the genotype dosage and convert them into PLINK binary format. 
-Therefore, to speed up the clumping process, you can allow PRSice to generate a large intermediate file, containing the hard
-coded genotypes in PLINK binary format by using the <code>--allow-inter</code> option. </p>
+To speed up the clumping process, you can allow PRSice to generate a large intermediate file, containing the hard
+coded genotypes in PLINK binary format by using the <code>--allow-inter</code> option.</p>
 <h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
-<p>An external phenotype file can be provided to PRSice using the <code>--pheno-file</code>
-parameter. 
+<p>An external phenotype file can be provided to PRSice using the <code>--pheno</code> parameter. 
 This must be a tab / space delimited file and missing data <strong>must</strong> be represented by either <code>NA</code> or <code>-9</code> (only for binary traits).
 The first two column of the phenotype file should be the FID and the IID, or when
 <code>--ignore-fid</code> is set, the first column should be the IID.
@@ -404,8 +419,7 @@ be provided separately to the <code>--ld</code> parameter</p>
 </div>
 <h1 id="clumping">Clumping<a class="headerlink" href="#clumping" title="Permanent link">&para;</a></h1>
 <p>By default, PRSice will perform Clumping to remove SNPs that are in LD with each other.
-Similar to PLINK, the r<sup>2</sup> values computed by PRSice are based on maximum likelihood haplotype frequency estimates.
-The pearson correlation r<sup>2</sup> calculation is also supported and can be specified by using <code>--pearson</code>.</p>
+Similar to PLINK, the r<sup>2</sup> values computed by PRSice are based on maximum likelihood haplotype frequency estimates.</p>
 <p>Both cases and controls are included in the LD calculation. 
 Alternatively, a combination of <code>--ld</code> and <code>--ld-keep</code>/<code>-ld-remove</code> can be used to restrict LD calculation in control samples. </p>
 <p>Clumping parameters can be changed by using the <code>--clump-kb</code>, <code>--clump-r2</code> and <code>--clump-p</code> option.
@@ -466,15 +480,21 @@ genotype as the sample with missing genotype.</p>
 samples will be excluded.
 Alternatively, if <code>--missing CENTER</code> is set, all PRS calculated will be minused by
 the MAF of the SNP (therefore, missing samples will have PRS of 0).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Missingness imputation is usually based on the target samples. If you would like to 
+impute the missingness using the reference sample, you can use <code>--use-ref-maf</code> parameter
+to specify all MAF to be calculated using the reference samples.</p>
+</div>
 <h1 id="empirical-p-value-calculation">Empirical P-value calculation<a class="headerlink" href="#empirical-p-value-calculation" title="Permanent link">&para;</a></h1>
-<p>All approaches to PRS calculation involve parameter optimisation in generating the final prediction model, and are thus vulnerable to overfitting.
-There are a few methods to account for the overfitting:</p>
+<p>All approaches to PRS calculation involve parameter optimisation and are therefore overfitted. </p>
+<p>There are a few methods to account for the overfitting:</p>
 <ol>
 <li>Evaluate performance in an independent validation sample</li>
 <li>Cross validation</li>
 <li>Calculate an empirical P-value</li>
 </ol>
-<p>In, PRSice-2, we have implemented a permutation analysis to calculate an empirical P-value. </p>
+<p>In, PRSice-2, we have implemented permutation procedure to calculate the empirical P-value. </p>
 <h2 id="permutation-procedure">Permutation Procedure<a class="headerlink" href="#permutation-procedure" title="Permanent link">&para;</a></h2>
 <p>To calculate the empirical P-value, PRSice-2 perform the following</p>
 <ol>
@@ -500,11 +520,11 @@ the observed phenotypic variance explained, R<sup>2</sup>, remains unadjusted an
 Therefore, it is imperative to perform out-of-samp,le prediction, or cross-validation to evaluate the predictive accuracy of PRS. </p>
 </div>
 <h2 id="computation-algorithm">Computation Algorithm<a class="headerlink" href="#computation-algorithm" title="Permanent link">&para;</a></h2>
-<p>In reality, due to the time consuming nature of permutation analysis, PRSice-2 exploit certain property of random number generation to speed up the permutation analysis. </p>
+<p>In reality, PRSice-2 exploit certain property of random number generation to speed up the permutation analysis. </p>
 <p>To generate random numbers, a random seed is required. When the same seed is provided, the same sequence of random number will always be generated. 
 PRSice-2 exploit this property, such that the permutation analysis is performed as follow</p>
 <ol>
-<li>Generate the random seed or use the user provided random seed to <span class="arithmatex">\(S\)</span></li>
+<li>Generate the random seed or set the random seed to the user provided random seed (<span class="arithmatex">\(S\)</span>)</li>
 <li>For each p-value threshold<ol>
 <li>Calculate the observed p-value </li>
 <li>Seed the random number generator with <span class="arithmatex">\(S\)</span></li>
@@ -517,7 +537,7 @@ PRSice-2 exploit this property, such that the permutation analysis is performed 
 <li>Calculate the empirical p-value once all p-value thresholds have been processed</li>
 </ol>
 <p>As we re-seed the random number generator for each p-value threshold, we ensure the random phenotypes generated in each p-value thresholds
-to be identical, therefore allowing us to reuse the calculated PRS, and also reuse the decomosed matrix, which leads to significant speed 
+are identical, allowing us to reuse the calculated PRS and the decomosed matrix, which leads to significant speed 
 up of the permutation process.</p>
 <h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
 <h2 id="bar-plot">Bar Plot<a class="headerlink" href="#bar-plot" title="Permanent link">&para;</a></h2>
