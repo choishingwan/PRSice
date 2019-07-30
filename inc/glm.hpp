@@ -195,10 +195,10 @@ private:
     void run_step_halving(const family& f, int& iterr)
     {
         // check for infinite deviance
-        if (isinf(m_dev))
+        if (std::isinf(m_dev))
         {
             int itrr = 0;
-            while (isinf(m_dev))
+            while (std::isinf(m_dev))
             {
                 ++itrr;
                 if (itrr > m_maxit) break;
