@@ -1,3 +1,4 @@
+office/ 
 reference/
 window
 *.o
@@ -19,3 +20,5 @@ site/
 test/data/bk/*
 test/data/*
 zlib*
+
+*.user*

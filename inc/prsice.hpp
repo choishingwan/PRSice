@@ -90,15 +90,20 @@ public:
         m_logit_perm = commander.logit_perm();
         m_seed = commander.seed();
         bool has_binary = false;
-        for (auto b : m_target_binary) {
-            if (b) {
+        for (auto b : m_target_binary)
+        {
+            if (b)
+            {
                 has_binary = true;
                 break;
             }
         }
-        if (m_perform_perm) {
-            if (has_binary) {
-                if (!m_logit_perm) {
+        if (m_perform_perm)
+        {
+            if (has_binary)
+            {
+                if (!m_logit_perm)
+                {
                     std::string message =
                         "Warning: To speed up the permutation, "
                         "we perform linear regression instead of logistic "
@@ -222,10 +227,9 @@ public:
         // the number of raw PRSice run
         m_total_process = num_thresholds * num_phenotype()
                           * ((num_region > 2) ? num_region - 1 : 1);
-        if (perm) {
-            m_total_process *= (num_perm + 1);
-        }
-        if (set_perm) {
+        if (perm) { m_total_process *= (num_perm + 1); }
+        if (set_perm)
+        {
             // the additional permutation we've got to run, num_region -2 as we
             // don't perform permutation on the background set nor the base set
             m_total_process +=
@@ -245,14 +249,14 @@ public:
                               * 100.0;
         // progress bar can be slow when permutation + thresholding is used due
         // to the huge amount of processing required
-        if (cur_progress - m_previous_percentage > 0.01) {
+        if (cur_progress - m_previous_percentage > 0.01)
+        {
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_percentage = cur_progress;
         }
 
-        if (m_previous_percentage >= 100.0 || completed) {
-            fprintf(stderr, "\rProcessing %03.2f%%", 100.0);
-        }
+        if (m_previous_percentage >= 100.0 || completed)
+        { fprintf(stderr, "\rProcessing %03.2f%%", 100.0); }
     }
     /*!
      * \brief The master function for performing the competitive analysis
@@ -306,7 +310,7 @@ private:
         std::vector<std::string> name;
         std::vector<int> order;
         std::vector<bool> binary;
-        bool use_pheno=false;
+        bool use_pheno = false;
     } m_pheno_info;
 
     // store the number of non-sig, margin sig, and sig pathway & phenotype
@@ -321,7 +325,7 @@ private:
     std::vector<double> m_permuted_pheno;
     std::vector<double> m_best_sample_score;
     std::vector<size_t> m_matrix_index;
-    std::vector<size_t> m_significant_store{0, 0, 0};
+    std::vector<size_t> m_significant_store {0, 0, 0};
     std::vector<bool> m_target_binary;
     std::ofstream m_all_out, m_best_out, m_prsice_out;
     column_file_info m_all_file, m_best_file;
@@ -454,12 +458,15 @@ private:
      * \param require_standardize is a boolean, indicating if we want a
      * standardized PRS
      */
-    void produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-        Genotype& target,
-        const std::vector<size_t>::const_iterator& bk_start_idx,
-        const std::vector<size_t>::const_iterator& bk_end_idx,
-        size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
-        const bool require_standardize, const bool use_ref_maf);
+    void
+    produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                     Genotype& target,
+                     const std::vector<size_t>::const_iterator& bk_start_idx,
+                     const std::vector<size_t>::const_iterator& bk_end_idx,
+                     size_t num_consumer,
+                     std::map<size_t, std::vector<size_t>>& set_index,
+                     const size_t num_perm, const bool require_standardize,
+                     const bool use_ref_maf);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis

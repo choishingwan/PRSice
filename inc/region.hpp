@@ -100,14 +100,13 @@ protected:
     static void is_bed_line(const std::vector<std::string>& bed_line,
                             size_t& column_size, bool& is_header)
     {
-        if (bed_line.front() == "track" || bed_line.front() == "browser") {
+        if (bed_line.front() == "track" || bed_line.front() == "browser")
+        {
             is_header = true;
             return;
         }
 
-        if (column_size == 0) {
-            column_size = bed_line.size();
-        }
+        if (column_size == 0) { column_size = bed_line.size(); }
         else if (column_size != bed_line.size())
         {
             std::string message =
@@ -124,15 +123,18 @@ protected:
         // reporter here)
         std::string chr = bed_line.front();
         std::transform(chr.begin(), chr.end(), chr.begin(), ::toupper);
-        if (bed_line.front().rfind("CHR") != 0) {
-            if (!misc::isNumeric(bed_line.front())) {
+        if (bed_line.front().rfind("CHR") != 0)
+        {
+            if (!misc::isNumeric(bed_line.front()))
+            {
                 std::string message =
                     "Error: Invalid BED format. First field "
                     "of BED file should be chromosomal information\n";
                 throw std::runtime_error(message);
             }
         }
-        if (bed_line.size() > 5) {
+        if (bed_line.size() > 5)
+        {
             if (bed_line[5] != "." && bed_line[5] != "+" && bed_line[5] != "-")
             {
                 std::string message = "Error: Undefined strand information: "
@@ -161,9 +163,11 @@ protected:
         while ((pos = attribute.find_first_of(" ;", prev)) != std::string::npos
                && num_added < 2)
         {
-            if (pos > prev) {
+            if (pos > prev)
+            {
                 temp = attribute.substr(prev, pos - prev);
-                if (temp.size() == 7 && temp.substr(5) == "id") {
+                if (temp.size() == 7 && temp.substr(5) == "id")
+                {
                     add_next = true;
                     add_id = 0;
                 }

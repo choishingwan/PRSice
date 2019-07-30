@@ -97,9 +97,12 @@ public:
                       const std::string& remove_file, const std::string& delim,
                       bool verbose, Reporter& reporter);
 
-    // do a quick filtering before we actually read in and process the genotypes
-    void load_snps(const std::string& out, const std::string& exclude,
-                   const std::string& extract,
+    // We need the exclusion_region parameter because when we read in the base
+    // we do allow users to provide a base without the CHR and LOC, which forbid
+    // us to do the regional filtering. However, as exclusion and extractions
+    // are based on the SNP ID, we can be confident that they were already done
+    // in read_base
+    void load_snps(const std::string& out,
                    const std::vector<IITree<int, int>>& exclusion_regions,
                    bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
@@ -124,9 +127,8 @@ public:
     void update_snp_index()
     {
         m_existed_snps_index.clear();
-        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp) {
-            m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp;
-        }
+        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
+        { m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp; }
     }
     /*!
      * \brief Return the number of sample we wish to perform PRS on
@@ -294,9 +296,7 @@ public:
         double prs = m_prs_info[i].prs;
         int num_snp = m_prs_info[i].num_snp;
         double avg = prs;
-        if (num_snp == 0) {
-            avg = 0.0;
-        }
+        if (num_snp == 0) { avg = 0.0; }
         else
         {
             avg = prs / static_cast<double>(num_snp);
@@ -341,9 +341,8 @@ public:
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end,
-                   const std::string &exclude_snps,
-                   const std::string &extract_snps,
+                   const double& bound_end, const std::string& exclude_snps,
+                   const std::string& extract_snps,
                    const std::vector<IITree<int, int>>& exclusion_region,
                    const double& maf_control, const double& maf_case,
                    const double& info_threshold, const bool maf_control_filter,
@@ -381,22 +380,20 @@ public:
         std::vector<uintptr_t>& flag, const size_t required_size, const int chr,
         const int bp, const bool genome_wide_background)
     {
-        if (flag.size() != required_size) {
-            flag.resize(required_size);
-        }
+        if (flag.size() != required_size) { flag.resize(required_size); }
         std::fill(flag.begin(), flag.end(), 0);
         SET_BIT(0, flag.data());
-        if (genome_wide_background) {
-            SET_BIT(1, flag.data());
-        }
+        if (genome_wide_background) { SET_BIT(1, flag.data()); }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if (chr >= 0 && !gene_sets.empty()) {
+        if (chr >= 0 && !gene_sets.empty())
+        {
             std::vector<size_t> out;
             if (static_cast<size_t>(chr) >= gene_sets.size()) return;
             gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
             int idx;
-            for (auto&& j : out) {
+            for (auto&& j : out)
+            {
                 idx = gene_sets[static_cast<size_t>(chr)].data(j);
                 // idx= cr_label(gene_sets, b[j]);
                 SET_BIT(static_cast<size_t>(idx), flag.data());
@@ -404,10 +401,9 @@ public:
         }
         if (snp_in_sets.empty() || rs.empty()) return;
         auto&& snp_idx = snp_in_sets.find(rs);
-        if (snp_idx != snp_in_sets.end()) {
-            for (auto&& i : snp_idx->second) {
-                SET_BIT(i, flag.data());
-            }
+        if (snp_idx != snp_in_sets.end())
+        {
+            for (auto&& i : snp_idx->second) { SET_BIT(i, flag.data()); }
         }
         return;
     }
@@ -456,7 +452,13 @@ protected:
     double m_het_weight = 1;
     double m_homrar_weight = 2;
     size_t m_num_thresholds = 0;
-    size_t m_thread = 1;                  // number of final samples
+    size_t m_thread = 1; // number of final samples
+    size_t m_num_ambig = 0;
+    size_t m_num_maf_filter = 0;
+    size_t m_num_geno_filter = 0;
+    size_t m_num_info_filter = 0;
+    size_t m_num_xrange = 0;
+    size_t m_base_missed = 0;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -468,17 +470,11 @@ protected:
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
     std::random_device::result_type m_seed = 0;
-    uint32_t m_num_ambig = 0;
     uint32_t m_num_ref_target_mismatch = 0;
-    uint32_t m_num_maf_filter = 0;
-    uint32_t m_num_geno_filter = 0;
-    uint32_t m_num_info_filter = 0;
     uint32_t m_num_male = 0;
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
-    uint32_t m_num_xrange = 0;
-    uint32_t m_base_missed = 0;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
     bool m_is_ref = false;
@@ -508,7 +504,8 @@ protected:
     {
         // NOTE: Threshold is x < p <= end and minimum category is 0
         int category = 0;
-        if (pvalue > bound_end && !no_full) {
+        if (pvalue > bound_end && !no_full)
+        {
             category = static_cast<int>(
                 std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
             pthres = 1.0;
@@ -533,7 +530,8 @@ protected:
     int calculate_category(const double& pvalue,
                            const std::vector<double>& barlevels, double& pthres)
     {
-        for (size_t i = 0; i < barlevels.size(); ++i) {
+        for (size_t i = 0; i < barlevels.size(); ++i)
+        {
             if (pvalue < barlevels[i]
                 || misc::logically_equal(pvalue, barlevels[i]))
             {
@@ -699,7 +697,8 @@ protected:
         uintptr_t cur_decr = 120;
         uintptr_t* lptr_12x_end;
         unfiltered_sample_ctl2 -= unfiltered_sample_ctl2 % 12;
-        while (unfiltered_sample_ctl2 >= 120) {
+        while (unfiltered_sample_ctl2 >= 120)
+        {
         single_marker_freqs_and_hwe_loop:
             lptr_12x_end = &(lptr[cur_decr]);
             count_3freq_1920b((__m128i*) lptr, (__m128i*) lptr_12x_end,
@@ -713,14 +712,16 @@ protected:
             founder_include2 = &(founder_include2[cur_decr]);
             unfiltered_sample_ctl2 -= cur_decr;
         }
-        if (unfiltered_sample_ctl2) {
+        if (unfiltered_sample_ctl2)
+        {
             cur_decr = unfiltered_sample_ctl2;
             goto single_marker_freqs_and_hwe_loop;
         }
 #else
         uintptr_t* lptr_twelve_end =
             &(lptr[unfiltered_sample_ctl2 - unfiltered_sample_ctl2 % 12]);
-        while (lptr < lptr_twelve_end) {
+        while (lptr < lptr_twelve_end)
+        {
             count_3freq_48b(lptr, sample_include2, &tot_a, &tot_b, &tot_c);
             count_3freq_48b(lptr, founder_include2, &tot_a_f, &tot_b_f,
                             &tot_c_f);
@@ -729,7 +730,8 @@ protected:
             founder_include2 = &(founder_include2[12]);
         }
 #endif
-        while (lptr < lptr_end) {
+        while (lptr < lptr_end)
+        {
             loader = *lptr++;
             loader2 = *sample_include2++;
             loader3 = (loader >> 1) & loader2;
@@ -810,7 +812,8 @@ protected:
         __univec acc11;
         __univec acc10;
         uint32_t ct2;
-        while (sample_ctv6 >= 30) {
+        while (sample_ctv6 >= 30)
+        {
             sample_ctv6 -= 30;
             vend = &(veca0[30]);
             acc00.vi = _mm_setzero_si128();
@@ -928,7 +931,8 @@ protected:
             counts_3x3[3] +=
                 ((acc10.u8[0] + acc10.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (sample_ctv6) {
+        if (sample_ctv6)
+        {
             vend = &(veca0[sample_ctv6]);
             ct2 = sample_ctv6 % 2;
             sample_ctv6 = 0;
@@ -936,7 +940,8 @@ protected:
             acc01.vi = _mm_setzero_si128();
             acc11.vi = _mm_setzero_si128();
             acc10.vi = _mm_setzero_si128();
-            if (ct2) {
+            if (ct2)
+            {
                 countx00 = _mm_setzero_si128();
                 countx01 = _mm_setzero_si128();
                 countx11 = _mm_setzero_si128();
@@ -977,7 +982,8 @@ protected:
             new_mask = (((~cur_geno) & FIVEMASK) | shifted_masked_geno) * 3;
             *mask_buf_ptr++ = new_mask;
         } while (geno_ptr < geno_end);
-        if (is_x) {
+        if (is_x)
+        {
             geno_ptr = geno_buf;
             do
             {
@@ -987,7 +993,8 @@ protected:
                                  & (*founder_male_include2++));
             } while (geno_ptr < geno_end);
         }
-        if (founder_ct % BITCT2) {
+        if (founder_ct % BITCT2)
+        {
             mask_buf[founder_ct / BITCT2] &=
                 (ONELU << (2 * (founder_ct % BITCT2))) - ONELU;
         }
@@ -1235,7 +1242,8 @@ protected:
                      uintptr_t* mask2, int32_t* return_vals,
                      uint32_t batch_ct_m1, uint32_t last_batch_size)
     {
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             ld_dot_prod_batch((__m128i*) vec1, (__m128i*) vec2,
                               (__m128i*) mask1, (__m128i*) mask2, return_vals,
                               MULTIPLEX_LD / 192);
@@ -1316,7 +1324,8 @@ protected:
     {
         // accelerated implementation for no-missing-loci case
         int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             result -= ld_dot_prod_nm_batch((__m128i*) vec1, (__m128i*) vec2,
                                            MULTIPLEX_LD / 192);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
@@ -1467,7 +1476,8 @@ protected:
                      uintptr_t* mask2, int32_t* return_vals,
                      uint32_t batch_ct_m1, uint32_t last_batch_size)
     {
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals,
                               MULTIPLEX_LD / 48);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
@@ -1521,7 +1531,8 @@ protected:
                            uint32_t last_batch_size)
     {
         int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--) {
+        while (batch_ct_m1--)
+        {
             result -= ld_dot_prod_nm_batch(vec1, vec2, MULTIPLEX_LD / 48);
             vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
             vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
@@ -1551,7 +1562,8 @@ protected:
         __m128i loader2;
         __univec acc;
 
-        while (word12_ct >= 10) {
+        while (word12_ct >= 10)
+        {
             word12_ct -= 10;
             vend1 = &(vptr1[60]);
         ld_missing_ct_intersect_main_loop:
@@ -1592,7 +1604,8 @@ protected:
                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
             tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
         }
-        if (word12_ct) {
+        if (word12_ct)
+        {
             vend1 = &(vptr1[word12_ct * 6]);
             word12_ct = 0;
             goto ld_missing_ct_intersect_main_loop;
@@ -1604,7 +1617,8 @@ protected:
         uintptr_t tmp_stor;
         uintptr_t loader1;
         uintptr_t loader2;
-        while (lptr1 < lptr1_end) {
+        while (lptr1 < lptr1_end)
+        {
             loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
             loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
             loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
@@ -1628,10 +1642,10 @@ protected:
         }
 #endif
         lptr1_end2 = &(lptr1[word12_rem]);
-        while (lptr1 < lptr1_end2) {
-            tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK);
-        }
-        if (lshift_last) {
+        while (lptr1 < lptr1_end2)
+        { tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK); }
+        if (lshift_last)
+        {
             tot += popcount2_long(((~((*lptr1) | (*lptr2))) & FIVEMASK)
                                   << lshift_last);
         }

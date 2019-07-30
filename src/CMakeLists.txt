@@ -5,6 +5,23 @@ cmake_minimum_required (VERSION 3.1)
 # Eigen from http://bitbucket.org/eigen/eigen/get/3.2.9.tar.bz2
 include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/lib)
 include_directories(${CMAKE_SOURCE_DIR}/inc)
+SET(prsice_header
+    binarygen.hpp
+    binaryplink.hpp
+    commander.hpp
+    dcdflib.h
+    family.hpp
+    genotype.hpp
+    genotypefactory.hpp
+    glm.hpp
+    misc.hpp
+    prsice.hpp
+    region.hpp
+    regression.hpp
+    reporter.hpp
+    snp.hpp
+    storage.hpp
+    thread_queue.hpp)
 
 add_library(bgen ${CMAKE_SOURCE_DIR}/src/bgen_lib.cpp)
 add_library(gzstream ${CMAKE_SOURCE_DIR}/src/gzstream.cpp)
@@ -22,7 +39,6 @@ add_library(prsice_lib
     ${CMAKE_SOURCE_DIR}/src/regression.cpp
     ${CMAKE_SOURCE_DIR}/src/reporter.cpp
     ${CMAKE_SOURCE_DIR}/src/snp.cpp)
-
 target_link_libraries( prsice_lib PRIVATE
     bgen
     gzstream

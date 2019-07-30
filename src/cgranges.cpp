@@ -19,7 +19,8 @@
     {                                                                     \
         rstype_t* i;                                                      \
         for (i = beg + 1; i < end; ++i)                                   \
-            if (rskey(*i) < rskey(*(i - 1))) {                            \
+            if (rskey(*i) < rskey(*(i - 1)))                              \
+            {                                                             \
                 rstype_t *j, tmp = *i;                                    \
                 for (j = i; j > beg && rskey(tmp) < rskey(*(j - 1)); --j) \
                     *j = *(j - 1);                                        \
@@ -36,10 +37,13 @@
         for (i = beg; i != end; ++i) ++b[rskey(*i) >> s & m].e;           \
         for (k = b + 1; k != be; ++k)                                     \
             k->e += (k - 1)->e - beg, k->b = (k - 1)->e;                  \
-        for (k = b; k != be;) {                                           \
-            if (k->b != k->e) {                                           \
+        for (k = b; k != be;)                                             \
+        {                                                                 \
+            if (k->b != k->e)                                             \
+            {                                                             \
                 rsbucket_##name##_t* l;                                   \
-                if ((l = b + (rskey(*k->b) >> s & m)) != k) {             \
+                if ((l = b + (rskey(*k->b) >> s & m)) != k)               \
+                {                                                         \
                     rstype_t tmp = *k->b, swap;                           \
                     do                                                    \
                     {                                                     \
@@ -57,7 +61,8 @@
                 ++k;                                                      \
         }                                                                 \
         for (b->b = beg, k = b + 1; k != be; ++k) k->b = (k - 1)->e;      \
-        if (s) {                                                          \
+        if (s)                                                            \
+        {                                                                 \
             s = s > n_bits ? s - n_bits : 0;                              \
             for (k = b; k != be; ++k)                                     \
                 if (k->e - k->b > RS_MIN_SIZE)                            \
@@ -130,7 +135,8 @@ int32_t cr_add_ctg(cgranges_t* cr, const char* ctg, int32_t len)
     khint_t k;
     strhash_t* h = (strhash_t*) cr->hc;
     k = kh_put(str, h, ctg, &absent);
-    if (absent) {
+    if (absent)
+    {
         cr_ctg_t* p;
         if (cr->n_ctg == cr->m_ctg) EXPAND(cr->ctg, cr->m_ctg);
         kh_val(h, k) = cr->n_ctg;
@@ -190,15 +196,18 @@ void cr_index_prepare(cgranges_t* cr)
 {
     int64_t i, st;
     if (!cr_is_sorted(cr)) cr_sort(cr);
-    for (st = 0, i = 1; i <= cr->n_r; ++i) {
-        if (i == cr->n_r || cr->r[i].x >> 32 != cr->r[st].x >> 32) {
+    for (st = 0, i = 1; i <= cr->n_r; ++i)
+    {
+        if (i == cr->n_r || cr->r[i].x >> 32 != cr->r[st].x >> 32)
+        {
             int32_t ctg = cr->r[st].x >> 32;
             cr->ctg[ctg].off = st;
             cr->ctg[ctg].n = i - st;
             st = i;
         }
     }
-    for (i = 0; i < cr->n_r; ++i) {
+    for (i = 0; i < cr->n_r; ++i)
+    {
         cr_intv_t* r = &cr->r[i];
         r->x = r->x << 32 | r->y;
         r->y = 0;
@@ -211,9 +220,11 @@ int32_t cr_index1(cr_intv_t* a, int64_t n)
     int32_t last, k;
     if (n <= 0) return -1;
     for (i = 0; i < n; i += 2) last_i = i, last = a[i].y = (int32_t) a[i].x;
-    for (k = 1; 1LL << k <= n; ++k) {
+    for (k = 1; 1LL << k <= n; ++k)
+    {
         int64_t x = 1LL << (k - 1), i0 = (x << 1) - 1, step = x << 2;
-        for (i = i0; i < n; i += step) {
+        for (i = i0; i < n; i += step)
+        {
             int32_t el = a[i - x].y;
             int32_t er = i + x < n ? a[i + x].y : last;
             int32_t e = (int32_t) a[i].x;
@@ -259,15 +270,17 @@ int64_t cr_overlap_int(const cgranges_t* cr, int32_t ctg_id, int32_t st,
     r = &cr->r[c->off];
     p = &stack[t++];
     p->k = c->root_k, p->x = (1LL << p->k) - 1,
-    p->w = 0;   // push the root into the stack
-    while (t) { // stack is not empyt
+    p->w = 0; // push the root into the stack
+    while (t)
+    { // stack is not empyt
         istack_t z = stack[--t];
         if (z.k <= 2)
         { // the subtree is no larger than (1<<(z.k+1))-1; do a linear scan
             int64_t i, i0 = z.x >> z.k << z.k, i1 = i0 + (1LL << (z.k + 1)) - 1;
             if (i1 >= c->n) i1 = c->n;
             for (i = i0; i < i1; ++i)
-                if (cr_st(&r[i]) < en && st < cr_en(&r[i])) {
+                if (cr_st(&r[i]) < en && st < cr_en(&r[i]))
+                {
                     if (n == m_b) EXPAND(b, m_b);
                     b[n++] = c->off + i;
                 }
@@ -277,7 +290,8 @@ int64_t cr_overlap_int(const cgranges_t* cr, int32_t ctg_id, int32_t st,
             int64_t y = z.x - (1LL << (z.k - 1));
             p = &stack[t++];
             p->k = z.k, p->x = z.x, p->w = 1;
-            if (y >= c->n || r[y].y > st) {
+            if (y >= c->n || r[y].y > st)
+            {
                 p = &stack[t++];
                 p->k = z.k - 1, p->x = y,
                 p->w = 0; // push the left child to the stack
