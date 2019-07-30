@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.4"
+r.version <- "2.2.5"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -322,6 +322,8 @@ help_message <-
                             seed and same input is provided, same result\n
                             can be generated\n
     --thread        | -n    Number of thread use\n
+    --use-ref-maf           When specified, missingness imputation will be\n
+                            performed based on the reference samples\n
     --x-range               Range of SNPs to be excluded from the whole\n
                             analysis. It can either be a single bed file\n
                             or a comma seperated list of range. Range must\n
@@ -542,6 +544,7 @@ option_list <- list(
   make_option(c("--non-cumulate"), action = "store_true", dest = "non_cumulate"),
   make_option(c("--pearson"), action = "store_true"),
   make_option(c("-n", "--thread"), type = "numeric"),
+  make_option(c("--use-ref-maf"), action = "store_true", dest = "use_ref_maf"),
   make_option(c("--x-range"), type = "character", dest="x_range"),
   #R Specified options
   make_option(c("--plot"), action = "store_true"),
@@ -691,7 +694,8 @@ flags <-
         "no-y",
         "non-cumulate",
         "or",
-        "print-snp"
+        "print-snp",
+        "use-ref-maf"
     )
 # Skip PRSice core function if only plotting is requirec
 if (!provided("plot", argv)) {
