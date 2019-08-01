@@ -301,10 +301,10 @@ PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz
 <p><code>--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --se 6 --pvalue 7 --index</code></p>
 <p>Strand flips are automatically detected and accounted for.</p>
 <p>If an imputation info score or the minor allele frequencies (MAF) are also included in the file, 
-<code>--info-base &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--maf-base &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> can be used to filter
+<code>--base-info &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--base-maf &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> can be used to filter
 SNPs based on their INFO score and MAF respectively.</p>
 <p>For binary trait base file, SNPs can be filtered according to the MAF in case and control separately using</p>
-<div class="codehilite"><pre><span></span>--maf-base &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;
+<div class="codehilite"><pre><span></span>--base-maf &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;
 </pre></div>
 
 <p>By default, PRSice will look for the following column names automatically from the base file header if <code>--index</code> was not provided or if the column name of the specific arguement(s) were not provided:</p>
