@@ -305,8 +305,7 @@ void BinaryPlink::calc_freq_gen_inter(
     std::string cur_file_name = "";
     double progress = 0.0, prev_progress = -1.0;
     double cur_maf, cur_geno;
-    double sample_ct_recip =
-        1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
+    double sample_ct_recip = 1.0 / (static_cast<double>(m_sample_ct));
     std::streampos byte_pos = 1, prev_pos = 0;
     size_t processed_count = 0;
     size_t retained = 0;
