@@ -1151,6 +1151,13 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                 permutation(num_thread, m_target_binary[pheno_index]);
             }
         }
+        else
+        {
+            prsice_result cur_result;
+            cur_result.threshold = cur_threshold;
+            cur_result.num_snp = m_num_snp_included;
+            m_prs_results[prs_result_idx] = cur_result;
+        }
         prs_result_idx++;
         first_run = false;
     }
@@ -1781,12 +1788,43 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // we move out of the function
 }
 
+void PRSice::no_regress_out(const Commander& c_commander,
+                            const std::vector<std::string>& region_names,
+                            const size_t pheno_index, const size_t region_index)
+{
+    std::string pheno_name = "";
+    if (m_pheno_info.name.size() > 1)
+        pheno_name = m_pheno_info.name[static_cast<size_t>(pheno_index)];
+    std::string output_prefix = c_commander.out();
+    if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
+    const std::string out_prsice = output_prefix + ".prsice";
+
+    m_prsice_out.open(out_prsice.c_str());
+    if (!m_prsice_out.is_open())
+    {
+        std::string error_message =
+            "Error: Cannot open file: " + out_prsice + " to write";
+        throw std::runtime_error(error_message);
+    }
+    // we won't store the empirical p and competitive p output in the prsice
+    // file now as that seems like a waste (only one threshold will contain
+    // that information, storing that in the summary file should be enough)
+    m_prsice_out
+        << "Set\tThreshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP\n";
+
+    for (size_t i = 0; i < m_prs_results.size(); ++i)
+    {
+        m_prsice_out << region_names[region_index] << "\t"
+                     << m_prs_results[i].threshold << "\t-\t-\t-\t-\t"
+                     << m_prs_results[i].num_snp << "\n";
+    }
+}
 void PRSice::output(const Commander& c_commander,
                     const std::vector<std::string>& region_names,
                     const size_t pheno_index, const size_t region_index)
 {
-    // if prevalence is provided, we'd like to generate calculate the adjusted
-    // R2
+    // if prevalence is provided, we'd like to generate calculate the
+    // adjusted R2
     std::vector<double> prev = c_commander.prevalence();
     bool has_prevalence = c_commander.has_prevalence();
     const bool is_binary =
@@ -1798,7 +1836,8 @@ void PRSice::output(const Commander& c_commander,
         for (size_t i = 0; i < static_cast<size_t>(pheno_index); ++i)
         {
             if (c_commander.is_binary(i))
-                num_binary++; // this is the number of previous binary traits
+                num_binary++; // this is the number of previous binary
+                              // traits
         }
         int num_case = static_cast<int>(m_phenotype.sum());
         double case_ratio = static_cast<double>(num_case)
@@ -1869,17 +1908,17 @@ void PRSice::output(const Commander& c_commander,
                      << m_prs_results[i].coefficient << "\t"
                      << m_prs_results[i].se << "\t" << m_prs_results[i].num_snp
                      << "\n";
-        // the empirical p-value will now be excluded from the .prsice output
-        // (the "-" isn't that helpful anyway)
+        // the empirical p-value will now be excluded from the .prsice
+        // output (the "-" isn't that helpful anyway)
     }
     auto&& best_info =
         m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
             m_best_index)];
 
 
-    // we will extract the information of the best threshold, store it and use
-    // it to generate the summary file
-    // in theory though, I should be able to start generating the summary file
+    // we will extract the information of the best threshold, store it and
+    // use it to generate the summary file in theory though, I should be
+    // able to start generating the summary file
     prsice_summary prs_sum;
     prs_sum.pheno = pheno_name;
     prs_sum.set = region_names[region_index];
@@ -1903,8 +1942,8 @@ void PRSice::output(const Commander& c_commander,
 
 void PRSice::summarize(const Commander& commander, Reporter& reporter)
 {
-    // we need to know if we are going to write "and" in the output, thus need a
-    // flag to indicate if there are any previous outputs
+    // we need to know if we are going to write "and" in the output, thus
+    // need a flag to indicate if there are any previous outputs
 
     bool has_previous_output = false;
     // we will output a short summary file
@@ -1957,8 +1996,9 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     out << "Phenotype\tSet\tThreshold\tPRS.R2";
     if (has_prevalence)
     {
-        // if we have the prevalence adjustment, we would also like to output
-        // the adjusted R2 together with the unadjusted (just in case)
+        // if we have the prevalence adjustment, we would also like to
+        // output the adjusted R2 together with the unadjusted (just in
+        // case)
         out << "\tPRS.R2.adj";
     }
     out << "\tFull.R2\tNull."
@@ -1970,8 +2010,8 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     {
         out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
             << "\t" << sum.result.threshold;
-        // by default, phenotype that doesn't have the prevalence information
-        // will have a prevalence of -1
+        // by default, phenotype that doesn't have the prevalence
+        // information will have a prevalence of -1
         if (sum.prevalence > 0)
         {
             // calculate the adjusted R2 for binary traits
@@ -1992,24 +2032,25 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
         }
         else
         {
-            // if the prevalence is never provided, we don't need to calculate
-            // the adjusted R2
+            // if the prevalence is never provided, we don't need to
+            // calculate the adjusted R2
             out << "\t" << sum.result.r2 - sum.r2_null << "\t" << sum.result.r2
                 << "\t" << sum.r2_null << "\t-";
         }
         // now generate the rest of the output
         out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t"
             << sum.result.p << "\t" << sum.result.num_snp;
-        // As we never run competitive analysis on the base data set, we need to
-        // account for that (default will have a p-value less than 0)
+        // As we never run competitive analysis on the base data set, we
+        // need to account for that (default will have a p-value less than
+        // 0)
         if (m_perform_competitive && (sum.result.competitive_p >= 0.0))
         { out << "\t" << sum.result.competitive_p; }
         else if (m_perform_competitive)
         {
-            // this is the base. While it look nicer to have - to represent not
-            // available, it become nightmarish for R and other downstream
-            // analysis where we need to as.numeric(as.character()). Therefore
-            // we now use NA instead
+            // this is the base. While it look nicer to have - to represent
+            // not available, it become nightmarish for R and other
+            // downstream analysis where we need to
+            // as.numeric(as.character()). Therefore we now use NA instead
             out << "\tNA";
         }
         if (m_perform_perm) out << "\t" << sum.result.emp_p;
@@ -2032,9 +2073,8 @@ void PRSice::null_set_no_thread(
     const bool is_binary, const bool require_standardize,
     const bool use_ref_maf)
 {
-    // we need to know the size of the largest gene set (excluding the base and
-    // background)
-    // it's a map, last element should be the largest
+    // we need to know the size of the largest gene set (excluding the base
+    // and background) it's a map, last element should be the largest
     const size_t max_size = set_index.rbegin()->first;
     // need to count the number of permutation done
     size_t processed = 0;
@@ -2080,8 +2120,8 @@ void PRSice::null_set_no_thread(
             target.get_null_score(set_size.first, prev_size, background,
                                   first_run, require_standardize, use_ref_maf);
 
-            // now that we've constructed the PRS, for any subsequent set sizes,
-            // we should not reset the PRS calculation until the next
+            // now that we've constructed the PRS, for any subsequent set
+            // sizes, we should not reset the PRS calculation until the next
             // permutation, thus we need to set first_run to true
             first_run = false;
             prev_size = set_size.first;
@@ -2101,10 +2141,11 @@ void PRSice::null_set_no_thread(
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
                                 coefficient, se, 1);
                 t_value = std::fabs(coefficient / se);
-                // in GLM, p_value is calculated by t_value^2, so to mimic that,
-                // we also do t_value^2, though this should give the same result
-                // as abs(t_value) so we will just use abs(t-value) for both QT
-                // and binary traits t_value *= t_value;
+                // in GLM, p_value is calculated by t_value^2, so to mimic
+                // that, we also do t_value^2, though this should give the
+                // same result as abs(t_value) so we will just use
+                // abs(t-value) for both QT and binary traits t_value *=
+                // t_value;
             }
             else
             {
@@ -2168,11 +2209,11 @@ void PRSice::produce_null_prs(
             target.get_null_score(set_size.first, prev_size, background,
                                   first_run, require_standardize, use_ref_maf);
             first_run = false;
-            // we need to know how many SNPs we have already read, such that we
-            // can skip reading this number of SNPs for the next set
+            // we need to know how many SNPs we have already read, such that
+            // we can skip reading this number of SNPs for the next set
             prev_size = set_size.first;
-            // we store the PRS in a new vector to avoid crazy error with move
-            // semetics and stuff which I have not fully understand
+            // we store the PRS in a new vector to avoid crazy error with
+            // move semetics and stuff which I have not fully understand
             std::vector<double> prs(num_regress_sample, 0);
             for (size_t sample_id = 0; sample_id < num_sample; ++sample_id)
             {
@@ -2180,8 +2221,8 @@ void PRSice::produce_null_prs(
                 prs[sample_id] =
                     target.calculate_score(m_score, m_matrix_index[sample_id]);
             }
-            // then we push the result prs to the queue, which can then picked
-            // up by the consumers
+            // then we push the result prs to the queue, which can then
+            // picked up by the consumers
             q.emplace(std::make_pair(prs, set_size.first), num_consumer);
             m_analysis_done++;
             print_progress();
@@ -2239,8 +2280,8 @@ void PRSice::consume_prs(
         }
         double t_value = std::fabs(coefficient / se);
         auto&& index = set_index[std::get<1>(prs_info)];
-        // we register the number of time a more significant / bigger t-value is
-        // obtained when compared to the observed t-value
+        // we register the number of time a more significant / bigger
+        // t-value is obtained when compared to the observed t-value
         for (auto&& ref : index)
         {
             // in theory because set_perm_res is now atomic, it should be ok
@@ -2281,16 +2322,16 @@ void PRSice::run_competitive(
     size_t max_set_size = 0;
     for (size_t i = 0; i < num_prs_res; ++i)
     {
-        // if we have already calculated the competitive p-value for the set, we
-        // will just skip them. This help us to handle multiple-phenotype
-        // without too much additional coding
+        // if we have already calculated the competitive p-value for the
+        // set, we will just skip them. This help us to handle
+        // multiple-phenotype without too much additional coding
         if (m_prs_summary[i].has_competitive || m_prs_summary[i].set == "Base")
             continue;
         if (!started)
         {
-            // remembering the index of the first set that need to perform the
-            // competitive p-value calculation. This allow us to later reassign
-            // results to the sets
+            // remembering the index of the first set that need to perform
+            // the competitive p-value calculation. This allow us to later
+            // reassign results to the sets
             pheno_start_idx = i;
             started = true;
         }
@@ -2301,9 +2342,10 @@ void PRSice::run_competitive(
         // ori_t_value will contain the obesrved t-value
         obs_t_value.push_back(std::fabs(res.coefficient / res.se));
     }
-    // set_perm_res stores number of perm where a more sig result is obtained
-    // initialize here as atomic doesn't have copy and move constructor, making
-    // any operator that need to invoke constructor invalid
+    // set_perm_res stores number of perm where a more sig result is
+    // obtained initialize here as atomic doesn't have copy and move
+    // constructor, making any operator that need to invoke constructor
+    // invalid
     std::vector<std::atomic<size_t>> set_perm_res(obs_t_value.size());
     for (auto& set : set_perm_res) { set = 0; }
     if (max_set_size > num_bk_snps)
@@ -2328,19 +2370,19 @@ void PRSice::run_competitive(
     size_t num_thread = commander.thread();
     // find out the number of samples involved so that we can estimate the
     // required memory
-    // The reason we need to go through the next set of calculation is that we
-    // want to be certain that we've enough memory for the competitive analysis,
-    // which will generate one new indepenendet variable matrix for each thread.
-    // To avoid crashing due to insufficient memory, we will need to limit the
-    // number of thread used
+    // The reason we need to go through the next set of calculation is that
+    // we want to be certain that we've enough memory for the competitive
+    // analysis, which will generate one new indepenendet variable matrix
+    // for each thread. To avoid crashing due to insufficient memory, we
+    // will need to limit the number of thread used
     const size_t mb = 1048576;
     const size_t num_regress_sample =
         static_cast<size_t>(m_independent_variables.rows());
-    // the required memory is roughly number of Sample * number of covaraite.
-    // But then for GLM, we might do iterative reweighting which also generate a
-    // bunch of intermediate that requires memory. As a result of that, we
-    // provide an over-estimation of required memory here to ensure we have
-    // sufficient memory for our analysis
+    // the required memory is roughly number of Sample * number of
+    // covaraite. But then for GLM, we might do iterative reweighting which
+    // also generate a bunch of intermediate that requires memory. As a
+    // result of that, we provide an over-estimation of required memory here
+    // to ensure we have sufficient memory for our analysis
     const size_t basic_memory_required_per_thread =
         num_regress_sample * sizeof(double)
         * (static_cast<size_t>(m_independent_variables.cols()) * 6 + 15);
@@ -2387,10 +2429,11 @@ void PRSice::run_competitive(
 
     if (num_thread > 1)
     {
-        //  similar to permutation for empirical p-value calculation, we employ
-        //  the producer consumer pattern where one thread is responsible for
-        //  reading in the PRS and construct the required independent variable
-        //  and other threads are responsible for the calculation
+        //  similar to permutation for empirical p-value calculation, we
+        //  employ the producer consumer pattern where one thread is
+        //  responsible for reading in the PRS and construct the required
+        //  independent variable and other threads are responsible for the
+        //  calculation
         Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
@@ -2411,8 +2454,8 @@ void PRSice::run_competitive(
     }
     else
     {
-        // alternatively, if we only got one thread, we will use the no thread
-        // function to reduce threading overhead
+        // alternatively, if we only got one thread, we will use the no
+        // thread function to reduce threading overhead
         null_set_no_thread(target, bk_start_idx, bk_end_idx, set_index,
                            obs_t_value, set_perm_res, num_perm, is_binary,
                            require_standardize, use_ref_maf);
@@ -2428,8 +2471,8 @@ void PRSice::run_competitive(
     for (size_t i = pheno_start_idx; i < num_prs_res; ++i)
     {
         auto&& res = m_prs_summary[i].result;
-        // we need to minus out the start index from i such that our index start
-        // at 0, which is the assumption of set_perm_res
+        // we need to minus out the start index from i such that our index
+        // start at 0, which is the assumption of set_perm_res
         res.competitive_p =
             (static_cast<double>(set_perm_res[(i - pheno_start_idx)]) + 1.0)
             / (static_cast<double>(num_perm) + 1.0);
