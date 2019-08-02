@@ -123,7 +123,7 @@ protected:
         // reporter here)
         std::string chr = bed_line.front();
         std::transform(chr.begin(), chr.end(), chr.begin(), ::toupper);
-        if (bed_line.front().rfind("CHR") != 0)
+        if (chr.rfind("CHR") != 0)
         {
             if (!misc::isNumeric(bed_line.front()))
             {
