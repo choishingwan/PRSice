@@ -344,10 +344,17 @@ int main(int argc, char* argv[])
                         continue;
                     }
                     if (!commander.no_regress())
+                    {
                         // if we performed regression, we'd like to generate
                         // the output file (.prsice)
                         prsice.output(commander, region_names, i_pheno,
                                       i_region);
+                    }
+                    else
+                    {
+                        prsice.no_regress_out(commander, region_names, i_pheno,
+                                              i_region);
+                    }
                 }
                 if (!commander.no_regress() && commander.perform_set_perm())
                 {

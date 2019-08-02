@@ -48,6 +48,7 @@
   }
   
 .codehilite code, .codehilite pre{color:#3F3F3F;background-color:#F7F7F7;
+    white-space: pre-wrap;
     overflow: auto;
     box-sizing: border-box;
     padding: 0.01em 16px;

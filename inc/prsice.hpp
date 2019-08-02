@@ -188,16 +188,19 @@ public:
     void output(const Commander& c_commander,
                 const std::vector<std::string>& region_names,
                 const size_t pheno_index, const size_t region_index);
+    void no_regress_out(const Commander& c_commander,
+                        const std::vector<std::string>& region_names,
+                        const size_t pheno_index, const size_t region_index);
     /*!
      * \brief Function that prepare the output files by writing out white
      * spaces, this allow us to generate a nice vertical file
      * \param out is the output prefix
      * \param all_score indicate if we want to generate the all score file
-     * \param has_prev indicate if prevalence is provided. If it is provided, we
-     * need to also provide the adjusted R2
-     * \param target is the target genotype object containing the sample names
-     * \param region_name is the name of regions involved
-     * \param pheno_index is the index of the current phenotype
+     * \param has_prev indicate if prevalence is provided. If it is
+     * provided, we need to also provide the adjusted R2 \param target is
+     * the target genotype object containing the sample names \param
+     * region_name is the name of regions involved \param pheno_index is the
+     * index of the current phenotype
      */
     void prep_output(const std::string& out, const bool all_score,
                      const bool has_prev, const Genotype& target,
