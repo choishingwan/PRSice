@@ -704,6 +704,10 @@ void BinaryPlink::gen_snp_vector(
                     num_retained++;
                 }
             }
+            else
+            {
+                ++m_num_ambig;
+            }
         }
         bim.close();
     }
