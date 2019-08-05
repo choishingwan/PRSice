@@ -841,14 +841,14 @@ void BinaryGen::calc_freq_gen_inter(
     else
     {
         // sortby reference positions
-        std::sort(begin(reference->m_existed_snps),
-                  end(reference->m_existed_snps),
-                  [](SNP const& t1, SNP const& t2) {
-                      if (t1.file_name().compare(t2.file_name()) == 0)
-                      { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
-                      else
-                          return t1.file_name().compare(t2.file_name()) < 0;
-                  });
+        std::sort(
+            begin(reference->m_existed_snps), end(reference->m_existed_snps),
+            [](SNP const& t1, SNP const& t2) {
+                if (t1.ref_file_name().compare(t2.ref_file_name()) == 0)
+                { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
+                else
+                    return t1.ref_file_name().compare(t2.ref_file_name()) < 0;
+            });
     }
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
