@@ -273,22 +273,23 @@ void BinaryPlink::calc_freq_gen_inter(
         std::sort(begin(reference->m_existed_snps),
                   end(reference->m_existed_snps),
                   [](SNP const& t1, SNP const& t2) {
-                      if (t1.file_name().compare(t2.file_name()) == 0)
+                      if (t1.file_name() == t2.file_name())
                       { return t1.byte_pos() < t2.byte_pos(); }
                       else
-                          return t1.file_name().compare(t2.file_name()) < 0;
+                          return t1.file_name() < t2.file_name();
                   });
     }
     else
     {
+        // this is the reference file, so we sort by the reference's position
         // sortby reference positions
         std::sort(begin(reference->m_existed_snps),
                   end(reference->m_existed_snps),
                   [](SNP const& t1, SNP const& t2) {
-                      if (t1.file_name().compare(t2.file_name()) == 0)
+                      if (t1.ref_file_name() == t2.ref_file_name())
                       { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
                       else
-                          return t1.file_name().compare(t2.file_name()) < 0;
+                          return t1.ref_file_name() < t2.ref_file_name();
                   });
     }
 
@@ -305,7 +306,7 @@ void BinaryPlink::calc_freq_gen_inter(
     std::string cur_file_name = "";
     double progress = 0.0, prev_progress = -1.0;
     double cur_maf, cur_geno;
-    double sample_ct_recip = 1.0 / (static_cast<double>(m_sample_ct));
+    const double sample_ct_recip = 1.0 / (static_cast<double>(m_sample_ct));
     std::streampos byte_pos = 1, prev_pos = 0;
     size_t processed_count = 0;
     size_t retained = 0;
@@ -339,7 +340,7 @@ void BinaryPlink::calc_freq_gen_inter(
         else
         {
             cur_file_name = snp.file_name();
-            byte_pos = snp.ref_byte_pos();
+            byte_pos = snp.byte_pos();
         }
         if (prev_file != cur_file_name)
         {
