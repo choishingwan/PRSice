@@ -841,14 +841,14 @@ void BinaryGen::calc_freq_gen_inter(
     else
     {
         // sortby reference positions
-        std::sort(begin(reference->m_existed_snps),
-                  end(reference->m_existed_snps),
-                  [](SNP const& t1, SNP const& t2) {
-                      if (t1.file_name().compare(t2.file_name()) == 0)
-                      { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
-                      else
-                          return t1.file_name().compare(t2.file_name()) < 0;
-                  });
+        std::sort(
+            begin(reference->m_existed_snps), end(reference->m_existed_snps),
+            [](SNP const& t1, SNP const& t2) {
+                if (t1.ref_file_name().compare(t2.ref_file_name()) == 0)
+                { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
+                else
+                    return t1.ref_file_name().compare(t2.ref_file_name()) < 0;
+            });
     }
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -859,8 +859,7 @@ void BinaryGen::calc_freq_gen_inter(
     std::string bgen_name = "";
     std::ifstream bgen_file;
     double cur_maf, cur_geno;
-    double sample_ct_recip =
-        1.0 / (static_cast<double>(static_cast<int32_t>(m_sample_ct)));
+    double sample_ct_recip = 1.0 / (static_cast<double>(m_sample_ct));
     std::streampos byte_pos, tmp_byte_pos;
     size_t processed_count = 0;
     size_t retained = 0;
@@ -877,7 +876,7 @@ void BinaryGen::calc_freq_gen_inter(
                                sample_include2.data());
     init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
                                founder_include2.data());
-    m_tmp_genotype.resize(unfiltered_sample_ctl * 2, 0);
+    m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
     // we initialize the plink converter with the sample inclusion vector and
     // also the tempory genotype vector list. We also provide the hard coding
     // threshold
@@ -904,6 +903,7 @@ void BinaryGen::calc_freq_gen_inter(
     // now start processing the bgen file
     double progress = 0, prev_progress = -1.0;
     const size_t total_snp = reference->m_existed_snps.size();
+    genfile::bgen::Context context;
     for (auto&& snp : reference->m_existed_snps)
     {
         progress = static_cast<double>(processed_count)
@@ -937,6 +937,7 @@ void BinaryGen::calc_freq_gen_inter(
                     "Error: Cannot open bed file: " + bgen_name + "!\n";
                 throw std::runtime_error(error_message);
             }
+            context = m_context_map[cur_file_name];
         }
         processed_count++;
         // bgen always seek as there are always something stored in between
@@ -948,17 +949,8 @@ void BinaryGen::calc_freq_gen_inter(
             throw std::runtime_error(error_message);
         }
         // now read in the genotype information
-        auto&& context = m_context_map[cur_file_name];
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
             bgen_file, context, setter, &m_buffer1, &m_buffer2);
-        // there's no founder for bgen, can simply calculate the genotyping rate
-        // and maf directly when we parse the probability data
-        /*
-        single_marker_freqs_and_hwe(
-            unfiltered_sample_ctv2, m_tmp_genotype.data(),
-            sample_include2.data(), founder_include2.data(), m_sample_ct,
-            &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf, &lh_ctf, &hh_ctf);
-            */
         setter.get_count(ll_ct, lh_ct, hh_ct, missing);
         uii = ll_ct + lh_ct + hh_ct;
         cur_geno = 1.0 - ((static_cast<int32_t>(uii)) * sample_ct_recip);
@@ -972,11 +964,6 @@ void BinaryGen::calc_freq_gen_inter(
             cur_maf = (static_cast<double>(2 * hh_ct + lh_ct))
                       / (static_cast<double>(uii));
             cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
-        }
-        if (snp.rs() == "RSID_149")
-        {
-            std::cerr << hh_ct << "\t" << lh_ct << "\t" << ll_ct << std::endl;
-            std::cerr << "Maf is: " << cur_maf << std::endl;
         }
         // filter by genotype missingness
         if (geno_filter && geno_threshold < cur_geno)
@@ -993,9 +980,7 @@ void BinaryGen::calc_freq_gen_inter(
             m_num_maf_filter++;
             continue;
         }
-        else if (maf_filter
-                 && (misc::logically_equal(cur_maf, 0.0)
-                     || misc::logically_equal(cur_maf, 1.0)))
+        else if (maf_filter && (ll_ct == m_sample_ct || hh_ct == m_sample_ct))
         {
             // none of the sample contain this SNP
             // still count as MAF filtering (for now)
@@ -1019,7 +1004,7 @@ void BinaryGen::calc_freq_gen_inter(
             snp.set_counts(ll_ct, lh_ct, hh_ct, missing);
             snp.set_expected(setter.expected());
         }
-        retained++;
+        ++retained;
         // we need to -1 because we put processed_count ++ forward
         // to avoid continue skipping out the addition
         retain_snps[processed_count - 1] = true;

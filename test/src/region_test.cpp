@@ -378,7 +378,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "/Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
+        if (!bed_file.is_open())
+        {
             throw std::runtime_error(std::string(
                 "Error: Cannot open bed file to write " + bed_name));
         }
@@ -495,9 +496,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2\t19182\t32729\n"
                  << "2\t94644\t98555\n"
@@ -600,9 +600,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729\n"
                  << "2 94644 98555\n"
@@ -706,9 +705,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . .\n"
                  << "2 94644 98555 . .\n"
@@ -811,9 +809,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -912,9 +909,8 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182\n"
              << "2 94644 \n"
@@ -939,9 +935,8 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182\n"
              << "2 94644 \n"
@@ -982,9 +977,8 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . \n"
@@ -1011,9 +1005,8 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 .\n"
@@ -1152,9 +1145,8 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . L\n"
@@ -1195,9 +1187,8 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 ABS 123567 . . +\n"
@@ -1222,9 +1213,8 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 -94644 123567 . . +\n"
@@ -1248,9 +1238,8 @@ TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 -123141 . . +\n"
              << "2 94644 123567 . . +\n"
@@ -1275,9 +1264,8 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 ABC . . +\n"
              << "2 94644 123567 . . +\n"
@@ -1303,9 +1291,8 @@ TEST(REGION_MALFORM_BED, SMALLER_END)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . +\n"
@@ -1330,9 +1317,8 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 -94644 123567 . . +\n"
@@ -1373,9 +1359,8 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 ABC 123567 . . +\n"
@@ -1417,9 +1402,8 @@ TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . +\n"
@@ -1460,9 +1444,8 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 94644 123567 . . +\n"
@@ -1502,9 +1485,8 @@ TEST(REGION_MALFORM_BED, SMALLER_END_SET)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 123141 . . +\n"
              << "2 123567 94644 . . +\n"
@@ -1543,9 +1525,8 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -1622,9 +1603,8 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_TRACE)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "track name=pairedReads description=\"Clone Paired Reads\" "
                 "useScore=1\n"
@@ -1665,9 +1645,8 @@ TEST(REGION_STD_BED_INPUT, DUPLICATED_SET_NAME)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "track name=pairedReads description=\"Clone Paired Reads\" "
                 "useScore=1\n"
@@ -1708,9 +1687,8 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "browser position chr7:127471196-127495720\n"
              << "browser hide all useScore=1\n"
@@ -1751,9 +1729,8 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "browser position chr7:127471196-127495720\n"
              << "browser hide all useScore=1\n"
@@ -1778,9 +1755,8 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_TRACK)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "track name=pairedReads description=\"Clone Paired Reads\" "
                 "useScore=1\n"
@@ -1805,9 +1781,8 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_EXCLUSION)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "#CHR START END\n"
              << "2 19182 32729 . . .\n";
@@ -1831,9 +1806,8 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "#CHR START END\n"
              << "2 19182 32729 . . .\n";
@@ -1883,9 +1857,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -1988,6 +1961,128 @@ TEST_F(REGION_STD_BED, MID_NOT_FOUND)
     EXPECT_EQ(get_flag(19, 39329 + 1).front(), not_found.front());
     EXPECT_EQ(get_flag(20, 64037 + 1).front(), found.front());
 }
+
+
+class REGION_CHR_BED : public ::testing::Test
+{
+protected:
+    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<int, int>> gene_sets;
+    std::vector<uintptr_t> not_found = {0};
+    std::vector<uintptr_t> found = {0};
+    std::vector<std::string> region_names;
+    size_t num_regions;
+    size_t required_size;
+    bool genome_wide_background = false;
+    void SetUp() override
+    {
+        std::ofstream bed_file;
+        std::string bed_name = path + "Test.bed";
+        bed_file.open(bed_name.c_str());
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
+        //  now generate the output required
+        bed_file << "chr2 19182 32729 . . .\n"
+                 << "chr2 94644 98555 . . .\n"
+                 << "chr3 3209 18821 . . .\n"
+                 << "chr3 29863 38285 . . .\n"
+                 << "chr4 20139 97433 . . .\n"
+                 << "chr5 13998 35076 . . .\n"
+                 << "chr5 50433 97855 . . .\n"
+                 << "chr6 34611 45099 . . .\n"
+                 << "chr6 45503 49751 . . .\n"
+                 << "chr7 7080 45054 . . .\n"
+                 << "chr7 30305 45723 . . .\n" // overlap
+                 << "chr10 54504 62968 . . .\n"
+                 << "chr11 20844 26475 . . .\n"
+                 << "chr12 38890 50405 . . .\n"
+                 << "chr13 56146 67102 . . .\n"
+                 << "chr14 1694 47285 . . .\n"
+                 << "chr14 5225 78548 . . .\n"  // overlap
+                 << "chr14 13102 45658 . . .\n" // overlap
+                 << "chr15 4706 10214 . . .\n"
+                 << "chr15 26926 85344 . . .\n"
+                 << "chr15 78969 98716 . . .\n" // overlap
+                 << "chr16 7139 73747 . . .\n"
+                 << "chr16 12143 36596 . . .\n" // overlap
+                 << "chr16 31326 56532 . . .\n" // overlap
+                 << "chr16 43942 85160 . . .\n" // overlap
+                 << "chr19 22463 39329 . . .\n"
+                 << "chr19 46559 49131 . . .\n"
+                 << "chr20 64037 98171 . . .\n"
+                 << "chr21 9363 49431 . . .\n"
+                 << "chr21 43440 82120 . . .\n"; // overlap
+        bed_file.close();
+        Reporter reporter(std::string(path + "LOG"));
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        int window_5 = 0;
+        int window_3 = 0;
+        std::string gtf = "";
+        std::string msigdb = "";
+        std::string snp_set = "";
+        std::string background = "";
+        std::vector<std::string> bed_names = {bed_name};
+        num_regions = Region::generate_regions(
+            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
+            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
+            22, reporter);
+        SET_BIT(0, not_found.data());
+        SET_BIT(0, found.data());
+        // 2 because 1 is reserved for background and 2 is the first set
+        SET_BIT(2, found.data());
+        required_size = BITCT_TO_WORDCT(num_regions);
+    }
+    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    {
+        std::vector<uintptr_t> index(required_size, 0);
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, chr, bp,
+                                 genome_wide_background);
+        return index;
+    }
+};
+TEST_F(REGION_CHR_BED, CHECK_INCLUSION_OVERLAPPED)
+{
+    // with standard input, we can no longer use check_exclusion function as
+    // that always uses the base region, which doesn't contain any boundary
+    // instead, we must use the update flag function
+
+    EXPECT_EQ(get_flag(7, 7079 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(7, 7080 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 7081 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45053 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45054 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45055 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 30303 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 30305 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 30306 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45722 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(7, 45723 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(7, 45724 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(14, 1693 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(14, 1695 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 47284 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 47285 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 47286 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 5224 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 5225 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 5226 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 13101 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 13102 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 13103 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 45657 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 45658 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 45659 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 78547 + 1).front(), found.front());
+    EXPECT_EQ(get_flag(14, 78548 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(14, 78549 + 1).front(), not_found.front());
+}
+TEST_F(REGION_CHR_BED, MID_NOT_FOUND)
+{
+    EXPECT_EQ(get_flag(19, 39329 + 1).front(), not_found.front());
+    EXPECT_EQ(get_flag(20, 64037 + 1).front(), found.front());
+}
 class REGION_STD_BED_PAD : public ::testing::Test
 {
     // test window padding
@@ -2005,9 +2100,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729 . . .\n"
                  << "2 94644 98555 . . .\n"
@@ -2113,9 +2207,8 @@ protected:
         std::ofstream bed_file;
         std::string bed_name = path + "Test.bed";
         bed_file.open(bed_name.c_str());
-        if (!bed_file.is_open()) {
-            throw std::runtime_error("Error: Cannot open bed file");
-        }
+        if (!bed_file.is_open())
+        { throw std::runtime_error("Error: Cannot open bed file"); }
         //  now generate the output required
         bed_file << "2 19182 32729\n"
                  << "2 94644 98555\n"
@@ -2195,9 +2288,8 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
     std::string bed_name = path + "Test.bed";
     std::string second_bed_name = path + "Test2.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n";
@@ -2239,9 +2331,8 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
     std::string bed_name = path + "Test.bed";
     std::string second_bed_name = path + "Test2.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n";
@@ -2254,7 +2345,8 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
                                         "CDS"};
 
     std::vector<std::string> bed_names = {
-        bed_name, std::string(second_bed_name + ":Name"),
+        bed_name,
+        std::string(second_bed_name + ":Name"),
     };
     int window_5 = 0;
     int window_3 = 0;
@@ -4715,9 +4807,8 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -4846,9 +4937,8 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5164,9 +5254,8 @@ TEST(REGION_BACKGROUND, INVALID_FORMAT)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5239,9 +5328,8 @@ TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5314,9 +5402,8 @@ TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5389,9 +5476,8 @@ TEST(REGION_BACKGROUND, NEGATIVE_END)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5463,9 +5549,8 @@ TEST(REGION_BACKGROUND, NEGATIVE_START)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5538,9 +5623,8 @@ TEST(REGION_BACKGROUND, INVALID_END)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5612,9 +5696,8 @@ TEST(REGION_BACKGROUND, INVALID_START)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5687,9 +5770,8 @@ TEST(REGION_BACKGROUND, SMALLER_END)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5792,9 +5874,8 @@ TEST(REGION_BACKGROUND, SKIP_CHR)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -5924,9 +6005,8 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
@@ -6094,9 +6174,8 @@ TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
-    if (!bed_file.is_open()) {
-        throw std::runtime_error("Error: Cannot open bed file");
-    }
+    if (!bed_file.is_open())
+    { throw std::runtime_error("Error: Cannot open bed file"); }
     //  now generate the output required
     bed_file << "2 19182 32729 . . .\n"
              << "2 94644 98555 . . .\n"
