@@ -2396,13 +2396,14 @@ void PRSice::run_competitive(
     {
         // if we have used up all memory, we will exit
         std::string error_message =
-            "Error: Not enough memory left for permutation. "
+            "(DEBUG) Error: Not enough memory left for permutation. "
             "User allowed "
             + std::to_string(valid_memory / mb)
             + " Mb of memory but already used " + std::to_string(used_memory)
             + " Mb";
         fprintf(stderr, "\n");
-        throw std::runtime_error(error_message);
+        std::cerr << error_message << std::endl;
+        // throw std::runtime_error(error_message);
     }
     // artificially reduce available memory to avoid memory overflow
     // ideally, if whole PRSice is within the same memory pool, we will

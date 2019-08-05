@@ -376,7 +376,7 @@ public:
         // Any category larger than the bar-level size will be assumed to have p
         // threshold of 1
         // use intermediate to avoid implicite conversion
-        auto&& index = static_cast<std::vector<int>::size_type>(i);
+        auto&& index = static_cast<size_t>(i);
         if (index > m_barlevel.size()) return 1.0;
         return m_barlevel.at(index);
     }
