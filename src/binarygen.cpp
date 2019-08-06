@@ -500,7 +500,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
 }
 
 void BinaryGen::gen_snp_vector(
-    const std::vector<IITree<int, int>>& exclusion_regions,
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
     const std::string& out_prefix, Genotype* target)
 {
     std::unordered_set<std::string> duplicated_snps;
