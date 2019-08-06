@@ -1831,12 +1831,7 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
         error_message.append(
             "Error: Must provide a gtf file if msigdb is specified\n");
     }
-    if (m_window_3 < 0 || m_window_5 < 0)
-    {
-        error = true;
-        error_message.append(
-            "Error: 5' and 3' extension must be larger than 0\n");
-    }
+
     if (m_feature.empty())
     {
         m_feature.push_back("exon");

@@ -538,28 +538,12 @@ public:
      * \return True if we want the whole genome to be used as the background
      */
     bool genome_wide_background() const { return m_full_background; }
-    int window_5() const
-    {
-        if (m_window_5 < 0)
-        {
-            throw std::runtime_error("Error: Length of 5' extension must be "
-                                     "greater than or equal to zero!");
-        }
-        return m_window_5;
-    }
+    size_t window_5() const { return m_window_5; }
     /*!
      * \brief Return the 3' extension of regions in \b bp
      * \return The length of extension to 3' regions
      */
-    int window_3() const
-    {
-        if (m_window_3 < 0)
-        {
-            throw std::runtime_error("Error: Length of 5' extension must be "
-                                     "greater than or equal to zero!");
-        }
-        return m_window_3;
-    }
+    size_t window_3() const { return m_window_3; }
     // target
     /*!
      * \brief Return the target file name
@@ -722,18 +706,18 @@ private:
     double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
+    size_t m_clump_distance = 250000;
     size_t m_memory = 0;
     size_t m_permutation = 0;
     size_t m_set_perm = 0;
+    size_t m_window_5 = 0;
+    size_t m_window_3 = 0;
     std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
-    int m_clump_distance = 250000;
     int m_thread = 1;
-    int m_window_5 = 0;
-    int m_window_3 = 0;
     int m_allow_inter = false;
     int m_fastscore = false;
     int m_full_background = false;
@@ -1375,10 +1359,17 @@ private:
         return true;
     }
 
-    inline int set_distance(const std::string& input,
-                            const std::string& command, int default_unit,
-                            std::map<std::string, std::string>& message,
-                            bool& error, std::string& error_messages)
+    inline bool valid_distance(const std::string& str, const size_t& unit,
+                               size_t& res)
+    {
+        double cur_dist = misc::convert<double>(str) * unit;
+        res = static_cast<size_t>(cur_dist);
+        return (trunc(cur_dist) == cur_dist);
+    }
+    inline size_t set_distance(const std::string& input,
+                               const std::string& command, size_t default_unit,
+                               std::map<std::string, std::string>& message,
+                               bool& error, std::string& error_messages)
     {
         std::string in = input;
         if (message.find(command) != message.end())
@@ -1387,12 +1378,18 @@ private:
                                   + "\n");
         }
         message[command] = in;
-        int dist;
+        size_t dist = 0;
         try
         {
             // when no unit is provided, we multiply based on default
-            dist =
-                static_cast<int>(misc::convert<double>(input) * default_unit);
+            if (!valid_distance(input, default_unit, dist))
+            {
+                error = true;
+                error_messages.append("Error: Non-integer distance obtained: "
+                                      + misc::to_string(input) + " x "
+                                      + misc::to_string(default_unit) + "\n");
+                return ~size_t(0);
+            }
             if (default_unit == 1000)
                 message[command] = input + "kb";
             else
@@ -1406,42 +1403,75 @@ private:
             {
                 try
                 {
-                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
-                    if (unit == "BP")
+                    if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'B'
+                        && (static_cast<unsigned char>(unit[1]) & 0xdf) == 'P')
                     {
-                        dist = static_cast<int>(misc::convert<double>(value));
+                        if (!valid_distance(value, 1, dist))
+                        {
+                            error = true;
+                            error_messages.append(
+                                "Error: Non-integer distance obtained: "
+                                + misc::to_string(value) + "\n");
+                        }
                         message[command] = value + "bp";
                         return dist;
                     }
-                    else if (unit == "KB")
+                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'K'
+                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
+                                    == 'B')
                     {
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000);
+                        if (!valid_distance(value, 1000, dist))
+                        {
+                            error = true;
+                            error_messages.append(
+                                "Error: Non-integer distance obtained: " + value
+                                + " x 1000\n");
+                        }
                         message[command] = value + "kb";
                         return dist;
                     }
-                    else if (unit == "MB")
+                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'M'
+                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
+                                    == 'B')
                     {
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000 * 1000);
+                        if (!valid_distance(value, 1000 * 1000, dist))
+                        {
+                            error = true;
+                            error_messages.append(
+                                "Error: Non-integer distance obtained: " + value
+                                + " x 1000^2\n");
+                        }
                         message[command] = value + "mb";
                         return dist;
                     }
-                    else if (unit == "GB")
+                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'G'
+                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
+                                    == 'B')
                     {
-                        // kinda stupid here, but whatever
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000 * 1000 * 1000);
+                        if (!valid_distance(value, 1000 * 1000 * 1000, dist))
+                        {
+                            error = true;
+                            error_messages.append(
+                                "Error: Non-integer distance obtained: " + value
+                                + " x 1000^3\n");
+                        }
                         message[command] = value + "gb";
                         return dist;
                     }
-                    else if (unit == "TB")
+                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'T'
+                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
+                                    == 'B')
                     {
-                        // way too much....
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000 * 1000 * 1000 * 1000);
+                        if (!valid_distance(value, 1000 * 1000 * 1000 * 1000,
+                                            dist))
+                        {
+                            error = true;
+                            error_messages.append(
+                                "Error: Non-integer distance obtained: " + value
+                                + " x 1000^4\n");
+                        }
                         message[command] = value + "tb";
                         return dist;
                     }
@@ -1450,39 +1480,69 @@ private:
                         // maybe only one input?
                         unit = input.substr(in.length() - 1);
                         value = input.substr(0, in.length() - 1);
-                        if (unit == "B" || unit == "b")
+                        if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'B')
                         {
-                            dist =
-                                static_cast<int>(misc::convert<double>(value));
-                            message[command] = value + "bb";
+                            if (!valid_distance(value, 1, dist))
+                            {
+                                error = true;
+                                error_messages.append(
+                                    "Error: Non-integer distance obtained: "
+                                    + value + "\n");
+                            }
+                            message[command] = value + "b";
                             return dist;
                         }
-                        else if (unit == "K" || unit == "k")
+                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
+                                 == 'K')
                         {
-                            dist = static_cast<int>(misc::convert<double>(value)
-                                                    * 1000);
+                            if (!valid_distance(value, 1000, dist))
+                            {
+                                error = true;
+                                error_messages.append(
+                                    "Error: Non-integer distance obtained: "
+                                    + value + " x 1000\n");
+                            }
                             message[command] = value + "kb";
                             return dist;
                         }
-                        else if (unit == "M" || unit == "m")
+                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
+                                 == 'M')
                         {
-                            dist = static_cast<int>(misc::convert<double>(value)
-                                                    * 1000 * 1000);
+                            if (!valid_distance(value, 1000 * 1000, dist))
+                            {
+                                error = true;
+                                error_messages.append(
+                                    "Error: Non-integer distance obtained: "
+                                    + value + " x 1000^2\n");
+                            }
                             message[command] = value + "mb";
                             return dist;
                         }
-                        else if (unit == "G" || unit == "g")
+                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
+                                 == 'G')
                         {
-                            dist = static_cast<int>(misc::convert<double>(value)
-                                                    * 1000 * 1000 * 1000);
+                            if (!valid_distance(value, 1000 * 1000 * 1000,
+                                                dist))
+                            {
+                                error = true;
+                                error_messages.append(
+                                    "Error: Non-integer distance obtained: "
+                                    + value + " x 1000^3\n");
+                            }
                             message[command] = value + "gb";
                             return dist;
                         }
-                        else if (unit == "T" || unit == "t")
+                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
+                                 == 'T')
                         {
-                            dist =
-                                static_cast<int>(misc::convert<double>(value)
-                                                 * 1000 * 1000 * 1000 * 1000);
+                            if (!valid_distance(
+                                    value, 1000 * 1000 * 1000 * 1000, dist))
+                            {
+                                error = true;
+                                error_messages.append(
+                                    "Error: Non-integer distance obtained: "
+                                    + value + " x 1000^4\n");
+                            }
                             message[command] = value + "tb";
                             return dist;
                         }
