@@ -33,7 +33,7 @@ class SNP
 {
 public:
     SNP() {}
-    SNP(const std::string& rs_id, const int chr, const int loc,
+    SNP(const std::string& rs_id, const int chr, const size_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const double& stat, const double& p_value, const int category,
         const double p_threshold)
@@ -83,7 +83,7 @@ public:
     }
     void add_target(const std::string& target_file,
                     const std::streampos target_byte_pos, const int chr,
-                    const int loc, const std::string& ref,
+                    const size_t loc, const std::string& ref,
                     const std::string& alt, const bool flipping)
     {
         m_target_file = target_file;
@@ -129,12 +129,13 @@ public:
      * flipped = true
      * \return true if it is a match
      */
-    inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
+    inline bool matching(intptr_t chr, size_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
     {
         // should be trimmed
         if (chr != -1 && m_chr != -1 && chr != m_chr) { return false; }
-        if (loc != -1 && m_loc != -1 && loc != m_loc) { return false; }
+        if (loc != ~size_t(0) && m_loc != ~size_t(0) && loc != m_loc)
+        { return false; }
         flipped = false;
         if (m_ref == ref)
         {
@@ -168,7 +169,7 @@ public:
     }
 
     int chr() const { return m_chr; }
-    int loc() const { return m_loc; }
+    size_t loc() const { return m_loc; }
     int category() const { return m_category; }
     /*!
      * \brief Get the p-value of the SNP
@@ -432,12 +433,13 @@ private:
     double m_ref_expected_value = 0.0;
     int m_chr = -1;
     int m_category = -1;
-    int m_loc = -1;
+
     int m_low_bound = 0;
     int m_up_bound = 0;
     size_t m_homcom = 0;
     size_t m_het = 0;
     size_t m_homrar = 0;
+    size_t m_loc = ~size_t(0);
     size_t m_missing = 0;
     size_t m_ref_homcom = 0;
     size_t m_ref_het = 0;
