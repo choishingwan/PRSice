@@ -1119,11 +1119,6 @@ void BinaryGen::hard_code_score(
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    uintptr_t* lbptr;
-    uint32_t uii;
-    uint32_t ujj;
-    uint32_t ukk;
-    uintptr_t ulii = 0;
     // genotype counts
     size_t homrar_ct = 0;
     size_t missing_ct = 0;
@@ -1134,9 +1129,9 @@ void BinaryGen::hard_code_score(
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
     // this is needed if we want to calculate the MAF of the sample
-    int ploidy = 2;
-    const int miss_count =
-        static_cast<int>((m_missing_score != MISSING_SCORE::SET_ZERO) * ploidy);
+    const size_t ploidy = 2;
+    const size_t miss_count =
+        (m_missing_score != MISSING_SCORE::SET_ZERO) * ploidy;
     const bool is_centre = (m_missing_score == MISSING_SCORE::CENTER);
     const bool mean_impute = (m_missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if we need to reset the sample's PRS
@@ -1229,86 +1224,8 @@ void BinaryGen::hard_code_score(
             miss_score = ploidy * stat * maf;
         }
         // start reading the genotype
-        lbptr = genotype.data();
-        uii = 0;
-        ulii = 0;
-        do
-        {
-            // ulii contain the numeric representation of the current genotype
-            ulii = ~(*lbptr++);
-            if (uii + BITCT2 > m_unfiltered_sample_ct)
-            {
-                // this is PLINK, not sure exactly what this is about
-                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
-                        - ONELU;
-            }
-            // ujj sample index of the current genotype block
-            ujj = 0;
-            while (ujj < BITCT)
-            {
-                // go through the whole genotype block
-                // ukk is the current genotype
-                ukk = (ulii >> ujj) & 3;
-                // and the sample index can be calculated as uii+(ujj/2)
-                if (uii + (ujj / 2) >= m_sample_ct) { break; }
-                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
-                // now we will get all genotypes (0, 1, 2, 3)
-                if (not_first)
-                {
-                    switch (ukk)
-                    {
-                    default:
-                        // true = 1, false = 0
-                        sample_prs.num_snp += ploidy;
-                        sample_prs.prs += homcom_weight * stat - adj_score;
-                        break;
-                    case 1:
-                        sample_prs.num_snp += ploidy;
-                        sample_prs.prs += het_weight * stat - adj_score;
-                        break;
-                    case 3:
-                        sample_prs.num_snp += ploidy;
-                        sample_prs.prs += homrar_weight * stat - adj_score;
-                        break;
-                    case 2:
-                        // handle missing sample
-                        sample_prs.num_snp += miss_count;
-                        sample_prs.prs += miss_score;
-                        break;
-                    }
-                }
-                else
-                {
-                    switch (ukk)
-                    {
-                    default:
-                        // true = 1, false = 0
-                        sample_prs.num_snp = ploidy;
-                        sample_prs.prs = homcom_weight * stat - adj_score;
-                        break;
-                    case 1:
-                        sample_prs.num_snp = ploidy;
-                        sample_prs.prs = het_weight * stat - adj_score;
-                        break;
-                    case 3:
-                        sample_prs.num_snp = ploidy;
-                        sample_prs.prs = homrar_weight * stat - adj_score;
-                        break;
-                    case 2:
-                        // handle missing sample
-                        sample_prs.num_snp = miss_count;
-                        sample_prs.prs = miss_score;
-                        break;
-                    }
-                }
-                // ulii &= ~((3 * ONELU) << ujj);
-                // as each sample is represented by two byte, we will add 2 to
-                // the index
-                ujj += 2;
-            }
-            // uii is the number of samples we have finished so far
-            uii += BITCT2;
-        } while (uii < m_sample_ct);
+        read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
+                 homcom_weight, het_weight, homrar_weight, not_first);
         // we've finish processing the first SNP no longer need to reset the
         // PRS
         not_first = true;

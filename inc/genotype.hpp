@@ -604,6 +604,97 @@ protected:
         const bool /*hard_coded*/, Genotype* /*target=nullptr*/)
     {
     }
+    void read_prs(std::vector<uintptr_t>& genotype, const size_t ploidy,
+                  const double stat, const double adj_score,
+                  const double miss_score, const size_t miss_count,
+                  const double homcom_weight, const double het_weight,
+                  const double homrar_weight, const bool not_first)
+    {
+        uintptr_t* lbptr = genotype.data();
+        uintptr_t ulii;
+        uint32_t uii;
+        uint32_t ujj;
+        uint32_t ukk;
+        uii = 0;
+        ulii = 0;
+        do
+        {
+            // ulii contain the numeric representation of the current genotype
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct)
+            {
+                // this is PLINK, not sure exactly what this is about
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                        - ONELU;
+            }
+            // ujj sample index of the current genotype block
+            ujj = 0;
+            while (ujj < BITCT)
+            {
+                // go through the whole genotype block
+                // ukk is the current genotype
+                ukk = (ulii >> ujj) & 3;
+                // and the sample index can be calculated as uii+(ujj/2)
+                if (uii + (ujj / 2) >= m_sample_ct) { break; }
+                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
+                // now we will get all genotypes (0, 1, 2, 3)
+                if (not_first)
+                {
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp += miss_count;
+                        sample_prs.prs += miss_score;
+                        break;
+                    }
+                }
+                else
+                {
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp = miss_count;
+                        sample_prs.prs = miss_score;
+                        break;
+                    }
+                }
+                // ulii &= ~((3 * ONELU) << ujj);
+                // as each sample is represented by two byte, we will add 2 to
+                // the index
+                ujj += 2;
+            }
+            // uii is the number of samples we have finished so far
+            uii += BITCT2;
+        } while (uii < m_sample_ct);
+    }
 
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
