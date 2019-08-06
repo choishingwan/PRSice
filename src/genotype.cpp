@@ -703,8 +703,8 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
     */
 }
 
-std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
-                                                        Reporter& reporter)
+std::unordered_set<std::string>
+Genotype::load_snp_list(const std::string& input, Reporter& reporter)
 {
     std::ifstream in;
     // first, we read in the file
@@ -738,7 +738,8 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
 
             std::transform(name.begin(), name.end(), name.begin(), ::toupper);
             if (name == "SNP" || name == "RS" || name == "RS_ID"
-                || name == "RS.ID" || name == "RSID")
+                || name == "RS.ID" || name == "RSID" || name == "VARIANT.ID"
+                || name == "VARIANT_ID")
             {
                 /// we will assume this column to contain the SNP ID
                 has_snp_colname = true;
@@ -748,7 +749,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
             }
             // we will continue to iterate until we reaches the end or found a
             // column with the specific names
-            rs_index++;
+            ++rs_index;
         }
         if (!has_snp_colname)
         {
@@ -759,9 +760,9 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
                 // with 6 column, we will assume this to be a bim file, where
                 // the SNP ID is at the second column
                 message = "SNP extraction/exclusion list contains 6 columns, "
-                          "will assume second column contains the SNP ID";
+                          "will assume this is a bim file, with the "
+                          "second column contains the SNP ID";
                 reporter.report(message);
-
                 // we set the rs index to 1 (use the second column as the RS ID)
                 rs_index = 1;
             }
@@ -769,7 +770,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
             {
                 // otherwise, we will assume the first column contain the SNP ID
                 message = "SNP extraction/exclusion list contains "
-                          + std::to_string(token.size())
+                          + misc::to_string(token.size())
                           + " columns, "
                             "will assume first column contains the SNP ID";
                 reporter.report(message);
@@ -793,7 +794,7 @@ std::unordered_set<std::string> Genotype::load_snp_list(std::string input,
     {
         misc::trim(line);
         if (line.empty()) continue;
-        std::vector<std::string> token = misc::split(line);
+        token = misc::split(line);
         // don't think the parsing . into chr:bp will be helpful in the context
         // of an extraction / exclusion list
         // as this is a set, we don't need to worry about duplicates
@@ -906,6 +907,9 @@ void Genotype::calc_freqs_and_intermediate(
     Reporter& reporter, Genotype* target)
 {
     std::string message = "";
+    m_num_geno_filter = 0;
+    m_num_maf_filter = 0;
+    m_num_info_filter = 0;
     calc_freq_gen_inter(maf_threshold, geno_threshold, info_threshold,
                         maf_filter, geno_filter, info_filter, hard_coded,
                         target);
@@ -1468,10 +1472,10 @@ bool Genotype::prepare_prsice()
               [](SNP const& t1, SNP const& t2) {
                   if (t1.category() == t2.category())
                   {
-                      if (t1.file_name().compare(t2.file_name()) == 0)
+                      if (t1.file_name() == t2.file_name())
                       { return t1.byte_pos() < t2.byte_pos(); }
                       else
-                          return t1.file_name().compare(t2.file_name()) < 0;
+                          return t1.file_name() < t2.file_name();
                   }
                   else
                       return t1.category() < t2.category();
@@ -1489,6 +1493,7 @@ void Genotype::build_membership_matrix(
     std::unordered_set<double> threshold;
     std::ofstream snp_out;
     const std::string snp_name = out + ".snp";
+    const bool is_prset = (num_sets != 2);
     if (print_snps)
     {
         snp_out.open(snp_name.c_str());
@@ -1499,14 +1504,13 @@ void Genotype::build_membership_matrix(
             throw std::runtime_error(error_message);
         }
         snp_out << "CHR\tSNP\tBP\tP";
-        for (size_t i = 0; i < region_name.size() - (region_name.size() == 2);
-             ++i)
+        for (size_t i = 0; i < region_name.size() - !is_prset; ++i)
         { snp_out << "\t" << region_name[i]; }
         snp_out << "\n";
     }
     size_t prev_idx;
     bool has_snp = false;
-    if (num_sets > 2)
+    if (is_prset)
     {
         for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
         {
@@ -1514,7 +1518,7 @@ void Genotype::build_membership_matrix(
             prev_idx = 0;
             if (threshold.find(snp.get_threshold()) == threshold.end())
             {
-                m_num_thresholds++;
+                ++m_num_thresholds;
                 threshold.insert(snp.get_threshold());
                 m_thresholds.push_back(snp.get_threshold());
             }
@@ -1526,13 +1530,13 @@ void Genotype::build_membership_matrix(
                 for (auto&& index : idx)
                 {
                     assert(index >= prev_idx);
-                    for (; prev_idx < index; ++prev_idx) { snp_out << "\tN"; }
-                    snp_out << "\tY";
+                    for (; prev_idx < index; ++prev_idx) { snp_out << "\t0"; }
+                    snp_out << "\t1";
                     if (index > 1) has_snp = true;
                     temporary_storage[index].push_back(i_snp);
                     prev_idx = index + 1;
                 }
-                for (; prev_idx < num_sets; ++prev_idx) { snp_out << "\tN"; }
+                for (; prev_idx < num_sets; ++prev_idx) { snp_out << "\t0"; }
                 snp_out << "\n";
             }
             else
@@ -1584,7 +1588,7 @@ void Genotype::build_membership_matrix(
                     m_thresholds.push_back(snp.get_threshold());
                 }
                 snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                        << "\t" << snp.p_value() << "\tY\n";
+                        << "\t" << snp.p_value() << "\t1\n";
                 region_membership.push_back(i_snp);
             }
         }
