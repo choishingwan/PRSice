@@ -58,9 +58,9 @@ protected:
      * \return Vector containing the sample information
      */
     std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
-    void gen_snp_vector(const std::vector<IITree<int, int>>& exclusion_regions,
-                        const std::string& out_prefix,
-                        Genotype* target = nullptr);
+    void
+    gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+                   const std::string& out_prefix, Genotype* target = nullptr);
     void calc_freq_gen_inter(const double& maf_threshold,
                              const double& geno_threshold, const double&,
                              const bool maf_filter, const bool geno_filter,
@@ -76,6 +76,22 @@ protected:
      */
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
+    inline void update_bed(const std::string& file_name)
+    {
+        if (m_bed_file.is_open()) { m_bed_file.close(); }
+        std::string bedname = file_name + ".bed";
+        // open the bed file in binary mode
+        m_bed_file.open(bedname.c_str(), std::ios::binary);
+        if (!m_bed_file.is_open())
+        {
+            throw std::runtime_error(std::string(
+                "Error: Cannot open bed file: " + file_name + ".bed"));
+        }
+        // we reset the prev_loc value to 0 as this is a new file
+        m_prev_loc = 0;
+        // update teh current file name
+        m_cur_file = file_name;
+    }
     /*!
      * \brief Function for read in the genotype file directly from the binary
      * plink file
@@ -99,24 +115,7 @@ protected:
             get_final_mask(static_cast<uint32_t>(m_founder_ct));
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        // we don't need to check if m_cur_file is empty because empty equals
-        // only to empty, which shouldn't happen
-        if (m_cur_file != file_name)
-        {
-            if (m_bed_file.is_open()) { m_bed_file.close(); }
-            std::string bedname = file_name + ".bed";
-            // open the bed file in binary mode
-            m_bed_file.open(bedname.c_str(), std::ios::binary);
-            if (!m_bed_file.is_open())
-            {
-                throw std::runtime_error(std::string(
-                    "Error: Cannot open bed file: " + file_name + ".bed"));
-            }
-            // we reset the prev_loc value to 0 as this is a new file
-            m_prev_loc = 0;
-            // update teh current file name
-            m_cur_file = file_name;
-        }
+        if (m_cur_file != file_name) { update_bed(file_name); }
         // if our current position does not equal to the required read position,
         // we will try to seek from the beginning of file to the target location
         if ((m_prev_loc != byte_pos)
