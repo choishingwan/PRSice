@@ -1,6 +1,8 @@
 #ifndef MISC_TEST_HPP
 #define MISC_TEST_HPP
 #include "global.hpp"
+#include "gzstream.h"
+#include "misc.hpp"
 #include "reporter.hpp"
 #include "gtest/gtest.h"
 #include <vector>
@@ -130,4 +132,32 @@ TEST(REPORTER, NO_WRAP_MESSAGE)
 }
 
 
+TEST(UTILITY, IS_GZ_FILE)
+{
+    GZSTREAM_NAMESPACE::ogzstream file;
+    file.open("DEBUG.gz");
+    file.close();
+    ASSERT_TRUE(misc::is_gz_file("DEBUG.gz"));
+    std::remove("DEBUG.gz");
+    file.open("DEBUG");
+    file.close();
+    ASSERT_TRUE(misc::is_gz_file("DEBUG"));
+    std::remove("DEBUG");
+    try
+    {
+        misc::is_gz_file("DEBUG");
+        // not found
+        FAIL();
+    }
+    catch (const std::runtime_error&)
+    {
+        SUCCEED();
+    }
+    // should be robust against the suffix
+    std::ofstream test;
+    test.open("DEBUG.gz");
+    test.close();
+    ASSERT_FALSE(misc::is_gz_file("DEBUG.gz"));
+    std::remove("DEBUG.gz");
+}
 #endif // MISC_TEST_HPP
