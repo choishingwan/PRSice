@@ -487,24 +487,24 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     reporter.initiailize(log_name);
 
 
-    if (m_print_all_scores) message_store["all-score"] = "";
     if (m_allow_inter) message_store["allow-inter"] = "";
-    if (m_stat_is_or) message_store["or"] = "";
-    if (m_stat_is_beta) message_store["beta"] = "";
     if (m_fastscore) message_store["fastscore"] = "";
-    if (m_target_is_hard_coded) message_store["hard"] = "";
     if (m_ignore_fid) message_store["ignore-fid"] = "";
+    if (m_include_nonfounders) message_store["nonfounders"] = "";
     if (m_input_is_index) message_store["index"] = "";
     if (m_keep_ambig) message_store["keep-ambig"] = "";
     if (m_logit_perm) message_store["logit-perm"] = "";
     if (m_no_clump) message_store["no-clump"] = "";
-    if (m_user_no_default) message_store["no-default"] = "";
     if (m_no_full) message_store["no-full"] = "";
     if (m_no_regress) message_store["no-regress"] = "";
-    if (m_include_nonfounders) message_store["nonfounders"] = "";
     if (m_pearson) message_store["pearson"] = "";
+    if (m_print_all_scores) message_store["all-score"] = "";
     if (m_print_snp) message_store["print-snp"] = "";
+    if (m_stat_is_beta) message_store["beta"] = "";
+    if (m_stat_is_or) message_store["or"] = "";
+    if (m_target_is_hard_coded) message_store["hard"] = "";
     if (m_use_ref_maf) message_store["use-ref-maf"] = "";
+    if (m_user_no_default) message_store["no-default"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
     start = std::chrono::system_clock::now();
     std::time_t start_time = std::chrono::system_clock::to_time_t(start);
@@ -543,10 +543,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
 // initialize the parameters, then call the
 // parameter processing function
 // Default destructor of Command, do nothing
-Commander::~Commander()
-{
-    // dtor
-}
+Commander::~Commander() {}
 
 // Function to set the help message
 // avoid having large chunk of un-foldable code

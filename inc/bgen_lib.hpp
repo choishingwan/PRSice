@@ -104,7 +104,8 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
     int result =
         uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
                    reinterpret_cast<Bytef const*>(begin), source_size);
-    assert(result == Z_OK);
+    if (result != Z_OK)
+        throw std::runtime_error("Error: Cannot decomporess bgen zlib");
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
 }
