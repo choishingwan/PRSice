@@ -37,12 +37,12 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
         range = misc::split(region, ":");
         if (range.size() == 1)
         {
-            // file input
+            // bed file input
             std::ifstream input_file;
-            input_file.open(range.front());
+            input_file.open(region);
             if (!input_file.is_open())
             {
-                std::string message = "Error: " + range.front()
+                std::string message = "Error: " + region
                                       + " cannot be open. Please check you "
                                         "have the correct input";
                 throw std::runtime_error(message);
@@ -91,15 +91,13 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
                         "coordinate\n";
                     throw std::runtime_error(message);
                 }
-                // to string is kinda stupid here, but rather not touching the
-                // core algorithm when I am exhausted.
                 if (chr >= 0)
                 {
                     // ignore any chromosome that we failed to parse, which
                     // will have chr < 0
-                    if (cr.size() < static_cast<size_t>(chr) + 1)
-                    { cr.resize(static_cast<size_t>(chr) + 1); }
-                    cr[static_cast<size_t>(chr)].add(low_bound, upper_bound, 0);
+                    size_t chr_num = static_cast<size_t>(chr);
+                    if (cr.size() < chr_num + 1) { cr.resize(chr_num + 1); }
+                    cr[chr_num].add(low_bound, upper_bound, 0);
                 }
             }
             input_file.close();
@@ -138,9 +136,9 @@ void Region::generate_exclusion(std::vector<IITree<int, int>>& cr,
             {
                 // ignore any chromosome that we failed to parse, which
                 // will have chr < 0
-                if (cr.size() < static_cast<size_t>(chr) + 1)
-                { cr.resize(static_cast<size_t>(chr) + 1); }
-                cr[static_cast<size_t>(chr)].add(low_bound, upper_bound, 0);
+                size_t chr_num = static_cast<size_t>(chr);
+                if (cr.size() < chr_num + 1) { cr.resize(chr_num + 1); }
+                cr[chr_num].add(low_bound, upper_bound, 0);
             }
         }
         else
@@ -174,9 +172,9 @@ size_t Region::generate_regions(
     reporter.report(message);
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest
+    std::unordered_set<std::string> duplicated_sets;
     region_names.push_back("Base");
     region_names.push_back("Background");
-    std::unordered_set<std::string> duplicated_sets;
     duplicated_sets.insert("Base");
     duplicated_sets.insert("Background");
     // 0 reserved for base
@@ -220,7 +218,6 @@ size_t Region::generate_regions(
         load_msigdb(msig, msigdb_list, region_names, duplicated_sets, set_idx,
                     reporter);
     }
-
     // now process the gtf file and add the regions
     if (!background.empty() && !genome_wide_background)
     {
@@ -559,10 +556,8 @@ void Region::load_gtf(
                 throw std::runtime_error(error);
             }
             // Now extract the name
-            attribute = get_attribute(token[+GTF::ATTRIBUTE]);
-            name = attribute[1];
-            id = attribute[0];
-            if (name.empty() && id.empty())
+            bool found = parse_attribute(token[+GTF::ATTRIBUTE], id, name);
+            if (!found)
             {
                 // lack both
                 std::string message =
@@ -808,8 +803,6 @@ bool Region::load_bed_regions(const std::string& bed_file,
      * Such that any SNP with coordinate of chr1:2-5 on the 1
      * base coordinate system will be included in the analysis
      */
-
-
     // check if we have the name
     std::string file_name, set_name, line, message;
     std::vector<std::string> token = misc::split(bed_file, ":");
