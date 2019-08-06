@@ -839,30 +839,25 @@ std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
     return result;
 }
 
+// return true if  we need to work on it
 bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
                               bool& chr_error, std::string& error_message)
 {
-    if (is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code))
-        || chr_code == m_xymt_codes[X_OFFSET]
-        || chr_code == m_xymt_codes[Y_OFFSET])
+    if (chr_code < 0)
     {
-        // we ignore Sex chromosomes and haploid chromosome
-
+        // invalid chr code
+        chr_error = true;
+        error_message = "Error: Invalid chromosome number for SNP";
+        return true;
+    }
+    if (chr_code > MAX_POSSIBLE_CHROM
+        || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
+    {
+        // this is sex / mt chromosome
+        sex_error = true;
         error_message = "Warning: Currently not support "
                         "haploid chromosome and sex "
                         "chromosomes\n";
-        sex_error = true;
-        return true;
-    }
-    // will cause slight mix up here as sex_error will = chr_error now
-    if ((static_cast<uint32_t>(chr_code)) > m_max_code)
-    {
-        // bigger than the maximum code, ignore it
-        error_message = "Warning: SNPs with chromosome number larger "
-                        "than "
-                        + std::to_string(m_max_code) + "."
-                        + " They will be ignored!\n";
-        chr_error = true;
         return true;
     }
     return false;

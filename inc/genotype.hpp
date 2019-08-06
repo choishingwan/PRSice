@@ -641,9 +641,18 @@ protected:
      * \param reporter the logger
      * \returnan unordered_set use for checking if the SNP is in the file
      */
-    std::unordered_set<std::string> load_snp_list(std::string input,
+    std::unordered_set<std::string> load_snp_list(const std::string& input,
                                                   Reporter& reporter);
-
+    void shrink_snp_vector(const std::vector<bool>& retain)
+    {
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&retain, this](const SNP& s) {
+                               return !retain[(&s - &*begin(m_existed_snps))];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
+    }
     /** Misc information **/
     // uint32_t m_hh_exists;
     /*!
