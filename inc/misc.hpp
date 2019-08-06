@@ -117,7 +117,7 @@ inline bool to_bool(const std::string& input)
         throw std::runtime_error(error_message);
     }
 }
-
+// TODO: Delete this, doesn't seems to give robust answer
 inline int parseLine(char* line)
 {
     // This assumes that a digit will be found and the line ends in " Kb".
@@ -129,7 +129,7 @@ inline int parseLine(char* line)
     return i;
 }
 
-
+// TODO: Delete this, doesn't seems to give robust answer
 inline int getValue()
 { // Note: this value is in KB!
     FILE* file = fopen("/proc/self/status", "r");
@@ -148,7 +148,7 @@ inline int getValue()
     return result;
 }
 
-// this works on MAC and Linux
+// TODO: Delete this, doesn't seems to give robust answer
 inline size_t current_ram_usage()
 {
 #if defined __APPLE__
@@ -174,7 +174,7 @@ inline size_t current_ram_usage()
     return getValue() * 1024;
 #endif
 }
-
+// TODO: Delete this, doesn't seems to give robust answer
 inline size_t total_ram_available()
 {
 #ifdef __APPLE__
@@ -1004,6 +1004,24 @@ inline bool logically_equal(double a, double b, double error_factor = 1.0)
                                       * error_factor));
 }
 
+inline bool is_gz_file(const std::string& name)
+{
+    const unsigned char gz_magic[2] = {0x1f, 0x8b};
+    FILE* fp;
+    if ((fp = fopen(name.c_str(), "rb")) == nullptr)
+    { throw std::runtime_error("Error: Cannot open file - " + name); }
+    unsigned char buf[2];
+    if (fread(buf, 1, 2, fp) == 2)
+    {
+        if (buf[0] == gz_magic[0] && buf[1] == gz_magic[1]) { return true; }
+        return false;
+    }
+    else
+    {
+        // can open the file, but can't read the magic number.
+        return false;
+    }
+}
 inline bool isNumeric(std::string s)
 {
     try
