@@ -51,51 +51,52 @@ public:
      */
     Region() {}
     virtual ~Region();
-    static void generate_exclusion(std::vector<IITree<int, int>>& cr,
+    static void generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
                                    const std::string& exclusion_range);
     static size_t generate_regions(
-        std::vector<IITree<int, int>>& gene_sets,
+        std::vector<IITree<size_t, size_t>>& gene_sets,
         std::vector<std::string>& region_names,
-        std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
-        const std::vector<std::string>& feature, const int window_5,
-        const int window_3, const bool genome_wide_background,
+        std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
+        const std::vector<std::string>& feature, const size_t window_5,
+        const size_t window_3, const bool genome_wide_background,
         const std::string& gtf, const std::string& msigdb,
         const std::vector<std::string>& bed, const std::string& snp_set,
-        const std::string& background, const uint32_t max_chr,
+        const std::string& background, const size_t max_chr,
         Reporter& reporter);
 
 protected:
     static void load_background(
-        const std::string& background, const int window_5, const int window_3,
-        const uint32_t max_chr,
-        std::unordered_map<std::string, std::vector<int>>& msigdb_list,
-        bool printed_warning, std::vector<IITree<int, int>>& gene_sets,
+        const std::string& background, const size_t window_5,
+        const size_t window_3, const size_t max_chr,
+        std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
+        bool printed_warning, std::vector<IITree<size_t, size_t>>& gene_sets,
         Reporter& reporter);
-    static void
-    load_msigdb(const std::string& msig,
-                std::unordered_map<std::string, std::vector<int>>& msigdb_list,
-                std::vector<std::string>& region_names,
-                std::unordered_set<std::string> duplicated_sets, int& set_idx,
-                Reporter& reporter);
+    static void load_msigdb(
+        const std::string& msig,
+        std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        std::vector<std::string>& region_names,
+        std::unordered_set<std::string>& duplicated_sets, size_t& set_idx,
+        Reporter& reporter);
     static void load_gtf(
         const std::string& gtf,
-        const std::unordered_map<std::string, std::vector<int>>& msigdb_list,
-        const std::vector<std::string>& features, const uint32_t max_chr,
-        const int window_5, const int window_3,
-        std::vector<IITree<int, int>>& gene_sets,
+        const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        const std::vector<std::string>& features, const size_t max_chr,
+        const size_t window_5, const size_t window_3,
+        std::vector<IITree<size_t, size_t>>& gene_sets,
         const bool genome_wide_background, const bool provided_background,
         Reporter& reporter);
     static bool load_bed_regions(
-        const std::string& bed_file, std::vector<IITree<int, int>>& gene_sets,
-        const int window_5, const int window_3, bool& print_warning,
-        const int set_idx, const uint32_t max_chr,
-        std::vector<std::string>& region_names,
-        std::unordered_set<std::string> duplicated_sets, Reporter& reporter);
+        const std::string& bed_file,
+        std::vector<IITree<size_t, size_t>>& gene_sets, const size_t window_5,
+        const size_t window_3, bool& printed_warning, const size_t set_idx,
+        const size_t max_chr, std::vector<std::string>& region_names,
+        std::unordered_set<std::string>& duplicated_sets, Reporter& reporter);
     static void load_snp_sets(
         std::string snp_file,
-        std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
         std::vector<std::string>& region_names,
-        std::unordered_set<std::string>& duplicated_sets, int& set_idx,
+        std::unordered_set<std::string>& duplicated_sets, size_t& set_idx,
         Reporter& reporter);
     static void is_bed_line(const std::vector<std::string>& bed_line,
                             size_t& column_size, bool& is_header)

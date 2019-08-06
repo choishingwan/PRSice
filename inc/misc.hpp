@@ -1060,4 +1060,27 @@ inline int string_to_int(const char* p)
     if (neg) { x = -x; }
     return x;
 }
+inline size_t string_to_size_t(const char* p)
+{
+    int x = 0;
+    if (*p == '-')
+    {
+        throw std::runtime_error(
+            "Error: Negative value, cannot be assigned to unsigned integer\n");
+    }
+    else if (*p == '+')
+    {
+        ++p;
+    }
+    else if (*p < '0' || *p > '9')
+    {
+        throw std::runtime_error("Error: Not an integer\n");
+    }
+    while (*p >= '0' && *p <= '9')
+    {
+        x = (x * 10) + (*p - '0');
+        ++p;
+    }
+    return x;
+}
 }
