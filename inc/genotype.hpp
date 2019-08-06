@@ -103,7 +103,7 @@ public:
     // are based on the SNP ID, we can be confident that they were already done
     // in read_base
     void load_snps(const std::string& out,
-                   const std::vector<IITree<int, int>>& exclusion_regions,
+                   const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    bool verbose, Reporter& reporter,
                    Genotype* target = nullptr);
 
@@ -159,8 +159,7 @@ public:
      * calculation instead of the haplotype likelihood clumping. If this is
      * true, efficient_clumping will call the pearson_clumping algorithm
      */
-    void efficient_clumping(Genotype& reference, Reporter& reporter,
-                            bool const use_pearson);
+    void efficient_clumping(Genotype& reference, Reporter& reporter);
     /*!
      * \brief This function helps to load all command line dependencies into the
      * object so that we don't need to pass along the commander any more
@@ -343,7 +342,7 @@ public:
                    const double& bound_start, const double& bound_inter,
                    const double& bound_end, const std::string& exclude_snps,
                    const std::string& extract_snps,
-                   const std::vector<IITree<int, int>>& exclusion_region,
+                   const std::vector<IITree<size_t, size_t>>& exclusion_region,
                    const double& maf_control, const double& maf_case,
                    const double& info_threshold, const bool maf_control_filter,
                    const bool maf_case_filter, const bool info_filter,
@@ -363,22 +362,23 @@ public:
                    double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
-    static bool within_region(const std::vector<IITree<int, int>>& cr,
-                              const int chr, const int loc)
+    static bool within_region(const std::vector<IITree<size_t, size_t>>& cr,
+                              const size_t chr, const size_t loc)
     {
         std::vector<size_t> output;
-        if (chr < 0) return false;
-        if (static_cast<size_t>(chr) >= cr.size()) return false;
-        cr[static_cast<size_t>(chr)].overlap(loc - 1, loc + 1, output);
+        if (chr >= cr.size()) return false;
+        size_t start = (loc == 0) ? 1 : loc;
+        cr[chr].overlap(start, loc + 1, output);
         return !output.empty();
     }
 
 
     static void construct_flag(
-        const std::string& rs, const std::vector<IITree<int, int>>& gene_sets,
-        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
-        std::vector<uintptr_t>& flag, const size_t required_size, const int chr,
-        const int bp, const bool genome_wide_background)
+        const std::string& rs,
+        const std::vector<IITree<size_t, size_t>>& gene_sets,
+        const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
+        std::vector<uintptr_t>& flag, const size_t required_size,
+        const size_t chr, const size_t bp, const bool genome_wide_background)
     {
         if (flag.size() != required_size) { flag.resize(required_size); }
         std::fill(flag.begin(), flag.end(), 0);
@@ -386,17 +386,17 @@ public:
         if (genome_wide_background) { SET_BIT(1, flag.data()); }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if (chr >= 0 && !gene_sets.empty())
+        if (!gene_sets.empty())
         {
             std::vector<size_t> out;
-            if (static_cast<size_t>(chr) >= gene_sets.size()) return;
-            gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
-            int idx;
+            if (chr >= gene_sets.size()) return;
+            gene_sets[chr].overlap(bp - 1, bp + 1, out);
+            size_t idx;
             for (auto&& j : out)
             {
-                idx = gene_sets[static_cast<size_t>(chr)].data(j);
+                idx = gene_sets[chr].data(j);
                 // idx= cr_label(gene_sets, b[j]);
-                SET_BIT(static_cast<size_t>(idx), flag.data());
+                SET_BIT(idx, flag.data());
             }
         }
         if (snp_in_sets.empty() || rs.empty()) return;
@@ -408,8 +408,8 @@ public:
         return;
     }
     void add_flags(
-        const std::vector<IITree<int, int>>& cr,
-        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        const std::vector<IITree<size_t, size_t>>& cr,
+        const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
         const size_t num_sets, const bool genome_wide_background);
 
 protected:
@@ -453,6 +453,7 @@ protected:
     double m_homrar_weight = 2;
     size_t m_num_thresholds = 0;
     size_t m_thread = 1; // number of final samples
+    size_t m_max_window_size = 0;
     size_t m_num_ambig = 0;
     size_t m_num_maf_filter = 0;
     size_t m_num_geno_filter = 0;
@@ -465,7 +466,6 @@ protected:
     uintptr_t m_sample_ct = 0;
     uintptr_t m_founder_ct = 0;
     uintptr_t m_marker_ct = 0;
-    intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
@@ -592,9 +592,9 @@ protected:
         return std::vector<Sample_ID>(0);
     }
 
-    virtual void
-    gen_snp_vector(const std::vector<IITree<int, int>>& /*exclusion_regions*/,
-                   const std::string& /*out_prefix*/, Genotype* /*target*/)
+    virtual void gen_snp_vector(
+        const std::vector<IITree<size_t, size_t>>& /*exclusion_regions*/,
+        const std::string& /*out_prefix*/, Genotype* /*target*/)
     {
     }
     virtual void calc_freq_gen_inter(

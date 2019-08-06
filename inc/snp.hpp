@@ -33,7 +33,7 @@ class SNP
 {
 public:
     SNP() {}
-    SNP(const std::string& rs_id, const int chr, const size_t loc,
+    SNP(const std::string& rs_id, const size_t chr, const size_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
         const double& stat, const double& p_value, const int category,
         const double p_threshold)
@@ -82,7 +82,7 @@ public:
         m_target_byte_pos = byte_pos;
     }
     void add_target(const std::string& target_file,
-                    const std::streampos target_byte_pos, const int chr,
+                    const std::streampos target_byte_pos, const size_t chr,
                     const size_t loc, const std::string& ref,
                     const std::string& alt, const bool flipping)
     {
@@ -129,11 +129,12 @@ public:
      * flipped = true
      * \return true if it is a match
      */
-    inline bool matching(intptr_t chr, size_t loc, std::string& ref,
+    inline bool matching(size_t chr, size_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
     {
         // should be trimmed
-        if (chr != -1 && m_chr != -1 && chr != m_chr) { return false; }
+        if (chr != ~size_t(0) && m_chr != ~size_t(0) && chr != m_chr)
+        { return false; }
         if (loc != ~size_t(0) && m_loc != ~size_t(0) && loc != m_loc)
         { return false; }
         flipped = false;
@@ -168,7 +169,7 @@ public:
             return false; // cannot flip nor match
     }
 
-    int chr() const { return m_chr; }
+    size_t chr() const { return m_chr; }
     size_t loc() const { return m_loc; }
     int category() const { return m_category; }
     /*!
@@ -290,13 +291,13 @@ public:
      * is used as the index
      * \param low the designated bound index
      */
-    void set_low_bound(int low) { m_low_bound = low; }
+    void set_low_bound(size_t low) { m_low_bound = low; }
     /*!
      * \brief Set the upper boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
      * \param up the designated bound index
      */
-    void set_up_bound(int up) { m_up_bound = up; }
+    void set_up_bound(size_t up) { m_up_bound = up; }
     /*!
      * \brief get_counts will return the current genotype count for this SNP.
      * Return true if this was previously calculated (and indicate the need of
@@ -396,12 +397,12 @@ public:
      * \brief Obtain the upper bound of the clump region correspond to this SNP
      * \return the upper bound of the region
      */
-    int up_bound() const { return m_up_bound; }
+    size_t up_bound() const { return m_up_bound; }
     /*!
      * \brief Obtain the lower bound of the clump region correspond to this SNP
      * \return the lower bound of the region
      */
-    int low_bound() const { return m_low_bound; }
+    size_t low_bound() const { return m_low_bound; }
     void set_expected(double expected) { m_expected_value = expected; }
     void set_ref_expected(double expected) { m_ref_expected_value = expected; }
     bool has_expected() const { return m_has_expected; }
@@ -431,11 +432,11 @@ private:
     double m_p_threshold = 0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
-    int m_chr = -1;
     int m_category = -1;
 
-    int m_low_bound = 0;
-    int m_up_bound = 0;
+    size_t m_chr = ~size_t(0);
+    size_t m_low_bound = ~size_t(0);
+    size_t m_up_bound = ~size_t(0);
     size_t m_homcom = 0;
     size_t m_het = 0;
     size_t m_homrar = 0;
