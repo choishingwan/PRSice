@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
         // cgranges_t* exclusion_region = cr_init();
-        std::vector<IITree<int, int>> exclusion_regions;
+        std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
         // now we index cr
@@ -63,14 +63,14 @@ int main(int argc, char* argv[])
 
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
-        double maf, geno, info, hard_threshold;
-        bool maf_filter, geno_filter, hard_coded, info_filter, init_ref = false;
+        double maf, geno, info;
+        bool init_ref = false;
         // load the filtering parameters for the target file
-        maf_filter = commander.target_maf(maf);
-        geno_filter = commander.target_geno(geno);
-        info_filter = commander.target_info(info);
-        hard_threshold = commander.get_target_hard_threshold();
-        hard_coded = commander.hard_coded();
+        bool maf_filter = commander.target_maf(maf);
+        bool geno_filter = commander.target_geno(geno);
+        bool info_filter = commander.target_info(info);
+        double hard_threshold = commander.get_target_hard_threshold();
+        bool hard_coded = commander.hard_coded();
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
         try
@@ -186,10 +186,10 @@ int main(int argc, char* argv[])
             // accordingly
             // Generate Region flag information
             std::vector<std::string> region_names;
-            std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+            std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
             size_t num_regions;
             // cgranges_t* gene_sets = cr_init();
-            std::vector<IITree<int, int>> gene_sets;
+            std::vector<IITree<size_t, size_t>> gene_sets;
             num_regions = Region::generate_regions(
                 gene_sets, region_names, snp_in_sets, commander.feature(),
                 commander.window_5(), commander.window_3(),
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
                 // now perform clumping
                 target_file->efficient_clumping(
                     commander.use_ref() ? *reference_file : *target_file,
-                    reporter, commander.pearson());
+                    reporter);
                 // immediately free the memory
             }
             if (init_ref)
