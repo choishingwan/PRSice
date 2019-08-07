@@ -1195,10 +1195,10 @@ void BinaryGen::hard_code_score(
                 m_bgen_file, context, setter, &m_buffer1, &m_buffer2);
             setter.get_count(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
-        // if we haven't got the count from the genotype matrix, we will
+        // TODO: if we haven't got the count from the genotype matrix, we will
         // need to calculate that in theory, we might not need to do the
         // counting as that is already done when we convert the dosages into
-        // the binary genotypes (TODO)
+        // the binary genotypes
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
