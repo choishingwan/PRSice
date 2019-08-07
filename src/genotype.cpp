@@ -240,12 +240,16 @@ void Genotype::read_base(
             // if the input is index, we will keep the header, otherwise, we
             // will remove the header
             std::getline(gz_snp_file, line);
-            message.append("GZ file detected. First line of file is:\n");
+            message.append("GZ file detected. Header of file is:\n");
             message.append(line + "\n\n");
             // gz_snp_file.clear();
             // gz_snp_file.seekg(0, gz_snp_file.beg);
-            gz_snp_file.close();
-            gz_snp_file.open(base_file.c_str());
+            // gz_snp_file.close();
+            // gz_snp_file.open(base_file.c_str());
+        }
+        else
+        {
+            message.append("GZ file detected.");
         }
         reporter.report("Due to library restrictions, we cannot display "
                         "progress bar for gz");
@@ -271,7 +275,7 @@ void Genotype::read_base(
 
     std::unordered_set<std::string> dup_index;
     while ((gz_input && std::getline(gz_snp_file, line))
-           || (gz_input && std::getline(snp_file, line)))
+           || (!gz_input && std::getline(snp_file, line)))
     {
         if (!gz_input)
         {
