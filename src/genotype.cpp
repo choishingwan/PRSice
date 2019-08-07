@@ -41,17 +41,17 @@ void Genotype::build_clump_windows()
     size_t low_bound = 0, last_snp = 0, prev_loc = 0, vector_index = 0,
            diff = 0;
     size_t prev_chr = ~size_t(0);
+    bool first_snp = true;
     m_max_window_size = 0;
     // now we iterate thorugh all the SNPs to define the clumping window
     for (auto&& cur_snp : m_existed_snps)
     {
-        if (prev_chr != cur_snp.chr())
+        if (first_snp || prev_chr != cur_snp.chr())
         {
-            // if prev_chr not equal to  current chromosome, we update the
-            // previous information to the current SNP (reset)
             prev_chr = cur_snp.chr();
             prev_loc = cur_snp.loc();
             low_bound = vector_index;
+            first_snp = false;
         }
         // we can safely assume current location always bigger than prev_loc
         // as we have sorted the vector
@@ -62,8 +62,12 @@ void Genotype::build_clump_windows()
             // threshold
             while (cur_snp.loc() - prev_loc > m_clump_distance
                    && low_bound < vector_index)
-            { prev_loc = m_existed_snps[low_bound++].loc(); }
+            {
+                ++low_bound;
+                prev_loc = m_existed_snps[low_bound].loc();
+            }
         }
+
         // now low_bound should be the first SNP where the core index SNP need
         // to read from
         cur_snp.set_low_bound(low_bound);
@@ -242,10 +246,6 @@ void Genotype::read_base(
             std::getline(gz_snp_file, line);
             message.append("GZ file detected. Header of file is:\n");
             message.append(line + "\n\n");
-            // gz_snp_file.clear();
-            // gz_snp_file.seekg(0, gz_snp_file.beg);
-            // gz_snp_file.close();
-            // gz_snp_file.open(base_file.c_str());
         }
         else
         {
