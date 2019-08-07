@@ -1372,6 +1372,7 @@ private:
                                bool& error, std::string& error_messages)
     {
         std::string in = input;
+        const size_t u = 1000;
         if (message.find(command) != message.end())
         {
             error_messages.append("Warning: Duplicated argument --" + command
@@ -1390,7 +1391,7 @@ private:
                                       + misc::to_string(default_unit) + "\n");
                 return ~size_t(0);
             }
-            if (default_unit == 1000)
+            if (default_unit == u)
                 message[command] = input + "kb";
             else
                 message[command] = input + "bp";
@@ -1422,7 +1423,7 @@ private:
                              && (static_cast<unsigned char>(unit[1]) & 0xdf)
                                     == 'B')
                     {
-                        if (!valid_distance(value, 1000, dist))
+                        if (!valid_distance(value, u, dist))
                         {
                             error = true;
                             error_messages.append(
@@ -1436,7 +1437,7 @@ private:
                              && (static_cast<unsigned char>(unit[1]) & 0xdf)
                                     == 'B')
                     {
-                        if (!valid_distance(value, 1000 * 1000, dist))
+                        if (!valid_distance(value, u * u, dist))
                         {
                             error = true;
                             error_messages.append(
@@ -1450,7 +1451,7 @@ private:
                              && (static_cast<unsigned char>(unit[1]) & 0xdf)
                                     == 'B')
                     {
-                        if (!valid_distance(value, 1000 * 1000 * 1000, dist))
+                        if (!valid_distance(value, u * u * u, dist))
                         {
                             error = true;
                             error_messages.append(
@@ -1464,8 +1465,7 @@ private:
                              && (static_cast<unsigned char>(unit[1]) & 0xdf)
                                     == 'B')
                     {
-                        if (!valid_distance(value, 1000 * 1000 * 1000 * 1000,
-                                            dist))
+                        if (!valid_distance(value, u * u * u * u, dist))
                         {
                             error = true;
                             error_messages.append(
@@ -1495,7 +1495,7 @@ private:
                         else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
                                  == 'K')
                         {
-                            if (!valid_distance(value, 1000, dist))
+                            if (!valid_distance(value, u, dist))
                             {
                                 error = true;
                                 error_messages.append(
@@ -1508,7 +1508,7 @@ private:
                         else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
                                  == 'M')
                         {
-                            if (!valid_distance(value, 1000 * 1000, dist))
+                            if (!valid_distance(value, u * u, dist))
                             {
                                 error = true;
                                 error_messages.append(
@@ -1521,8 +1521,7 @@ private:
                         else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
                                  == 'G')
                         {
-                            if (!valid_distance(value, 1000 * 1000 * 1000,
-                                                dist))
+                            if (!valid_distance(value, u * u * u, dist))
                             {
                                 error = true;
                                 error_messages.append(
@@ -1535,8 +1534,7 @@ private:
                         else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
                                  == 'T')
                         {
-                            if (!valid_distance(
-                                    value, 1000 * 1000 * 1000 * 1000, dist))
+                            if (!valid_distance(value, u * u * u * u, dist))
                             {
                                 error = true;
                                 error_messages.append(
