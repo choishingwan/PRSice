@@ -16,8 +16,8 @@ protected:
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
+    size_t chr = 1, loc = 1;
     int category = 1;
-    int chr = 1, loc = 1;
     void SetUp() override
     {
         snp = SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
@@ -539,8 +539,8 @@ class SNP_REGION : public ::testing::Test
     // For exclusion, strand information should not alter result (window
     // padding should all be 0)
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     size_t num_regions;
     size_t required_size;
@@ -618,14 +618,14 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
+        size_t window_5 = 0;
+        size_t window_3 = 0;
         std::string msigdb = "";
         std::string snp_set = "";
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+        std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
         num_regions = Region::generate_regions(
             gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
             genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
@@ -653,16 +653,17 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
     // genome_wide_background is set to true. All SNPs therefore have their
     // background bit set no matter what
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -674,16 +675,16 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost the base and background flag
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 2 || i == 7) { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -742,16 +743,17 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -763,16 +765,16 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost the base flag
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 2 || i == 7) { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -797,16 +799,17 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
 
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from base_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -816,11 +819,11 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_TRUE(set_snp.clumped());
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should have acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(base_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(base_snp.in(i)); }
         else
         {
             ASSERT_FALSE(base_snp.in(i));
@@ -876,7 +879,8 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
     ASSERT_TRUE(set_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
     ASSERT_TRUE(set_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
         ASSERT_FALSE(set_snp.in(i));
@@ -889,14 +893,13 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
     ASSERT_TRUE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost all flags
-    for (size_t i = 0; i < num_regions; ++i) {
-        ASSERT_FALSE(set_snp.in(i));
-    }
+    for (size_t i = 0; i < num_regions; ++i) { ASSERT_FALSE(set_snp.in(i)); }
 }
 
 TEST(SNP_COUNTS, SET_COUNTS)
