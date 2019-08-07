@@ -76,11 +76,9 @@ void Genotype::build_clump_windows()
         {
             // if the last SNP is on a differenet chromosome or it is to far
             // from the current SNP
-
             diff = vector_index - m_existed_snps[last_snp].low_bound();
             // we will set the up bound of that SNP to the current SNP
-            m_existed_snps[static_cast<size_t>(last_snp)].set_up_bound(
-                vector_index);
+            m_existed_snps[last_snp].set_up_bound(vector_index);
             ++last_snp;
             if (m_max_window_size < diff) { m_max_window_size = diff; }
         }
@@ -185,37 +183,6 @@ void Genotype::read_base(
         no_full ? (fastscore ? barlevels.back() : bound_end) : 1.0;
     // Start reading the base file. If the base file contain gz as its suffix,
     // we will read it as a gz file
-    bool gz_input = false;
-    try
-    {
-        gz_input = misc::is_gz_file(base_file);
-    }
-    catch (const std::runtime_error& e)
-    {
-        throw std::runtime_error(e.what());
-    }
-
-    if (gz_input)
-    {
-        gz_snp_file.open(base_file.c_str());
-        if (!gz_snp_file.good())
-        {
-            std::string error_message = "Error: Cannot open base file: "
-                                        + base_file + " (gz) to read!\n";
-            throw std::runtime_error(error_message);
-        }
-    }
-    else
-    {
-        snp_file.open(base_file.c_str());
-        if (!snp_file.is_open())
-        {
-            std::string error_message =
-                "Error: Cannot open base file: " + base_file;
-            throw std::runtime_error(error_message);
-        }
-    }
-
     std::vector<std::string> token;
     std::string line;
     std::string message = "Base file: " + base_file + "\n";
@@ -248,11 +215,26 @@ void Genotype::read_base(
     bool to_remove = false;
     int category = -1;
     int32_t chr_code;
-    std::unordered_set<std::string> dup_index;
     std::streampos file_length = 0;
+    bool gz_input = false;
+    try
+    {
+        gz_input = misc::is_gz_file(base_file);
+    }
+    catch (const std::runtime_error& e)
+    {
+        throw std::runtime_error(e.what());
+    }
+
     if (gz_input)
     {
-        // gzstream does not support seek, so we can't display progress bar
+        gz_snp_file.open(base_file.c_str());
+        if (!gz_snp_file.good())
+        {
+            std::string error_message = "Error: Cannot open base file: "
+                                        + base_file + " (gz) to read!\n";
+            throw std::runtime_error(error_message);
+        }
         if (!is_index)
         {
             // if the input is index, we will keep the header, otherwise, we
@@ -263,7 +245,6 @@ void Genotype::read_base(
             // gz_snp_file.clear();
             // gz_snp_file.seekg(0, gz_snp_file.beg);
             gz_snp_file.close();
-            gz_snp_file.clear();
             gz_snp_file.open(base_file.c_str());
         }
         reporter.report("Due to library restrictions, we cannot display "
@@ -271,8 +252,13 @@ void Genotype::read_base(
     }
     else
     {
-        // get the maximum file length, therefore allow us to display the
-        // progress
+        snp_file.open(base_file.c_str());
+        if (!snp_file.is_open())
+        {
+            std::string error_message =
+                "Error: Cannot open base file: " + base_file;
+            throw std::runtime_error(error_message);
+        }
         snp_file.seekg(0, snp_file.end);
         file_length = snp_file.tellg();
         snp_file.clear();
@@ -283,6 +269,7 @@ void Genotype::read_base(
     }
     double prev_progress = 0.0;
 
+    std::unordered_set<std::string> dup_index;
     while ((gz_input && std::getline(gz_snp_file, line))
            || (gz_input && std::getline(snp_file, line)))
     {

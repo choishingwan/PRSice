@@ -384,11 +384,11 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                error_messages);
             break;
         case 'C':
-            set_string(optarg, message_store, m_cov_file, dummy, "cov-file",
+            set_string(optarg, message_store, m_cov_file, dummy, "cov",
                        error_messages);
             break;
         case 'f':
-            set_string(optarg, message_store, m_pheno_file, dummy, "pheno-file",
+            set_string(optarg, message_store, m_pheno_file, dummy, "pheno",
                        error_messages);
             break;
         case 'F':
