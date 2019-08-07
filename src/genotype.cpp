@@ -260,8 +260,11 @@ void Genotype::read_base(
             std::getline(gz_snp_file, line);
             message.append("GZ file detected. First line of file is:\n");
             message.append(line + "\n\n");
+            // gz_snp_file.clear();
+            // gz_snp_file.seekg(0, gz_snp_file.beg);
+            gz_snp_file.close();
             gz_snp_file.clear();
-            gz_snp_file.seekg(0, gz_snp_file.beg);
+            gz_snp_file.open(base_file.c_str());
         }
         reporter.report("Due to library restrictions, we cannot display "
                         "progress bar for gz");
@@ -279,13 +282,9 @@ void Genotype::read_base(
         if (!is_index) std::getline(snp_file, line);
     }
     double prev_progress = 0.0;
-    std::istream* stream;
-    if (gz_input) { stream = &(gz_snp_file); }
-    else
-    {
-        stream = &(snp_file);
-    }
-    while (std::getline(*stream, line))
+
+    while ((gz_input && std::getline(gz_snp_file, line))
+           || (gz_input && std::getline(snp_file, line)))
     {
         if (!gz_input)
         {
