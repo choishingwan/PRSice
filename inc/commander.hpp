@@ -885,7 +885,6 @@ private:
         if (message.find(c) == message.end()) { message[c] = input; }
         else
         {
-            // we will append instead of overwrite
             message[c] = "," + input;
         }
         if (!input.empty() && input.back() == ',')
@@ -901,70 +900,35 @@ private:
             {
                 // check if this is true or false, if, not, try parsing
                 std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
-                if (bin.length() == 1)
-                {
-                    switch (bin.at(0))
-                    {
-                    case 'T': target.push_back(true); break;
-                    case 'F': target.push_back(false); break;
-                    default:
-                        error_message.append(
-                            "Error: Invalid argument passed to " + c + ": "
-                            + input
-                            + "! Require binary arguments e.g. T/F, "
-                              "True/False\n");
-                        return false;
-                    }
-                }
-                else if (bin == "TRUE")
-                {
-                    target.push_back(true);
-                }
-                else if (bin == "FALSE")
+                if (bin == "T" || bin == "TRUE") { target.push_back(true); }
+                else if (bin == "F" || bin == "FALSE")
                 {
                     target.push_back(false);
                 }
                 // we likely have numeric input
                 else
                 {
-                    // only allow T/F for simplicity
-                    // no point being paritally lazy with 2True, right?
-                    char value = bin.at(bin.length() - 1);
-                    std::string prefix = bin.substr(0, bin.size() - 1);
-                    int num = 0;
+                    std::string value_str = bin.substr(bin.length() - 1);
                     try
                     {
-                        switch (value)
+                        size_t repeat =
+                            misc::string_to_size_t(value_str.c_str());
+                        bool value;
+                        if (bin.back() == 'T') { value = true; }
+                        else if (bin.back() == 'F')
                         {
-                        case 'T':
-                            num = misc::convert<int>(prefix);
-                            for (int i = 0; i < num; ++i)
-                            { target.push_back(true); }
-                            break;
-                        case 'F':
-                            num = misc::convert<int>(prefix);
-                            for (int i = 0; i < num; ++i)
-                            { target.push_back(false); }
-                            break;
-                        default:
-                            error_message.append(
-                                "Error: Invalid argument passed to " + c + ": "
-                                + input
-                                + "! Require binary arguments e.g. T/F, "
-                                  "True/False\n");
-                            return false;
+                            value = false;
                         }
+                        else
+                        {
+                            throw std::runtime_error("");
+                        }
+                        for (size_t i = 0; i < repeat; ++i)
+                        { target.push_back(value); }
                     }
-                    catch (...)
+                    catch (const std::runtime_error&)
                     {
-                        // to capture problem when we cannot convert prefix
-                        // into number
-                        error_message.append(
-                            "Error: Invalid argument passed to " + c + ": "
-                            + input
-                            + "! Require binary arguments e.g. T/F, "
-                              "True/False\n");
-                        return false;
+                        throw std::runtime_error("");
                     }
                 }
             }
@@ -992,7 +956,6 @@ private:
                                    const std::string& c,
                                    std::string& error_message)
     {
-
         if (input.empty()) return;
         if (message.find(c) == message.end()) { message[c] = input; }
         else
@@ -1252,7 +1215,6 @@ private:
                            const std::string& c, std::string& error_message,
                            bool add_quote = false)
     {
-
         if (message.find(c) != message.end())
         {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
