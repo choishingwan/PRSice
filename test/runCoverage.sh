@@ -5,7 +5,7 @@
 # ${3} is the directory for the unit test output
 LCOV=lcov
 GENHTML=genhtml
-BROWSER=Firefox 
+#BROWSER=Firefox 
 
 SRC_DIR="${1}"
 UNIT_TEST="${2}"

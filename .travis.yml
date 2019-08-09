@@ -42,9 +42,7 @@ matrix:
       osx_image: xcode8
       env:
         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
-        
 
-        
 before_install:
     - eval "${MATRIX_EVAL}"
     # Combine global build options with OS/compiler-dependent options
@@ -60,7 +58,6 @@ install:
     - ${CXX} -v
     - sudo pip install --user cpp-coveralls
 
-
 addons:
   apt:
     sources:
@@ -73,7 +70,6 @@ script:
   - mkdir build
   - cd build
   - cmake -DCODE_COVERAGE=ON -DBUILD_TESTING=ON ../
-  
   - make
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   #- ../bin/runUnitTests ../test/data
