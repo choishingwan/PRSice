@@ -209,7 +209,10 @@ protected:
         // otherwise improper trailing bits might cause a segfault, when we
         // should be ignoring them or just issuing a warning.
         if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
-        { return RET_READ_FAIL; }
+        {
+            std::string error_message = "Error: Cannot read the bed file(read)";
+            throw std::runtime_error(error_message);
+        }
         return 0;
     }
 };

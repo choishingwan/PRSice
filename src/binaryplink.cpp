@@ -878,12 +878,7 @@ void BinaryPlink::read_score(
         cur_line = cur_snp.byte_pos();
         if (m_prev_loc != cur_line
             && !m_bed_file.seekg(cur_line, std::ios_base::beg))
-        {
-            // only jump to the line if the cur_line does not equal to the
-            // current position. because bed offset != 0, the first SNP will
-            // always be seeked
-            throw std::runtime_error("Error: Cannot read the bed file!");
-        }
+        { throw std::runtime_error("Error: Cannot read the bed file!"); }
 
         // we now read the genotype from the file by calling
         // load_and_collapse_incl
@@ -891,12 +886,7 @@ void BinaryPlink::read_score(
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-        if (load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data()))
-        {
-            std::string error_message =
-                "Error: Cannot read the bed file(read): " + m_cur_file;
-            throw std::runtime_error(error_message);
-        }
+        load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data());
         if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                 use_ref_maf))
         {
@@ -929,50 +919,26 @@ void BinaryPlink::read_score(
         // directly read in the current location
         m_prev_loc =
             static_cast<std::streampos>(unfiltered_sample_ct4) + cur_line;
-        // reset the weight (as we might have flipped it later on)
-        homcom_weight = m_homcom_weight;
-        het_weight = m_het_weight;
-        homrar_weight = m_homrar_weight;
+
         if (m_founder_ct == missing_ct)
         {
             // problematic snp
             cur_snp.invalid();
             continue;
         }
+        homcom_weight = m_homcom_weight;
+        het_weight = m_het_weight;
+        homrar_weight = m_homrar_weight;
+        if (cur_snp.is_flipped()) { std::swap(homcom_weight, homrar_weight); }
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
-            / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
-               * static_cast<double>(ploidy));
-        if (cur_snp.is_flipped())
-        {
-
-            // change the mean to reflect flipping
-            maf = 1.0 - maf;
-            // swap the weighting
-            std::swap(homcom_weight, homrar_weight);
-        }
-        // Multiply by ploidy
-        // we don't allow the use of center and mean impute together
-        // if centre, missing = 0 anyway (kinda like mean imputed)
-        // centre is 0 if false
-
+            / (static_cast<double>((homcom_ct + het_ct + homrar_ct) * ploidy));
         stat = cur_snp.stat();
         adj_score = 0;
-        if (is_centre)
-        {
-            // as is_centre will never change, branch prediction might be rather
-            // accurate, therefore we don't need to do the complex
-            // stat*maf*is_centre
-            adj_score = ploidy * stat * maf;
-        }
-
+        if (is_centre) { adj_score = ploidy * stat * maf; }
         miss_score = 0;
-        if (mean_impute)
-        {
-            // again, mean_impute is stable, branch prediction should be ok
-            miss_score = ploidy * stat * maf;
-        }
+        if (mean_impute) { miss_score = ploidy * stat * maf; }
         // now we go through the SNP vector
         read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
                  homcom_weight, het_weight, homrar_weight, not_first);
