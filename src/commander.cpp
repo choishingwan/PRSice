@@ -135,7 +135,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                               const struct option longOpts[],
                               Reporter& reporter)
 {
-
     int32_t max_threads = 1;
 #if defined(WIN32) || defined(_WIN32) \
     || defined(__WIN32) && !defined(__CYGWIN__)
