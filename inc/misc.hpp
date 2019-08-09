@@ -71,7 +71,7 @@ public:
         m_storage.resize(row * col, def);
         m_row = row;
         m_col = col;
-    };
+    }
     vec2d(size_t row, size_t col)
     {
         if (row == 0 || col == 0)
@@ -79,7 +79,7 @@ public:
         m_storage.resize(row * col);
         m_row = row;
         m_col = col;
-    };
+    }
     T operator()(size_t row, size_t col) const
     {
         if (row > m_row || col > m_col)
@@ -93,8 +93,8 @@ public:
         return m_storage[row * m_col + col];
     }
     void clear() { m_storage.clear(); }
-    size_t rows() const { return m_row; };
-    size_t cols() const { return m_col; };
+    size_t rows() const { return m_row; }
+    size_t cols() const { return m_col; }
 
 private:
     size_t m_row = 0;
@@ -117,63 +117,10 @@ inline bool to_bool(const std::string& input)
         throw std::runtime_error(error_message);
     }
 }
-// TODO: Delete this, doesn't seems to give robust answer
-inline int parseLine(char* line)
-{
-    // This assumes that a digit will be found and the line ends in " Kb".
-    int i = strlen(line);
-    const char* p = line;
-    while (*p < '0' || *p > '9') p++;
-    line[i - 3] = '\0';
-    i = atoi(p);
-    return i;
-}
+
 
 // TODO: Delete this, doesn't seems to give robust answer
-inline int getValue()
-{ // Note: this value is in KB!
-    FILE* file = fopen("/proc/self/status", "r");
-    int result = -1;
-    char line[128];
-
-    while (fgets(line, 128, file) != NULL)
-    {
-        if (strncmp(line, "VmSize:", 7) == 0)
-        {
-            result = parseLine(line);
-            break;
-        }
-    }
-    fclose(file);
-    return result;
-}
-
-// TODO: Delete this, doesn't seems to give robust answer
-inline size_t current_ram_usage()
-{
-#if defined __APPLE__
-    // From https://stackoverflow.com/a/1911863
-    struct task_basic_info t_info;
-    mach_msg_type_number_t t_info_count = TASK_BASIC_INFO_COUNT;
-
-    if (KERN_SUCCESS
-        != task_info(mach_task_self(), TASK_BASIC_INFO, (task_info_t) &t_info,
-                     &t_info_count))
-    { throw std::runtime_error("Unable to determine memory used"); }
-    return t_info.resident_size;
-#elif defined _WIN32
-    PROCESS_MEMORY_COUNTERS_EX memCounter;
-    GetProcessMemoryInfo(
-        GetCurrentProcess(),
-        reinterpret_cast<PPROCESS_MEMORY_COUNTERS>(&memCounter),
-        sizeof(memCounter));
-    // SIZE_T virtualMemUsedByMe = memCounter.PrivateUsage;
-    SIZE_T physMemUsedByMe = memCounter.WorkingSetSize;
-    return physMemUsedByMe;
-#else
-    return getValue() * 1024;
-#endif
-}
+inline size_t current_ram_usage() { return 0; }
 // TODO: Delete this, doesn't seems to give robust answer
 inline size_t total_ram_available()
 {
