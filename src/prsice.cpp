@@ -302,19 +302,52 @@ void PRSice::update_sample_included(const std::string& delim, Genotype& target)
     }
 }
 
-
+void PRSice::parse_pheno(const bool binary, const std::string& pheno,
+                         std::vector<double>& pheno_store, double& first_pheno,
+                         bool& more_than_one_pheno, size_t& num_case,
+                         size_t& num_control, int& max_pheno_code)
+{
+    if (binary)
+    {
+        // if trait is binary
+        // we first convert it to a temporary
+        int temp = misc::convert<int>(pheno);
+        // so taht we can check if the input is valid
+        if (temp >= 0 && temp <= 2)
+        {
+            pheno_store.push_back(temp);
+            if (max_pheno_code < temp) max_pheno_code = temp;
+            if (temp == 1)
+                ++num_case;
+            else
+                ++num_control;
+        }
+        else
+        {
+            throw std::runtime_error("Invalid binary phenotype format!");
+        }
+    }
+    else
+    {
+        pheno_store.push_back(misc::convert<double>(pheno));
+        if (pheno_store.size() == 1) { first_pheno = pheno_store[0]; }
+        else if (!more_than_one_pheno
+                 && !misc::logically_equal(first_pheno, pheno_store.back()))
+        {
+            more_than_one_pheno = true;
+        }
+    }
+}
 void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                            const size_t pheno_index, const std::string& delim,
                            Reporter& reporter)
 {
-    // reserve the maximum size (All samples)
-    // check if the phenotype is binary or not
     const bool binary = m_pheno_info.binary[pheno_index];
     const size_t sample_ct = target.num_sample();
     std::string line;
     int max_pheno_code = 0;
-    int num_case = 0;
-    int num_control = 0;
+    size_t num_case = 0;
+    size_t num_control = 0;
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
     size_t sample_index_ct = 0;
@@ -334,11 +367,8 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // read in the phenotype index
         const size_t pheno_col_index =
             static_cast<size_t>(m_pheno_info.col[pheno_index]);
-        // and get the phenotype name
         pheno_name = m_pheno_info.name[pheno_index];
-        // now read in the phenotype file
         std::ifstream pheno_file;
-        // check if the file is open
         pheno_file.open(pheno_file_name.c_str());
         if (!pheno_file.is_open())
         {
@@ -346,13 +376,11 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                 "Cannot open phenotype file: " + pheno_file_name;
             throw std::runtime_error(error_message);
         }
-
         // we first store everything into a map. This allow the phenotype and
         // genotype file to have completely different ordering and allow
         // different samples to be included in each file
         std::unordered_map<std::string, std::string> phenotype_info;
         std::vector<std::string> token;
-        // do not remove header line as that won't match anyway
         while (std::getline(pheno_file, line))
         {
             misc::trim(line);
@@ -368,9 +396,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                       "Have you use the --ignore-fid option?";
                 throw std::runtime_error(error_message);
             }
-            // read in the sample ID
-            // TODO: potential problem with BGEN. Might want to allow for
-            //       delim here
             id = (m_ignore_fid) ? token[0] : token[0] + delim + token[1];
             // and store the information into the map
             if (phenotype_info.find(id) != phenotype_info.end())
@@ -387,79 +412,26 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         pheno_file.close();
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
         {
-            // now we go through all the samples
-            // get the sample ID from the genotype object
             id = target.sample_id(i_sample, delim);
             if (phenotype_info.find(id) != phenotype_info.end()
                 && phenotype_info[id] != "NA" && target.is_founder(i_sample))
             {
-                // if this sample is found in the phenotype file, and the
-                // phenotype isn't NA, and the sample is founder (or
-                // keep-founder is used)
                 try
                 {
-                    if (binary)
-                    {
-                        // if trait is binary
-                        // we first convert it to a temporary
-                        int temp = misc::convert<int>(phenotype_info[id]);
-                        // so taht we can check if the input is valid
-                        if (temp >= 0 && temp <= 2)
-                        {
-                            pheno_store.push_back(temp);
-                            // we will also check what is the maximum phenotype
-                            // code (1 or 2)
-                            // this should happen relatively infrequently so
-                            // branch prediction should be rather accurate?
-                            if (max_pheno_code < temp) max_pheno_code = temp;
-                            // for now, we assume the coding is 0/1
-                            num_case += (temp == 1);
-                            num_control += (temp == 0);
-                        }
-                        else
-                        {
-                            // the phenotype of this sample is invalid
-                            throw std::runtime_error(
-                                "Invalid binary phenotype format!");
-                        }
-                    }
-                    else
-                    {
-                        // we will directly push_back the phenotype, if it is
-                        // not convertable, it will go into the catch
-                        pheno_store.push_back(
-                            misc::convert<double>(phenotype_info[id]));
-                        if (pheno_store.size() == 1)
-                        {
-                            // this is the first entrance
-                            first_pheno = pheno_store[0];
-                        }
-                        else if (!more_than_one_pheno
-                                 && !misc::logically_equal(first_pheno,
-                                                           pheno_store.back()))
-                        {
-                            // if we found something different from previous
-                            // input, then we will set more than one pheno as
-                            // true
-                            more_than_one_pheno = true;
-                        }
-                    }
-                    // we indicate we have this phenotype
-                    // sample_index_ct should currently be representative of the
-                    // sample index because we use the suffix++
-                    m_sample_with_phenotypes[id] = sample_index_ct++;
+                    parse_pheno(binary, phenotype_info[id], pheno_store,
+                                first_pheno, more_than_one_pheno, num_case,
+                                num_control, max_pheno_code);
+                    m_sample_with_phenotypes[id] = sample_index_ct;
+                    ++sample_index_ct;
                 }
                 catch (...)
                 {
-                    invalid_pheno++;
+                    ++invalid_pheno;
                 }
             }
             else
             {
-                // we cannot find this sample in the phenotype file / or that we
-                // don't want to
-                // TODO: Differentiate not include & not include for regression
-                num_not_found++;
+                ++num_not_found;
             }
         }
     }
@@ -476,50 +448,13 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             }
             try
             {
-                if (binary)
-                {
-                    // try to convert the input to int (we stored it as string)
-                    int temp = misc::convert<int>(target.pheno(i_sample));
-                    if (temp >= 0 && temp <= 2)
-                    {
-                        // again, check if the input is within reasonable range
-                        pheno_store.push_back(temp);
-                        if (max_pheno_code < temp) max_pheno_code = temp;
-                        // assume 0/1 encoding first
-                        num_case += (temp == 1);
-                        num_control += (temp == 0);
-                    }
-                    else
-                    {
-                        // this isn't a valid binary phenotype
-                        throw std::runtime_error(
-                            "Invalid binary phenotype format!");
-                    }
-                }
-                else
-                {
-                    pheno_store.push_back(
-                        misc::convert<double>(target.pheno(i_sample)));
-                    if (pheno_store.size() == 1)
-                    {
-                        // this is the first entrance
-                        first_pheno = pheno_store[0];
-                    }
-                    else if (!more_than_one_pheno
-                             && !misc::logically_equal(first_pheno,
-                                                       pheno_store.back()))
-                    {
-                        // if we found something different from previous
-                        // input, then we will set more than one pheno as
-                        // true
-                        more_than_one_pheno = true;
-                    }
-                }
-                // we indicate we have this phenotype
-                // sample_index_ct should currently be representative of the
-                // sample index because we use the suffix++
+
+                parse_pheno(binary, target.pheno(i_sample), pheno_store,
+                            first_pheno, more_than_one_pheno, num_case,
+                            num_control, max_pheno_code);
                 m_sample_with_phenotypes[target.sample_id(i_sample, delim)] =
-                    sample_index_ct++;
+                    sample_index_ct;
+                ++sample_index_ct;
             }
             catch (const std::runtime_error&)
             {
@@ -548,8 +483,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
 
     if (num_not_found == sample_ct)
     {
-        // it is also possible that the only sample that were found in the
-        // phenotype file are the non-founder
         message.append(
             "None of the target samples were found in the phenotype file. ");
         if (m_ignore_fid)
@@ -588,7 +521,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     bool error = false;
     if (max_pheno_code > 1 && binary)
     {
-        // this is likely code in 1/2
         num_case = 0;
         num_control = 0;
         for (auto&& pheno : pheno_store)
@@ -596,7 +528,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             pheno--;
             if (pheno < 0) { error = true; }
             else
-                (misc::logically_equal(pheno, 1)) ? num_case++ : num_control++;
+                (misc::logically_equal(pheno, 1)) ? ++num_case : ++num_control;
         }
     }
     if (error)
@@ -613,8 +545,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     // now store the vector into the m_phenotype vector
     m_phenotype = Eigen::Map<Eigen::VectorXd>(
         pheno_store.data(), static_cast<Eigen::Index>(pheno_store.size()));
-
-
     if (binary)
     {
         message.append(std::to_string(num_control) + " control(s)\n");

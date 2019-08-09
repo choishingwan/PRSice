@@ -553,6 +553,11 @@ private:
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
         const Eigen::Index rank, const Eigen::VectorXd& pre_se,
         const bool run_glm);
+
+    void parse_pheno(const bool binary, const std::string& pheno,
+                     std::vector<double>& pheno_store, double& first_pheno,
+                     bool& more_than_one_pheno, size_t& num_case,
+                     size_t& num_control, int& max_pheno_code);
 };
 
 #endif // PRSICE_H
