@@ -38,13 +38,12 @@ void Reporter::report(const std::string& input, bool wrap)
     paragraph = misc::split(input, "\n");
     std::string list_prefix;
     std::string decolour;
-    size_t space_pad = 0;
     for (auto&& message : paragraph)
     {
         check_list.clear();
         // go through each paragraph
         // red for error, yellow for warnings
-        space_pad = 0;
+        size_t space_pad = 0;
         bool is_error =
             !message.compare(0, m_error_prefix_size, m_error_prefix);
         bool is_warning =
@@ -59,13 +58,11 @@ void Reporter::report(const std::string& input, bool wrap)
             std::cerr << m_warning_color_start;
             space_pad = m_warning_prefix_size + 1;
         }
-        bool is_list = false;
         check_list = misc::split(message, ")");
         if (check_list.size() > 1)
         {
             if (misc::isNumeric(check_list.front()))
             {
-                is_list = true;
                 list_prefix = check_list.front() + ")";
                 space_pad = list_prefix.size() + 1;
             }

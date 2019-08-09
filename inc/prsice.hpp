@@ -306,6 +306,13 @@ private:
         int skip_column_length;
         int line_width;
         int processed_threshold;
+        column_file_info()
+        {
+            header_length = 0;
+            skip_column_length = 0;
+            line_width = 0;
+            processed_threshold = 0;
+        }
     };
     struct Pheno_Info
     {
@@ -404,9 +411,9 @@ private:
      * \param reporter is the logger
      */
     void gen_cov_matrix(const std::string& c_cov_file,
-                        const std::vector<std::string> cov_header_name,
-                        const std::vector<uint32_t> cov_header_index,
-                        const std::vector<uint32_t> factor_cov_index,
+                        const std::vector<std::string>& cov_header_name,
+                        const std::vector<uint32_t>& cov_header_index,
+                        const std::vector<uint32_t>& factor_cov_index,
                         const std::string& delim, Reporter& reporter);
     /*!
      * \brief Function use to process the covariate file, should be able to

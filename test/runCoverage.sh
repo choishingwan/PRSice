@@ -9,7 +9,7 @@ GENHTML=genhtml
 
 SRC_DIR="${1}"
 UNIT_TEST="${2}"
-TEST_DIR="${3}"
+#TEST_DIR="${3}"
 
 # Generate our base line info
 "${LCOV}" -d "${SRC_DIR}" -z

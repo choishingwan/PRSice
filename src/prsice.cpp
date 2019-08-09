@@ -901,9 +901,9 @@ void PRSice::process_cov_file(
 }
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
-                            const std::vector<std::string> cov_header_name,
-                            const std::vector<uint32_t> cov_header_index,
-                            const std::vector<uint32_t> factor_cov_index,
+                            const std::vector<std::string>& cov_header_name,
+                            const std::vector<uint32_t>& cov_header_index,
+                            const std::vector<uint32_t>& factor_cov_index,
                             const std::string& delim, Reporter& reporter)
 {
     // The size of the map should be informative of the number of sample
