@@ -562,9 +562,8 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
 
 
 void PRSice::process_cov_file(
-    const std::string& cov_file, const std::vector<uint32_t>& factor_cov_index,
-    std::vector<size_t>& cov_start_index,
-    const std::vector<uint32_t>& cov_index,
+    const std::string& cov_file, const std::vector<size_t>& factor_cov_index,
+    std::vector<size_t>& cov_start_index, const std::vector<size_t>& cov_index,
     const std::vector<std::string>& cov_name,
     std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
     size_t& num_column, const std::string& delim, Reporter& reporter)
@@ -829,8 +828,8 @@ void PRSice::process_cov_file(
 
 void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                             const std::vector<std::string>& cov_header_name,
-                            const std::vector<uint32_t>& cov_header_index,
-                            const std::vector<uint32_t>& factor_cov_index,
+                            const std::vector<size_t>& cov_header_index,
+                            const std::vector<size_t>& factor_cov_index,
                             const std::string& delim, Reporter& reporter)
 {
     // The size of the map should be informative of the number of sample
