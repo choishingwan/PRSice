@@ -1832,7 +1832,7 @@ bool Commander::prset_check(std::map<std::string, std::string>& message,
             "Error: Must provide a gtf file if msigdb is specified\n");
     }
 
-    if (m_feature.empty())
+    if (m_feature.empty() && !m_gtf.empty())
     {
         m_feature.push_back("exon");
         m_feature.push_back("gene");
