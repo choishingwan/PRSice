@@ -1043,8 +1043,6 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                            std::string& error_message)
 {
     bool error = false;
-    bool has_col = false;
-    size_t col_index;
     if (m_base_file.empty())
     {
         error_message.append("Error: You must provide a base file\n");
@@ -1052,8 +1050,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     }
     // get input header
     std::string header;
-    if (m_base_file.substr(m_base_file.find_last_of(".") + 1).compare("gz")
-        == 0)
+    const bool is_gz = misc::is_gz_file(m_base_file);
+    if (is_gz)
     {
         GZSTREAM_NAMESPACE::igzstream in(m_base_file.c_str());
         if (!in.good())
@@ -1098,67 +1096,40 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     {
         // can't do much but to check the boundary
         for (size_t i = 0; i < column_names.size(); ++i)
-        { column_names[i] = std::to_string(i); }
+        { column_names[i] = misc::to_string(i); }
     }
-    has_col = index_check(m_chr, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::CHR] = col_index;
-    m_base_has_col[+BASE_INDEX::CHR] = has_col;
-    if (has_col)
-        message["chr"] = m_chr;
-    else if (m_provided_chr_col)
+    if (!in_file(column_names, m_chr, "chr", message, BASE_INDEX::CHR)
+        && m_provided_chr_col)
     {
         error_message.append("Warning: " + m_chr + " not found in base file\n");
         message.erase("chr");
     }
-    has_col = index_check(m_effect_allele, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::REF] = col_index;
-    m_base_has_col[+BASE_INDEX::REF] = has_col;
-    if (has_col)
-        message["A1"] = m_effect_allele;
-    else if (m_provided_effect_allele)
+    if (!in_file(column_names, m_effect_allele, "A1", message, BASE_INDEX::REF))
     {
         error = true;
         error_message.append("Error: " + m_effect_allele
                              + " not found in base file\n");
     }
-    has_col = index_check(m_non_effect_allele, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::ALT] = col_index;
-    m_base_has_col[+BASE_INDEX::ALT] = has_col;
-    if (has_col)
-        message["A2"] = m_non_effect_allele;
-    else if (m_provided_non_effect_allele)
+    if (!in_file(column_names, m_non_effect_allele, "A2", message,
+                 BASE_INDEX::ALT)
+        && m_provided_non_effect_allele)
     {
         error_message.append("Warning: " + m_non_effect_allele
                              + " not found in base file\n");
         message.erase("A2");
     }
-    has_col = index_check(m_snp, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::RS] = col_index;
-    m_base_has_col[+BASE_INDEX::RS] = has_col;
-    if (has_col)
-        message["snp"] = m_snp;
-    else if (m_provided_snp_id)
+    if (!in_file(column_names, m_snp, "snp", message, BASE_INDEX::RS))
     {
         error = true;
         error_message.append("Error: " + m_snp + " not found in base file\n");
     }
-    has_col = index_check(m_bp, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::BP] = col_index;
-    m_base_has_col[+BASE_INDEX::BP] = has_col;
-    if (has_col)
-        message["bp"] = m_bp;
-    else if (m_provided_bp)
+    if (!in_file(column_names, m_bp, "bp", message, BASE_INDEX::BP)
+        && m_provided_bp)
     {
         error_message.append("Warning: " + m_bp + " not found in base file\n");
         message.erase("bp");
     }
-
-    has_col = index_check(m_p_value, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::P] = col_index;
-    m_base_has_col[+BASE_INDEX::P] = has_col;
-    if (has_col)
-        message["pvalue"] = m_p_value;
-    else if (m_provided_p_value)
+    if (!in_file(column_names, m_p_value, "pvalue", message, BASE_INDEX::P))
     {
         error = true;
         error_message.append("Error: " + m_p_value
@@ -1169,7 +1140,6 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
     tmp_error = !set_base_info_threshold(column_names, tmp_error_message);
     if (m_provided_info_threshold)
     {
-        // only need to provide the error message when user wants the filtering
         error |= tmp_error;
         error_message.append(tmp_error_message);
     }
@@ -1186,102 +1156,55 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Error: Statistic cannot be both OR and beta\n");
         error = true;
     }
-    has_col = index_check(m_statistic, column_names, col_index);
-    if (has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
-    m_base_has_col[+BASE_INDEX::STAT] = has_col;
-    if (has_col)
-        message["stat"] = m_statistic;
-    else if (m_provided_statistic)
+    bool has_col =
+        in_file(column_names, m_statistic, "stat", message, BASE_INDEX::STAT);
+    if (!has_col && (m_provided_statistic || m_user_no_default))
     {
         error_message.append("Error: " + m_statistic
                              + " not found in base file\n");
     }
     else if (!m_user_no_default)
     {
-        // we can't find the default statistic column (BETA)
-        // and user allow default option
-        if (m_stat_is_or)
+        // this is ok, because we have already check that --or and --beta are
+        // mutually exclusive before
+        if (m_stat_is_or || m_stat_is_beta)
         {
-            // search for OR
-            has_col = index_check("OR", column_names, col_index);
-            if (has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
-            m_base_has_col[+BASE_INDEX::STAT] = has_col;
+            const std::string target = m_stat_is_or ? "OR" : "BETA";
+            has_col = in_file(column_names, target, "stat", message,
+                              BASE_INDEX::STAT, false);
             if (!has_col)
             {
                 error = true;
                 error_message.append("Error: Cannot find appropriate "
                                      "statistic column in base file!\n");
-            }
-            else
-            {
-                message["stat"] = "OR";
-            }
-        }
-        else if (m_stat_is_beta)
-        {
-            // search for BETA
-            has_col = index_check("BETA", column_names, col_index);
-            if (has_col) m_base_col_index[+BASE_INDEX::STAT] = col_index;
-            m_base_has_col[+BASE_INDEX::STAT] = has_col;
-            if (!has_col)
-            {
-                error = true;
-                error_message.append("Error: Cannot find appropriate "
-                                     "statistic column in base file!\n");
-            }
-            else
-            {
-                message["stat"] = "BETA";
+                message.erase("stat");
             }
         }
         else
         {
             // go through file and look for either OR or BETA
-            bool or_found = false, beta_found = false;
-            for (size_t i = 0; i < column_names.size(); ++i)
+            bool or_found = in_file(column_names, "OR", "stat", message,
+                                    BASE_INDEX::STAT, false);
+            bool beta_found = in_file(column_names, "BETA", "stat", message,
+                                      BASE_INDEX::STAT, false);
+            if (or_found && beta_found)
             {
-                std::string temp = column_names[i];
-                std::transform(temp.begin(), temp.end(), temp.begin(),
-                               ::toupper);
-                if (temp == "OR")
-                {
-                    m_stat_is_beta = false;
-                    m_stat_is_or = true;
-                    m_statistic = column_names[i];
-                    message["stat"] = column_names[i];
-                    or_found = true;
-                    message["or"] = "";
-                    message.erase("beta");
-                    m_base_col_index[+BASE_INDEX::STAT] = i;
-                    m_base_has_col[+BASE_INDEX::STAT] = true;
-                }
-                else if (temp == "BETA")
-                {
-                    m_stat_is_beta = true;
-                    m_stat_is_or = false;
-                    m_statistic = column_names[i];
-                    message["stat"] = column_names[i];
-                    message["beta"] = "";
-                    beta_found = true;
-                    message.erase("or");
-                    m_base_col_index[+BASE_INDEX::STAT] = i;
-                    m_base_has_col[+BASE_INDEX::STAT] = true;
-                }
-                if (beta_found && or_found)
-                {
-                    error_message.append(
-                        "Error: Both OR and BETA "
-                        "found in base file! We cannot determine "
-                        "which statistic to use, please provide it "
-                        "through --stat\n");
-                    error = true;
-                    break;
-                }
+                error_message.append(
+                    "Error: Both OR and BETA "
+                    "found in base file! We cannot determine "
+                    "which statistic to use, please provide it "
+                    "through --stat\n");
+                error = true;
+            }
+            else if (or_found || beta_found)
+            {
+                m_stat_is_or = or_found;
+                m_stat_is_beta = beta_found;
+                m_base_has_col[+BASE_INDEX::STAT] = true;
             }
         }
     }
-
-    // Statistic is ok, but beta or or not provided
+    // Statistic is ok, but beta and or not provided
     if (m_base_has_col[+BASE_INDEX::STAT])
     {
         if (!m_stat_is_or && !m_stat_is_beta)
@@ -1299,34 +1222,20 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
                 m_stat_is_beta = true;
                 message["beta"] = "";
             }
+            else
+            {
+                error = true;
+                error_message.append(
+                    "Error: Cannot determine if statistic is BETA or OR: "
+                    + m_statistic + "\n");
+            }
         }
-    }
-    // now check all required columns are here
-    if (!m_base_has_col[+BASE_INDEX::P])
-    {
-        // we can actually losen this requirement if user doesn't
-        // perform clumping and p-value thresholding
-        error = true;
-        error_message.append("Error: No p-value column (" + m_p_value
-                             + ") in file!\n");
     }
     if (!m_base_has_col[+BASE_INDEX::STAT])
     {
         error = true;
         error_message.append("Error: No statistic column (" + m_statistic
                              + ") in file!\n");
-    }
-    if (!m_base_has_col[+BASE_INDEX::RS])
-    {
-        error = true;
-        error_message.append("Error: No SNP name column (" + m_snp
-                             + ") in file!\n");
-    }
-    if (!m_base_has_col[+BASE_INDEX::REF])
-    {
-        error = true;
-        error_message.append("Error: No Reference allele column ("
-                             + m_effect_allele + ") in file!\n");
     }
     // we don't need bp and chr as we can always get those from the bim file
     // use a for loop as it is short enough and we only bother with those
@@ -1466,7 +1375,8 @@ bool Commander::ref_check(std::map<std::string, std::string>& message,
     }
     return !error;
 }
-std::vector<std::string> Commander::transform_covariate(std::string& cov)
+std::vector<std::string>
+Commander::transform_covariate(const std::string& cov_in)
 {
     std::vector<std::string> final_covariates;
     std::vector<std::string> open;
@@ -1474,123 +1384,77 @@ std::vector<std::string> Commander::transform_covariate(std::string& cov)
     std::vector<std::string> info;
     std::vector<std::string> individual;
     std::vector<std::string> range;
-    std::vector<int> numeric;
-    std::vector<bool> list;
+    std::string cov = cov_in;
+    std::string prefix, suffix;
+    // simplify to reasonable use cases
     if (cov.at(0) == '@')
     {
-        // this needs transformation
-        // remove the @ form the front of the string
         cov.erase(0, 1);
         // find the start of range by identifying [
         open = misc::split(cov, "[");
-        for (auto&& o : open)
+        prefix = open.front();
+        if (open.size() != 2)
         {
-            if (o.find("]") != std::string::npos)
-            {
-                // we also found close range in this
-                close = misc::split(o, "]");
-                // the first one will always be the list
-                info.push_back(close[0]);
-                list.push_back(true);
-                // Nested List is not supported
-                for (std::vector<std::string>::size_type cl = 1;
-                     cl < close.size(); ++cl)
-                {
-                    info.push_back(close[cl]);
-                    list.push_back(false);
-                }
-            }
-            else
-            {
-                // TODO: this can only be a nested list, should issue a
-                // warning
-                info.push_back(o);
-                list.push_back(false);
-            }
+            throw std::runtime_error("Error: Currently only support simple "
+                                     "list (i.e. with one set of [])");
         }
-
-        for (std::vector<std::string>::size_type c = 0; c < info.size(); ++c)
+        // check for the second set, we do allow XXX[123]YYY
+        close = misc::split(open.back(), "]");
+        if (close.size() == 2)
+            suffix = close.back();
+        else
+            suffix = "";
+        if (close.size() > 2)
         {
-            if (list[c])
+            throw std::runtime_error("Error: Currently only support simple "
+                                     "list (i.e. with one set of [])");
+        }
+        individual = misc::split(close.front(), ".");
+        for (auto&& ind : individual)
+        {
+            if (ind.find("-") != std::string::npos)
             {
-                individual = misc::split(info[c], ".");
-                numeric.clear();
-                for (auto&& ind : individual)
+                // This is list
+                range = misc::split(ind, "-");
+                if (range.size() != 2)
                 {
-                    if (ind.find("-") != std::string::npos)
+                    std::cerr << "Invalid range" << std::endl;
+                    throw std::runtime_error(
+                        "Error: Invalid range format, range "
+                        "must be in the form of start-end");
+                }
+                try
+                {
+                    size_t start = misc::string_to_size_t(range[0].c_str());
+                    size_t end = misc::string_to_size_t(range[1].c_str());
+                    if (start > end) { std::swap(start, end); }
+                    for (; start <= end; ++start)
                     {
-                        range = misc::split(ind, "-");
-                        if (range.size() != 2)
-                        {
-                            throw std::runtime_error(
-                                "Error: Invalid range format, range "
-                                "must be in the form of start-end");
-                        }
-                        try
-                        {
-                            size_t start = misc::convert<size_t>(range[0]);
-                            size_t end = misc::convert<size_t>(range[1]);
-                            if (start > end) { std::swap(start, end); }
-                            for (std::vector<std::string>::size_type s = start;
-                                 s <= end; ++s)
-                            { numeric.push_back(static_cast<int>(s)); }
-                        }
-                        catch (...)
-                        {
-                            std::string error_message =
-                                "Error: Invalid parameter: " + range[0] + " or "
-                                + range[1] + ", only allow integer!";
-                            throw std::runtime_error(error_message);
-                        }
-                    }
-                    else
-                    {
-                        try
-                        {
-                            int temp = misc::convert<int>(ind);
-                            numeric.push_back(temp);
-                        }
-                        catch (...)
-                        {
-                            std::string error_message =
-                                "Error: Invalid parameter: " + ind
-                                + ", only allow integer!";
-                            throw std::runtime_error(error_message);
-                        }
+                        final_covariates.push_back(
+                            prefix + misc::to_string(start) + suffix);
                     }
                 }
-
-                // Now we have all the numeric parameters
-                if (final_covariates.empty())
+                catch (const std::runtime_error&)
                 {
-                    for (auto n : numeric)
-                    { final_covariates.push_back(std::to_string(n)); }
-                }
-                else
-                {
-                    auto&& cur_size = final_covariates.size();
-                    for (std::vector<std::string>::size_type final = 0;
-                         final < cur_size; ++final)
-                    {
-                        std::string cur = final_covariates[final];
-                        final_covariates[final].append(
-                            std::to_string(numeric.front()));
-                        for (std::vector<std::string>::size_type s = 1;
-                             s < numeric.size(); ++s)
-                        {
-                            final_covariates.push_back(
-                                cur + std::to_string(numeric[s]));
-                        }
-                    }
+                    std::string error_message = "Error: Invalid parameter: "
+                                                + ind + ", only allow integer!";
+                    throw std::runtime_error(error_message);
                 }
             }
             else
             {
-                for (std::vector<std::string>::size_type final = 0;
-                     final < final_covariates.size(); ++final)
-                { final_covariates[final].append(info[c]); }
-                if (final_covariates.empty())
-                    final_covariates.push_back(info[c]);
+                // this is single value
+                try
+                {
+                    misc::convert<int>(ind);
+                    final_covariates.push_back(prefix + ind + suffix);
+                }
+                catch (const std::runtime_error&)
+                {
+                    std::string error_message = "Error: Invalid parameter: "
+                                                + ind + ", only allow integer!";
+                    throw std::runtime_error(error_message);
+                }
             }
         }
     }
@@ -1617,8 +1481,6 @@ bool Commander::covariate_check(std::string& error_message)
     {
         if (cov.empty()) continue;
         ori_input.insert(cov);
-        // got annoyed with the input of PC.1 PC.2 PC.3, do this automatic
-        // thingy to substitute them
         transformed_cov = transform_covariate(cov);
         for (auto&& trans : transformed_cov) { included.insert(trans); }
     }
@@ -1630,37 +1492,33 @@ bool Commander::covariate_check(std::string& error_message)
     {
         error_message.append("Error: Cannot open covariate file: " + m_cov_file
                              + "\n");
-        // really can't do checking, will have to terminate now
         return false;
     }
     std::string line;
     std::getline(cov_file, line);
+    cov_file.close();
+    misc::trim(line);
     if (line.empty())
     {
         error_message.append("Error: First line of covariate file is empty!\n");
         return false;
     }
-    // remove all the special characters
-    misc::trim(line);
-    cov_file.close();
     std::vector<std::string> cov_header = misc::split(line);
     std::string missing = "";
-    std::unordered_map<std::string, uint32_t> ref_index;
+    std::unordered_map<std::string, size_t> ref_index;
     // now get the index for each column name in the covariate file
-    for (std::vector<int>::size_type i = 0; i < cov_header.size(); ++i)
-    { ref_index[cov_header[i]] = static_cast<uint32_t>(i); }
+    for (size_t i = 0; i < cov_header.size(); ++i)
+    { ref_index[cov_header[i]] = i; }
 
     // when user provide a covariate file but not the covariate name, we
     // will just read in every covariates
     if (m_cov_colname.size() == 0)
     {
         // add all headers to the covariate list
-        for (std::vector<int>::size_type i = (1 + !m_ignore_fid);
-             i < cov_header.size(); ++i)
+        for (size_t i = (1 + !m_ignore_fid); i < cov_header.size(); ++i)
         { included.insert(cov_header[i]); }
     }
     size_t valid_cov = 0;
-    // covariate.covariates.clear();
     m_col_index_of_cov.clear();
     for (auto&& cov : included)
     {
@@ -1669,10 +1527,8 @@ bool Commander::covariate_check(std::string& error_message)
         if (ref_index.find(cov) != ref_index.end())
         {
             m_col_index_of_cov.push_back(ref_index[cov]);
-            // covariate.covariates.push_back(cov);
-            valid_cov++;
+            ++valid_cov;
         }
-        // store information of covariates not found in the covarite file
         else if (missing.empty())
         {
             missing = cov;

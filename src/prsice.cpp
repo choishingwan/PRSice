@@ -448,7 +448,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
             }
             try
             {
-
                 parse_pheno(binary, target.pheno(i_sample), pheno_store,
                             first_pheno, more_than_one_pheno, num_case,
                             num_control, max_pheno_code);

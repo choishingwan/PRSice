@@ -177,12 +177,12 @@ public:
      * \brief Get the index of the covariates
      * \return The column index of the covariates
      */
-    std::vector<uint32_t> get_cov_index() const { return m_col_index_of_cov; }
+    std::vector<size_t> get_cov_index() const { return m_col_index_of_cov; }
     /*!
      * \brief Get the index of the covariate that are factor
      * \return The column index of the factor covariates
      */
-    std::vector<uint32_t> get_factor_cov_index() const
+    std::vector<size_t> get_factor_cov_index() const
     {
         return m_col_index_of_factor_cov;
     }
@@ -648,8 +648,8 @@ private:
     std::vector<std::string> m_pheno_col;
     std::vector<double> m_barlevel;
     std::vector<double> m_prevalence;
-    std::vector<uint32_t> m_col_index_of_cov;
-    std::vector<uint32_t> m_col_index_of_factor_cov;
+    std::vector<size_t> m_col_index_of_cov;
+    std::vector<size_t> m_col_index_of_factor_cov;
     std::vector<size_t> m_base_col_index;
     std::vector<bool> m_base_has_col;
     std::vector<bool> m_is_binary;
@@ -1199,7 +1199,7 @@ private:
         message["missing"] = input;
         return true;
     }
-    std::vector<std::string> transform_covariate(std::string& cov);
+    std::vector<std::string> transform_covariate(const std::string& cov_in);
     /*!
      * \brief Simply store the string input into the target variable
      * \param input The input string
@@ -1435,12 +1435,18 @@ private:
      * not found
      */
     inline bool index_check(const std::string& target,
-                            const std::vector<std::string>& ref,
-                            size_t& index) const
+                            const std::vector<std::string>& ref, size_t& index,
+                            bool case_sensitive = true) const
     {
+        std::string tmp = "";
         for (size_t i = 0; i < ref.size(); ++i)
         {
-            if (target == ref[i])
+            tmp = ref[i];
+            if (!case_sensitive)
+            {
+                std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::toupper);
+            }
+            if (target == tmp)
             {
                 index = i;
                 return true;
@@ -1561,6 +1567,23 @@ private:
             control = false;
         }
         return true;
+    }
+
+    bool in_file(const std::vector<std::string>& column_names,
+                 const std::string& field, const std::string& field_name,
+                 std::map<std::string, std::string>& message, BASE_INDEX index,
+                 bool case_sensitive = true)
+    {
+        size_t col_index;
+        bool has_col =
+            index_check(field, column_names, col_index, case_sensitive);
+        if (has_col)
+        {
+            m_base_col_index[+index] = col_index;
+            message[field_name] = field;
+        }
+        m_base_has_col[+index] = has_col;
+        return has_col;
     }
 };
 
