@@ -225,7 +225,6 @@ TEST(REGION, MULTI_CHROMOSOME_INVALID)
 }
 class REGION_EX_STRING : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -263,7 +262,6 @@ TEST_F(REGION_EX_STRING, FINE_SEQUENT_SEARCH)
 
 class REGION_EX_STRING_REGION : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -302,7 +300,6 @@ TEST_F(REGION_EX_STRING_REGION, SEQ_LOW_BOUND)
 
 class REGION_STRING_MIX : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -370,7 +367,6 @@ TEST_F(REGION_STRING_MIX, RUN_OVER)
 
 class REGION_BED_MIN_TAB_NO_OVER : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -488,7 +484,6 @@ TEST_F(REGION_BED_MIN_TAB_NO_OVER, RANDOM_ORDER)
 
 class REGION_BED_MIN_TAB : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -592,7 +587,6 @@ TEST_F(REGION_BED_MIN_TAB, CHECK_INCLUSION_OVERLAPPED)
 
 class REGION_BED_MIN_SPACE : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -696,7 +690,6 @@ TEST_F(REGION_BED_MIN_SPACE, CHECK_INCLUSION_OVERLAPPED)
 
 class REGION_BED_5_COLUMN : public ::testing::Test
 {
-
 protected:
     std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
@@ -2920,7 +2913,6 @@ TEST(REGION_GTF_BASIC, BIGGER_START)
 }
 TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
 {
-
     std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
@@ -2964,7 +2956,6 @@ TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
 }
 TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
 {
-
     std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
@@ -3009,7 +3000,6 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
 }
 TEST(REGION_GTF_BASIC, NO_GENE_ID_2)
 {
-
     std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
