@@ -1322,10 +1322,16 @@ private:
     }
 
     inline bool valid_distance(const std::string& str, const size_t& unit,
-                               size_t& res)
+                               size_t& res, std::string& error_messages)
     {
         double cur_dist = misc::convert<double>(str) * unit;
         res = static_cast<size_t>(cur_dist);
+        if (trunc(cur_dist) != cur_dist)
+        {
+            error_messages.append("Error: Non-integer distance obtained: "
+                                  + misc::to_string(str) + " x "
+                                  + misc::to_string(unit) + "\n");
+        }
         return (trunc(cur_dist) == cur_dist);
     }
     inline size_t set_distance(const std::string& input,
@@ -1333,24 +1339,25 @@ private:
                                std::map<std::string, std::string>& message,
                                bool& error, std::string& error_messages)
     {
-        std::string in = input;
-        const size_t u = 1000;
         if (message.find(command) != message.end())
         {
             error_messages.append("Warning: Duplicated argument --" + command
                                   + "\n");
         }
+        std::string in = input;
+        std::transform(in.begin(), in.end(), in.begin(), ::tolower);
+        const size_t u = 1000;
         message[command] = in;
         size_t dist = 0;
+        bool cur_error = false;
         try
         {
             // when no unit is provided, we multiply based on default
-            if (!valid_distance(input, default_unit, dist))
+            cur_error =
+                !valid_distance(input, default_unit, dist, error_messages);
+            if (cur_error)
             {
                 error = true;
-                error_messages.append("Error: Non-integer distance obtained: "
-                                      + misc::to_string(input) + " x "
-                                      + misc::to_string(default_unit) + "\n");
                 return ~size_t(0);
             }
             if (default_unit == u)
@@ -1361,152 +1368,44 @@ private:
         }
         catch (...)
         {
-            // contain MB KB or B here
             if (input.length() >= 2)
             {
                 try
                 {
                     std::string unit = in.substr(in.length() - 2);
+                    size_t multiplication = 1;
                     std::string value = in.substr(0, in.length() - 2);
-                    if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'B'
-                        && (static_cast<unsigned char>(unit[1]) & 0xdf) == 'P')
-                    {
-                        if (!valid_distance(value, 1, dist))
-                        {
-                            error = true;
-                            error_messages.append(
-                                "Error: Non-integer distance obtained: "
-                                + misc::to_string(value) + "\n");
-                        }
-                        message[command] = value + "bp";
-                        return dist;
-                    }
-                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'K'
-                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
-                                    == 'B')
-                    {
-                        if (!valid_distance(value, u, dist))
-                        {
-                            error = true;
-                            error_messages.append(
-                                "Error: Non-integer distance obtained: " + value
-                                + " x 1000\n");
-                        }
-                        message[command] = value + "kb";
-                        return dist;
-                    }
-                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'M'
-                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
-                                    == 'B')
-                    {
-                        if (!valid_distance(value, u * u, dist))
-                        {
-                            error = true;
-                            error_messages.append(
-                                "Error: Non-integer distance obtained: " + value
-                                + " x 1000^2\n");
-                        }
-                        message[command] = value + "mb";
-                        return dist;
-                    }
-                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'G'
-                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
-                                    == 'B')
-                    {
-                        if (!valid_distance(value, u * u * u, dist))
-                        {
-                            error = true;
-                            error_messages.append(
-                                "Error: Non-integer distance obtained: " + value
-                                + " x 1000^3\n");
-                        }
-                        message[command] = value + "gb";
-                        return dist;
-                    }
-                    else if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'T'
-                             && (static_cast<unsigned char>(unit[1]) & 0xdf)
-                                    == 'B')
-                    {
-                        if (!valid_distance(value, u * u * u * u, dist))
-                        {
-                            error = true;
-                            error_messages.append(
-                                "Error: Non-integer distance obtained: " + value
-                                + " x 1000^4\n");
-                        }
-                        message[command] = value + "tb";
-                        return dist;
-                    }
+                    if (unit == "bp") {}
+                    else if (unit == "kb")
+                        multiplication = u;
+                    else if (unit == "mb")
+                        multiplication = u * u;
+                    else if (unit == "gb")
+                        multiplication = u * u * u;
+                    else if (unit == "tb")
+                        multiplication = u * u * u * u;
                     else
                     {
-                        // maybe only one input?
-                        unit = input.substr(in.length() - 1);
-                        value = input.substr(0, in.length() - 1);
-                        if ((static_cast<unsigned char>(unit[0]) & 0xdf) == 'B')
+                        unit = in.substr(in.length() - 1);
+                        value = in.substr(0, in.length() - 1);
+                        if (unit == "b") {}
+                        else if (unit == "k")
+                            multiplication = u;
+                        else if (unit == "m")
+                            multiplication = u * u;
+                        else if (unit == "g")
+                            multiplication = u * u * u;
+                        else if (unit == "t")
+                            multiplication = u * u * u * u;
+                        else
                         {
-                            if (!valid_distance(value, 1, dist))
-                            {
-                                error = true;
-                                error_messages.append(
-                                    "Error: Non-integer distance obtained: "
-                                    + value + "\n");
-                            }
-                            message[command] = value + "b";
-                            return dist;
-                        }
-                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
-                                 == 'K')
-                        {
-                            if (!valid_distance(value, u, dist))
-                            {
-                                error = true;
-                                error_messages.append(
-                                    "Error: Non-integer distance obtained: "
-                                    + value + " x 1000\n");
-                            }
-                            message[command] = value + "kb";
-                            return dist;
-                        }
-                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
-                                 == 'M')
-                        {
-                            if (!valid_distance(value, u * u, dist))
-                            {
-                                error = true;
-                                error_messages.append(
-                                    "Error: Non-integer distance obtained: "
-                                    + value + " x 1000^2\n");
-                            }
-                            message[command] = value + "mb";
-                            return dist;
-                        }
-                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
-                                 == 'G')
-                        {
-                            if (!valid_distance(value, u * u * u, dist))
-                            {
-                                error = true;
-                                error_messages.append(
-                                    "Error: Non-integer distance obtained: "
-                                    + value + " x 1000^3\n");
-                            }
-                            message[command] = value + "gb";
-                            return dist;
-                        }
-                        else if ((static_cast<unsigned char>(unit[0]) & 0xdf)
-                                 == 'T')
-                        {
-                            if (!valid_distance(value, u * u * u * u, dist))
-                            {
-                                error = true;
-                                error_messages.append(
-                                    "Error: Non-integer distance obtained: "
-                                    + value + " x 1000^4\n");
-                            }
-                            message[command] = value + "tb";
-                            return dist;
+                            throw std::runtime_error("");
                         }
                     }
+                    error |= !valid_distance(value, multiplication, dist,
+                                             error_messages);
+                    message[command] = value + unit;
+                    return dist;
                 }
                 catch (...)
                 {
@@ -1514,7 +1413,7 @@ private:
                                           + in);
                     message.erase(command);
                     error = true;
-                    return 0;
+                    return ~size_t(0);
                 }
             }
             else
@@ -1522,11 +1421,11 @@ private:
                 error_messages.append("Error: Undefined distance input: " + in);
                 message.erase(command);
                 error = true;
-                return 0;
+                return ~size_t(0);
             }
         }
         error = true;
-        return 0;
+        return ~size_t(0);
     }
     /*!
      * \brief Get the column index based on file header and the input string

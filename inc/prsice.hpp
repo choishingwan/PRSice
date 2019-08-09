@@ -302,10 +302,10 @@ private:
     };
     struct column_file_info
     {
-        int header_length;
-        int skip_column_length;
-        int line_width;
-        int processed_threshold;
+        size_t header_length;
+        size_t skip_column_length;
+        size_t line_width;
+        size_t processed_threshold;
         column_file_info()
         {
             header_length = 0;
@@ -353,15 +353,15 @@ private:
     uint32_t m_analysis_done = 0;
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
-    int32_t m_precision = 9;
+    size_t m_precision = 9;
     // the 7 are:
     // 1 for sign
     // 1 for dot
     // 2 for e- (scientific)
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
-    int32_t m_numeric_width = m_precision + 7;
-    int32_t m_max_fid_length = 3;
-    int32_t m_max_iid_length = 3;
+    size_t m_numeric_width = m_precision + 7;
+    size_t m_max_fid_length = 3;
+    size_t m_max_iid_length = 3;
     int m_best_index = -1;
     size_t m_num_perm = 0;
     SCORING m_score = SCORING::AVERAGE;

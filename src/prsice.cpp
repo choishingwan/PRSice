@@ -283,12 +283,12 @@ void PRSice::update_sample_included(const std::string& delim, Genotype& target)
     // store the matrix sequentially and the m_matrix should still correspond to
     // the phenotype vector and covariance matrix's order correctly
     m_matrix_index.clear();
-    int32_t fid_length, iid_length;
+    size_t fid_length, iid_length;
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
     {
         // got through each sample
-        fid_length = static_cast<int32_t>(target.fid(i_sample).length());
-        iid_length = static_cast<int32_t>(target.iid(i_sample).length());
+        fid_length = target.fid(i_sample).length();
+        iid_length = target.iid(i_sample).length();
         if (m_max_fid_length < fid_length) m_max_fid_length = fid_length;
         if (m_max_iid_length < iid_length) m_max_iid_length = iid_length;
         // update the in regression flag according to covariate
@@ -307,7 +307,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
                            const size_t pheno_index, const std::string& delim,
                            Reporter& reporter)
 {
-
     // reserve the maximum size (All samples)
     // check if the phenotype is binary or not
     const bool binary = m_pheno_info.binary[pheno_index];
@@ -470,7 +469,6 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
         {
-
             if (target.pheno_is_na(i_sample) || !target.is_founder(i_sample))
             {
                 // it is ok to skip NA as default = sample.has_pheno = false
@@ -1122,15 +1120,14 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                 // we will calculate the the number of white space we need to
                 // skip to reach the current sample + threshold's output
                 // position
-                int loc = m_all_file.header_length
-                          + static_cast<int>(sample)
-                                * (m_all_file.line_width + NEXT_LENGTH)
-                          + NEXT_LENGTH + m_all_file.skip_column_length
-                          + m_all_file.processed_threshold
-                          + m_all_file.processed_threshold * m_numeric_width;
-                m_all_out.seekp(loc);
+                size_t loc = m_all_file.header_length
+                             + sample * (m_all_file.line_width + NEXT_LENGTH)
+                             + NEXT_LENGTH + m_all_file.skip_column_length
+                             + m_all_file.processed_threshold
+                             + m_all_file.processed_threshold * m_numeric_width;
+                m_all_out.seekp(static_cast<long long>(loc));
                 // then we will output the score
-                m_all_out << std::setprecision(m_precision)
+                m_all_out << std::setprecision(static_cast<int>(m_precision))
                           << target.calculate_score(m_score, sample);
             }
         }
@@ -1140,16 +1137,10 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
         m_all_file.processed_threshold++;
         if (!no_regress)
         {
-            // We only perform the regression analysis if we would like to
-            // perform the regresswion
             regress_score(target, cur_threshold, num_thread, pheno_index,
                           prs_result_idx);
-
             if (m_perform_perm)
-            {
-                // perform permutation if required
-                permutation(num_thread, m_target_binary[pheno_index]);
-            }
+            { permutation(num_thread, m_target_binary[pheno_index]); }
         }
         else
         {
@@ -1176,7 +1167,6 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
 void PRSice::print_best(Genotype& target, const size_t pheno_index,
                         const Commander& commander)
 {
-
     // read in the name of the phenotype. If there's only one phenotype name,
     // we'll do assign an empty string to phenotyp name
     std::string pheno_name = "";
@@ -1199,24 +1189,16 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     }
     else
     {
-        for (int sample = 0; sample < static_cast<int>(target.num_sample());
-             ++sample)
+        for (size_t sample = 0; sample < target.num_sample(); ++sample)
         {
-            // samples that are extracted are ignored
-            // sample excluded will not be output here
-            /* std::string has_pheno =
-                target.sample_in_regression(static_cast<size_t>(sample)) ? "Yes"
-                                                                         : "No";
-                                                                         */
-            int loc = m_best_file.header_length
-                      + sample * (m_best_file.line_width + NEXT_LENGTH)
-                      + NEXT_LENGTH + m_best_file.skip_column_length
-                      + m_best_file.processed_threshold
-                      + m_best_file.processed_threshold * m_numeric_width;
-
-            m_best_out.seekp(loc);
-            m_best_out << std::setprecision(m_precision)
-                       << m_best_sample_score[static_cast<size_t>(sample)];
+            size_t loc = m_best_file.header_length
+                         + sample * (m_best_file.line_width + NEXT_LENGTH)
+                         + NEXT_LENGTH + m_best_file.skip_column_length
+                         + m_best_file.processed_threshold
+                         + m_best_file.processed_threshold * m_numeric_width;
+            m_best_out.seekp(static_cast<long long>(loc));
+            m_best_out << std::setprecision(static_cast<int>(m_precision))
+                       << m_best_sample_score[sample];
         }
     }
     // once we finish outputing the result, we need to increment the
@@ -1334,7 +1316,6 @@ void PRSice::process_permutations()
 
 void PRSice::permutation(const size_t n_thread, bool is_binary)
 {
-
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
     Eigen::setNbThreads(static_cast<int>(n_thread));
@@ -1400,7 +1381,6 @@ void PRSice::run_null_perm_no_thread(
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
     const Eigen::Index rank, const Eigen::VectorXd& pre_se, const bool run_glm)
 {
-
     // reset the seed for each new threshold such that we will always generate
     // the same phenotpe for each threhsold without us needing to regenerate the
     // PRS
@@ -1663,30 +1643,29 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         {
             for (size_t i = 0; i < region_name.size(); ++i)
             {
-                // the second item is always the background, which we will not
-                // output
                 if (i == 1) continue;
                 header_line.append(" " + region_name[i]);
             }
         }
         // the safetest way to calculate the length we need to speed is to
         // directly count the number of byte involved
-        auto begin_byte = m_best_out.tellp();
+        const auto begin_byte = m_best_out.tellp();
         m_best_out << header_line << "\n";
-        auto end_byte = m_best_out.tellp();
+        const auto end_byte = m_best_out.tellp();
         // we now know the exact number of byte the header contain and can
         // correctly skip it acordingly
-        m_best_file.header_length = static_cast<int>(end_byte - begin_byte);
+        assert(end_byte >= begin_byte);
+        m_best_file.header_length = static_cast<size_t>(end_byte - begin_byte);
         // we will set the processed_threshold information to 0
         m_best_file.processed_threshold = 0;
 
         // each numeric output took 12 spaces, then for each output, there is
         // one space next to each
         m_best_file.line_width =
-            m_max_fid_length /* FID */ + 1         /* space */
-            + m_max_iid_length                     /* IID */
-            + 1 /* space */ + 3 /* Yes/No */ + 1   /* space */
-            + static_cast<int>(region_name.size()) /* each region */
+            m_max_fid_length /* FID */ + 1       /* space */
+            + m_max_iid_length                   /* IID */
+            + 1 /* space */ + 3 /* Yes/No */ + 1 /* space */
+            + region_name.size()                 /* each region */
                   * (m_numeric_width + 1 /* space */)
             + 1 /* new line */;
 
@@ -1715,23 +1694,16 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // SNPs from the smaller threshold to the highest (therefore, the
         // processed_threshold index should be correct)
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
-        int num_thresholds = static_cast<int>(avail_thresholds.size());
-        auto begin_byte = m_all_out.tellp();
+        const size_t num_thresholds = avail_thresholds.size();
+        const auto begin_byte = m_all_out.tellp();
         m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
         if (!m_perform_prset)
         {
-            for (auto& thres : avail_thresholds)
-            {
-                m_all_out << " " << thres;
-                // if we are not performing PRSet, it is easy, just one
-                // column per threshold
-            }
+            for (auto& thres : avail_thresholds) { m_all_out << " " << thres; }
         }
         else
         {
-            // but if we are performing PRSet, we will need to have region
-            // number * threshold number thresholds
             for (size_t i = 0; i < region_name.size() - 1; ++i)
             {
                 for (auto& thres : avail_thresholds)
@@ -1739,22 +1711,21 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             }
         }
         m_all_out << "\n";
-        auto end_byte = m_all_out.tellp();
+        const auto end_byte = m_all_out.tellp();
         // if the line is too long, we might encounter overflow
-        m_all_file.header_length = static_cast<int>(end_byte - begin_byte);
+        assert(end_byte >= begin_byte);
+        m_all_file.header_length = static_cast<size_t>(end_byte - begin_byte);
         m_all_file.processed_threshold = 0;
-        m_all_file.line_width =
-            m_max_fid_length + 1 + m_max_iid_length + 1
-            + num_thresholds
-                  * static_cast<int>(region_name.size() - !print_background)
-                  * (m_numeric_width + 1)
-            + 1;
+        m_all_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1
+                                + num_thresholds
+                                      * (region_name.size() - !print_background)
+                                      * (m_numeric_width + 1)
+                                + 1;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
-        // all_out << header_line << "\n";
     }
 
     // output sample IDs
-    size_t num_samples_included = target.num_sample();
+    const size_t num_samples_included = target.num_sample();
     std::string best_line;
     std::string name;
     for (size_t i_sample = 0; i_sample < num_samples_included; ++i_sample)
@@ -1771,12 +1742,14 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             // we print a line containing m_best_file.line_width white space
             // characters, which we can then overwrite later on, therefore
             // achieving a vertical output
-            m_best_out << std::setfill(' ') << std::setw(m_best_file.line_width)
+            m_best_out << std::setfill(' ')
+                       << std::setw(static_cast<int>(m_best_file.line_width))
                        << std::left << best_line << "\n";
         }
         if (all_scores)
         {
-            m_all_out << std::setfill(' ') << std::setw(m_all_file.line_width)
+            m_all_out << std::setfill(' ')
+                      << std::setw(static_cast<int>(m_all_file.line_width))
                       << std::left << name << "\n";
         }
     }
@@ -1994,13 +1967,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     }
     const bool has_prevalence = commander.has_prevalence();
     out << "Phenotype\tSet\tThreshold\tPRS.R2";
-    if (has_prevalence)
-    {
-        // if we have the prevalence adjustment, we would also like to
-        // output the adjusted R2 together with the unadjusted (just in
-        // case)
-        out << "\tPRS.R2.adj";
-    }
+    if (has_prevalence) { out << "\tPRS.R2.adj"; }
     out << "\tFull.R2\tNull."
            "R2\tPrevalence\tCoefficient\tStandard.Error\tP\tNum_SNP";
     if (m_perform_competitive) out << "\tCompetitive.P";
@@ -2009,8 +1976,9 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     for (auto&& sum : m_prs_summary)
     {
         out << ((sum.pheno.empty()) ? "-" : sum.pheno) << "\t" << sum.set
-            << "\t" << sum.result.threshold;
-        // by default, phenotype that doesn't have the prevalence
+            << "\t" << sum.result.threshold << "\t"
+            << sum.result.r2 - sum.r2_null;
+        // by default, phenotypethat doesn't have the prevalence
         // information will have a prevalence of -1
         if (sum.prevalence > 0)
         {
@@ -2019,38 +1987,27 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
             double null = sum.r2_null;
             full = sum.top * full / (1 + sum.bottom * full);
             null = sum.top * null / (1 + sum.bottom * null);
-            out << "\t" << sum.result.r2 - sum.r2_null << "\t" << full - null
-                << "\t" << full << "\t" << null << "\t" << sum.prevalence;
+            out << "\t" << full - null << "\t" << full << "\t" << null << "\t"
+                << sum.prevalence;
         }
         else if (has_prevalence)
         {
             // and replace the R2 adjust by NA if the sample doesn't have
             // prevalence (i.e. quantitative trait)
-            out << "\t" << sum.result.r2 - sum.r2_null << "\tNA\t"
-                << sum.result.r2 << "\t" << sum.r2_null << "\t"
+            out << "\tNA\t" << sum.result.r2 << "\t" << sum.r2_null << "\t"
                 << sum.prevalence;
         }
         else
         {
-            // if the prevalence is never provided, we don't need to
-            // calculate the adjusted R2
-            out << "\t" << sum.result.r2 - sum.r2_null << "\t" << sum.result.r2
-                << "\t" << sum.r2_null << "\t-";
+            out << "\t" << sum.result.r2 << "\t" << sum.r2_null << "\t-";
         }
         // now generate the rest of the output
         out << "\t" << sum.result.coefficient << "\t" << sum.result.se << "\t"
             << sum.result.p << "\t" << sum.result.num_snp;
-        // As we never run competitive analysis on the base data set, we
-        // need to account for that (default will have a p-value less than
-        // 0)
         if (m_perform_competitive && (sum.result.competitive_p >= 0.0))
         { out << "\t" << sum.result.competitive_p; }
         else if (m_perform_competitive)
         {
-            // this is the base. While it look nicer to have - to represent
-            // not available, it become nightmarish for R and other
-            // downstream analysis where we need to
-            // as.numeric(as.character()). Therefore we now use NA instead
             out << "\tNA";
         }
         if (m_perform_perm) out << "\t" << sum.result.emp_p;
@@ -2298,46 +2255,35 @@ void PRSice::run_competitive(
     m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
     size_t num_perm;
-    if (!commander.set_perm(num_perm))
-    {
-        // false when we don't want to perform the competitive analysis
-        return;
-    }
+    if (!commander.set_perm(num_perm)) { return; }
     const bool require_standardize = (m_score == SCORING::STANDARDIZE);
     const bool is_binary = m_target_binary[pheno_index];
     const bool use_ref_maf = commander.use_ref_maf();
+    const size_t num_prs_res = m_prs_summary.size();
     const size_t num_bk_snps =
         static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
     // the number of items to skip from the front of prs_summary
     size_t pheno_start_idx = 0;
     // obs_t_value stores the observed t-value
     std::vector<double> obs_t_value;
-
     // set_index stores the index of sets with "key" size
     std::map<size_t, std::vector<size_t>> set_index;
-    const size_t num_prs_res = m_prs_summary.size();
     bool started = false;
     // start at 1 to avoid the base set
     size_t cur_set_index = 0;
     size_t max_set_size = 0;
     for (size_t i = 0; i < num_prs_res; ++i)
     {
-        // if we have already calculated the competitive p-value for the
-        // set, we will just skip them. This help us to handle
-        // multiple-phenotype without too much additional coding
         if (m_prs_summary[i].has_competitive || m_prs_summary[i].set == "Base")
             continue;
         if (!started)
         {
-            // remembering the index of the first set that need to perform
-            // the competitive p-value calculation. This allow us to later
-            // reassign results to the sets
             pheno_start_idx = i;
             started = true;
         }
         auto&& res = m_prs_summary[i].result;
-        // store the location of this set w.r.t number of SNPs in set
-        set_index[res.num_snp].push_back(cur_set_index++);
+        set_index[res.num_snp].push_back(cur_set_index);
+        ++cur_set_index;
         if (res.num_snp > max_set_size) max_set_size = res.num_snp;
         // ori_t_value will contain the obesrved t-value
         obs_t_value.push_back(std::fabs(res.coefficient / res.se));
@@ -2368,66 +2314,36 @@ void PRSice::run_competitive(
     // now we can run the competitive testing
     // know how many thread we are allowed to use
     size_t num_thread = commander.thread();
-    // find out the number of samples involved so that we can estimate the
-    // required memory
-    // The reason we need to go through the next set of calculation is that
-    // we want to be certain that we've enough memory for the competitive
-    // analysis, which will generate one new indepenendet variable matrix
-    // for each thread. To avoid crashing due to insufficient memory, we
-    // will need to limit the number of thread used
-    const size_t mb = 1048576;
-    const size_t num_regress_sample =
-        static_cast<size_t>(m_independent_variables.rows());
-    // the required memory is roughly number of Sample * number of
-    // covaraite. But then for GLM, we might do iterative reweighting which
-    // also generate a bunch of intermediate that requires memory. As a
-    // result of that, we provide an over-estimation of required memory here
-    // to ensure we have sufficient memory for our analysis
-    const size_t basic_memory_required_per_thread =
+    const uintptr_t num_regress_sample =
+        static_cast<uintptr_t>(m_independent_variables.rows());
+    const uintptr_t basic_memory_required_per_thread =
         num_regress_sample * sizeof(double)
-        * (static_cast<size_t>(m_independent_variables.cols()) * 6 + 15);
-    // we need to calculate the total amount of memory available right now
-    const size_t total_memory = misc::total_ram_available();
-    // and the calculate the amount of memory we are allowed to use
-    const size_t valid_memory = commander.max_memory(total_memory);
-    // then calculate the amount of memory we've already used
-    const size_t used_memory = misc::current_ram_usage();
-    if (valid_memory <= used_memory)
+        * (static_cast<uintptr_t>(m_independent_variables.cols()) * 6 + 15);
+    unsigned char* bigstack_ua = nullptr;
+    for (; num_thread > 0; --num_thread)
     {
-        // if we have used up all memory, we will exit
+        bigstack_ua = reinterpret_cast<unsigned char*>(
+            malloc(basic_memory_required_per_thread * num_thread * 1048576
+                   * sizeof(char)));
+        if (bigstack_ua)
+        {
+            // enough memory
+            delete bigstack_ua;
+            break;
+        }
+    }
+    if (num_thread == 0)
+    {
         std::string error_message =
             "(DEBUG) Error: Not enough memory left for permutation. "
-            "User allowed "
-            + std::to_string(valid_memory / mb)
-            + " Mb of memory but already used " + std::to_string(used_memory)
+            "Minimum require memory = "
+            + std::to_string(basic_memory_required_per_thread / 1048576)
             + " Mb";
-        fprintf(stderr, "\n");
-        std::cerr << error_message << std::endl;
-        // throw std::runtime_error(error_message);
-    }
-    // artificially reduce available memory to avoid memory overflow
-    // ideally, if whole PRSice is within the same memory pool, we will
-    // not need to do this reduction
-    const size_t available_memory =
-        static_cast<size_t>((valid_memory - used_memory) * 0.5);
-
-    if (available_memory < basic_memory_required_per_thread)
-    {
-        std::string error_message =
-            "Error: Not enough memory left for permutation. "
-            "System allowed "
-            + std::to_string(available_memory / mb)
-            + " Mb of memory but required at least "
-            + std::to_string(basic_memory_required_per_thread) + " Mb";
         fprintf(stderr, "\n");
         throw std::runtime_error(error_message);
     }
-    // reduce number of threads to account for memory available
-    if (available_memory / basic_memory_required_per_thread < num_thread)
-    { num_thread = available_memory / basic_memory_required_per_thread; }
-    // now, we should be safe to run the competitive p-value analysis wiht
-    // num_thread without worry about insufficient memory
-
+    reporter.report("Running permutation with " + misc::to_string(num_thread)
+                    + " threads");
     if (num_thread > 1)
     {
         //  similar to permutation for empirical p-value calculation, we
