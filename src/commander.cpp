@@ -1163,7 +1163,7 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append("Error: " + m_statistic
                              + " not found in base file\n");
     }
-    else if (!m_user_no_default)
+    else if (!m_user_no_default && !has_col)
     {
         // this is ok, because we have already check that --or and --beta are
         // mutually exclusive before
