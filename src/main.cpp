@@ -185,17 +185,12 @@ int main(int argc, char* argv[])
             // now should get the correct MAF and should have filtered the SNPs
             // accordingly
             // Generate Region flag information
-            std::vector<std::string> region_names;
+            Region region(commander, &reporter);
             std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-            size_t num_regions;
-            // cgranges_t* gene_sets = cr_init();
             std::vector<IITree<size_t, size_t>> gene_sets;
-            num_regions = Region::generate_regions(
-                gene_sets, region_names, snp_in_sets, commander.feature(),
-                commander.window_5(), commander.window_3(),
-                commander.genome_wide_background(), commander.gtf(),
-                commander.msigdb(), commander.bed(), commander.snp_set(),
-                commander.background(), target_file->max_chr(), reporter);
+            size_t num_regions = region.generate_regions(
+                gene_sets, snp_in_sets, target_file->max_chr());
+            std::vector<std::string> region_names = region.get_names();
             target_file->add_flags(gene_sets, snp_in_sets, num_regions,
                                    commander.genome_wide_background());
             // cr_destroy(gene_sets);

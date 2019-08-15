@@ -1944,10 +1944,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
     out.close();
 }
 
-PRSice::~PRSice()
-{
-    // dtor
-}
+PRSice::~PRSice() {}
 
 void PRSice::null_set_no_thread(
     Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,

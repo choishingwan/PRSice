@@ -505,12 +505,12 @@ public:
      * \brief Return the msigdb file name
      * \return MSigDB file name
      */
-    std::string msigdb() const { return m_msigdb; }
+    std::vector<std::string> msigdb() const { return m_msigdb; }
     /*!
      * \brief snp_set return file name containing SNP set(s)
      * \return File name containing the SNP set(s)
      */
-    std::string snp_set() const { return m_snp_set; }
+    std::vector<std::string> snp_set() const { return m_snp_set; }
 
     /*!
      * \brief Return file name containing background regions
@@ -641,11 +641,13 @@ public:
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
+    std::vector<std::string> m_bed_files;
     std::vector<std::string> m_cov_colname;
     std::vector<std::string> m_factor_cov;
-    std::vector<std::string> m_bed_files;
+    std::vector<std::string> m_msigdb;
     std::vector<std::string> m_feature;
     std::vector<std::string> m_pheno_col;
+    std::vector<std::string> m_snp_set;
     std::vector<double> m_barlevel;
     std::vector<double> m_prevalence;
     std::vector<size_t> m_col_index_of_cov;
@@ -660,9 +662,7 @@ private:
     std::string m_target_type = "bed";
     std::string m_pheno_file = "";
     std::string m_gtf = "";
-    std::string m_msigdb = "";
     std::string m_background = "";
-    std::string m_snp_set = "";
     std::string m_cov_file;
     std::string m_base_file = "";
     std::string m_chr = "CHR";

@@ -342,8 +342,11 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, message_store, m_snp, m_provided_snp_id,
                            command, error_messages);
             else if (command == "snp-set")
-                set_string(optarg, message_store, m_snp_set, m_perform_prset,
-                           command, error_messages);
+            {
+                load_string_vector(optarg, message_store, m_snp_set, "snp-set",
+                                   error_messages);
+                m_perform_prset = true;
+            }
             else if (command == "stat")
                 set_string(optarg, message_store, m_statistic,
                            m_provided_statistic, command, error_messages);
@@ -418,8 +421,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                        error_messages);
             break;
         case 'm':
-            set_string(optarg, message_store, m_msigdb, m_perform_prset,
-                       "msigdb", error_messages);
+            load_string_vector(optarg, message_store, m_msigdb, "msigdb",
+                               error_messages);
+            m_perform_prset = true;
             break;
         case 'n':
             if (strcmp("max", optarg) == 0)
