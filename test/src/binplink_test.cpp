@@ -16,6 +16,7 @@ class BPLINK_GEN_SAMPLE_TARGET : public ::testing::Test
 {
 protected:
     BinaryPlink* plink = nullptr;
+    Reporter* reporter = nullptr;
     void SetUp() override
     {
         std::string file_list;
@@ -23,11 +24,15 @@ protected:
         uint32_t thread = 1;
         bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
              is_ref = false;
-        Reporter reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"));
         plink = new BinaryPlink(file_list, file, thread, ignore_fid,
                                 keep_nonfounder, keep_ambig, is_ref, reporter);
     }
-    void TearDown() override { delete plink; }
+    void TearDown() override
+    {
+        delete plink;
+        delete reporter;
+    }
 };
 
 TEST_F(BPLINK_GEN_SAMPLE_TARGET, NO_SELECTION)
@@ -36,8 +41,7 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, NO_SELECTION)
     std::string remove_file = "";
     bool verbose = true;
     std::string delim = " ";
-    Reporter reporter(std::string(path + "LOG"));
-    plink->load_samples(keep_file, remove_file, delim, verbose, reporter);
+    plink->load_samples(keep_file, remove_file, delim, verbose);
     ASSERT_EQ(plink->num_sample(), 2000);
 }
 TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE)
@@ -48,7 +52,8 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE)
     keep.open(keep_file.c_str());
     // We are using toy sample, so the sample naming convention should be
     // CAS_XXX CONT_XXX where XXX range from 1 to 1000
-    for (size_t i = 123; i < 234; ++i) {
+    for (size_t i = 123; i < 234; ++i)
+    {
         keep << "CAS_" << i << "\t"
              << "CAS_" << i << std::endl;
         keep << "CONT_" << i << "\t"
@@ -58,9 +63,7 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE)
     keep.close();
     std::string remove_file = "";
     bool verbose = true;
-
-    Reporter reporter(std::string(path + "LOG"));
-    plink->load_samples(keep_file, remove_file, delim, verbose, reporter);
+    plink->load_samples(keep_file, remove_file, delim, verbose);
     ASSERT_EQ(plink->num_sample(), 222);
 }
 TEST_F(BPLINK_GEN_SAMPLE_TARGET, REMOVE_SAMPLE)
@@ -72,7 +75,8 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, REMOVE_SAMPLE)
     remove.open(remove_file.c_str());
     // We are using toy sample, so the sample naming convention should be
     // CAS_XXX CONT_XXX where XXX range from 1 to 1000
-    for (size_t i = 321; i < 432; ++i) {
+    for (size_t i = 321; i < 432; ++i)
+    {
         remove << "CAS_" << i << "\t"
                << "CAS_" << i << std::endl;
         remove << "CONT_" << i << "\t"
@@ -81,9 +85,7 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, REMOVE_SAMPLE)
 
     remove.close();
     bool verbose = true;
-
-    Reporter reporter(std::string(path + "LOG"));
-    plink->load_samples(keep_file, remove_file, delim, verbose, reporter);
+    plink->load_samples(keep_file, remove_file, delim, verbose);
     ASSERT_EQ(plink->num_sample(), 1778);
 }
 TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE_IID)
@@ -94,7 +96,8 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE_IID)
     keep.open(keep_file.c_str());
     // We are using toy sample, so the sample naming convention should be
     // CAS_XXX CONT_XXX where XXX range from 1 to 1000
-    for (size_t i = 123; i < 234; ++i) {
+    for (size_t i = 123; i < 234; ++i)
+    {
         keep << "CAS_" << i << std::endl;
         keep << "CONT_" << i << std::endl;
     }
@@ -104,10 +107,9 @@ TEST_F(BPLINK_GEN_SAMPLE_TARGET, KEEP_SAMPLE_IID)
     bool verbose = true;
     // we have set ignore_fid to false, therefore when only IID is provided,
     // PRSice should error out
-    Reporter reporter(std::string(path + "LOG"));
     try
     {
-        plink->load_samples(keep_file, remove_file, delim, verbose, reporter);
+        plink->load_samples(keep_file, remove_file, delim, verbose);
         FAIL();
     }
     catch (...)
@@ -127,8 +129,8 @@ TEST(BPLINK_EXTERNAL, EXTERNAL_SAMPLE)
          is_ref = false;
     Reporter reporter(std::string(path + "LOG"));
     BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
-                            keep_nonfounder, keep_ambig, is_ref, reporter);
-    plinkBinary.load_samples("", "", delim, true, reporter);
+                            keep_nonfounder, keep_ambig, is_ref, &reporter);
+    plinkBinary.load_samples("", "", delim, true);
     ASSERT_EQ(plinkBinary.num_sample(), 2000);
 }
 TEST(BPLINK_SAMPLE_CHECK, DUPLICATE_SAMPLE)
@@ -142,10 +144,10 @@ TEST(BPLINK_SAMPLE_CHECK, DUPLICATE_SAMPLE)
          is_ref = false;
     Reporter reporter(std::string(path + "LOG"));
     BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
-                            keep_nonfounder, keep_ambig, is_ref, reporter);
+                            keep_nonfounder, keep_ambig, is_ref, &reporter);
     try
     {
-        plinkBinary.load_samples("", "", delim, true, reporter);
+        plinkBinary.load_samples("", "", delim, true);
         FAIL();
     }
     catch (...)
@@ -167,14 +169,13 @@ TEST(BPLINK_FOUNDER, FOUNDER_REMOVE)
          is_ref = false;
     Reporter reporter(std::string(path + "LOG"));
     BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
-                            keep_nonfounder, keep_ambig, is_ref, reporter);
-    plinkBinary.load_samples("", "", delim, true, reporter);
+                            keep_nonfounder, keep_ambig, is_ref, &reporter);
+    plinkBinary.load_samples("", "", delim, true);
     // we still keep the non-founders, just not using them for regression
     ASSERT_EQ(plinkBinary.num_sample(), 2000);
     int sum_founder = 0;
-    for (size_t i = 0; i < 2000; ++i) {
-        sum_founder += plinkBinary.is_founder(i);
-    }
+    for (size_t i = 0; i < 2000; ++i)
+    { sum_founder += plinkBinary.is_founder(i); }
     // NOTE: This was intended to be 859. But our dummy has two of the
     // founders set to have a different FID, the script correctly account for
     // samples in these family to be a fonuder, because while the IID of
