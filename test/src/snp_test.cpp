@@ -6,6 +6,7 @@
 #include "snp.hpp"
 #include "gtest/gtest.h"
 #include <vector>
+
 class SNP_INIT_TEST : public ::testing::Test
 {
 protected:
@@ -620,16 +621,14 @@ protected:
                                             "CDS"};
         size_t window_5 = 0;
         size_t window_3 = 0;
-        std::string msigdb = "";
-        std::string snp_set = "";
         std::string background = "";
         std::vector<std::string> region_names;
-        std::vector<std::string> bed_names = {};
+        std::vector<std::string> bed_names = {}, snp_set, msigdb = {gmt_name};
         std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         required_size = BITCT_TO_WORDCT(num_regions);
         SET_BIT(0, not_found.data());
     }
