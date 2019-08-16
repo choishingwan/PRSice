@@ -75,15 +75,26 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
                 }
                 if (is_header) continue; // skip header
                 int chr = get_chrom_code_raw(boundary[0].c_str());
-                size_t low_bound =
-                    misc::string_to_size_t(boundary[1].c_str()) + 1;
-                // +1 because start at 0
-                size_t upper_bound =
-                    misc::string_to_size_t(boundary[2].c_str());
+                size_t low_bound, upper_bound;
+                try
+                {
+                    low_bound = misc::string_to_size_t(boundary[1].c_str()) + 1;
+                    upper_bound = misc::string_to_size_t(boundary[2].c_str());
+                    if (low_bound == 0 || upper_bound == 0)
+                    { throw std::runtime_error(""); }
+                    ++upper_bound;
+                }
+                catch (const std::runtime_error&)
+                {
+                    std::string message =
+                        "Error: Invalid exclusion coordinate. "
+                        "Coordinate must be larger than 1\n";
+                    throw std::runtime_error(message);
+                }
                 // Do nothing because while BED end is exclusive, it is 0 base.
                 // For an inclusive end bound, we will need to do -1 (make it
                 // inclusive) and +1 (transform to 1 base)
-                if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1)
+                if (low_bound > upper_bound)
                 {
                     std::string message =
                         "Error: Invalid exclusion coordinate. "
@@ -182,11 +193,10 @@ size_t Region::generate_regions(
     m_reporter->report(message);
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest
-    std::unordered_set<std::string> duplicated_sets;
     m_region_name.push_back("Base");
     m_region_name.push_back("Background");
-    duplicated_sets.insert("Base");
-    duplicated_sets.insert("Background");
+    m_processed_sets.insert("Base");
+    m_processed_sets.insert("Background");
     // 0 reserved for base
     // 1 reserved for background
     size_t set_idx = 2;

@@ -198,7 +198,7 @@ TEST(REGION, MULTI_CHROMOSOME)
         std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrX:10";
         std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
-        ASSERT_EQ(exclusion_region.size(), CHROM_X + 1);
+        ASSERT_EQ(exclusion_region.size(), 20 + 1);
         exclusion_region.clear();
     }
     catch (...)
@@ -930,9 +930,9 @@ class REGION_MALFORM_BED_MASTER : public ::testing::Test
 protected:
     FAKE_REGION* region;
     std::string bed_name;
+    Reporter* reporter;
     void SetUp() override
     {
-        Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -944,12 +944,17 @@ protected:
         bed_name = path + "Test.bed";
         std::vector<std::string> bed = {bed_name};
         bool genome_wide_background = false;
+        reporter = new Reporter(std::string(path + "LOG"));
         region = new FAKE_REGION(bed, feature, msigdb, snp_set, background, gtf,
                                  window_5, window_3, genome_wide_background,
-                                 &reporter);
+                                 reporter);
     }
 
-    void TearDown() override { delete region; }
+    void TearDown() override
+    {
+        delete region;
+        delete reporter;
+    }
 };
 TEST_F(REGION_MALFORM_BED_MASTER, NOT_ENOUGH_COLUMN_SET)
 {
@@ -963,18 +968,22 @@ TEST_F(REGION_MALFORM_BED_MASTER, NOT_ENOUGH_COLUMN_SET)
              << "3 3209\n"
              << "21 43440\n"; // overlap
     bed_file.close();
+    std::cerr << "Finished writing bed" << std::endl;
     std::vector<IITree<size_t, size_t>> gene_sets;
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
+        std::cerr << "Start generating region" << std::endl;
         region->generate_regions(gene_sets, snp_in_sets, 22);
+        std::cerr << "failed" << std::endl;
         FAIL();
     }
     catch (...)
     {
+        std::cerr << "Success" << std::endl;
         SUCCEED();
     }
-    gene_sets.clear();
+    std::cerr << "Completed" << std::endl;
 }
 
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
@@ -2264,10 +2273,11 @@ class REGION_GTF : public ::testing::Test
 {
 protected:
     FAKE_REGION* region;
+    Reporter* reporter;
     std::string gtf_name = path + "Test.gtf";
     void SetUp() override
     {
-        Reporter reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -2279,10 +2289,14 @@ protected:
         bool genome_wide_background = false;
         region = new FAKE_REGION(bed, feature, msigdb, snp_set, background,
                                  gtf_name, window_5, window_3,
-                                 genome_wide_background, &reporter);
+                                 genome_wide_background, reporter);
     }
 
-    void TearDown() override { delete region; }
+    void TearDown() override
+    {
+        delete region;
+        delete reporter;
+    }
 };
 
 TEST_F(REGION_GTF, NOT_EXIST)
@@ -3422,6 +3436,7 @@ class REGION_MSIGDB : public ::testing::Test
 {
 protected:
     FAKE_REGION* region;
+    Reporter* reporter;
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
     void SetUp() override
@@ -3431,7 +3446,7 @@ protected:
         gmt << "SET1 DDX11L1" << std::endl;
         gmt << "SET2 CIT" << std::endl;
         gmt.close();
-        Reporter reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -3444,10 +3459,14 @@ protected:
         bool genome_wide_background = false;
         region = new FAKE_REGION(bed, feature, msigdb, snp_set, background,
                                  gtf_name, window_5, window_3,
-                                 genome_wide_background, &reporter);
+                                 genome_wide_background, reporter);
     }
 
-    void TearDown() override { delete region; }
+    void TearDown() override
+    {
+        delete region;
+        delete reporter;
+    }
 };
 TEST_F(REGION_MSIGDB, NAME_CROSS_CHR)
 {
