@@ -95,7 +95,7 @@ public:
      */
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, const std::string& delim,
-                      bool verbose, Reporter& reporter);
+                      bool verbose);
 
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
@@ -104,14 +104,13 @@ public:
     // in read_base
     void load_snps(const std::string& out,
                    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   bool verbose, Reporter& reporter,
-                   Genotype* target = nullptr);
+                   bool verbose, Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(
         const double& maf_threshold, const double& geno_threshold,
         const double& info_threshold, const bool maf_filter,
         const bool geno_filter, const bool info_filter, const bool hard_coded,
-        bool verbose, Reporter& reporter, Genotype* target = nullptr);
+        bool verbose, Genotype* target = nullptr);
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -159,7 +158,7 @@ public:
      * calculation instead of the haplotype likelihood clumping. If this is
      * true, efficient_clumping will call the pearson_clumping algorithm
      */
-    void efficient_clumping(Genotype& reference, Reporter& reporter);
+    void efficient_clumping(Genotype& reference);
     /*!
      * \brief This function helps to load all command line dependencies into the
      * object so that we don't need to pass along the commander any more

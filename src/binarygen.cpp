@@ -107,7 +107,7 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector(const std::string& delim)
         std::getline(sample_file, line);
         std::vector<std::string> header_names = misc::split(line);
         // might want to get the reporter involved.
-        fprintf(stderr, "Detected bgen sample file format\n");
+        m_reporter->report("Detected bgen sample file format\n");
         for (size_t i = 3; i < header_names.size(); ++i)
         {
             // try to identify column containing SEX

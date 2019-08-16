@@ -97,7 +97,7 @@ int main(int argc, char* argv[])
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(),
-                                      commander.delim(), verbose, reporter);
+                                      commander.delim(), verbose);
             // For bgen or any format that require intermediate generation, we
             // need to know if a reference file is going to be used, therefore
             // decide if we are going to generate the target intermediate or the
@@ -108,11 +108,10 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
-            target_file->load_snps(commander.out(), exclusion_regions, verbose,
-                                   reporter);
+            target_file->load_snps(commander.out(), exclusion_regions, verbose);
             // now load the reference file
-            if ((!commander.no_clump() && commander.use_ref())
-                || commander.use_ref_maf())
+            if (commander.use_ref()
+                && (!commander.no_clump() || commander.use_ref_maf()))
             {
                 message = "Start processing reference\n";
                 reporter.report(message);
@@ -123,12 +122,12 @@ int main(int argc, char* argv[])
                 message.append(
                     "==================================================");
                 reporter.report(message);
-                reference_file->load_samples(
-                    commander.ref_keep_file(), commander.ref_remove_file(),
-                    commander.delim(), verbose, reporter);
+                reference_file->load_samples(commander.ref_keep_file(),
+                                             commander.ref_remove_file(),
+                                             commander.delim(), verbose);
                 // load the reference file
                 reference_file->load_snps(commander.out(), exclusion_regions,
-                                          verbose, reporter, target_file);
+                                          verbose, target_file);
             }
             exclusion_regions.clear();
             // with the reference file read, we can start doing filtering and
@@ -148,7 +147,7 @@ int main(int argc, char* argv[])
                 // i.e after clumping, to speed up the process
                 target_file->calc_freqs_and_intermediate(
                     maf, geno, info, maf_filter, geno_filter, info_filter,
-                    hard_coded, true, reporter);
+                    hard_coded, true);
             }
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
@@ -170,7 +169,7 @@ int main(int argc, char* argv[])
                 reporter.report(message);
                 reference_file->calc_freqs_and_intermediate(
                     maf, geno, info, maf_filter, geno_filter, info_filter,
-                    hard_coded, true, reporter, target_file);
+                    hard_coded, true, target_file);
                 has_ref_maf = true;
             }
             // now should get the correct MAF and should have filtered the SNPs
@@ -210,24 +209,20 @@ int main(int argc, char* argv[])
                 }
                 // now perform clumping
                 target_file->efficient_clumping(
-                    commander.use_ref() ? *reference_file : *target_file,
-                    reporter);
+                    commander.use_ref() ? *reference_file : *target_file);
                 // immediately free the memory
             }
             if (init_ref)
             {
                 if (commander.use_ref_maf() && !has_ref_maf)
                 {
-                    // doesn't need to worry about generating the intermediate
-                    // file as we will always have the reference maf if we are
-                    // going to generate the intermediate file
                     message = "Calculate MAF based on Reference\n";
                     message.append(
                         "==================================================");
                     reporter.report(message);
                     reference_file->calc_freqs_and_intermediate(
                         maf, geno, info, maf_filter, geno_filter, info_filter,
-                        hard_coded, true, reporter, target_file);
+                        hard_coded, true, target_file);
                 }
                 delete reference_file;
             }

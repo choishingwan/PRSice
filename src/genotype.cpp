@@ -595,6 +595,7 @@ Genotype::load_genotype_prefix(const std::string& file_name)
     multi.close();
     return genotype_files;
 }
+
 void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {
@@ -826,8 +827,7 @@ bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
 
 void Genotype::load_samples(const std::string& keep_file,
                             const std::string& remove_file,
-                            const std::string& delim, bool verbose,
-                            Reporter& reporter)
+                            const std::string& delim, bool verbose)
 {
     if (!remove_file.empty())
     { m_sample_selection_list = load_ref(remove_file, delim, m_ignore_fid); }
@@ -852,7 +852,7 @@ void Genotype::load_samples(const std::string& keep_file,
                           + misc::to_string(m_num_female)
                           + " female(s)) observed\n";
     message.append(misc::to_string(m_founder_ct) + " founder(s) included");
-    if (verbose) reporter.report(message);
+    if (verbose) m_reporter->report(message);
     m_sample_selection_list.clear();
 }
 
@@ -860,7 +860,7 @@ void Genotype::calc_freqs_and_intermediate(
     const double& maf_threshold, const double& geno_threshold,
     const double& info_threshold, const bool maf_filter, const bool geno_filter,
     const bool info_filter, const bool hard_coded, bool verbose,
-    Reporter& reporter, Genotype* target)
+    Genotype* target)
 {
     std::string message = "";
     m_num_geno_filter = 0;
@@ -894,13 +894,13 @@ void Genotype::calc_freqs_and_intermediate(
                        + " variant(s) remained");
     }
 
-    if (verbose) reporter.report(message);
+    if (verbose) m_reporter->report(message);
 }
 
 void Genotype::load_snps(
     const std::string& out,
     const std::vector<IITree<size_t, size_t>>& exclusion_regions, bool verbose,
-    Reporter& reporter, Genotype* target)
+    Genotype* target)
 {
     m_base_missed = 0;
     m_num_ambig = 0;
@@ -939,7 +939,7 @@ void Genotype::load_snps(
                        + " variant(s) remained\n");
     }
 
-    if (verbose) reporter.report(message);
+    if (verbose) m_reporter->report(message);
     m_snp_selection_list.clear();
     if (!m_is_ref)
     {
@@ -964,10 +964,10 @@ void Genotype::load_snps(
 Genotype::~Genotype() {}
 
 
-void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
+void Genotype::efficient_clumping(Genotype& reference)
 {
     // the m_existed_snp must be sorted before coming into this equation
-    reporter.report("Start performing clumping");
+    m_reporter->report("Start performing clumping");
     // we want to initialize the vectors with size correspond to the sample in
     // the reference panel. Need to use the unfiltered sample size
     const uintptr_t unfiltered_sample_ctl =
@@ -1117,7 +1117,7 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
         message.append("Allocated " + misc::to_string(malloc_size_mb)
                        + " MB successfully");
     }
-    reporter.report(message);
+    m_reporter->report(message);
     // force 64-byte align to make cache line sensitivity work (from PLINK, not
     // familiar with computer programming to know this...)
     // will stay with the old style cast to avoid trouble
@@ -1384,35 +1384,13 @@ void Genotype::efficient_clumping(Genotype& reference, Reporter& reporter)
     bigstack_ua = nullptr;
     bigstack_initial_base = nullptr;
     if (num_core_snps != m_existed_snps.size())
-    {
-        //  if there are clumped SNPs, we would like to remove them from the
-        //  vector
-        // the remain_core SNP has the same order as the m_existed_snps
-        // (core_snp_index is the index correspond to the m_existed_snp of
-        // target) so it is ok for us to simply perform the remove if
-
-        // because of the algorithm, any SNP with p-value above the clump-p
-        // threshold will never be process, thus the remain_core for those SNPs
-        // will always be 0, and will be removed (though they will also
-        // misleadingly be considered as "clumped")
-        // TODO: Issue a warning if the highest p-value threshold is higher than
-        // the clump-p threshold
-        m_existed_snps.erase(
-            std::remove_if(
-                m_existed_snps.begin(), m_existed_snps.end(),
-                [&remain_core, this](const SNP& s) {
-                    return !remain_core[&s - &*begin(m_existed_snps)];
-                }),
-            m_existed_snps.end());
-        m_existed_snps.shrink_to_fit();
-    }
+    { shrink_snp_vector(remain_core); }
     // we no longer require the index. might as well clear it (and hope it will
     // release the memory)
     m_existed_snps_index.clear();
-
     message = "Number of variant(s) after clumping : "
               + misc::to_string(m_existed_snps.size());
-    reporter.report(message);
+    m_reporter->report(message);
 }
 
 
