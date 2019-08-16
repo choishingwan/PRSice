@@ -77,12 +77,13 @@ public:
      * \param commander contains all user input
      * \param reporter is the logger
      */
-    PRSice(const Commander& commander, const bool prset, Reporter& reporter)
+    PRSice(const Commander& commander, const bool prset, Reporter* reporter)
         : m_target_binary(commander.is_binary())
         , m_target(commander.target_name())
         , m_out(commander.out())
         , m_score(commander.get_score())
         , m_missing_score(commander.get_missing_score())
+        , m_reporter(reporter)
         , m_ignore_fid(commander.ignore_fid())
         , m_perform_prset(prset)
     {
@@ -116,13 +117,13 @@ public:
                     message.append("If you must, you can run logistic "
                                    "regression instead by setting the "
                                    "--logit-perm flag\n\n");
-                    reporter.report(message);
+                    m_reporter->report(message);
                 }
                 else
                 {
                     std::string message = "Warning: Using --logit-perm can be "
                                           "ridiculously slow\n";
-                    reporter.report(message);
+                    m_reporter->report(message);
                 }
             }
         }
@@ -138,7 +139,7 @@ public:
      */
     void pheno_check(const std::string& file_name,
                      const std::vector<std::string>& col_names,
-                     const std::vector<bool>& is_binary, Reporter& reporter);
+                     const std::vector<bool>& is_binary);
     // init_matrix whenever phenotype changes
     /*!
      * \brief init_matrix will initialize the independent and dependent matrix
@@ -149,8 +150,7 @@ public:
      * \param reporter is the logger
      */
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
-                     const std::string& delim, Genotype& target,
-                     Reporter& reporter);
+                     const std::string& delim, Genotype& target);
     /*!
      * \brief Return the total number of phenotype involved
      * \return the total number of phenotype to process
@@ -212,7 +212,7 @@ public:
      * \param c_commander contains all user input
      * \param reporter is the logger
      */
-    void summarize(const Commander& c_commander, Reporter& reporter);
+    void summarize(const Commander& c_commander);
     /*!
      * \brief Calculate the number of processes required
      * \param commander the user input, provide information on the number of
@@ -271,8 +271,7 @@ public:
     run_competitive(Genotype& target,
                     const std::vector<size_t>::const_iterator& bk_start_idx,
                     const std::vector<size_t>::const_iterator& bk_end_idx,
-                    const Commander& commander, const size_t pheno_index,
-                    Reporter& reporter);
+                    const Commander& commander, const size_t pheno_index);
 
 
 protected:
@@ -366,6 +365,7 @@ private:
     size_t m_num_perm = 0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    Reporter* m_reporter;
     bool m_ignore_fid = false;
     bool m_perform_prset = false;
     bool m_perform_competitive = false;
@@ -397,8 +397,7 @@ private:
      * \param reporter is the logger
      */
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                       const size_t pheno_index, const std::string& delim,
-                       Reporter& reporter);
+                       const size_t pheno_index, const std::string& delim);
     /*!
      * \brief Function to generate the m_independent_variable matrix
      * \param c_cov_file is the name of the covariate file
@@ -414,7 +413,7 @@ private:
                         const std::vector<std::string>& cov_header_name,
                         const std::vector<size_t>& cov_header_index,
                         const std::vector<size_t>& factor_cov_index,
-                        const std::string& delim, Reporter& reporter);
+                        const std::string& delim);
     /*!
      * \brief Function use to process the covariate file, should be able to
      * determine the level of factors
@@ -436,7 +435,7 @@ private:
         const std::vector<size_t>& cov_index,
         const std::vector<std::string>& cov_name,
         std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
-        size_t& num_column, const std::string& delim, Reporter& reporter);
+        size_t& num_column, const std::string& delim);
 
     /*!
      * \brief Once PRS analysis and permutation has been performed for all

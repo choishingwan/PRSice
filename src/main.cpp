@@ -183,12 +183,12 @@ int main(int argc, char* argv[])
             std::vector<std::string> region_names = region.get_names();
             target_file->add_flags(gene_sets, snp_in_sets, num_regions,
                                    commander.genome_wide_background());
-            // cr_destroy(gene_sets);
+
             gene_sets.clear();
             // start processing other files before doing clumping
-            PRSice prsice(commander, num_regions > 2, reporter);
+            PRSice prsice(commander, num_regions > 2, &reporter);
             prsice.pheno_check(commander.pheno_file(), commander.pheno_col(),
-                               commander.is_binary(), reporter);
+                               commander.is_binary());
             // Store relevant parameters to the target object
             target_file->set_info(commander);
             if (!commander.no_clump())
@@ -305,7 +305,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Processing the %zu th phenotype\n",
                         i_pheno + 1);
                 prsice.init_matrix(commander, i_pheno, commander.delim(),
-                                   *target_file, reporter);
+                                   *target_file);
                 fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
@@ -343,14 +343,14 @@ int main(int argc, char* argv[])
                     // and user request it
                     prsice.run_competitive(*target_file, background_start_idx,
                                            background_end_idx, commander,
-                                           i_pheno, reporter);
+                                           i_pheno);
                 }
             }
             prsice.print_progress(true);
             fprintf(stderr, "\n");
             if (!commander.no_regress())
                 // now generate the summary file
-                prsice.summarize(commander, reporter);
+                prsice.summarize(commander);
         }
         catch (const std::invalid_argument& ia)
         {

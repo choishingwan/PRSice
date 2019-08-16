@@ -20,7 +20,7 @@
 std::mutex PRSice::lock_guard;
 void PRSice::pheno_check(const std::string& pheno_file,
                          const std::vector<std::string>& pheno_header,
-                         const std::vector<bool>& is_binary, Reporter& reporter)
+                         const std::vector<bool>& is_binary)
 {
     std::string message = "";
     if (pheno_file.empty())
@@ -179,12 +179,11 @@ void PRSice::pheno_check(const std::string& pheno_file,
     size_t num_pheno = (m_pheno_info.use_pheno) ? m_pheno_info.col.size() : 1;
     message.append("There are a total of " + std::to_string(num_pheno)
                    + " phenotype to process\n");
-    reporter.report(message);
+    m_reporter->report(message);
 }
 
 void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
-                         const std::string& delim, Genotype& target,
-                         Reporter& reporter)
+                         const std::string& delim, Genotype& target)
 {
     if (m_prsice_out.is_open()) m_prsice_out.close();
     if (m_all_out.is_open()) m_all_out.close();
@@ -218,12 +217,12 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
         return;
     }
     // read in phenotype vector
-    gen_pheno_vec(target, pheno_file, pheno_index, delim, reporter);
+    gen_pheno_vec(target, pheno_file, pheno_index, delim);
     // now that we've got the phenotype, we can start processing the more
     // complicated covariate
     gen_cov_matrix(c_commander.get_cov_file(), c_commander.get_cov_name(),
                    c_commander.get_cov_index(),
-                   c_commander.get_factor_cov_index(), delim, reporter);
+                   c_commander.get_factor_cov_index(), delim);
     // NOTE: After gen_cov_matrix, the has_pheno flag in m_sample_names is no
     // longer correct as we have not updated that to account for invalid
     // covariates.
@@ -339,8 +338,7 @@ void PRSice::parse_pheno(const bool binary, const std::string& pheno,
     }
 }
 void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                           const size_t pheno_index, const std::string& delim,
-                           Reporter& reporter)
+                           const size_t pheno_index, const std::string& delim)
 {
     const bool binary = m_pheno_info.binary[pheno_index];
     const size_t sample_ct = target.num_sample();
@@ -498,13 +496,13 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         message.append("Or it is possible that only non-founder sample contain "
                        "the phenotype information and you did not use "
                        "--nonfounders?\n");
-        reporter.report(message);
+        m_reporter->report(message);
         throw std::runtime_error("Error: No sample left");
     }
     if (invalid_pheno == sample_ct)
     {
         message.append("Error: All sample has invalid phenotypes!");
-        reporter.report(message);
+        m_reporter->report(message);
         throw std::runtime_error("Error: No sample left");
     }
     if (!binary && !more_than_one_pheno)
@@ -512,7 +510,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         message.append("Only one phenotype value detected");
         if (misc::logically_equal(first_pheno, -9))
         { message.append(" and they are all -9"); }
-        reporter.report(message);
+        m_reporter->report(message);
         throw std::runtime_error("Not enough valid phenotype");
     }
     // finished basic logs
@@ -532,13 +530,13 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
     }
     if (error)
     {
-        reporter.report(message);
+        m_reporter->report(message);
         throw std::runtime_error(
             "Mixed encoding! Both 0/1 and 1/2 encoding found!");
     }
     if (pheno_store.size() == 0)
     {
-        reporter.report(message);
+        m_reporter->report(message);
         throw std::runtime_error("No phenotype presented");
     }
     // now store the vector into the m_phenotype vector
@@ -557,7 +555,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
         message.append(std::to_string(m_phenotype.rows())
                        + " sample(s) with valid phenotype\n");
     }
-    reporter.report(message);
+    m_reporter->report(message);
 }
 
 
@@ -566,7 +564,7 @@ void PRSice::process_cov_file(
     std::vector<size_t>& cov_start_index, const std::vector<size_t>& cov_index,
     const std::vector<std::string>& cov_name,
     std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
-    size_t& num_column, const std::string& delim, Reporter& reporter)
+    size_t& num_column, const std::string& delim)
 {
     // first, go through the covariate and generate the factor level vector
     std::ifstream cov;
@@ -744,7 +742,7 @@ void PRSice::process_cov_file(
         ++cur_cov_index;
     }
     // we now output the covariate information
-    reporter.report(message);
+    m_reporter->report(message);
     // now update the m_phenotype vector, removing any sample with missing
     // covariates
     if (valid_sample_index.size() != num_sample && num_sample != 0)
@@ -771,7 +769,7 @@ void PRSice::process_cov_file(
                 }
                 ++cur_cov_index;
             }
-            reporter.report(message);
+            m_reporter->report(message);
             throw std::runtime_error("Error: All samples removed due to "
                                      "missingness in covariate file!");
         }
@@ -783,7 +781,7 @@ void PRSice::process_cov_file(
                 + "% of your samples were removed! "
                   "You should check if your covariate file is correct\n");
         }
-        reporter.report(message);
+        m_reporter->report(message);
         // sort the sample index
         // Sorting is required because our ordering follows the covariate
         // file, which does not need to have the same ordering as the
@@ -830,7 +828,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
                             const std::vector<std::string>& cov_header_name,
                             const std::vector<size_t>& cov_header_index,
                             const std::vector<size_t>& factor_cov_index,
-                            const std::string& delim, Reporter& reporter)
+                            const std::string& delim)
 {
     // The size of the map should be informative of the number of sample
     // currently included in the data
@@ -869,10 +867,10 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     // level
     process_cov_file(c_cov_file, factor_cov_index, cov_start_index,
                      cov_header_index, cov_header_name, factor_list, num_column,
-                     delim, reporter);
+                     delim);
     std::string message = "Processing the covariate file: " + c_cov_file + "\n";
     message.append("==============================\n");
-    reporter.report(message);
+    m_reporter->report(message);
     // update the number of sample to account for missing covariates
     num_sample = m_sample_with_phenotypes.size();
     // initalize the matrix to the desired size
@@ -960,7 +958,7 @@ void PRSice::gen_cov_matrix(const std::string& c_cov_file,
     message = "After reading the covariate file, "
               + std::to_string(m_sample_with_phenotypes.size())
               + " sample(s) included in the analysis\n";
-    reporter.report(message);
+    m_reporter->report(message);
 }
 
 bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
@@ -1841,7 +1839,7 @@ void PRSice::output(const Commander& c_commander,
         m_significant_store[2]++;
 }
 
-void PRSice::summarize(const Commander& commander, Reporter& reporter)
+void PRSice::summarize(const Commander& commander)
 {
     // we need to know if we are going to write "and" in the output, thus
     // need a flag to indicate if there are any previous outputs
@@ -1882,7 +1880,7 @@ void PRSice::summarize(const Commander& commander, Reporter& reporter)
             "You can use the --perm option (see manual) to calculate "
             "an empirical P-value.");
     }
-    reporter.report(message);
+    m_reporter->report(message);
     // now we generate the output file
     std::string out_name = commander.out() + ".summary";
     std::ofstream out;
@@ -2175,7 +2173,7 @@ void PRSice::consume_prs(
 void PRSice::run_competitive(
     Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,
     const std::vector<size_t>::const_iterator& bk_end_idx,
-    const Commander& commander, const size_t pheno_index, Reporter& reporter)
+    const Commander& commander, const size_t pheno_index)
 {
     m_perform_competitive = true;
     fprintf(stderr, "\nStart competitive permutation\n");
@@ -2233,7 +2231,7 @@ void PRSice::run_competitive(
             // same error. Need a better structure here)
             m_prs_summary[i].has_competitive = true;
         }
-        reporter.report(error_messgae);
+        m_reporter->report(error_messgae);
         return;
     }
     // now we can run the competitive testing
@@ -2267,8 +2265,8 @@ void PRSice::run_competitive(
         fprintf(stderr, "\n");
         throw std::runtime_error(error_message);
     }
-    reporter.report("Running permutation with " + misc::to_string(num_thread)
-                    + " threads");
+    m_reporter->report("Running permutation with " + misc::to_string(num_thread)
+                       + " threads");
     if (num_thread > 1)
     {
         //  similar to permutation for empirical p-value calculation, we
