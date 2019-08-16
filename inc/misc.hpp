@@ -969,7 +969,7 @@ inline bool is_gz_file(const std::string& name)
         return false;
     }
 }
-inline bool isNumeric(std::string s)
+inline bool isNumeric(const std::string& s)
 {
     try
     {

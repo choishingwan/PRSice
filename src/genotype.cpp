@@ -1640,8 +1640,8 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const bool first_run, const bool use_ref_maf)
 {
     // if there are no SNPs or we are at the end
-    if (m_existed_snps.size() == 0 || (*start_index) == m_existed_snps.size()
-        || start_index == end_index)
+    if (m_existed_snps.size() == 0 || start_index == end_index
+        || (*start_index) == m_existed_snps.size())
         return false;
     // reset number of SNPs if we don't need cumulative PRS
     if (non_cumulate) num_snp_included = 0;
@@ -1661,7 +1661,7 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                use_ref_maf);
     // update the current index
     start_index = region_end;
-    if ((*start_index) == 0) return -1;
+    // if ((*start_index) == 0) return -1;
     if (require_statistic)
     {
         misc::RunningStat rs;
