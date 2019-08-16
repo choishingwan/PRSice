@@ -1,4 +1,4 @@
-#ifndef REGION_TEST_HPP
+﻿#ifndef REGION_TEST_HPP
 #define REGION_TEST_HPP
 #include "genotype.hpp"
 #include "global.hpp"
@@ -3593,6 +3593,7 @@ TEST_F(REGION_MSIGDB, ID_CROSS_CHR)
 }
 TEST_F(REGION_MSIGDB, NO_GTF)
 {
+    std::remove(gtf_name.c_str());
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     std::vector<IITree<size_t, size_t>> gene_sets;
     try
@@ -4034,53 +4035,61 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
                            &reporter);
         num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         region_names = region.get_names();
-        SUCCEED();
+        // we should have the 3 sets, the base, the SNP_SET and the background
+        ASSERT_EQ(num_regions, 3);
+        // for single set, we use the file name as the set name
+        ASSERT_STREQ(region_names[2].c_str(), "snp_set");
     }
     catch (...)
     {
         FAIL();
     }
-    // we should have the 3 sets, the base, the SNP_SET and the background
-    ASSERT_EQ(num_regions, 3);
-    // for single set, we use the file name as the set name
-    ASSERT_STREQ(region_names[2].c_str(), "snp_set");
-    // Or we allow user defined name
-    snp_set_name.append(":SNP_SET");
-    region_names.clear();
-    FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
-                       gtf_name, window_5, window_3, genome_wide_background,
-                       &reporter);
-    num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
-    region_names = region.get_names();
-    ASSERT_EQ(num_regions, 3);
-    ASSERT_STREQ(region_names[2].c_str(), "SNP_SET");
-    ASSERT_EQ(snp_in_sets.size(), 4);
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
-        index(required_size, 0);
-    // here, we don't provide anything for background construction,
-    // and as we set genome_wide_background as false, we will never
-    // set the bit for background
-    SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
-    SET_BIT(0, not_found.data());
-    Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), not_found.front());
-    Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
+    try
+    {
+        // Or we allow user defined name
+        snp_set_name.append(":SNP_SET");
+        snp_sets.clear();
+        snp_sets.push_back(snp_set_name);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
+        std::cerr << "Test" << std::endl;
+        ASSERT_EQ(num_regions, 3);
+        ASSERT_STREQ(region_names[2].c_str(), "SNP_SET");
+        ASSERT_EQ(snp_in_sets.size(), 4);
+        const size_t required_size = BITCT_TO_WORDCT(num_regions);
+        // we can simply check if the target SNPs are located in snp_in_sets
+        // we have 1245
+        std::vector<uintptr_t> found(required_size, 0),
+            not_found(required_size, 0), index(required_size, 0);
+        // here, we don't provide anything for background construction,
+        // and as we set genome_wide_background as false, we will never
+        // set the bit for background
+        SET_BIT(0, found.data());
+        SET_BIT(2, found.data());
+        SET_BIT(0, not_found.data());
+        Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), not_found.front());
+        Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+    }
+    catch (...)
+    {
+        FAIL();
+    }
 }
 
 TEST(REGION_SNP_SET, MULTI_SNP_SET)
@@ -4473,11 +4482,11 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
     size_t window_5 = 0;
     size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string gtf_name = "", gmt_name = "";
+    std::string gtf_name = "";
     std::vector<std::string> region_names;
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     std::vector<IITree<size_t, size_t>> gene_sets;
-    std::vector<std::string> snp_set, msigdb = {gmt_name};
+    std::vector<std::string> snp_set, msigdb;
     size_t num_regions;
     try
     {
@@ -4485,67 +4494,84 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
         num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+
+        // we should have the 3 sets, the base, the bed and the background
+        ASSERT_EQ(num_regions, 3);
+        const size_t required_size = BITCT_TO_WORDCT(num_regions);
+        std::vector<uintptr_t> not_found = {0};
+        std::vector<uintptr_t> found = {0}, index = {0};
+        SET_BIT(0, not_found.data());
+        SET_BIT(0, found.data());
+        SET_BIT(1, found.data());
+        // 4  3016 87782
+        //"4 20139 97433 . . .\n"
+        // 4  87000 should be found in both the set and the background
+        // 13 53970 should only be found in the background
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 3015 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), not_found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 3016 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 3017 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 20138 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // found in both background and the bed file
+        SET_BIT(2, found.data());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 20139 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 20140 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 87781 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        found.front() = 0;
+        // only found in bed but not background
+        SET_BIT(0, found.data());
+        SET_BIT(2, found.data());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 87782 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 87783 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        found.front() = 0;
+        // found in all
+        SET_BIT(0, found.data());
+        SET_BIT(1, found.data());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 13, 53970 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // anything on chromosome 17 should only be found in the base
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 17, 53970 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), not_found.front());
+    }
+    catch (const std::runtime_error& e)
+    {
+        e.what();
+        FAIL();
     }
     catch (...)
     {
         FAIL();
     }
-    // we should have the 3 sets, the base, the bed and the background
-    ASSERT_EQ(num_regions, 3);
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    std::vector<uintptr_t> not_found = {0};
-    std::vector<uintptr_t> found = {0}, index = {0};
-    SET_BIT(0, not_found.data());
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
-    // 4  3016 87782
-    //"4 20139 97433 . . .\n"
-    // 4  87000 should be found in both the set and the background
-    // 13 53970 should only be found in the background
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3015 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), not_found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3016 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3017 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20138 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // found in both background and the bed file
-    SET_BIT(2, found.data());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20139 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20140 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87781 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    // only found in bed but not background
-    SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87782 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87783 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    // found in all
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53970 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // anything on chromosome 17 should only be found in the base
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             17, 53970 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), not_found.front());
 }
 
 TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
@@ -4748,7 +4774,7 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     size_t window_5 = 0;
     size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::vector<std::string> region_names, msigdb, snp_set;
+    std::vector<std::string> region_names, msigdb = {gmt_name}, snp_set;
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     std::vector<IITree<size_t, size_t>> gene_sets;
     size_t num_regions;

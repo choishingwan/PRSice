@@ -53,9 +53,9 @@ TEST_F(SNP_INIT_TEST, INIT_TEST)
     ASSERT_DOUBLE_EQ(snp.p_value(), p);
     ASSERT_DOUBLE_EQ(snp.get_threshold(), p_threshold);
     ASSERT_EQ(snp.category(), category);
-    // default bounaries is always 0
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
+    // default bounaries is always ~size_t(0)
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
+    ASSERT_EQ(snp.up_bound(), ~size_t(0));
     ASSERT_EQ(homcom, 0);
     ASSERT_EQ(het, 0);
     ASSERT_EQ(homrar, 0);
@@ -472,13 +472,13 @@ TEST(SNP_BOUND, SET_LOW_BOUND)
     double p = 0.0;
     double p_threshold = 1;
     int category = 1;
-    int chr = 1, loc = -1;
+    size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
+    ASSERT_EQ(snp.up_bound(), ~size_t(0));
     snp.set_low_bound(10);
     ASSERT_EQ(snp.low_bound(), 10);
-    ASSERT_EQ(snp.up_bound(), 0);
+    ASSERT_EQ(snp.up_bound(), ~size_t(0));
 }
 TEST(SNP_BOUND, SET_UP_BOUND)
 {
@@ -489,13 +489,13 @@ TEST(SNP_BOUND, SET_UP_BOUND)
     double p = 0.0;
     double p_threshold = 1;
     int category = 1;
-    int chr = 1, loc = -1;
+    size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.low_bound(), 0);
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
     snp.set_up_bound(10);
     ASSERT_EQ(snp.up_bound(), 10);
-    ASSERT_EQ(snp.low_bound(), 0);
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
 }
 
 TEST(SNP_TEST, SORT_BY_P_CHR)

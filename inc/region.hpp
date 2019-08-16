@@ -123,7 +123,7 @@ protected:
         }
         try
         {
-            end = misc::string_to_size_t(end_str.c_str()) + pad;
+            end = misc::string_to_size_t(end_str.c_str());
         }
         catch (...)
         {
