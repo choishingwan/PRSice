@@ -21,13 +21,14 @@
 BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
                          size_t thread, const bool ignore_fid,
                          const bool keep_nonfounder, const bool keep_ambig,
-                         const bool is_ref, Reporter& reporter)
+                         const bool is_ref, Reporter* reporter)
 {
     m_thread = thread;
     m_ignore_fid = ignore_fid;
     m_keep_nonfounder = keep_nonfounder;
     m_keep_ambig = keep_ambig;
     m_is_ref = is_ref;
+    m_reporter = reporter;
     // set the chromosome information
     // will need to add more script here if we want to support something other
     // than human
@@ -67,7 +68,7 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
     {
         m_sample_file = m_genotype_files.front() + ".fam";
     }
-    reporter.report(message);
+    m_reporter->report(message);
 }
 
 std::vector<Sample_ID> BinaryPlink::gen_sample_vector(const std::string& delim)

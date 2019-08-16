@@ -54,13 +54,9 @@ int main(int argc, char* argv[])
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
-        // cgranges_t* exclusion_region = cr_init();
         std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
-        // now we index cr
-        // cr_index(exclusion_region);
-
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
         double maf, geno, info;
@@ -83,18 +79,16 @@ int main(int argc, char* argv[])
             message.append(
                 "==================================================");
             reporter.report(message);
+            target_file->snp_extraction(commander.extract_file(),
+                                        commander.exclude_file());
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
                 commander.bar_levels(), commander.lower(), commander.inter(),
-                commander.upper(), commander.exclude_file(),
-                commander.extract_file(), exclusion_regions,
+                commander.upper(), exclusion_regions,
                 commander.maf_base_control(), commander.maf_base_case(),
-                commander.base_info_score(),
-                commander.perform_maf_base_control_filter(),
-                commander.perform_maf_base_case_filter(),
-                commander.perform_base_info_score_filter(),
-                commander.fastscore(), commander.no_full(), commander.beta(),
-                commander.is_index(), commander.keep_ambig(), reporter);
+                commander.base_info_score(), commander.fastscore(),
+                commander.no_full(), commander.beta(), commander.is_index(),
+                commander.keep_ambig());
             // no longer need the exclusion region object
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
@@ -156,7 +150,6 @@ int main(int argc, char* argv[])
                     maf, geno, info, maf_filter, geno_filter, info_filter,
                     hard_coded, true, reporter);
             }
-
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);

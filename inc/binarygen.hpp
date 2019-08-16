@@ -39,7 +39,7 @@ public:
               const size_t thread, const bool use_inter,
               const bool use_hard_coded, const bool no_regress,
               const bool ignore_fid, const bool keep_nonfounder,
-              const bool keep_ambig, const bool is_ref, Reporter& reporter);
+              const bool keep_ambig, const bool is_ref, Reporter* reporter);
     ~BinaryGen();
 
 private:

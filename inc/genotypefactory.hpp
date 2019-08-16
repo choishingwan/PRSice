@@ -56,7 +56,7 @@ public:
                     commander.ref_list(), commander.ref_name(),
                     commander.thread(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    reporter);
+                    &reporter);
             }
             else
             {
@@ -64,7 +64,7 @@ public:
                     commander.target_list(), commander.target_name(),
                     commander.thread(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    reporter);
+                    &reporter);
             }
         }
         case 2:
@@ -81,7 +81,7 @@ public:
                     commander.use_inter(), commander.hard_coded(),
                     commander.no_regress(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    reporter);
+                    &reporter);
             }
             else
             {
@@ -93,7 +93,7 @@ public:
                     commander.use_inter(), commander.hard_coded(),
                     commander.no_regress(), commander.ignore_fid(),
                     commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    reporter);
+                    &reporter);
             }
         }
         default:

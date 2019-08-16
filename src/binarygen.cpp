@@ -23,7 +23,7 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
                      const bool use_inter, const bool use_hard_coded,
                      const bool no_regress, const bool ignore_fid,
                      const bool keep_nonfounder, const bool keep_ambig,
-                     const bool is_ref, Reporter& reporter)
+                     const bool is_ref, Reporter* reporter)
 {
     m_intermediate = use_inter;
     m_thread = thread;
@@ -35,6 +35,7 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
     m_intermediate_file = out_prefix + ".inter";
     m_hard_threshold = hard_threshold;
     m_dose_threshold = dose_threshold;
+    m_reporter = reporter;
     // set the chromosome information
     // will need to add more script here if we want to support something
     // other than human
@@ -82,7 +83,7 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
         m_genotype_files = set_genotype_files(file_name);
     }
     if (!external_sample) { m_sample_file = pheno_file; }
-    reporter.report(message);
+    m_reporter->report(message);
 }
 
 std::vector<Sample_ID> BinaryGen::gen_sample_vector(const std::string& delim)

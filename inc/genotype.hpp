@@ -335,20 +335,19 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
+    void snp_extraction(const std::string& exclude_snps,
+                        const std::string& extract_snps);
     void read_base(const std::string& base_file,
                    const std::vector<size_t>& col_index,
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end, const std::string& exclude_snps,
-                   const std::string& extract_snps,
+                   const double& bound_end,
                    const std::vector<IITree<size_t, size_t>>& exclusion_region,
                    const double& maf_control, const double& maf_case,
-                   const double& info_threshold, const bool maf_control_filter,
-                   const bool maf_case_filter, const bool info_filter,
-                   const bool fastscore, const bool no_full, const bool is_beta,
-                   const bool is_index, const bool keep_ambig,
-                   Reporter& reporter);
+                   const double& info_threshold, const bool fastscore,
+                   const bool no_full, const bool is_beta, const bool is_index,
+                   const bool keep_ambig);
     void build_clump_windows();
     void build_membership_matrix(std::vector<size_t>& region_membership,
                                  std::vector<size_t>& region_start_idx,
@@ -485,6 +484,7 @@ protected:
     bool m_hard_coded = false;
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
+    Reporter* m_reporter;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
@@ -732,8 +732,7 @@ protected:
      * \param reporter the logger
      * \returnan unordered_set use for checking if the SNP is in the file
      */
-    std::unordered_set<std::string> load_snp_list(const std::string& input,
-                                                  Reporter& reporter);
+    std::unordered_set<std::string> load_snp_list(const std::string& input);
     void shrink_snp_vector(const std::vector<bool>& retain)
     {
         m_existed_snps.erase(

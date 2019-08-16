@@ -146,18 +146,28 @@ void Genotype::add_flags(
     }
 }
 
+void Genotype::snp_extraction(const std::string& exclude_snps,
+                              const std::string& extract_snps)
+{
+    if (!extract_snps.empty())
+    {
+        m_exclude_snp = false;
+        m_snp_selection_list = load_snp_list(extract_snps);
+    }
+    else if (!exclude_snps.empty())
+    {
+        m_snp_selection_list = load_snp_list(exclude_snps);
+    }
+}
 void Genotype::read_base(
     const std::string& base_file, const std::vector<size_t>& col_index,
     const std::vector<bool>& has_col, const std::vector<double>& barlevels,
     const double& bound_start, const double& bound_inter,
-    const double& bound_end, const std::string& exclude_snps,
-    const std::string& extract_snps,
+    const double& bound_end,
     const std::vector<IITree<size_t, size_t>>& exclusion_regions,
     const double& maf_control, const double& maf_case,
-    const double& info_threshold, const bool maf_control_filter,
-    const bool maf_case_filter, const bool info_filter, const bool fastscore,
-    const bool no_full, const bool is_beta, const bool is_index,
-    const bool keep_ambig, Reporter& reporter)
+    const double& info_threshold, const bool fastscore, const bool no_full,
+    const bool is_beta, const bool is_index, const bool keep_ambig)
 {
     // can assume region is of the same order as m_existed_snp
     // because they use the same chr encoding and similar sorting algorithm
@@ -165,28 +175,12 @@ void Genotype::read_base(
     // doesn't matter if two SNPs have the same coordinates
     assert(col_index.size() == +BASE_INDEX::MAX + 1);
     assert(!barlevels.empty());
-    if (!m_is_ref)
-    {
-        if (!extract_snps.empty())
-        {
-            m_exclude_snp = false;
-            m_snp_selection_list = load_snp_list(extract_snps, reporter);
-        }
-        else if (!exclude_snps.empty())
-        {
-            m_snp_selection_list = load_snp_list(exclude_snps, reporter);
-        }
-    }
     const size_t max_index = col_index[+BASE_INDEX::MAX];
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
     std::ofstream mismatch_snp_record;
-    // Read in threshold information
-    // barlevel is sorted, last element is the biggest
     const double max_threshold =
         no_full ? (fastscore ? barlevels.back() : bound_end) : 1.0;
-    // Start reading the base file. If the base file contain gz as its suffix,
-    // we will read it as a gz file
     std::vector<std::string> token;
     std::string line;
     std::string message = "Base file: " + base_file + "\n";
@@ -214,11 +208,10 @@ void Genotype::read_base(
     size_t num_info_filter = 0;
     size_t num_chr_filter = 0;
     size_t num_maf_filter = 0;
-    bool exclude = false;
-    bool to_remove = false;
-    int category = -1;
     int32_t chr_code;
     std::streampos file_length = 0;
+    int category = -1;
+    bool to_remove = false;
     bool gz_input = false;
     try
     {
@@ -250,8 +243,8 @@ void Genotype::read_base(
         {
             message.append("GZ file detected.");
         }
-        reporter.report("Due to library restrictions, we cannot display "
-                        "progress bar for gz");
+        m_reporter->report("Due to library restrictions, we cannot display "
+                           "progress bar for gz");
     }
     else
     {
@@ -271,7 +264,6 @@ void Genotype::read_base(
         if (!is_index) std::getline(snp_file, line);
     }
     double prev_progress = 0.0;
-
     std::unordered_set<std::string> dup_index;
     while ((gz_input && std::getline(gz_snp_file, line))
            || (!gz_input && std::getline(snp_file, line)))
@@ -288,8 +280,7 @@ void Genotype::read_base(
         }
         misc::trim(line);
         if (line.empty()) continue;
-        num_line_in_base++;
-        exclude = false;
+        ++num_line_in_base;
         token = misc::split(line);
         if (token.size() <= max_index)
         {
@@ -297,19 +288,18 @@ void Genotype::read_base(
             error_message.append("\nMore index than column in data\n");
             throw std::runtime_error(error_message);
         }
-
         rs_id = token[col_index[+BASE_INDEX::RS]];
         if (dup_index.find(rs_id) != dup_index.end())
         {
             ++num_duplicated;
             continue;
         }
-        // if this is not a duplicated SNP
+
         auto&& selection = m_snp_selection_list.find(rs_id);
         if ((!m_exclude_snp && selection == m_snp_selection_list.end())
             || (m_exclude_snp && selection != m_snp_selection_list.end()))
         {
-            num_selected++;
+            ++num_selected;
             continue;
         }
         dup_index.insert(rs_id);
@@ -318,7 +308,6 @@ void Genotype::read_base(
         {
             chr_code =
                 get_chrom_code_raw(token[col_index[+BASE_INDEX::CHR]].c_str());
-            // only two check, if it is haploid, or if it is sex chromosome
             if (chr_code < 0)
             {
                 // invalid chromosome
@@ -328,12 +317,12 @@ void Genotype::read_base(
             if (chr_code >= MAX_POSSIBLE_CHROM)
             {
                 // sex chromosome
-                num_haploid++;
+                ++num_haploid;
                 continue;
             }
             if (is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
             {
-                // this is a haploid chromosome outside of the sex chromosome
+                // this is a haploid chromosome
                 ++num_haploid;
                 continue;
             }
@@ -353,6 +342,7 @@ void Genotype::read_base(
                        ::toupper);
         std::transform(alt_allele.begin(), alt_allele.end(), alt_allele.begin(),
                        ::toupper);
+        loc = ~size_t(0);
         if (has_col[+BASE_INDEX::BP])
         {
             // obtain the SNP coordinate
@@ -369,20 +359,17 @@ void Genotype::read_base(
                 throw std::runtime_error(error_message);
             }
         }
-        else
+        to_remove = false;
+        if (has_col[+BASE_INDEX::BP] && has_col[+BASE_INDEX::CHR])
+            to_remove = Genotype::within_region(exclusion_regions, chr, loc);
+        if (to_remove)
         {
-            loc = ~size_t(0);
-        }
-        to_remove = Genotype::within_region(exclusion_regions, chr, loc);
-        if (to_remove && !exclude)
-        {
-            num_region_exclude++;
+            ++num_region_exclude;
             continue;
         }
-        maf = 1;
-        // note, this is for reference
-        if (maf_control_filter && has_col[+BASE_INDEX::MAF])
+        if (has_col[+BASE_INDEX::MAF])
         {
+            maf = 1;
             // only read in if we want to perform MAF filtering
             try
             {
@@ -402,11 +389,9 @@ void Genotype::read_base(
                 continue;
             }
         }
-        maf_case_temp = 1;
-        if (maf_case_filter && has_col[+BASE_INDEX::MAF_CASE])
+        if (has_col[+BASE_INDEX::MAF_CASE])
         {
-            // only read in the case MAf if we want to perform filtering on
-            // it
+            maf_case_temp = 1;
             try
             {
                 maf_case_temp = misc::convert<double>(
@@ -429,7 +414,7 @@ void Genotype::read_base(
             }
         }
         info_score = 1;
-        if (info_filter && has_col[+BASE_INDEX::INFO])
+        if (has_col[+BASE_INDEX::INFO])
         {
             // obtain the INFO score
             try
@@ -482,46 +467,34 @@ void Genotype::read_base(
             }
             else if (misc::logically_equal(stat, 0.0) && !is_beta)
             {
-                // we can't calculate log(0), so we will say we can't
-                // convert it
                 ++num_not_converted;
                 continue;
             }
             else if (!is_beta)
-                // if it is OR, we will perform natural log to convert it to
-                // beta
                 stat = log(stat);
         }
         catch (...)
         {
-            // non-numeric statistic
             ++num_not_converted;
             continue;
         }
         if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
         {
-            // only coun the number if the snp is kept
-            if (!exclude && keep_ambig) num_ambiguous++;
-            if (!exclude) exclude = !keep_ambig;
+            ++num_ambiguous;
+            if (!keep_ambig) continue;
         }
-        if (!exclude)
+        category = -1;
+        pthres = 0.0;
+        if (fastscore)
+        { category = calculate_category(pvalue, barlevels, pthres); }
+        else
         {
-            category = -1;
-            pthres = 0.0;
-            if (fastscore)
-            { category = calculate_category(pvalue, barlevels, pthres); }
-            else
-            {
-                // calculate the threshold instead
-                category = calculate_category(pvalue, bound_start, bound_inter,
-                                              bound_end, pthres, no_full);
-            }
-            // now add SNP
-            m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele,
-                                            alt_allele, stat, pvalue, category,
-                                            pthres));
-            m_existed_snps_index[rs_id] = m_existed_snps.size() - 1;
+            category = calculate_category(pvalue, bound_start, bound_inter,
+                                          bound_end, pthres, no_full);
         }
+        m_existed_snps_index[rs_id] = m_existed_snps.size();
+        m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
+                                        stat, pvalue, category, pthres));
     }
     if (gz_input)
         gz_snp_file.close();
@@ -595,7 +568,7 @@ void Genotype::read_base(
     }
     message.append(std::to_string(m_existed_snps.size())
                    + " total variant(s) included from base file\n\n");
-    reporter.report(message);
+    m_reporter->report(message);
     if (m_existed_snps.size() == 0)
     { throw std::runtime_error("Error: No valid variant remaining"); }
 }
@@ -692,7 +665,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
 }
 
 std::unordered_set<std::string>
-Genotype::load_snp_list(const std::string& input, Reporter& reporter)
+Genotype::load_snp_list(const std::string& input)
 {
     std::ifstream in;
     // first, we read in the file
@@ -732,7 +705,7 @@ Genotype::load_snp_list(const std::string& input, Reporter& reporter)
                 /// we will assume this column to contain the SNP ID
                 has_snp_colname = true;
                 message = name + " assume to be column containing SNP ID";
-                reporter.report(message);
+                m_reporter->report(message);
                 break;
             }
             // we will continue to iterate until we reaches the end or found a
@@ -750,7 +723,7 @@ Genotype::load_snp_list(const std::string& input, Reporter& reporter)
                 message = "SNP extraction/exclusion list contains 6 columns, "
                           "will assume this is a bim file, with the "
                           "second column contains the SNP ID";
-                reporter.report(message);
+                m_reporter->report(message);
                 // we set the rs index to 1 (use the second column as the RS ID)
                 rs_index = 1;
             }
@@ -761,7 +734,7 @@ Genotype::load_snp_list(const std::string& input, Reporter& reporter)
                           + misc::to_string(token.size())
                           + " columns, "
                             "will assume first column contains the SNP ID";
-                reporter.report(message);
+                m_reporter->report(message);
                 // we set the rs index to 0 (use the first column as the RS ID)
                 rs_index = 0;
             }
@@ -773,7 +746,7 @@ Genotype::load_snp_list(const std::string& input, Reporter& reporter)
         // rs_index will be 0
         message =
             "Only one column detected, will assume only SNP ID is provided";
-        reporter.report(message);
+        m_reporter->report(message);
     }
     in.clear();
     in.seekg(0, std::ios::beg);
