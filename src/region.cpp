@@ -550,13 +550,18 @@ void Region::load_gtf(
         throw std::runtime_error("Error: No GTF entry remain after filter by "
                                  "feature and chromosome!\n");
     }
-    std::string entry = (exclude_feature == 1) ? "entry" : "entries";
-    message.append("A total of " + std::to_string(exclude_feature) + " " + entry
-                   + " removed due to feature selection\n");
-    entry = (chr_exclude == 1) ? "entry" : "entries";
-    message.append("A total of " + std::to_string(chr_exclude) + " " + entry
-                   + " removed as they are not on autosomal chromosome\n");
-
+    if (exclude_feature > 0)
+    {
+        std::string entry = (exclude_feature == 1) ? "entry" : "entries";
+        message.append("A total of " + std::to_string(exclude_feature) + " "
+                       + entry + " removed due to feature selection\n");
+    }
+    if (chr_exclude > 0)
+    {
+        std::string entry = (chr_exclude == 1) ? "entry" : "entries";
+        message.append("A total of " + std::to_string(chr_exclude) + " " + entry
+                       + " removed as they are not on autosomal chromosome\n");
+    }
     m_reporter->report(message);
 }
 
