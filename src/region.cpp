@@ -120,18 +120,29 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
                     "Should be chr:start, chr:start-end or a bed file\n";
                 throw std::runtime_error(message);
             }
-            size_t low_bound = misc::string_to_size_t(boundary.front().c_str());
-            size_t upper_bound =
-                misc::string_to_size_t(boundary.back().c_str());
-            // the library find overlap, which for SNP at 10
-            // the boundary should be defined as 9-11 when we read in the SNP
-            // here we do nothing but sainity check of the input
-            if (low_bound > upper_bound || low_bound < 1 || upper_bound < 1)
+            size_t low_bound, upper_bound;
+            try
             {
-                std::string message =
-                    "Error: Invalid exclusion coordinate. "
-                    "Coordinate must be larger than 1 and the end coordinate "
-                    "must be larger than or equal to the start coordinate\n";
+                low_bound = misc::string_to_size_t(boundary.front().c_str());
+                upper_bound = misc::string_to_size_t(boundary.back().c_str());
+                if (low_bound == 0 || upper_bound == 0)
+                { throw std::runtime_error(""); }
+            }
+            catch (const std::runtime_error&)
+            {
+                std::string message = "Error: Invalid exclusion coordinate. "
+                                      "Coordinate must be larger than 1\n";
+                throw std::runtime_error(message);
+            }
+            // the library find overlap, which for SNP at 10
+            // the boundary should be defined as 10-11 when we read in the SNP
+            // here we do nothing but sainity check of the input
+            ++upper_bound;
+            if (low_bound > upper_bound)
+            {
+                std::string message = "Error: Invalid exclusion coordinate. "
+                                      "End coordinate must be larger than or "
+                                      "equal to the start coordinate\n";
                 throw std::runtime_error(message);
             }
             // the range is completely inclusive []
