@@ -508,7 +508,7 @@ void Region::load_gtf(
                     { gene_sets[chr].add(start, end, idx); }
                 }
             }
-            if (!m_genome_wide_background & !provided_background)
+            if (!m_genome_wide_background && !provided_background)
             {
                 // we want to generate the background from GTF
                 // but not when a background file is provided
