@@ -67,52 +67,18 @@ public:
      * \brief Get the base info score threshold
      * \return return the base info score filtering threshold, 0.0 if not used
      */
-    double base_info_score() const
-    {
-        if (!m_provided_info_threshold) return 0.0;
-        return m_base_info_threshold;
-    }
-    /*!
-     * \brief Return if base info score filtering should be performed
-     * \return T if it should be
-     */
-    bool perform_base_info_score_filter() const
-    {
-        return m_provided_info_threshold;
-    }
+    double base_info_score() const { return m_base_info_threshold; }
     /*!
      * \brief Get the base maf threshold for controls
      * \return return the maf base control filtering threshold, 0.0 if not used
      */
-    double maf_base_control() const
-    {
-        if (!m_perform_base_maf_control_filter) return 0.0;
-        return m_control_maf_threshold;
-    }
-    /*!
-     * \brief Return if base maf control filter should be performed
-     * \return  T if it should be
-     */
-    bool perform_maf_base_control_filter() const
-    {
-        return m_perform_base_maf_control_filter;
-    }
+    double maf_base_control() const { return m_control_maf_threshold; }
+
     /*!
      * \brief Get the base maf threshold for cases
      * \return return the maf base case filtering threshold, 0.0 if not used
      */
-    double maf_base_case() const
-    {
-        if (!m_perform_base_maf_case_filter) return 0.0;
-        return m_case_maf_threshold;
-    } /*!
-       * \brief Return if base maf case filter should be performed
-       * \return  T if it should be
-       */
-    bool perform_maf_base_case_filter() const
-    {
-        return m_perform_base_maf_case_filter;
-    }
+    double maf_base_case() const { return m_case_maf_threshold; }
     /*!
      * \brief Check if column input is in index form
      * \return true if input is in index
@@ -752,8 +718,7 @@ private:
     bool m_provided_bp = false;
     bool m_provided_p_value = false;
     bool m_provided_info_threshold = false;
-    bool m_perform_base_maf_control_filter = false;
-    bool m_perform_base_maf_case_filter = false;
+    bool m_perform_base_maf_filter = false;
     bool m_use_proxy_clump = false;
     bool m_perform_ref_geno_filter = false;
     bool m_perform_ref_hard_thresholding = false;

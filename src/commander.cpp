@@ -185,8 +185,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                            m_provided_info_threshold, command, error_messages);
             else if (command == "base-maf")
                 set_string(optarg, message_store, m_maf_col,
-                           m_perform_base_maf_control_filter, command,
-                           error_messages);
+                           m_perform_base_maf_filter, command, error_messages);
             else if (command == "binary-target")
                 error |=
                     !parse_binary_vector(optarg, message_store, error_messages,
@@ -1160,12 +1159,8 @@ bool Commander::base_check(std::map<std::string, std::string>& message,
         error_message.append(tmp_error_message);
     }
     tmp_error_message.clear();
-    tmp_error = !set_base_maf_filter(column_names, tmp_error_message);
-    if (!m_maf_col.empty())
-    {
-        error |= tmp_error;
-        error_message.append(tmp_error_message);
-    }
+    if (m_perform_base_maf_filter)
+    { error |= !set_base_maf_filter(column_names, error_message); }
     // now process the statistic column
     if (m_stat_is_or && m_stat_is_beta)
     {
