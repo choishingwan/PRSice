@@ -1,4 +1,5 @@
 office* 
+*.gcno
 reference/
 window
 *.o
