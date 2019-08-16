@@ -214,7 +214,6 @@ void Genotype::read_base(
     size_t num_info_filter = 0;
     size_t num_chr_filter = 0;
     size_t num_maf_filter = 0;
-    bool maf_filtered = false;
     bool exclude = false;
     bool to_remove = false;
     int category = -1;
@@ -382,7 +381,6 @@ void Genotype::read_base(
         }
         maf = 1;
         // note, this is for reference
-        maf_filtered = false;
         if (maf_control_filter && has_col[+BASE_INDEX::MAF])
         {
             // only read in if we want to perform MAF filtering
