@@ -252,14 +252,15 @@ int main(int argc, char* argv[])
             std::ofstream empty_region;
             std::string empty_region_name = commander.out() + ".xregion";
             // region_start_idx size always = num_regions
+            // check regions to see if there are any empty regions
             for (size_t i = 2; i < region_start_idx.size(); ++i)
             {
                 size_t cur_idx = region_start_idx[i];
-                if (i + 1 >= region_start_idx[i])
+                if (i + 1 >= region_start_idx.size())
                 {
+                    // this is the last set
                     if (cur_idx == region_membership.size())
                     {
-                        // this is empty
                         if (!has_empty_region)
                         {
                             empty_region.open(empty_region_name.c_str());
