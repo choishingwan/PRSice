@@ -57,7 +57,7 @@ public:
     void add_reference(const size_t& ref_idx,
                        const unsigned long long ref_byte_pos, const bool flip)
     {
-        m_ref_index = ref_file;
+        m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
     }
