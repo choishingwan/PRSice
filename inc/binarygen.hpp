@@ -41,16 +41,23 @@ public:
               const bool ignore_fid, const bool keep_nonfounder,
               const bool keep_ambig, const bool is_ref, Reporter* reporter);
     ~BinaryGen();
+    void init_mmap()
+    {
+        m_genotype_files.resize(m_genotype_file_names.size());
+        std::error_code error;
+        for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
+        {
+            m_genotype_files[i].map(m_genotype_file_names[i] + ".bgen", error);
+            if (error) { throw std::runtime_error(error.message()); }
+        }
+    }
 
 private:
     typedef std::vector<std::vector<double>> Data;
-    std::unordered_map<std::string, genfile::bgen::Context> m_context_map;
+    std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
-    std::ifstream m_bgen_file;
-    std::string m_cur_file;
     std::string m_intermediate_file;
     std::string m_id_delim;
-    std::streampos m_prev_loc = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -81,7 +88,7 @@ private:
      * the m_context_map
      * \param prefix is the input bgen file prefix
      */
-    void get_context(std::string& prefix);
+    void get_context(const size_t& idx);
     /*!
      * \brief Check if the sample information and ordering of the bgen file
      *        matched the sample / phenotype file
@@ -102,8 +109,8 @@ private:
      * \param file_name is the file name of the bgen file
      */
     inline void read_genotype(uintptr_t* genotype,
-                              const std::streampos byte_pos,
-                              const std::string& file_name)
+                              const unsigned long long byte_pos,
+                              const size_t& file_idx)
     {
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
@@ -111,41 +118,21 @@ private:
         {
             // when m_ref_plink is set, it suggest we are using the
             // intermediate, which is a binary plink format. Therefore we can
-            // directly read from the file
-            if (m_cur_file.empty() || file_name != m_cur_file
-                || !m_bgen_file.is_open())
-            {
-                if (m_bgen_file.is_open()) m_bgen_file.close();
-                // read in the file in binary format
-                m_bgen_file.open(file_name.c_str(), std::ifstream::binary);
-                if (!m_bgen_file.is_open())
-                {
-                    std::string error_message =
-                        "Error: Cannot open intermediate file: " + file_name;
-                    throw std::runtime_error(error_message);
-                }
-                // update the binary file name
-                m_cur_file = file_name;
-                // set prev_location to 0
-                m_prev_loc = 0;
-            }
-            if (byte_pos != m_prev_loc
-                && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
-            {
-                // if the location is not equal and seek fail, we have problem
-                // reading the bed file
-                throw std::runtime_error(
-                    "Error: Cannot seek within the intermediate file!");
-            }
             // directly read in the binary data to genotype, this should already
-            // be well formated when we write it into the fiel
-            m_bgen_file.read((char*) genotype, unfiltered_sample_ct4);
+            // be well formated when we write it into the file
+            char* geno = reinterpret_cast<char*>(genotype);
+            auto&& cur_map = m_genotype_files[file_idx];
+            for (uintptr_t i = 0; i < unfiltered_sample_ct4; ++i)
+            {
+                *geno = cur_map[byte_pos + i];
+                ++geno;
+            }
+            // m_bgen_file.read((char*) genotype, unfiltered_sample_ct4);
             // update the location to previous location
-            m_prev_loc = byte_pos;
         }
         // if not, we will try to parse the binary GEN format into a plink
         // format (using the default intermediate flag = false)
-        else if (load_and_collapse_incl(byte_pos, file_name, genotype))
+        else if (load_and_collapse_incl(byte_pos, file_idx, genotype))
         {
             throw std::runtime_error("Error: Cannot read the bgen file!");
         }
@@ -170,94 +157,39 @@ private:
      * intermediate file
      * \return 0 if sucessful
      */
-    uint32_t load_and_collapse_incl(const std::streampos byte_pos,
-                                    const std::string& file_name,
-                                    uintptr_t* __restrict mainbuf,
-                                    bool intermediate = false)
+    uint32_t load_and_collapse_incl(const unsigned long long byte_pos,
+                                    const size_t& file_idx,
+                                    uintptr_t* __restrict mainbuf)
     {
         // check sample size != 0
         assert(m_unfiltered_sample_ct);
         // we first check if we will read in a new file
-        if (m_cur_file.empty() || file_name != m_cur_file
-            || !m_bgen_file.is_open())
-        {
-            if (m_bgen_file.is_open()) m_bgen_file.close();
-
-            std::string bgen_name = file_name + ".bgen";
-            if (intermediate)
-            {
-                // if it is the intermeidate file, we don't need to add the
-                // suffix
-                bgen_name = file_name;
-            }
-            // we can now open the file in binary mode
-            m_bgen_file.open(bgen_name.c_str(), std::ifstream::binary);
-            if (!m_bgen_file.is_open())
-            {
-                std::string error_message =
-                    "Error: Cannot open bgen file: " + bgen_name;
-                if (intermediate) error_message.append(" (intermediate file)");
-                throw std::runtime_error(error_message);
-            }
-            // reset the name of current file
-            m_cur_file = bgen_name;
-            // and reset the prev_loc counter
-            m_prev_loc = 0;
-        }
-        if ((m_prev_loc != byte_pos)
-            && !m_bgen_file.seekg(byte_pos, std::ios_base::beg))
-        {
-            // if the location is not equal and seek fail, we have problem
-            // reading the bed file
-            throw std::runtime_error(
-                "Error: Cannot seek within the bgen file!");
-        }
-
-        if (!intermediate)
-        {
-            // we are not using intermediate file at the moment, so this must be
-            // in bgen format obtain the context information of the current bgen
-            // file
-            auto&& context = m_context_map[file_name];
-            // we initailize the PLINK generator with the m_sample_include
-            // vector, the mainbuf (result storage) and also the hard threshold.
-            // We don't need to bother about founder or founder info here as all
-            // samples in bgen are considered as founder (at least this is the
-            // case at the moment)
-            // TODO, might want to make this struct a member so that we don't
-            // need to re-initialize it? Though it only contain pointers and
-            // doesn't have any big structures
-            PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold,
-                                   m_dose_threshold);
-            // we can now use the bgen library to parse the BGEN input and
-            // transform it into PLINK format (NOTE: The
-            // read_and_parse_genotype_data_block function has been modified
-            // such that it will always call .sample_completed() when finish
-            // reading each sample. This allow for a more elegant implementation
-            // on our side
-            genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-                m_bgen_file, context, setter, &m_buffer1, &m_buffer2);
-            // output from load_raw should have already copied all samples
-            // to the front without the need of subseting
-
-            m_prev_loc = m_bgen_file.tellg();
-        }
-        else
-        {
-            const uintptr_t unfiltered_sample_ct4 =
-                (m_unfiltered_sample_ct + 3) / 4;
-            // directly read from the intermediate file. No need to worry about
-            // the transformation as that should be dealt with when we generate
-            // the intermidate file
-            m_bgen_file.read((char*) mainbuf, unfiltered_sample_ct4);
-            m_prev_loc =
-                static_cast<std::streampos>(unfiltered_sample_ct4) + byte_pos;
-        }
+        auto&& context = m_context_map[file_idx];
+        // we initailize the PLINK generator with the m_sample_include
+        // vector, the mainbuf (result storage) and also the hard threshold.
+        // We don't need to bother about founder or founder info here as all
+        // samples in bgen are considered as founder (at least this is the
+        // case at the moment)
+        // TODO, might want to make this struct a member so that we don't
+        // need to re-initialize it? Though it only contain pointers and
+        // doesn't have any big structures
+        PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold,
+                               m_dose_threshold);
+        // we can now use the bgen library to parse the BGEN input and
+        // transform it into PLINK format (NOTE: The
+        // read_and_parse_genotype_data_block function has been modified
+        // such that it will always call .sample_completed() when finish
+        // reading each sample. This allow for a more elegant implementation
+        // on our side
+        genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
+            m_genotype_files[file_idx], context, setter, &m_buffer1, &m_buffer2,
+            byte_pos);
+        // output from load_raw should have already copied all samples
+        // to the front without the need of subseting
         // mainbuf should contains the information
         // update the m_prev_loc counter. However, for bgen, it is most likely
         // that we will need to seek for every SNP as there are padded data
         // between each SNP's genotype
-
         return 0;
     }
 
