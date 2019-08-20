@@ -395,8 +395,8 @@ void BinaryPlink::gen_snp_vector(
     std::unordered_set<std::string> duplicated_snp;
     std::vector<std::string> bim_token;
     std::vector<bool> retain_snp;
-    auto&& reference = (m_is_ref) ? target : this;
-    retain_snp.resize(reference->m_existed_snps.size(), false);
+    auto&& genotype = (m_is_ref) ? target : this;
+    retain_snp.resize(genotype->m_existed_snps.size(), false);
     std::ifstream bim;
     std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
@@ -463,8 +463,8 @@ void BinaryPlink::gen_snp_vector(
                     + misc::to_string(num_snp_read) + "\n";
                 throw std::runtime_error(error_message);
             }
-            if (reference->m_existed_snps_index.find(bim_token[+BIM::RS])
-                == reference->m_existed_snps_index.end())
+            if (genotype->m_existed_snps_index.find(bim_token[+BIM::RS])
+                == genotype->m_existed_snps_index.end())
             {
                 ++m_base_missed;
                 continue;
@@ -548,8 +548,8 @@ void BinaryPlink::gen_snp_vector(
                 m_num_ambig +=
                     ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
                 auto&& ref_index =
-                    reference->m_existed_snps_index[bim_token[+BIM::RS]];
-                if (!reference->m_existed_snps[ref_index].matching(
+                    genotype->m_existed_snps_index[bim_token[+BIM::RS]];
+                if (!genotype->m_existed_snps[ref_index].matching(
                         chr_num, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
                         flipping))
                 {
@@ -657,14 +657,14 @@ void BinaryPlink::gen_snp_vector(
         bim.close();
     }
     // try to release memory
-    if (num_retained != reference->m_existed_snps.size())
+    if (num_retained != genotype->m_existed_snps.size())
     {
         // remove any SNP that is not retained, the ref_retain vector should
         // have the same ID as the target->m_existed_snps so we can use it
         // directly for SNP removal
-        reference->shrink_snp_vector(retain_snp);
+        genotype->shrink_snp_vector(retain_snp);
         // need to update index search after we updated the vector
-        reference->update_snp_index();
+        genotype->update_snp_index();
     }
     if (duplicated_snp.size() != 0)
     {
@@ -679,7 +679,7 @@ void BinaryPlink::gen_snp_vector(
             throw std::runtime_error(error_message);
         }
         // we should not use m_existed_snps unless it is for reference
-        for (auto&& snp : reference->m_existed_snps)
+        for (auto&& snp : genotype->m_existed_snps)
         {
             // we only output the valid SNPs.
             if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
