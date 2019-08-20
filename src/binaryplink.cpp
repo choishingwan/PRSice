@@ -321,7 +321,7 @@ void BinaryPlink::calc_freq_gen_inter(
 
         // read in the genotype information to the genotype vector
         char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
-        for (uintptr_t i = 0; i < unfiltered_sample_ct4; ++i)
+        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
         {
             *geno = m_genotype_files[cur_file_idx][byte_pos + i];
             ++geno;
@@ -881,7 +881,7 @@ void BinaryPlink::read_score(
             throw std::runtime_error(error_message);
         }
         char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
-        for (size_t i = 0; i < unfiltered_sample_ct4; ++i)
+        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
         {
             *geno = cur_map[cur_line + i];
             ++geno;

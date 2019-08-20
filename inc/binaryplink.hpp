@@ -89,7 +89,7 @@ protected:
         // if we don't perform selection, we can directly perform the read on
         // the mainbuf
         char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
-        for (uintptr_t i = 0; i < unfiltered_sample_ct4; ++i)
+        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
         {
             *geno = m_genotype_files[file_idx][byte_pos + i];
             ++geno;
