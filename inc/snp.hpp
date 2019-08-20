@@ -27,7 +27,9 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
-
+static_assert(sizeof(std::streamsize) <= sizeof(unsigned long long),
+              "streampos larger than long long, don't know how to proceed. "
+              "Please use PRSice on another machine");
 class Genotype;
 class SNP
 {
@@ -52,44 +54,71 @@ public:
     }
 
     virtual ~SNP();
-    /*!
-     * \brief This is to change the m_ref_file and m_ref_byte_pos to account for
-     * reference panel. Without reference panel, ref_file and byte_pos equals to
-     * those observed in target
-     * \param ref_file is the file name of the reference panel that contain this
-     * SNP
-     * \param ref_byte_pos is the location of this SNP on the reference panel
-     * file
-     */
+    void add_reference(const size_t& ref_idx,
+                       const unsigned long long ref_byte_pos, const bool flip)
+    {
+        m_ref_index = ref_file;
+        m_ref_byte_pos = ref_byte_pos;
+        m_ref_flipped = flip;
+    }
+    /*
     void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos, const bool flip)
+                       const unsigned long long ref_byte_pos, const bool
+    flip)
     {
         m_ref_file = ref_file;
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
-    }
+    }*/
     // use by bgen to redirect read to the intermediate file
-    void update_reference(const std::string& ref_file,
-                          const std::streampos ref_byte_pos)
+    //    void update_reference(const std::string& ref_file,
+    //                          const unsigned long long ref_byte_pos)
+    //    {
+    //        m_ref_file = ref_file;
+    //        m_ref_byte_pos = ref_byte_pos;
+    //    }
+    void update_reference(const size_t& ref_idx,
+                          const unsigned long long ref_byte_pos)
     {
-        m_ref_file = ref_file;
+        m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
     }
-    void update_target(const std::string& target_file,
-                       const std::streampos byte_pos)
+    //    void update_target(const std::string& target_file,
+    //                       const unsigned long long byte_pos)
+    //    {
+    //        m_target_file = target_file;
+    //        m_target_byte_pos = byte_pos;
+    //    }
+    void update_target(const size_t& target_idx,
+                       const unsigned long long byte_pos)
     {
-        m_target_file = target_file;
+        m_target_index = target_idx;
         m_target_byte_pos = byte_pos;
     }
-    void add_target(const std::string& target_file,
-                    const std::streampos target_byte_pos, const size_t chr,
+    //    void add_target(const std::string& target_file,
+    //                    const unsigned long long target_byte_pos, const size_t
+    //                    chr, const size_t loc, const std::string& ref, const
+    //                    std::string& alt, const bool flipping)
+    //    {
+    //        m_target_file = target_file;
+    //        m_target_byte_pos = target_byte_pos;
+    //        // set reference to target by default
+    //        m_ref_file = target_file;
+    //        m_ref_byte_pos = target_byte_pos;
+    //        m_chr = chr;
+    //        m_loc = loc;
+    //        m_flipped = flipping;
+    //        m_ref = ref;
+    //        m_alt = alt;
+    //    }
+    void add_target(const size_t& target_idx,
+                    const unsigned long long target_byte_pos, const size_t chr,
                     const size_t loc, const std::string& ref,
                     const std::string& alt, const bool flipping)
     {
-        m_target_file = target_file;
+        m_target_index = target_idx;
         m_target_byte_pos = target_byte_pos;
-        // set reference to target by default
-        m_ref_file = target_file;
+        m_ref_index = target_idx;
         m_ref_byte_pos = target_byte_pos;
         m_chr = chr;
         m_loc = loc;
@@ -97,12 +126,24 @@ public:
         m_ref = ref;
         m_alt = alt;
     }
-    void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos, const size_t homcom,
-                       const size_t het, const size_t homrar,
-                       const size_t missing)
+    //    void add_reference(const std::string& ref_file,
+    //                       const unsigned long long ref_byte_pos,
+    //                       const size_t homcom, const size_t het,
+    //                       const size_t homrar, const size_t missing)
+    //    {
+    //        m_ref_file = ref_file;
+    //        m_ref_byte_pos = ref_byte_pos;
+    //        m_homcom = homcom;
+    //        m_ref_het = het;
+    //        m_ref_homrar = homrar;
+    //        m_ref_missing = missing;
+    //    }
+    void add_reference(const size_t& ref_idx,
+                       const unsigned long long ref_byte_pos,
+                       const size_t homcom, const size_t het,
+                       const size_t homrar, const size_t missing)
     {
-        m_ref_file = ref_file;
+        m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
         m_homcom = homcom;
         m_ref_het = het;
@@ -188,10 +229,12 @@ public:
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    std::streampos byte_pos() const { return m_target_byte_pos; }
-    std::streampos ref_byte_pos() const { return m_ref_byte_pos; }
-    std::string file_name() const { return m_target_file; }
-    std::string ref_file_name() const { return m_ref_file; }
+    unsigned long long byte_pos() const { return m_target_byte_pos; }
+    unsigned long long ref_byte_pos() const { return m_ref_byte_pos; }
+    // std::string file_name() const { return m_target_file; }
+    // std::string ref_file_name() const { return m_ref_file; }
+    size_t file_index() const { return m_target_index; }
+    size_t ref_file_index() const { return m_ref_index; }
     std::string rs() const { return m_rs; }
     std::string ref() const { return m_ref; }
     std::string alt() const { return m_alt; }
@@ -420,13 +463,15 @@ private:
     // performance we might want to organize the data into way where it is
     // easier to "cache" also use data types that are more friendly?
     std::vector<uintptr_t> m_flags;
+    // for referencing the corresponding m_memory_bed / m_bed_file in
+    // binaryplink
     std::string m_alt;
     std::string m_ref;
     std::string m_rs;
-    std::string m_target_file;
-    std::string m_ref_file;
-    std::streampos m_target_byte_pos;
-    std::streampos m_ref_byte_pos;
+    // std::string m_target_file;
+    // std::string m_ref_file;
+    unsigned long long m_target_byte_pos;
+    unsigned long long m_ref_byte_pos;
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
@@ -437,6 +482,8 @@ private:
     size_t m_chr = ~size_t(0);
     size_t m_low_bound = ~size_t(0);
     size_t m_up_bound = ~size_t(0);
+    size_t m_target_index = ~size_t(0);
+    size_t m_ref_index = ~size_t(0);
     size_t m_homcom = 0;
     size_t m_het = 0;
     size_t m_homrar = 0;

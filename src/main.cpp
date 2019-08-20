@@ -110,6 +110,8 @@ int main(int argc, char* argv[])
             // Finally, we can read in the SNP information
             target_file->load_snps(commander.out(), exclusion_regions, verbose);
             // now load the reference file
+            // initialize the memory map file
+            target_file->init_mmap();
             if (commander.use_ref()
                 && (!commander.no_clump() || commander.use_ref_maf()))
             {
@@ -154,27 +156,30 @@ int main(int argc, char* argv[])
             info_filter = commander.ref_info(info);
             hard_coded = commander.ref_hard_threshold();
             bool has_ref_maf = false;
-            if (init_ref
-                && (maf_filter || geno_filter || info_filter
-                    || commander.use_inter()))
+            if (init_ref)
             {
-                // we only go through the reference file if we are
-                // 1. Need the reference MAF
-                // 2. Need to filter the reference file (need hard code info)
-                // 3. Need to generate an intermediate file for clumping
-                message =
-                    "Calculate MAF and perform filtering on reference SNPs\n";
-                message.append(
-                    "==================================================");
-                reporter.report(message);
-                reference_file->calc_freqs_and_intermediate(
-                    maf, geno, info, maf_filter, geno_filter, info_filter,
-                    hard_coded, true, target_file);
-                has_ref_maf = true;
+                reference_file->init_mmap();
+                if (maf_filter || geno_filter || info_filter
+                    || commander.use_inter())
+                {
+                    // we only go through the reference file if we are
+                    // 1. Need the reference MAF
+                    // 2. Need to filter the reference file (need hard code
+                    // info)
+                    // 3. Need to generate an intermediate file for clumping
+                    message = "Calculate MAF and perform filtering on "
+                              "reference SNPs\n";
+                    message.append("======================================="
+                                   "===========");
+                    reporter.report(message);
+                    reference_file->calc_freqs_and_intermediate(
+                        maf, geno, info, maf_filter, geno_filter, info_filter,
+                        hard_coded, true, target_file);
+                    has_ref_maf = true;
+                }
             }
-            // now should get the correct MAF and should have filtered the SNPs
-            // accordingly
-            // Generate Region flag information
+            // now should get the correct MAF and should have filtered the
+            // SNPs accordingly Generate Region flag information
             Region region(commander, &reporter);
             std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
             std::vector<IITree<size_t, size_t>> gene_sets;
@@ -217,8 +222,8 @@ int main(int argc, char* argv[])
                 if (commander.use_ref_maf() && !has_ref_maf)
                 {
                     message = "Calculate MAF based on Reference\n";
-                    message.append(
-                        "==================================================");
+                    message.append("======================================="
+                                   "===========");
                     reporter.report(message);
                     reference_file->calc_freqs_and_intermediate(
                         maf, geno, info, maf_filter, geno_filter, info_filter,
