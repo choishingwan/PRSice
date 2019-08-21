@@ -766,6 +766,7 @@ protected:
     {
         // the allele should all be in upper case but whatever
         // true if equal
+        if (ref_allele.empty() || alt_allele.empty()) return false;
         if (ref_allele == alt_allele) return true;
         return (ref_allele == "A" && alt_allele == "T")
                || (alt_allele == "A" && ref_allele == "T")
