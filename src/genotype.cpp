@@ -1185,8 +1185,6 @@ void Genotype::efficient_clumping(Genotype& reference)
         size_t end = cur_target_snp.up_bound();
         // reset our pointer to the start of the memory stack as we are working
         // on a new core SNP
-        std::cerr << "Loop SNP: " << i_snp << "\t" << cur_target_snp.rs()
-                  << "\t" << start << "\t" << end << std::endl;
         window_data_ptr = window_data;
         cur_window_size = 0;
         // transversing on TARGET
@@ -1218,9 +1216,6 @@ void Genotype::efficient_clumping(Genotype& reference)
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.ref_byte_pos(),
                                     pair_target_snp.ref_file_index());
-            std::cerr << pair_target_snp.rs() << "\t" << std::hex
-                      << window_data_ptr << "\t" << *window_data_ptr << std::dec
-                      << std::endl;
             // we then move the pointer forward to the next space in the memory
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
         }
@@ -1237,8 +1232,6 @@ void Genotype::efficient_clumping(Genotype& reference)
         // note the use of cur_target_snp
         reference.read_genotype(window_data_ptr, cur_target_snp.ref_byte_pos(),
                                 cur_target_snp.ref_file_index());
-        std::cerr << cur_target_snp.rs() << "\t" << std::hex << window_data_ptr
-                  << "\t" << *window_data_ptr << std::dec << std::endl;
         // generate the required data mask
         // Disclaimer: For the next few lines, they are from PLINK and I don't
         // fully understand what they are doing
@@ -1302,12 +1295,8 @@ void Genotype::efficient_clumping(Genotype& reference)
                     r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
                 }
             }
-            std::cerr << cur_target_snp.rs() << "\t" << pair_target_snp.rs()
-                      << "\t" << r2 << std::endl;
             if (r2 >= min_r2)
             {
-                std::cerr << "Clumping: " << cur_target_snp.rs() << "\t"
-                          << pair_target_snp.rs() << std::endl;
                 // if the R2 between two SNP is higher than the minim threshold,
                 // we will perform clumping
                 // use the core SNP to clump the pair_target_snp
@@ -1338,10 +1327,6 @@ void Genotype::efficient_clumping(Genotype& reference)
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.ref_byte_pos(),
                                     pair_target_snp.ref_file_index());
-
-            std::cerr << pair_target_snp.rs() << "\t" << std::hex
-                      << window_data_ptr << "\t" << *window_data_ptr << std::dec
-                      << std::endl;
             r2 = -1;
             // obtain count using PLINK magic
             uint32_t counts[18];
@@ -1374,13 +1359,9 @@ void Genotype::efficient_clumping(Genotype& reference)
                     r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
                 }
             }
-            std::cerr << cur_target_snp.rs() << "\t" << pair_target_snp.rs()
-                      << "\t" << r2 << std::endl;
             // now perform clumping if required
             if (r2 >= min_r2)
             {
-                std::cerr << "Clumping: " << cur_target_snp.rs() << "\t"
-                          << pair_target_snp.rs() << std::endl;
                 cur_target_snp.clump(pair_target_snp, r2, m_use_proxy,
                                      m_clump_proxy);
             }
