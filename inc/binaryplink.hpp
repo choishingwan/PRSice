@@ -72,7 +72,7 @@ protected:
                              Genotype* target = nullptr);
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
-    inline void read_genotype(uintptr_t* genotype,
+    inline void read_genotype(uintptr_t* __restrict genotype,
                               const unsigned long long byte_pos,
                               const size_t& file_idx)
     {
@@ -100,7 +100,13 @@ protected:
                 + misc::to_string(max_file_size);
             throw std::runtime_error(error_message);
         }
-        char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
+        char* geno;
+        if (m_unfiltered_sample_ct == m_founder_ct)
+        { geno = reinterpret_cast<char*>(m_tmp_genotype.data()); }
+        else
+        {
+            geno = reinterpret_cast<char*>(m_tmp_genotype.data());
+        }
         for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
         {
             *geno = cur_map[byte_pos + i];
