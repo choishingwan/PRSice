@@ -491,7 +491,6 @@ void BinaryGen::gen_snp_vector(
     std::unordered_set<std::string> duplicated_snps;
     // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> processed_snps;
-    std::vector<std::string> alleles;
     std::vector<bool> retain_snp;
     auto&& genotype = (m_is_ref) ? target : this;
     retain_snp.resize(genotype->m_existed_snps.size(), false);
@@ -638,7 +637,7 @@ void BinaryGen::gen_snp_vector(
                 exclude_snp = true;
             }
             // perform check on ambiguousity
-            else if (ambiguous(alleles.back(), alleles.front()))
+            else if (ambiguous(A1, A2))
             {
                 ++m_num_ambig;
                 if (!m_keep_ambig) exclude_snp = true;
