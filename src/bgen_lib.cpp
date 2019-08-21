@@ -382,7 +382,7 @@ namespace bgen
         if ((context.flags & e_Layout) == e_Layout2
             || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
         {
-            read_little_endian_integer(aStream, &payload_size, cur_idx);
+            read_little_endian_integer(aStream, &payload_size, idx);
             cur_idx += sizeof(payload_size);
         }
         else

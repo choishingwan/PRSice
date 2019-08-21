@@ -1,4 +1,4 @@
-// This file is part of PRSice-2, copyright (C) 2016-2019
+﻿// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -170,8 +170,9 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector(const std::string& delim)
             else
             {
                 // emit a warning so people might be aware of it
-                std::cerr << "We assume the following line is not a header:\n"
-                          << line << "\n(first column isn't FID or IID)\n";
+                m_reporter->report(
+                    "We assume the following line is not a header:\n" + line
+                    + "\n(first column isn't FID or IID)\n");
             }
         }
         if (token.size()
@@ -909,6 +910,7 @@ void BinaryGen::calc_freq_gen_inter(
             cur_file_idx = snp.file_index();
             byte_pos = snp.byte_pos();
         }
+        context = m_context_map[cur_file_idx];
         ++processed_count;
         // now read in the genotype information
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
@@ -983,8 +985,8 @@ void BinaryGen::calc_freq_gen_inter(
             // no reference file
             // 4. We are dealing with target file and we are
             // expected to use hard_coding
-            tmp_byte_pos = inter_out.tellp();
-            inter_out.write((char*) (&m_tmp_genotype[0]),
+            tmp_byte_pos = static_cast<unsigned long long>(inter_out.tellp());
+            inter_out.write(reinterpret_cast<char*>(&m_tmp_genotype[0]),
                             m_tmp_genotype.size() * sizeof(m_tmp_genotype[0]));
             if (!m_is_ref)
             {
@@ -992,30 +994,30 @@ void BinaryGen::calc_freq_gen_inter(
                 if (hard_coded)
                 {
                     m_target_plink = true;
-                    snp.update_target(0, tmp_byte_pos);
+                    snp.update_target(m_genotype_files.size(), tmp_byte_pos);
                 }
                 if (!m_expect_reference)
                 {
                     // we don't have reference
                     m_ref_plink = true;
-                    snp.update_reference(0, tmp_byte_pos);
+                    snp.update_reference(m_genotype_files.size(), tmp_byte_pos);
                 }
             }
             else
             {
                 // this is the reference file
                 m_ref_plink = true;
-                snp.update_reference(0, tmp_byte_pos);
+                snp.update_reference(m_genotype_files.size(), tmp_byte_pos);
             }
         }
     }
     if (m_intermediate
         && (m_is_ref || !m_expect_reference || (!m_is_ref && m_hard_coded)))
     { // update our genotype file
-        m_genotype_files.clear();
-        m_genotype_files.resize(1);
+        inter_out.close();
+        m_genotype_files.push_back(mio::mmap_source());
         std::error_code error;
-        m_genotype_files.front().map(m_intermediate_file, error);
+        m_genotype_files.back().map(m_intermediate_file, error);
         if (error) { throw std::runtime_error(error.message()); }
     }
     fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%\n", 100.0);
