@@ -102,7 +102,7 @@ protected:
         }
         char* geno;
         if (m_unfiltered_sample_ct == m_founder_ct)
-        { geno = reinterpret_cast<char*>(m_tmp_genotype.data()); }
+        { geno = reinterpret_cast<char*>(genotype); }
         else
         {
             geno = reinterpret_cast<char*>(m_tmp_genotype.data());
@@ -112,8 +112,6 @@ protected:
             *geno = cur_map[byte_pos + i];
             ++geno;
         }
-        if (m_unfiltered_sample_ct == m_founder_ct)
-        { genotype = m_tmp_genotype.data(); }
         if (m_unfiltered_sample_ct != m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
