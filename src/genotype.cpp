@@ -1,4 +1,4 @@
-﻿// This file is part of PRSice-2, copyright (C) 2016-2019
+// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -146,8 +146,8 @@ void Genotype::add_flags(
     }
 }
 
-void Genotype::snp_extraction(const std::string& exclude_snps,
-                              const std::string& extract_snps)
+void Genotype::snp_extraction(const std::string& extract_snps,
+                              const std::string& exclude_snps)
 {
     if (!extract_snps.empty())
     {

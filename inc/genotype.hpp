@@ -335,8 +335,8 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    void snp_extraction(const std::string& exclude_snps,
-                        const std::string& extract_snps);
+    void snp_extraction(const std::string& extract_snps,
+                        const std::string& exclude_snps);
     void read_base(const std::string& base_file,
                    const std::vector<size_t>& col_index,
                    const std::vector<bool>& has_col,
