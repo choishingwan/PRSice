@@ -34,6 +34,7 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <mio.hpp>
 #include <random>
 #include <string>
 #include <unordered_map>
@@ -334,8 +335,8 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    void snp_extraction(const std::string& exclude_snps,
-                        const std::string& extract_snps);
+    void snp_extraction(const std::string& extract_snps,
+                        const std::string& exclude_snps);
     void read_base(const std::string& base_file,
                    const std::vector<size_t>& col_index,
                    const std::vector<bool>& has_col,
@@ -410,6 +411,8 @@ public:
         const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
         const size_t num_sets, const bool genome_wide_background);
 
+    virtual void init_mmap() {}
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -423,7 +426,8 @@ protected:
     std::unordered_set<std::string> m_snp_selection_list;
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
-    std::vector<std::string> m_genotype_files;
+    std::vector<std::string> m_genotype_file_names;
+    std::vector<mio::mmap_source> m_genotype_files;
     std::vector<double> m_thresholds;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
@@ -704,8 +708,8 @@ protected:
      * the thrid parameter
      */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
-                                      const std::streampos /*byte_pos*/,
-                                      const std::string& /*file_name*/)
+                                      const unsigned long long /*byte_pos*/,
+                                      const size_t& /*file_index*/)
     {
     }
     virtual void
@@ -762,6 +766,7 @@ protected:
     {
         // the allele should all be in upper case but whatever
         // true if equal
+        if (ref_allele.empty() || alt_allele.empty()) return false;
         if (ref_allele == alt_allele) return true;
         return (ref_allele == "A" && alt_allele == "T")
                || (alt_allele == "A" && ref_allele == "T")

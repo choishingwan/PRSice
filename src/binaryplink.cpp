@@ -1,4 +1,4 @@
-// This file is part of PRSice-2, copyright (C) 2016-2019
+﻿// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -52,28 +52,28 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
         // has listed input
         // check if there is an external sample file
         listed_input = token.front();
-        m_genotype_files = load_genotype_prefix(listed_input);
+        m_genotype_file_names = load_genotype_prefix(listed_input);
         message.append("info from file: " + listed_input + " (bed)\n");
     }
     else
     {
         // single file input, check for # and replace it with 1-22
         input = token.front();
-        m_genotype_files = set_genotype_files(input);
+        m_genotype_file_names = set_genotype_files(input);
         message.append("file: " + input + " (bed)\n");
     }
     if (external_sample)
     { message.append("With external fam file: " + m_sample_file + "\n"); }
     else
     {
-        m_sample_file = m_genotype_files.front() + ".fam";
+        m_sample_file = m_genotype_file_names.front() + ".fam";
     }
     m_reporter->report(message);
 }
 
 std::vector<Sample_ID> BinaryPlink::gen_sample_vector(const std::string& delim)
 {
-    assert(m_genotype_files.size() > 0);
+    assert(m_genotype_file_names.size() > 0);
     std::ifstream famfile;
     famfile.open(m_sample_file.c_str());
     if (!famfile.is_open())
@@ -243,30 +243,30 @@ void BinaryPlink::calc_freq_gen_inter(
     const bool /*hard_coded*/, Genotype* target)
 {
     // we will go through all the SNPs
-    auto&& reference = (m_is_ref) ? target : this;
+    auto&& genotype = (m_is_ref) ? target : this;
     // sort SNPs by the read order to minimize skipping
     if (!m_is_ref)
     {
         // not target
-        std::sort(begin(reference->m_existed_snps),
-                  end(reference->m_existed_snps),
+        std::sort(begin(genotype->m_existed_snps),
+                  end(genotype->m_existed_snps),
                   [](SNP const& t1, SNP const& t2) {
-                      if (t1.file_name() == t2.file_name())
+                      if (t1.file_index() == t2.file_index())
                       { return t1.byte_pos() < t2.byte_pos(); }
                       else
-                          return t1.file_name() < t2.file_name();
+                          return t1.file_index() < t2.file_index();
                   });
     }
     else
     {
         // reference file
-        std::sort(begin(reference->m_existed_snps),
-                  end(reference->m_existed_snps),
+        std::sort(begin(genotype->m_existed_snps),
+                  end(genotype->m_existed_snps),
                   [](SNP const& t1, SNP const& t2) {
-                      if (t1.ref_file_name() == t2.ref_file_name())
+                      if (t1.ref_file_index() == t2.ref_file_index())
                       { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
                       else
-                          return t1.ref_file_name() < t2.ref_file_name();
+                          return t1.ref_file_index() < t2.ref_file_index();
                   });
     }
 
@@ -276,17 +276,17 @@ void BinaryPlink::calc_freq_gen_inter(
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
-    const size_t total_snp = reference->m_existed_snps.size();
-    std::vector<bool> retain_snps(reference->m_existed_snps.size(), false);
+    const size_t total_snp = genotype->m_existed_snps.size();
+    std::vector<bool> retain_snps(genotype->m_existed_snps.size(), false);
     std::ifstream bed_file;
     std::string bed_name;
     std::string prev_file = "";
-    std::string cur_file_name = "";
     double progress = 0.0, prev_progress = -1.0;
     double cur_maf, cur_geno;
-    std::streampos byte_pos = 1;
+    unsigned long long byte_pos = 1;
     size_t processed_count = 0;
     size_t retained = 0;
+    size_t cur_file_idx = 0;
     uint32_t ll_ct = 0;
     uint32_t lh_ct = 0;
     uint32_t hh_ct = 0;
@@ -297,8 +297,7 @@ void BinaryPlink::calc_freq_gen_inter(
     uint32_t missing = 0;
     uint32_t tmp_total = 0;
     // initialize the sample inclusion mask
-    m_cur_file = "";
-    for (auto&& snp : reference->m_existed_snps)
+    for (auto&& snp : genotype->m_existed_snps)
     {
         progress = static_cast<double>(processed_count)
                    / static_cast<double>(total_snp) * 100;
@@ -311,40 +310,32 @@ void BinaryPlink::calc_freq_gen_inter(
         ++processed_count;
         if (m_is_ref)
         {
-            cur_file_name = snp.ref_file_name();
+            cur_file_idx = snp.ref_file_index();
             byte_pos = snp.ref_byte_pos();
         }
         else
         {
-            cur_file_name = snp.file_name();
+            cur_file_idx = snp.file_index();
             byte_pos = snp.byte_pos();
         }
-        if (m_cur_file != cur_file_name)
-        {
-            bed_name = cur_file_name + ".bed";
-            update_bed(bed_name);
-        }
-        if (m_prev_loc != byte_pos)
-        {
-            // only skip line if we are not reading sequentially
-            if (!bed_file.seekg(byte_pos, std::ios_base::beg))
-            {
-                std::string error_message =
-                    "Error: Cannot read the bed file (seek): " + bed_name + " "
-                    + std::string(strerror(errno));
-                throw std::runtime_error(error_message);
-            }
-        }
+        auto&& cur_map = m_genotype_files[cur_file_idx];
+        const unsigned long long max_file_size = cur_map.mapped_length();
+
         // read in the genotype information to the genotype vector
-        if (load_raw(unfiltered_sample_ct4, bed_file, m_tmp_genotype.data()))
+        if (byte_pos + unfiltered_sample_ct4 > max_file_size)
         {
             std::string error_message =
-                "Error: Cannot read the bed file(read): " + bed_name + " "
-                + std::string(strerror(errno));
+                "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
+                + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                + misc::to_string(max_file_size);
             throw std::runtime_error(error_message);
         }
-        m_prev_loc =
-            static_cast<std::streampos>(unfiltered_sample_ct4) + byte_pos;
+        char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
+        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
+        {
+            *geno = cur_map[byte_pos + i];
+            ++geno;
+        }
         // calculate the MAF using PLINK2 function
         single_marker_freqs_and_hwe(
             unfiltered_sample_ctv2, m_tmp_genotype.data(),
@@ -401,8 +392,8 @@ void BinaryPlink::calc_freq_gen_inter(
 
     fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%\n", 100.0);
     // now update the vector
-    if (retained != reference->m_existed_snps.size())
-    { reference->shrink_snp_vector(retain_snps); }
+    if (retained != genotype->m_existed_snps.size())
+    { genotype->shrink_snp_vector(retain_snps); }
 }
 
 void BinaryPlink::gen_snp_vector(
@@ -414,25 +405,27 @@ void BinaryPlink::gen_snp_vector(
     std::unordered_set<std::string> duplicated_snp;
     std::vector<std::string> bim_token;
     std::vector<bool> retain_snp;
-    auto&& reference = (m_is_ref) ? target : this;
-    retain_snp.resize(reference->m_existed_snps.size(), false);
+    auto&& genotype = (m_is_ref) ? target : this;
+    retain_snp.resize(genotype->m_existed_snps.size(), false);
     std::ifstream bim;
     std::ofstream mismatch_snp_record;
     std::string bim_name, bed_name, chr, line;
     std::string prev_chr = "", error_message = "";
     std::string mismatch_snp_record_name = out_prefix + ".mismatch";
-    std::streampos byte_pos;
+    std::string prefix;
     // temp holder for region match
+    uintptr_t bed_offset;
     size_t num_retained = 0;
-    int chr_code = 0;
     size_t chr_num = 0;
     size_t num_snp_read = 0;
+    unsigned long long byte_pos;
+    int chr_code = 0;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
          prev_chr_error = false, flipping = false, to_remove = false;
-    uintptr_t bed_offset;
-    for (auto prefix : m_genotype_files)
+    for (size_t idx = 0; idx < m_genotype_file_names.size(); ++idx)
     {
         // go through each genotype file
+        prefix = m_genotype_file_names[idx];
         bim_name = prefix + ".bim";
         bed_name = prefix + ".bed";
         // make sure we reset the flag of the ifstream by closing it before use
@@ -480,8 +473,8 @@ void BinaryPlink::gen_snp_vector(
                     + misc::to_string(num_snp_read) + "\n";
                 throw std::runtime_error(error_message);
             }
-            if (reference->m_existed_snps_index.find(bim_token[+BIM::RS])
-                == reference->m_existed_snps_index.end())
+            if (genotype->m_existed_snps_index.find(bim_token[+BIM::RS])
+                == genotype->m_existed_snps_index.end())
             {
                 ++m_base_missed;
                 continue;
@@ -565,8 +558,8 @@ void BinaryPlink::gen_snp_vector(
                 m_num_ambig +=
                     ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
                 auto&& ref_index =
-                    reference->m_existed_snps_index[bim_token[+BIM::RS]];
-                if (!reference->m_existed_snps[ref_index].matching(
+                    genotype->m_existed_snps_index[bim_token[+BIM::RS]];
+                if (!genotype->m_existed_snps[ref_index].matching(
                         chr_num, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
                         flipping))
                 {
@@ -651,17 +644,15 @@ void BinaryPlink::gen_snp_vector(
                 }
                 else
                 {
-                    byte_pos =
-                        bed_offset
-                        + ((num_snp_read - 1)
-                           * (static_cast<uint64_t>(unfiltered_sample_ct4)));
+                    byte_pos = bed_offset
+                               + ((num_snp_read - 1) * (unfiltered_sample_ct4));
                     if (m_is_ref)
                         // here, the flipping is relative to target
                         target->m_existed_snps[ref_index].add_reference(
-                            prefix, byte_pos, flipping);
+                            idx, byte_pos, flipping);
                     else
                         m_existed_snps[ref_index].add_target(
-                            prefix, byte_pos, chr_num, loc, bim_token[+BIM::A1],
+                            idx, byte_pos, chr_num, loc, bim_token[+BIM::A1],
                             bim_token[+BIM::A2], flipping);
                     processed_snps.insert(bim_token[+BIM::RS]);
                     retain_snp[ref_index] = true;
@@ -676,14 +667,14 @@ void BinaryPlink::gen_snp_vector(
         bim.close();
     }
     // try to release memory
-    if (num_retained != reference->m_existed_snps.size())
+    if (num_retained != genotype->m_existed_snps.size())
     {
         // remove any SNP that is not retained, the ref_retain vector should
         // have the same ID as the target->m_existed_snps so we can use it
         // directly for SNP removal
-        reference->shrink_snp_vector(retain_snp);
+        genotype->shrink_snp_vector(retain_snp);
         // need to update index search after we updated the vector
-        reference->update_snp_index();
+        genotype->update_snp_index();
     }
     if (duplicated_snp.size() != 0)
     {
@@ -698,7 +689,7 @@ void BinaryPlink::gen_snp_vector(
             throw std::runtime_error(error_message);
         }
         // we should not use m_existed_snps unless it is for reference
-        for (auto&& snp : reference->m_existed_snps)
+        for (auto&& snp : genotype->m_existed_snps)
         {
             // we only output the valid SNPs.
             if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
@@ -861,33 +852,50 @@ void BinaryPlink::read_score(
     // the PRS to zero instead of addint it up
     bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
-    m_cur_file = ""; // just close it
-    if (m_bed_file.is_open()) { m_bed_file.close(); }
+    // m_cur_file = ""; // just close it
+    // if (m_bed_file.is_open()) { m_bed_file.close(); }
     // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
-    std::streampos cur_line;
+    unsigned long long cur_line;
+    size_t cur_file_idx;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        if (m_cur_file != cur_snp.file_name())
-        { update_bed(cur_snp.file_name()); }
+        cur_file_idx = cur_snp.file_index();
+        auto&& cur_map = m_genotype_files[cur_file_idx];
+        /*
+                if (m_cur_file != cur_snp.file_name())
+                { update_bed(cur_snp.file_name()); }
+        */
         // current location of the snp in the bed file
         // allow for quick jumping
         // very useful for read score as most SNPs might not
         // be next to each other
         cur_line = cur_snp.byte_pos();
-        if (m_prev_loc != cur_line
-            && !m_bed_file.seekg(cur_line, std::ios_base::beg))
-        { throw std::runtime_error("Error: Cannot read the bed file!"); }
 
+        const unsigned long long max_file_size = cur_map.mapped_length();
         // we now read the genotype from the file by calling
         // load_and_collapse_incl
         // important point to note here is the use of m_sample_include and
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-        load_raw(unfiltered_sample_ct4, m_bed_file, m_tmp_genotype.data());
+
+        if (cur_line + unfiltered_sample_ct4 > max_file_size)
+        {
+            std::string error_message =
+                "Erorr: Reading out of bound: " + misc::to_string(cur_line)
+                + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                + misc::to_string(max_file_size);
+            throw std::runtime_error(error_message);
+        }
+        char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
+        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
+        {
+            *geno = cur_map[cur_line + i];
+            ++geno;
+        }
         if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                 use_ref_maf))
         {
@@ -918,9 +926,6 @@ void BinaryPlink::read_score(
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
         // directly read in the current location
-        m_prev_loc =
-            static_cast<std::streampos>(unfiltered_sample_ct4) + cur_line;
-
         if (m_founder_ct == missing_ct)
         {
             // problematic snp

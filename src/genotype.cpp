@@ -1,4 +1,4 @@
-﻿// This file is part of PRSice-2, copyright (C) 2016-2019
+// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -23,11 +23,11 @@ void Genotype::build_clump_windows()
               [](SNP const& t1, SNP const& t2) {
                   if (t1.chr() == t2.chr())
                   {
-                      if (t1.loc() < t2.loc())
+                      if (t1.loc() == t2.loc())
                       {
-                          if (t1.ref_file_name() == t2.ref_file_name())
+                          if (t1.ref_file_index() == t2.ref_file_index())
                           { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
-                          return t1.ref_file_name() < t2.ref_file_name();
+                          return t1.ref_file_index() < t2.ref_file_index();
                       }
                       else
                           return (t1.loc() < t2.loc());
@@ -146,8 +146,8 @@ void Genotype::add_flags(
     }
 }
 
-void Genotype::snp_extraction(const std::string& exclude_snps,
-                              const std::string& extract_snps)
+void Genotype::snp_extraction(const std::string& extract_snps,
+                              const std::string& exclude_snps)
 {
     if (!extract_snps.empty())
     {
@@ -1159,7 +1159,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             static_cast<double>(i_snp) / static_cast<double>(num_snp) * 100;
         if (progress - prev_progress > 0.01)
         {
-            fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+            // fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
             prev_progress = progress;
         }
         // get the index on target.m_existed_snp to the i_th most significant
@@ -1192,6 +1192,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         // file
         for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++)
         {
+
             // the start and end correspond to index on m_existed_snps instead
             // of m_sort_by_p, so we can skip reading from m_sort_by_p
             // the current SNP
@@ -1214,7 +1215,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             // should we read from)
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.ref_byte_pos(),
-                                    pair_target_snp.ref_file_name());
+                                    pair_target_snp.ref_file_index());
             // we then move the pointer forward to the next space in the memory
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
         }
@@ -1230,7 +1231,7 @@ void Genotype::efficient_clumping(Genotype& reference)
         // then we can read in the genotype from the reference panel
         // note the use of cur_target_snp
         reference.read_genotype(window_data_ptr, cur_target_snp.ref_byte_pos(),
-                                cur_target_snp.ref_file_name());
+                                cur_target_snp.ref_file_index());
         // generate the required data mask
         // Disclaimer: For the next few lines, they are from PLINK and I don't
         // fully understand what they are doing
@@ -1325,8 +1326,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             // read in the genotype information
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.ref_byte_pos(),
-                                    pair_target_snp.ref_file_name());
-
+                                    pair_target_snp.ref_file_index());
             r2 = -1;
             // obtain count using PLINK magic
             uint32_t counts[18];
@@ -1401,10 +1401,10 @@ bool Genotype::prepare_prsice()
               [](SNP const& t1, SNP const& t2) {
                   if (t1.category() == t2.category())
                   {
-                      if (t1.file_name() == t2.file_name())
+                      if (t1.file_index() == t2.file_index())
                       { return t1.byte_pos() < t2.byte_pos(); }
                       else
-                          return t1.file_name() < t2.file_name();
+                          return t1.file_index() < t2.file_index();
                   }
                   else
                       return t1.category() < t2.category();

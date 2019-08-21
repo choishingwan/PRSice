@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <mio.hpp>
 #include <stdexcept>
 #include <stdint.h>
 #include <vector>
@@ -105,7 +106,7 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
         uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
                    reinterpret_cast<Bytef const*>(begin), source_size);
     if (result != Z_OK)
-        throw std::runtime_error("Error: Cannot decomporess bgen zlib");
+        throw std::runtime_error("Error: Cannot decompress bgen zlib");
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
 }
@@ -298,6 +299,10 @@ namespace bgen
     // appear in the buffer).
     void read_genotype_data_block(std::istream& aStream, Context const& context,
                                   std::vector<byte_t>* buffer1);
+    void read_genotype_data_block(mio::mmap_source& aStream,
+                                  Context const& context,
+                                  std::vector<byte_t>* buffer1,
+                                  const unsigned long long idx);
 
     // Low-level function which uncompresses probability data stored in the
     // genotype data block contained in the first buffer into a second buffer
@@ -382,9 +387,18 @@ namespace bgen
     // values using the setter object provided. The buffers are used as
     // intermediate storage and will be resized to fit data as needed.
     template <typename Setter>
-    void read_and_parse_genotype_data_block(
-        std::istream& aStream, Context const& context, Setter& setter,
-        std::vector<byte_t>* buffer1, std::vector<byte_t>* buffer2, bool quick);
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context const& context,
+                                            Setter& setter,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2);
+    template <typename Setter>
+    void read_and_parse_genotype_data_block(mio::mmap_source& aStream,
+                                            Context const& context,
+                                            Setter& setter,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2,
+                                            unsigned long long idx);
 }
 }
 
@@ -427,7 +441,28 @@ namespace bgen
         read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
                                    integer_ptr);
     }
-
+    template <typename IntegerType>
+    void read_little_endian_integer(mio::mmap_source& in_stream,
+                                    IntegerType* integer_ptr,
+                                    const unsigned long long idx)
+    {
+        byte_t buffer[sizeof(IntegerType)];
+        const unsigned long long max_file_size = in_stream.mapped_length();
+        if (sizeof(IntegerType) + idx > max_file_size)
+        {
+            std::string error_message = "Erorr: BGEN reading out of bound";
+            throw std::runtime_error(error_message);
+        }
+        char* buf = reinterpret_cast<char*>(buffer);
+        for (unsigned long long i = 0; i < sizeof(IntegerType); ++i)
+        {
+            *buf = in_stream[idx + i];
+            ++buf;
+        }
+        // if (!in_stream) { throw BGenError(); }
+        read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
+                                   integer_ptr);
+    }
     template <typename IntegerType>
     void read_length_followed_by_data(std::istream& in_stream,
                                       IntegerType* length_ptr,
@@ -1480,6 +1515,19 @@ namespace bgen
                                             std::vector<byte_t>* buffer2)
     {
         read_genotype_data_block(aStream, context, buffer1);
+        uncompress_probability_data(context, *buffer1, buffer2);
+        parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                               context, setter);
+    }
+    template <typename Setter>
+    void read_and_parse_genotype_data_block(mio::mmap_source& aStream,
+                                            Context const& context,
+                                            Setter& setter,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2,
+                                            const unsigned long long idx)
+    {
+        read_genotype_data_block(aStream, context, buffer1, idx);
         uncompress_probability_data(context, *buffer1, buffer2);
         parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
                                context, setter);

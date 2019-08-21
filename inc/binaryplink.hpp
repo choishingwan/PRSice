@@ -23,6 +23,7 @@
 #include "misc.hpp"
 #include "reporter.hpp"
 #include <functional>
+#include <mio.hpp>
 class BinaryPlink : public Genotype
 {
 public:
@@ -46,17 +47,20 @@ public:
                 const bool is_ref, Reporter* reporter);
     BinaryPlink() {}
     ~BinaryPlink();
+    void init_mmap()
+    {
+        m_genotype_files.resize(m_genotype_file_names.size());
+        std::error_code error;
+        for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
+        {
+            m_genotype_files[i].map(m_genotype_file_names[i] + ".bed", error);
+            if (error) { throw std::runtime_error(error.message()); }
+        }
+    }
 
 protected:
     std::vector<uintptr_t> m_sample_mask;
-    std::string m_cur_file;
-    std::ifstream m_bed_file;
     std::streampos m_prev_loc = 0;
-
-    /*!
-     * \brief Generate the sample vector
-     * \return Vector containing the sample information
-     */
     std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
@@ -66,47 +70,11 @@ protected:
                              const bool maf_filter, const bool geno_filter,
                              const bool, const bool,
                              Genotype* target = nullptr);
-    /*!
-     * \brief This function is use to check the bed version. Most importantly,
-     *        this should give the correct bed_offset for file reading
-     * \param bed_name is the name of the file
-     * \param num_marker is the number of markers, use for checking the size of
-     *        the bed file
-     * \param bed_offset is the offset for bed file reading
-     */
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
-    inline void update_bed(const std::string& file_name)
-    {
-        if (m_bed_file.is_open()) { m_bed_file.close(); }
-        std::string bedname = file_name + ".bed";
-        // open the bed file in binary mode
-        m_bed_file.open(bedname.c_str(), std::ios::binary);
-        if (!m_bed_file.is_open())
-        {
-            throw std::runtime_error(std::string(
-                "Error: Cannot open bed file: " + file_name + ".bed"));
-        }
-        // we reset the prev_loc value to 0 as this is a new file
-        m_prev_loc = 0;
-        // update teh current file name
-        m_cur_file = file_name;
-    }
-    /*!
-     * \brief Function for read in the genotype file directly from the binary
-     * plink file
-     *
-     * \param genotype is the vector use to store the binary information from
-     * the file
-     *
-     * \param byte_pos is the stream pos of the SNP in the file, this allow us
-     * to jump directly to the target SNP without iterate through the file
-     *
-     * \param file_name is the name of the file
-     */
-    inline void read_genotype(uintptr_t* genotype,
-                              const std::streampos byte_pos,
-                              const std::string& file_name)
+    inline void read_genotype(uintptr_t* __restrict genotype,
+                              const unsigned long long byte_pos,
+                              const size_t& file_idx)
     {
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
@@ -115,106 +83,52 @@ protected:
             get_final_mask(static_cast<uint32_t>(m_founder_ct));
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        if (m_cur_file != file_name) { update_bed(file_name); }
-        // if our current position does not equal to the required read position,
-        // we will try to seek from the beginning of file to the target location
-        if ((m_prev_loc != byte_pos)
-            && !m_bed_file.seekg(byte_pos, std::ios_base::beg))
-        {
-            // if the location is not equal and seek fail, we have problem
-            // reading the bed file
-            throw std::runtime_error("Error: Cannot seek within the bed file!");
-        }
+
         // now we start reading / parsing the binary from the file
-        if (load_and_collapse_incl(
-                static_cast<uint32_t>(m_unfiltered_sample_ct),
-                static_cast<uint32_t>(m_founder_ct), m_founder_info.data(),
-                final_mask, false, m_bed_file, m_tmp_genotype.data(), genotype))
+        assert(unfiltered_sample_ct);
+        // if we don't perform selection, we can directly perform the read on
+        // the mainbuf
+        auto&& cur_map = m_genotype_files[file_idx];
+        const unsigned long long max_file_size = cur_map.mapped_length();
+
+        // read in the genotype information to the genotype vector
+        if (byte_pos + unfiltered_sample_ct4 > max_file_size)
         {
             std::string error_message =
-                "Error: Failed to read the bed file: " + m_cur_file;
+                "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
+                + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                + misc::to_string(max_file_size);
             throw std::runtime_error(error_message);
         }
-        // directly read in the current location to avoid possible calculation
-        // error
-        m_prev_loc =
-            static_cast<std::streampos>(unfiltered_sample_ct4) + byte_pos;
+        char* geno;
+        if (m_unfiltered_sample_ct == m_founder_ct)
+        { geno = reinterpret_cast<char*>(genotype); }
+        else
+        {
+            geno = reinterpret_cast<char*>(m_tmp_genotype.data());
+        }
+        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
+        {
+            *geno = cur_map[byte_pos + i];
+            ++geno;
+        }
+        if (m_unfiltered_sample_ct != m_founder_ct)
+        {
+            copy_quaterarr_nonempty_subset(
+                m_tmp_genotype.data(), m_founder_info.data(),
+                static_cast<uint32_t>(m_unfiltered_sample_ct),
+                static_cast<uint32_t>(m_founder_ct), genotype);
+        }
+        else
+        {
+            genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+        }
     }
+
     virtual void
     read_score(const std::vector<size_t>::const_iterator& start_idx,
                const std::vector<size_t>::const_iterator& end_idx,
                bool reset_zero, const bool use_ref_maf);
-    /*!
-     * \brief This is a slightly modified version of load_and_collapse_incl copy
-     * from PLINK2, main difference is the use of ifstream
-     *
-     * \param unfiltered_sample_ct is the number of unfiltered sample
-     * \param sample_ct is the number of sample we want
-     * \param sample_include is the binary vector indicate if the specific
-     * sample is required
-     *
-     * \param final_mask is the mask to mask out un used regions
-     * \param do_reverse not sure what it does, but should always be false here
-     * \param bedfile is the ifstream pointing to the plink binary file
-     * \param rawbuf is the vector for storing the raw genotype read, which will
-     * then be transformed into the required genotype data format
-     *
-     * \param mainbuf is the vector for storing the final genotype data
-     * \return 0 if the read is sucessful, and anyother number if it is not
-     */
-    uint32_t load_and_collapse_incl(uint32_t unfiltered_sample_ct,
-                                    uint32_t sample_ct,
-                                    const uintptr_t* __restrict sample_include,
-                                    uintptr_t final_mask, uint32_t do_reverse,
-                                    std::ifstream& bedfile,
-                                    uintptr_t* __restrict rawbuf,
-                                    uintptr_t* __restrict mainbuf)
-    {
-        assert(unfiltered_sample_ct);
-        uint32_t unfiltered_sample_ct4 = (unfiltered_sample_ct + 3) / 4;
-        // if we don't perform selection, we can directly perform the read on
-        // the mainbuf
-        if (unfiltered_sample_ct == sample_ct) { rawbuf = mainbuf; }
-        // we try to read in the data and store it in rawbug
-        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
-        { return RET_READ_FAIL; }
-        if (unfiltered_sample_ct != sample_ct)
-        {
-            // if we need to perform selection, we will remove all unwanted
-            // sample and push the data forward
-            copy_quaterarr_nonempty_subset(rawbuf, sample_include,
-                                           unfiltered_sample_ct, sample_ct,
-                                           mainbuf);
-        }
-        else
-        {
-            // if we dno't need filtering, then we simply mask out the unwanted
-            // region (to avoid the leftover, if any)
-            mainbuf[(unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
-        }
-        if (do_reverse)
-        {
-            // this will never be callsed in PRSice
-            reverse_loadbuf(sample_ct, (unsigned char*) mainbuf);
-        }
-        return 0;
-    }
-
-    inline uint32_t load_raw(uintptr_t unfiltered_sample_ct4,
-                             std::ifstream& bedfile, uintptr_t* rawbuf)
-    {
-        // only use this if all accesses to the data involve
-        // 1. some sort of mask, or
-        // 2. explicit iteration from 0..(unfiltered_sample_ct-1).
-        // otherwise improper trailing bits might cause a segfault, when we
-        // should be ignoring them or just issuing a warning.
-        if (!bedfile.read((char*) rawbuf, unfiltered_sample_ct4))
-        {
-            std::string error_message = "Error: Cannot read the bed file(read)";
-            throw std::runtime_error(error_message);
-        }
-        return 0;
-    }
 };
 
 #endif
