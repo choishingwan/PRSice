@@ -470,8 +470,8 @@ private:
     std::string m_rs;
     // std::string m_target_file;
     // std::string m_ref_file;
-    unsigned long long m_target_byte_pos;
-    unsigned long long m_ref_byte_pos;
+    unsigned long long m_target_byte_pos = 0;
+    unsigned long long m_ref_byte_pos = 0;
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
@@ -484,10 +484,10 @@ private:
     size_t m_up_bound = ~size_t(0);
     size_t m_target_index = ~size_t(0);
     size_t m_ref_index = ~size_t(0);
+    size_t m_loc = ~size_t(0);
     size_t m_homcom = 0;
     size_t m_het = 0;
     size_t m_homrar = 0;
-    size_t m_loc = ~size_t(0);
     size_t m_missing = 0;
     size_t m_ref_homcom = 0;
     size_t m_ref_het = 0;
