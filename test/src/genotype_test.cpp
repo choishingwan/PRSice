@@ -11,19 +11,20 @@ class GENOTYPE_BASIC : public Genotype, public ::testing::Test
 TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITHOUT_HASH)
 {
     std::string name = "Test";
-    m_genotype_files = set_genotype_files(name);
-    ASSERT_STREQ(m_genotype_files.front().c_str(), name.c_str());
-    ASSERT_EQ(m_genotype_files.size(), 1);
+    m_genotype_file_names = set_genotype_files(name);
+    ASSERT_STREQ(m_genotype_file_names.front().c_str(), name.c_str());
+    ASSERT_EQ(m_genotype_file_names.size(), 1);
 }
 TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITH_HASH)
 {
     std::string name = "chr#test";
     m_autosome_ct = 22;
-    m_genotype_files = set_genotype_files(name);
+    m_genotype_file_names = set_genotype_files(name);
     ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i) {
+    for (size_t i = 1; i <= m_autosome_ct; ++i)
+    {
         std::string name = "chr" + std::to_string(i) + "test";
-        ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
+        ASSERT_STREQ(m_genotype_file_names[i - 1].c_str(), name.c_str());
     }
 }
 
@@ -33,12 +34,13 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_MULTI_HASH)
     // substituted
     std::string name = "chr#test#";
     m_autosome_ct = 22;
-    m_genotype_files = set_genotype_files(name);
+    m_genotype_file_names = set_genotype_files(name);
     ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i) {
+    for (size_t i = 1; i <= m_autosome_ct; ++i)
+    {
         std::string name =
             "chr" + std::to_string(i) + "test" + std::to_string(i);
-        ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
+        ASSERT_STREQ(m_genotype_file_names[i - 1].c_str(), name.c_str());
     }
 }
 // init_chr
