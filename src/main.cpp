@@ -248,10 +248,14 @@ int main(int argc, char* argv[])
                 region_membership, region_start_idx, num_regions,
                 commander.out(), region_names, commander.print_snp());
             background_start_idx = region_membership.cbegin();
-            std::advance(background_start_idx, region_start_idx[1]);
+            std::advance(background_start_idx,
+                         static_cast<long>(region_start_idx[1]));
             background_end_idx = region_membership.cbegin();
             if (num_regions > 2)
-            { std::advance(background_end_idx, region_start_idx[2]); }
+            {
+                std::advance(background_end_idx,
+                             static_cast<long>(region_start_idx[2]));
+            }
             // we can now quickly check if any of the region are empty
             bool has_empty_region = false;
             std::ofstream empty_region;
