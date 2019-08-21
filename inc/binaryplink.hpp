@@ -88,10 +88,22 @@ protected:
         assert(unfiltered_sample_ct);
         // if we don't perform selection, we can directly perform the read on
         // the mainbuf
+        auto&& cur_map = m_genotype_files[file_idx];
+        const unsigned long long max_file_size = cur_map.mapped_length();
+
+        // read in the genotype information to the genotype vector
+        if (byte_pos + unfiltered_sample_ct4 > max_file_size)
+        {
+            std::string error_message =
+                "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
+                + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                + misc::to_string(max_file_size);
+            throw std::runtime_error(error_message);
+        }
         char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
         for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
         {
-            *geno = m_genotype_files[file_idx][byte_pos + i];
+            *geno = cur_map[byte_pos + i];
             ++geno;
         }
         if (m_unfiltered_sample_ct == m_founder_ct)
@@ -100,7 +112,8 @@ protected:
         {
             copy_quaterarr_nonempty_subset(
                 m_tmp_genotype.data(), m_founder_info.data(),
-                m_unfiltered_sample_ct, m_founder_ct, genotype);
+                static_cast<uint32_t>(m_unfiltered_sample_ct),
+                static_cast<uint32_t>(m_founder_ct), genotype);
         }
         else
         {

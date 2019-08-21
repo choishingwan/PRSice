@@ -318,12 +318,22 @@ void BinaryPlink::calc_freq_gen_inter(
             cur_file_idx = snp.file_index();
             byte_pos = snp.byte_pos();
         }
+        auto&& cur_map = m_genotype_files[cur_file_idx];
+        const unsigned long long max_file_size = cur_map.mapped_length();
 
         // read in the genotype information to the genotype vector
+        if (byte_pos + unfiltered_sample_ct4 > max_file_size)
+        {
+            std::string error_message =
+                "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
+                + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                + misc::to_string(max_file_size);
+            throw std::runtime_error(error_message);
+        }
         char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
         for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
         {
-            *geno = m_genotype_files[cur_file_idx][byte_pos + i];
+            *geno = cur_map[byte_pos + i];
             ++geno;
         }
         // calculate the MAF using PLINK2 function
@@ -864,7 +874,7 @@ void BinaryPlink::read_score(
         // be next to each other
         cur_line = cur_snp.byte_pos();
 
-        const size_t max_file_size = cur_map.mapped_length();
+        const unsigned long long max_file_size = cur_map.mapped_length();
         // we now read the genotype from the file by calling
         // load_and_collapse_incl
         // important point to note here is the use of m_sample_include and
@@ -872,7 +882,7 @@ void BinaryPlink::read_score(
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
 
-        if (cur_line + unfiltered_sample_ct4 >= max_file_size)
+        if (cur_line + unfiltered_sample_ct4 > max_file_size)
         {
             std::string error_message =
                 "Erorr: Reading out of bound: " + misc::to_string(cur_line)

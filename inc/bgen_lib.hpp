@@ -446,6 +446,12 @@ namespace bgen
                                     const unsigned long long idx)
     {
         byte_t buffer[sizeof(IntegerType)];
+        const unsigned long long max_file_size = in_stream.mapped_length();
+        if (sizeof(IntegerType) + idx > max_file_size)
+        {
+            std::string error_message = "Erorr: BGEN reading out of bound";
+            throw std::runtime_error(error_message);
+        }
         char* buf = reinterpret_cast<char*>(buffer);
         for (unsigned long long i = 0; i < sizeof(IntegerType); ++i)
         {

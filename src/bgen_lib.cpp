@@ -386,6 +386,12 @@ namespace bgen
             payload_size = 6 * context.number_of_samples;
         }
         buffer->resize(payload_size);
+        const unsigned long long max_file_size = aStream.mapped_length();
+        if (payload_size + idx > max_file_size)
+        {
+            std::string error_message = "Erorr: BGEN reading out of bound";
+            throw std::runtime_error(error_message);
+        }
         char* buf = reinterpret_cast<char*>(&(*buffer)[0]);
         for (unsigned long long i = 0; i < payload_size; ++i)
         {

@@ -120,8 +120,18 @@ private:
             // intermediate, which is a binary plink format. Therefore we can
             // directly read in the binary data to genotype, this should already
             // be well formated when we write it into the file
-            char* geno = reinterpret_cast<char*>(genotype);
             auto&& cur_map = m_genotype_files[file_idx];
+            const unsigned long long max_file_size = cur_map.mapped_length();
+            // read in the genotype information to the genotype vector
+            if (byte_pos + unfiltered_sample_ct4 > max_file_size)
+            {
+                std::string error_message =
+                    "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
+                    + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                    + misc::to_string(max_file_size);
+                throw std::runtime_error(error_message);
+            }
+            char* geno = reinterpret_cast<char*>(genotype);
             for (uintptr_t i = 0; i < unfiltered_sample_ct4; ++i)
             {
                 *geno = cur_map[byte_pos + i];

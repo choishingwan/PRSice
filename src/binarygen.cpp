@@ -1119,6 +1119,17 @@ void BinaryGen::hard_code_score(
                                   use_ref_maf))
         {
             // Have intermediate file and have the counts
+            const unsigned long long max_file_size =
+                cur_geno_file.mapped_length();
+            // read in the genotype information to the genotype vector
+            if (byte_pos + unfiltered_sample_ct4 > max_file_size)
+            {
+                std::string error_message =
+                    "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
+                    + " " + misc::to_string(unfiltered_sample_ct4) + " "
+                    + misc::to_string(max_file_size);
+                throw std::runtime_error(error_message);
+            }
             char* geno = reinterpret_cast<char*>(genotype.data());
             for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
             {
