@@ -106,7 +106,7 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
         uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
                    reinterpret_cast<Bytef const*>(begin), source_size);
     if (result != Z_OK)
-        throw std::runtime_error("Error: Cannot decomporess bgen zlib");
+        throw std::runtime_error("Error: Cannot decompress bgen zlib");
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
 }
@@ -397,7 +397,8 @@ namespace bgen
                                             Context const& context,
                                             Setter& setter,
                                             std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2);
+                                            std::vector<byte_t>* buffer2,
+                                            unsigned long long idx);
 }
 }
 
