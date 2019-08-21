@@ -378,24 +378,28 @@ namespace bgen
                                   const unsigned long long idx)
     {
         uint32_t payload_size = 0;
+        unsigned long long cur_idx = idx;
         if ((context.flags & e_Layout) == e_Layout2
             || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
-        { read_little_endian_integer(aStream, &payload_size, idx); }
+        {
+            read_little_endian_integer(aStream, &payload_size, cur_idx);
+            cur_idx += sizeof(payload_size);
+        }
         else
         {
             payload_size = 6 * context.number_of_samples;
         }
         buffer->resize(payload_size);
         const unsigned long long max_file_size = aStream.mapped_length();
-        if (payload_size + idx > max_file_size)
+        if (payload_size + cur_idx > max_file_size)
         {
             std::string error_message = "Erorr: BGEN reading out of bound";
             throw std::runtime_error(error_message);
         }
-        char* buf = reinterpret_cast<char*>(&(*buffer)[0]);
+        char* buf = reinterpret_cast<char*>(buffer->data());
         for (unsigned long long i = 0; i < payload_size; ++i)
         {
-            *buf = aStream[idx + i];
+            *buf = aStream[cur_idx + i];
             ++buf;
         }
     }
