@@ -508,7 +508,7 @@ void BinaryGen::gen_snp_vector(
     std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     std::string error_message = "";
     std::string A1, A2, prefix;
-    unsigned long long byte_pos;
+    unsigned long long byte_pos, start, data_size;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
     size_t chr_num = 0;
@@ -570,6 +570,7 @@ void BinaryGen::gen_snp_vector(
                         bgen_name.c_str());
             }
             m_unfiltered_marker_ct++;
+            start = bgen_file.tellg();
             // directly use the library without decompressing the genotype
             read_snp_identifying_data(bgen_file, context, &SNPID, &RSID,
                                       &chromosome, &SNP_position, &A1, &A2);
@@ -657,6 +658,9 @@ void BinaryGen::gen_snp_vector(
             // read in the genotype data block so that we advance the ifstream
             // pointer to the next SNP entry
             read_genotype_data_block(bgen_file, context, &m_buffer1);
+            data_size =
+                static_cast<unsigned long long>(bgen_file.tellg()) - start;
+            if (data_size > m_data_size) { m_data_size = data_size; }
             // if we want to exclude this SNP, we will not perform
             // decompression
             if (!exclude_snp)
@@ -914,8 +918,8 @@ void BinaryGen::calc_freq_gen_inter(
         ++processed_count;
         // now read in the genotype information
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-            m_genotype_files[cur_file_idx], context, setter, &m_buffer1,
-            &m_buffer2, byte_pos);
+            m_genotype_file, m_genotype_file_names[cur_file_idx] + ".bgen",
+            context, setter, &m_buffer1, &m_buffer2, byte_pos);
         // no founder, much easier
         setter.get_count(ll_ct, lh_ct, hh_ct, missing);
         uii = ll_ct + lh_ct + hh_ct;
@@ -994,20 +998,23 @@ void BinaryGen::calc_freq_gen_inter(
                 if (hard_coded)
                 {
                     m_target_plink = true;
-                    snp.update_target(m_genotype_files.size(), tmp_byte_pos);
+                    snp.update_target(m_genotype_file_names.size(),
+                                      tmp_byte_pos);
                 }
                 if (!m_expect_reference)
                 {
                     // we don't have reference
                     m_ref_plink = true;
-                    snp.update_reference(m_genotype_files.size(), tmp_byte_pos);
+                    snp.update_reference(m_genotype_file_names.size(),
+                                         tmp_byte_pos);
                 }
             }
             else
             {
                 // this is the reference file
                 m_ref_plink = true;
-                snp.update_reference(m_genotype_files.size(), tmp_byte_pos);
+                snp.update_reference(m_genotype_file_names.size(),
+                                     tmp_byte_pos);
             }
         }
     }
@@ -1015,10 +1022,7 @@ void BinaryGen::calc_freq_gen_inter(
         && (m_is_ref || !m_expect_reference || (!m_is_ref && m_hard_coded)))
     { // update our genotype file
         inter_out.close();
-        m_genotype_files.push_back(mio::mmap_source());
-        std::error_code error;
-        m_genotype_files.back().map(m_intermediate_file, error);
-        if (error) { throw std::runtime_error(error.message()); }
+        m_genotype_file_names.push_back(m_intermediate_file);
     }
     fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%\n", 100.0);
     // now update the vector
@@ -1061,8 +1065,8 @@ void BinaryGen::dosage_score(
 
         // start performing the parsing
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
-            m_genotype_files[snp.file_index()], context, setter, &m_buffer1,
-            &m_buffer2, snp.byte_pos());
+            m_genotype_file, m_genotype_file_names[snp.file_index()] + ".bgen",
+            context, setter, &m_buffer1, &m_buffer2, snp.byte_pos());
         // check if this SNP has some non-missing sample, if not, invalidate
         // it
         // after reading in this SNP, we no longer need to reset the PRS
@@ -1114,29 +1118,20 @@ void BinaryGen::hard_code_score(
         // if it has the intermediate file, then we should have already
         // calculated the counts
         byte_pos = cur_snp.byte_pos();
-        auto&& cur_geno_file = m_genotype_files[cur_snp.file_index()];
+
+        auto&& file_name = m_genotype_file_names[cur_snp.file_index()];
         if (m_intermediate
             && cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                   use_ref_maf))
         {
             // Have intermediate file and have the counts
-            const unsigned long long max_file_size =
-                cur_geno_file.mapped_length();
+            if (!m_genotype_file.mem_calculated())
+            {
+                m_genotype_file.init_memory_map(m_allowed_memory, m_data_size);
+            }
             // read in the genotype information to the genotype vector
-            if (byte_pos + unfiltered_sample_ct4 > max_file_size)
-            {
-                std::string error_message =
-                    "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
-                    + " " + misc::to_string(unfiltered_sample_ct4) + " "
-                    + misc::to_string(max_file_size);
-                throw std::runtime_error(error_message);
-            }
-            char* geno = reinterpret_cast<char*>(genotype.data());
-            for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
-            {
-                *geno = cur_geno_file[byte_pos + i];
-                ++geno;
-            }
+            m_genotype_file.read(file_name, byte_pos, unfiltered_sample_ct4,
+                                 reinterpret_cast<char*>(genotype.data()));
         }
         else if (m_intermediate)
         {
@@ -1149,8 +1144,8 @@ void BinaryGen::hard_code_score(
             context = m_context_map[cur_snp.file_index()];
             // start performing the parsing
             genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-                cur_geno_file, context, setter, &m_buffer1, &m_buffer2,
-                byte_pos);
+                m_genotype_file, file_name + ".bgen", context, setter,
+                &m_buffer1, &m_buffer2, byte_pos);
             setter.get_count(homcom_ct, het_ct, homrar_ct, missing_ct);
         }
         // TODO: if we haven't got the count from the genotype matrix, we will

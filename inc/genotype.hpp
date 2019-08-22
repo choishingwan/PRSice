@@ -412,8 +412,6 @@ public:
         const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
         const size_t num_sets, const bool genome_wide_background);
 
-    virtual void init_mmap(const unsigned long long&) {}
-
 protected:
     // friend with all child class so that they can also access the
     // protected elements

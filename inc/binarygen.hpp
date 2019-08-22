@@ -41,16 +41,7 @@ public:
               const bool ignore_fid, const bool keep_nonfounder,
               const bool keep_ambig, const bool is_ref, Reporter* reporter);
     ~BinaryGen();
-    void init_mmap()
-    {
-        m_genotype_files.resize(m_genotype_file_names.size());
-        std::error_code error;
-        for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
-        {
-            m_genotype_files[i].map(m_genotype_file_names[i] + ".bgen", error);
-            if (error) { throw std::runtime_error(error.message()); }
-        }
-    }
+    void init_mmap(const unsigned long long&) {}
 
 private:
     typedef std::vector<std::vector<double>> Data;
@@ -58,6 +49,7 @@ private:
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::string m_intermediate_file;
     std::string m_id_delim;
+    unsigned long long m_data_size = 0;
     bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -114,29 +106,18 @@ private:
     {
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
+        if (!m_genotype_file.mem_calculated())
+        { m_genotype_file.init_memory_map(m_allowed_memory, m_data_size); }
         if (m_ref_plink)
         {
             // when m_ref_plink is set, it suggest we are using the
             // intermediate, which is a binary plink format. Therefore we can
             // directly read in the binary data to genotype, this should already
             // be well formated when we write it into the file
-            auto&& cur_map = m_genotype_files[file_idx];
-            const unsigned long long max_file_size = cur_map.mapped_length();
-            // read in the genotype information to the genotype vector
-            if (byte_pos + unfiltered_sample_ct4 > max_file_size)
-            {
-                std::string error_message =
-                    "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
-                    + " " + misc::to_string(unfiltered_sample_ct4) + " "
-                    + misc::to_string(max_file_size);
-                throw std::runtime_error(error_message);
-            }
-            char* geno = reinterpret_cast<char*>(genotype);
-            for (uintptr_t i = 0; i < unfiltered_sample_ct4; ++i)
-            {
-                *geno = cur_map[byte_pos + i];
-                ++geno;
-            }
+            // intermediate file, so don't need .bgen
+            std::string file_name = m_genotype_file_names[file_idx];
+            m_genotype_file.read(file_name, byte_pos, unfiltered_sample_ct4,
+                                 reinterpret_cast<char*>(genotype));
             // m_bgen_file.read((char*) genotype, unfiltered_sample_ct4);
             // update the location to previous location
         }
@@ -191,8 +172,10 @@ private:
         // such that it will always call .sample_completed() when finish
         // reading each sample. This allow for a more elegant implementation
         // on our side
+        std::string file_name = m_genotype_file_names[file_idx] + ".bgen";
+        // WARNING: Problem here
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-            m_genotype_files[file_idx], context, setter, &m_buffer1, &m_buffer2,
+            m_genotype_file, file_name, context, setter, &m_buffer1, &m_buffer2,
             byte_pos);
         // output from load_raw should have already copied all samples
         // to the front without the need of subseting
