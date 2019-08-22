@@ -1092,17 +1092,21 @@ void basic_mmap<AccessMode, ByteT>::map(const handle_type handle,
 
     const auto file_size = detail::query_file_size(handle, error);
     if (error) { return; }
-
-    if (offset + length > file_size)
-    {
-        error = std::make_error_code(std::errc::invalid_argument);
-        return;
-    }
-
+    /*
+        if (offset + length > file_size)
+        {
+            error = std::make_error_code(std::errc::invalid_argument);
+            return;
+        }
+    */
+    // SAM: Instead of emitting an error, update length to valid number
+    size_type valid_length = length;
+    if (offset + valid_length > file_size)
+    { valid_length = file_size - offset; }
     const auto ctx = detail::memory_map(
         handle, offset,
-        length == map_entire_file ? (file_size - offset) : length, AccessMode,
-        error);
+        length == map_entire_file ? (file_size - offset) : valid_length,
+        AccessMode, error);
     if (!error)
     {
         // We must unmap the previous mapping that may have existed prior to
