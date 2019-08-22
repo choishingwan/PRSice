@@ -319,11 +319,12 @@ public:
      * \param detected should be the available memory
      * \return Maximum memory we can use
      */
-    size_t max_memory(const size_t detected) const
+    unsigned long long max_memory(const unsigned long long detected) const
     {
         return (!m_provided_memory || m_memory > detected) ? detected
                                                            : m_memory;
     }
+    unsigned long long memory() const { return m_memory; }
     /*!
      * \brief Return the full bar level
      * \return the vector containing the sorted bar levels
@@ -672,8 +673,8 @@ private:
     double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
+    unsigned long long m_memory = 1e10;
     size_t m_clump_distance = 250000;
-    size_t m_memory = 0;
     size_t m_permutation = 0;
     size_t m_set_perm = 0;
     size_t m_window_5 = 0;
@@ -1211,7 +1212,7 @@ private:
         { error_messages.append("Warning: Duplicated argument --memory\n"); }
         try
         {
-            size_t memory = misc::convert<size_t>(input);
+            size_t memory = misc::convert<unsigned long long>(input);
             m_memory = memory;
         }
         catch (...)
@@ -1225,47 +1226,64 @@ private:
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
                     if (unit == "KB")
-                    { m_memory = misc::convert<size_t>(value) * 1024; }
+                    {
+                        m_memory =
+                            misc::convert<unsigned long long>(value) * 1024;
+                        message["memory"] = misc::to_string(value) + "KB";
+                    }
                     else if (unit == "MB")
                     {
-                        m_memory = misc::convert<size_t>(value) * 1024 * 1024;
+                        m_memory = misc::convert<unsigned long long>(value)
+                                   * 1024 * 1024;
+                        message["memory"] = misc::to_string(value) + "MB";
                     }
                     else if (unit == "GB")
                     {
-                        m_memory =
-                            misc::convert<size_t>(value) * 1024 * 1024 * 1024;
+                        m_memory = misc::convert<unsigned long long>(value)
+                                   * 1024 * 1024 * 1024;
+                        message["memory"] = misc::to_string(value) + "GB";
                     }
                     else if (unit == "TB")
                     {
-                        m_memory = misc::convert<size_t>(value) * 1024 * 1024
-                                   * 1024 * 1024;
+                        m_memory = misc::convert<unsigned long long>(value)
+                                   * 1024 * 1024 * 1024 * 1024;
+                        message["memory"] = misc::to_string(value) + "TB";
                     }
                     else
                     {
                         // maybe only one input?
-                        unit = input.substr(in.length() - 1);
-                        value = input.substr(0, in.length() - 1);
+                        unit = in.substr(in.length() - 1);
+                        value = in.substr(0, in.length() - 1);
                         if (unit == "B")
-                        { m_memory = misc::convert<size_t>(value); }
+                        {
+                            m_memory = misc::convert<unsigned long long>(value);
+                            message["memory"] = misc::to_string(value) + "B";
+                        }
                         else if (unit == "K")
                         {
-                            m_memory = misc::convert<size_t>(value) * 1024;
+                            m_memory =
+                                misc::convert<unsigned long long>(value) * 1024;
+                            message["memory"] = misc::to_string(value) + "KB";
                         }
                         else if (unit == "M")
                         {
-                            m_memory =
-                                misc::convert<size_t>(value) * 1024 * 1024;
+                            m_memory = misc::convert<unsigned long long>(value)
+                                       * 1024 * 1024;
+                            message["memory"] = misc::to_string(value) + "MB";
                         }
                         else if (unit == "G")
                         {
-                            m_memory = misc::convert<size_t>(value) * 1024
-                                       * 1024 * 1024;
+                            m_memory = misc::convert<unsigned long long>(value)
+                                       * 1024 * 1024 * 1024;
+                            message["memory"] = misc::to_string(value) + "GB";
                         }
                         else if (unit == "T")
                         {
-                            m_memory = misc::convert<size_t>(value) * 1024
-                                       * 1024 * 1024 * 1024;
+                            m_memory = misc::convert<unsigned long long>(value)
+                                       * 1024 * 1024 * 1024 * 1024;
+                            message["memory"] = misc::to_string(value) + "TB";
                         }
+                        std::cerr << "New memory: " << m_memory << std::endl;
                     }
                 }
                 catch (...)
