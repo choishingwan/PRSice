@@ -872,7 +872,7 @@ void BinaryPlink::read_score(
         // for PRS
         if (!m_genotype_file.mem_calculated())
         {
-            m_genotype_file.init_memory_map(m_allowed_memory,
+            m_genotype_file.init_memory_map(g_allowed_memory,
                                             unfiltered_sample_ct4);
         }
         m_genotype_file.read(file_name, cur_line, unfiltered_sample_ct4,

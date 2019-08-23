@@ -98,10 +98,10 @@ public:
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, const std::string& delim,
                       bool verbose);
-    void set_memory(const unsigned long long& mem, const bool enable_mem)
+    static void set_memory(const unsigned long long& mem, const bool enable_mem)
     {
-        m_allowed_memory = mem;
-        if (enable_mem) { m_genotype_file.use_mmap(); }
+        g_allowed_memory = mem;
+        g_allow_mmap = enable_mem;
     }
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
@@ -466,7 +466,7 @@ protected:
     size_t m_num_info_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
-    unsigned long long m_allowed_memory = 1e10;
+    static unsigned long long g_allowed_memory;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -482,6 +482,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    static bool g_allow_mmap;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
     bool m_is_ref = false;
