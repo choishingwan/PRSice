@@ -73,7 +73,7 @@ int main(int argc, char* argv[])
             // initialize the target object using the factory
             target_file = factory.createGenotype(commander, reporter);
             target_file->set_memory(commander.memory(),
-                                    commander.disable_mmap());
+                                    commander.enable_mmap());
             // load base file into memory
             const std::string base_name = misc::remove_extension<std::string>(
                 misc::base_name<std::string>(commander.base_name()));
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
                 reference_file->set_memory(commander.memory(),
-                                           commander.disable_mmap());
+                                           commander.enable_mmap());
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
                 message.append(

@@ -84,6 +84,7 @@ public:
     }
     bool mem_calculated() const { return m_mem_calculated; }
     void no_mmap() { m_use_mmap = false; }
+    void use_mmap() { m_use_mmap = true; }
 
 private:
     std::ifstream m_input;
@@ -91,7 +92,7 @@ private:
     std::string m_file_name;
     unsigned long long m_offset;
     unsigned long long m_block_size;
-    bool m_use_mmap = true;
+    bool m_use_mmap = false;
     bool m_mem_calculated = false;
     // return true if we think mmap is useful
     bool calculate_block_size(const unsigned long long& mem,
