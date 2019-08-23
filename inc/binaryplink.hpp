@@ -47,15 +47,16 @@ public:
                 const bool is_ref, Reporter* reporter);
     BinaryPlink() {}
     ~BinaryPlink();
-    void init_mmap()
+    void init_mmap(const unsigned long long& mem)
     {
+        /*
         m_genotype_files.resize(m_genotype_file_names.size());
         std::error_code error;
         for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
         {
             m_genotype_files[i].map(m_genotype_file_names[i] + ".bed", error);
             if (error) { throw std::runtime_error(error.message()); }
-        }
+        }*/
     }
 
 protected:
@@ -88,29 +89,26 @@ protected:
         assert(unfiltered_sample_ct);
         // if we don't perform selection, we can directly perform the read on
         // the mainbuf
-        auto&& cur_map = m_genotype_files[file_idx];
-        const unsigned long long max_file_size = cur_map.mapped_length();
 
-        // read in the genotype information to the genotype vector
-        if (byte_pos + unfiltered_sample_ct4 > max_file_size)
+        // auto&& cur_map = m_genotype_files[file_idx];
+        if (!m_genotype_file.mem_calculated())
         {
-            std::string error_message =
-                "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
-                + " " + misc::to_string(unfiltered_sample_ct4) + " "
-                + misc::to_string(max_file_size);
-            throw std::runtime_error(error_message);
+            m_genotype_file.init_memory_map(m_allowed_memory,
+                                            unfiltered_sample_ct4);
         }
-        char* geno;
+        // m_genotype_file.no_mmap();
         if (m_unfiltered_sample_ct == m_founder_ct)
-        { geno = reinterpret_cast<char*>(genotype); }
+        {
+            m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed",
+                                 byte_pos, unfiltered_sample_ct4,
+                                 reinterpret_cast<char*>(genotype));
+        }
         else
         {
-            geno = reinterpret_cast<char*>(m_tmp_genotype.data());
-        }
-        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
-        {
-            *geno = cur_map[byte_pos + i];
-            ++geno;
+            m_genotype_file.read(
+                m_genotype_file_names[file_idx] + ".bed", byte_pos,
+                unfiltered_sample_ct4,
+                reinterpret_cast<char*>(m_tmp_genotype.data()));
         }
         if (m_unfiltered_sample_ct != m_founder_ct)
         {

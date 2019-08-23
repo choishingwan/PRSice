@@ -7,13 +7,13 @@
 #ifndef BGEN_REFERENCE_IMPLEMENTATION_HPP
 #define BGEN_REFERENCE_IMPLEMENTATION_HPP
 
+#include "memoryread.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <limits>
-#include <mio.hpp>
 #include <stdexcept>
 #include <stdint.h>
 #include <vector>
@@ -299,7 +299,8 @@ namespace bgen
     // appear in the buffer).
     void read_genotype_data_block(std::istream& aStream, Context const& context,
                                   std::vector<byte_t>* buffer1);
-    void read_genotype_data_block(mio::mmap_source& aStream,
+    void read_genotype_data_block(MemoryRead& aStream,
+                                  const std::string& file_name,
                                   Context const& context,
                                   std::vector<byte_t>* buffer1,
                                   const unsigned long long idx);
@@ -393,12 +394,10 @@ namespace bgen
                                             std::vector<byte_t>* buffer1,
                                             std::vector<byte_t>* buffer2);
     template <typename Setter>
-    void read_and_parse_genotype_data_block(mio::mmap_source& aStream,
-                                            Context const& context,
-                                            Setter& setter,
-                                            std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2,
-                                            unsigned long long idx);
+    void read_and_parse_genotype_data_block(
+        MemoryRead& aStream, const std::string& file_name,
+        Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
+        std::vector<byte_t>* buffer2, unsigned long long idx);
 }
 }
 
@@ -442,23 +441,14 @@ namespace bgen
                                    integer_ptr);
     }
     template <typename IntegerType>
-    void read_little_endian_integer(mio::mmap_source& in_stream,
+    void read_little_endian_integer(MemoryRead& in_stream,
+                                    const std::string& file_name,
                                     IntegerType* integer_ptr,
                                     const unsigned long long idx)
     {
         byte_t buffer[sizeof(IntegerType)];
-        const unsigned long long max_file_size = in_stream.mapped_length();
-        if (sizeof(IntegerType) + idx > max_file_size)
-        {
-            std::string error_message = "Erorr: BGEN reading out of bound";
-            throw std::runtime_error(error_message);
-        }
-        char* buf = reinterpret_cast<char*>(buffer);
-        for (unsigned long long i = 0; i < sizeof(IntegerType); ++i)
-        {
-            *buf = in_stream[idx + i];
-            ++buf;
-        }
+        in_stream.read(file_name, idx, sizeof(IntegerType),
+                       reinterpret_cast<char*>(buffer));
         // if (!in_stream) { throw BGenError(); }
         read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
                                    integer_ptr);
@@ -1520,14 +1510,12 @@ namespace bgen
                                context, setter);
     }
     template <typename Setter>
-    void read_and_parse_genotype_data_block(mio::mmap_source& aStream,
-                                            Context const& context,
-                                            Setter& setter,
-                                            std::vector<byte_t>* buffer1,
-                                            std::vector<byte_t>* buffer2,
-                                            const unsigned long long idx)
+    void read_and_parse_genotype_data_block(
+        MemoryRead& aStream, const std::string& file_name,
+        Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
+        std::vector<byte_t>* buffer2, const unsigned long long idx)
     {
-        read_genotype_data_block(aStream, context, buffer1, idx);
+        read_genotype_data_block(aStream, file_name, context, buffer1, idx);
         uncompress_probability_data(context, *buffer1, buffer2);
         parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
                                context, setter);

@@ -34,6 +34,7 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <memoryread.hpp>
 #include <mio.hpp>
 #include <random>
 #include <string>
@@ -97,7 +98,7 @@ public:
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, const std::string& delim,
                       bool verbose);
-
+    void set_memory(const unsigned long long& mem) { m_allowed_memory = mem; }
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
     // us to do the regional filtering. However, as exclusion and extractions
@@ -411,8 +412,6 @@ public:
         const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
         const size_t num_sets, const bool genome_wide_background);
 
-    virtual void init_mmap() {}
-
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -420,6 +419,7 @@ protected:
     friend class BinaryGen;
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
+    MemoryRead m_genotype_file;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
@@ -462,6 +462,7 @@ protected:
     size_t m_num_info_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
+    unsigned long long m_allowed_memory = 1e10;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
@@ -487,6 +488,7 @@ protected:
     bool m_hard_coded = false;
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
+    bool m_memory_initialized = false;
     Reporter* m_reporter;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;

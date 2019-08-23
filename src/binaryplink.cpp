@@ -859,43 +859,26 @@ void BinaryPlink::read_score(
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     unsigned long long cur_line;
     size_t cur_file_idx;
+    std::string file_name;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
         cur_file_idx = cur_snp.file_index();
-        auto&& cur_map = m_genotype_files[cur_file_idx];
-        /*
-                if (m_cur_file != cur_snp.file_name())
-                { update_bed(cur_snp.file_name()); }
-        */
-        // current location of the snp in the bed file
-        // allow for quick jumping
-        // very useful for read score as most SNPs might not
-        // be next to each other
+        file_name = m_genotype_file_names[cur_snp.file_index()] + ".bed";
         cur_line = cur_snp.byte_pos();
-
-        const unsigned long long max_file_size = cur_map.mapped_length();
         // we now read the genotype from the file by calling
         // load_and_collapse_incl
         // important point to note here is the use of m_sample_include and
         // m_sample_ct instead of using the m_founder m_founder_info as the
         // founder vector is for LD calculation whereas the sample_include is
         // for PRS
-
-        if (cur_line + unfiltered_sample_ct4 > max_file_size)
+        if (!m_genotype_file.mem_calculated())
         {
-            std::string error_message =
-                "Erorr: Reading out of bound: " + misc::to_string(cur_line)
-                + " " + misc::to_string(unfiltered_sample_ct4) + " "
-                + misc::to_string(max_file_size);
-            throw std::runtime_error(error_message);
+            m_genotype_file.init_memory_map(m_allowed_memory,
+                                            unfiltered_sample_ct4);
         }
-        char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
-        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
-        {
-            *geno = cur_map[cur_line + i];
-            ++geno;
-        }
+        m_genotype_file.read(file_name, cur_line, unfiltered_sample_ct4,
+                             reinterpret_cast<char*>(m_tmp_genotype.data()));
         if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                 use_ref_maf))
         {

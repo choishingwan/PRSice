@@ -372,7 +372,8 @@ namespace bgen
         buffer->resize(payload_size);
         aStream.read(reinterpret_cast<char*>(&(*buffer)[0]), payload_size);
     }
-    void read_genotype_data_block(mio::mmap_source& aStream,
+    void read_genotype_data_block(MemoryRead& aStream,
+                                  const std::string& file_name,
                                   Context const& context,
                                   std::vector<byte_t>* buffer,
                                   const unsigned long long idx)
@@ -382,7 +383,7 @@ namespace bgen
         if ((context.flags & e_Layout) == e_Layout2
             || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
         {
-            read_little_endian_integer(aStream, &payload_size, idx);
+            read_little_endian_integer(aStream, file_name, &payload_size, idx);
             cur_idx += sizeof(payload_size);
         }
         else
@@ -390,18 +391,8 @@ namespace bgen
             payload_size = 6 * context.number_of_samples;
         }
         buffer->resize(payload_size);
-        const unsigned long long max_file_size = aStream.mapped_length();
-        if (payload_size + cur_idx > max_file_size)
-        {
-            std::string error_message = "Erorr: BGEN reading out of bound";
-            throw std::runtime_error(error_message);
-        }
-        char* buf = reinterpret_cast<char*>(buffer->data());
-        for (unsigned long long i = 0; i < payload_size; ++i)
-        {
-            *buf = aStream[cur_idx + i];
-            ++buf;
-        }
+        aStream.read(file_name, cur_idx, payload_size,
+                     reinterpret_cast<char*>(buffer->data()));
     }
 
     void uncompress_probability_data(Context const& context,

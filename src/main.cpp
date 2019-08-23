@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
         {
             // initialize the target object using the factory
             target_file = factory.createGenotype(commander, reporter);
+            target_file->set_memory(commander.memory());
             // load base file into memory
             const std::string base_name = misc::remove_extension<std::string>(
                 misc::base_name<std::string>(commander.base_name()));
@@ -111,7 +112,6 @@ int main(int argc, char* argv[])
             target_file->load_snps(commander.out(), exclusion_regions, verbose);
             // now load the reference file
             // initialize the memory map file
-            target_file->init_mmap();
             if (commander.use_ref()
                 && (!commander.no_clump() || commander.use_ref_maf()))
             {
@@ -119,6 +119,7 @@ int main(int argc, char* argv[])
                 reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
+                reference_file->set_memory(commander.memory());
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
                 message.append(
@@ -158,7 +159,6 @@ int main(int argc, char* argv[])
             bool has_ref_maf = false;
             if (init_ref)
             {
-                reference_file->init_mmap();
                 if (maf_filter || geno_filter || info_filter
                     || commander.use_inter())
                 {
