@@ -24,7 +24,8 @@ public:
             // will still be suboptimal for bgen unless we know exactly how many
             // byte each data span as a whole
             if (byte_pos >= (m_offset + m_block_size) || byte_pos < m_offset
-                || byte_pos - m_offset + read_size > m_block_size)
+                || byte_pos - m_offset + read_size
+                       > m_memory_map.mapped_length())
             {
                 // + byte_pos to account for possible useless bytes
                 m_offset = byte_pos;
@@ -42,12 +43,8 @@ public:
                 // for over-run is read_size > file size
                 throw std::runtime_error("Error: File read out of bound");
             }
-            char* read = result;
-            for (unsigned long long i = 0; i < read_size; ++i)
-            {
-                *read = m_memory_map[byte_pos - m_offset + i];
-                ++read;
-            }
+            std::copy(&m_memory_map[byte_pos - m_offset],
+                      &m_memory_map[byte_pos - m_offset + read_size], result);
         }
         else
         {
@@ -99,6 +96,14 @@ private:
                               const unsigned long long& data_size)
     {
         unsigned long long remain_mem = misc::remain_memory();
+        unsigned long long used_mem = misc::getCurrentRSS();
+        if (used_mem > mem)
+        {
+            std::cerr
+                << "Warning: Already used " << used_mem
+                << " byte of data. Will now used more memory than user allowed."
+                << std::endl;
+        }
         if (mem > remain_mem)
         {
             std::cerr << "Warning: Not enough memory left. Only " << remain_mem
