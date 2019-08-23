@@ -73,7 +73,7 @@ public:
         if(m_use_mmap){
             m_use_mmap = allow_mmap;
         }
-        if (!m_use_mmap)
+        if (!allow_mmap)
         {
             std::cerr << "Warning: Not enough memory for file mapping to be "
                          "worth it, will "
