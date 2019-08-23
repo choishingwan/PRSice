@@ -600,7 +600,7 @@ public:
      * \return True if non-founders should be included
      */
     bool nonfounders() const { return m_include_nonfounders; }
-
+    bool disable_mmap() const { return m_disable_mmap; }
     bool use_ref_maf() const { return m_use_ref_maf; }
     double ref_dose_thres() const { return m_ref_dose_thres; }
     double target_dose_thres() const { return m_target_dose_thres; }
@@ -686,6 +686,7 @@ private:
 
     int m_thread = 1;
     int m_allow_inter = false;
+    int m_disable_mmap = false;
     int m_fastscore = false;
     int m_full_background = false;
     int m_ignore_fid = false;

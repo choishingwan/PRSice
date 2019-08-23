@@ -69,7 +69,10 @@ public:
     void init_memory_map(const unsigned long long mem,
                          const unsigned long long& data_size)
     {
-        m_use_mmap = calculate_block_size(mem, data_size);
+        bool allow_mmap = calculate_block_size(mem, data_size);
+        if(m_use_mmap){
+            m_use_mmap = allow_mmap;
+        }
         if (!m_use_mmap)
         {
             std::cerr << "Warning: Not enough memory for file mapping to be "
@@ -88,7 +91,7 @@ private:
     std::string m_file_name;
     unsigned long long m_offset;
     unsigned long long m_block_size;
-    bool m_use_mmap = false;
+    bool m_use_mmap = true;
     bool m_mem_calculated = false;
     // return true if we think mmap is useful
     bool calculate_block_size(const unsigned long long& mem,
