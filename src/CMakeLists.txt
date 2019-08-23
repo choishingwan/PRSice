@@ -14,6 +14,7 @@ SET(prsice_header
     genotype.hpp
     genotypefactory.hpp
     glm.hpp
+    memoryread.hpp
     misc.hpp
     prsice.hpp
     region.hpp
