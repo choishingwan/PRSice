@@ -7,10 +7,12 @@
 #include <stdexcept>
 #include <string>
 
+// TODO: Might want to do some precomputation of the ideal offsets such that we
+// can minimize the number of time we do the mapping
 class MemoryRead
 {
 public:
-    MemoryRead(){}
+    MemoryRead() {}
     void read(const std::string& file, const unsigned long long& byte_pos,
               const unsigned long long read_size, char* result)
     {
@@ -70,9 +72,7 @@ public:
                          const unsigned long long& data_size)
     {
         bool allow_mmap = calculate_block_size(mem, data_size);
-        if(m_use_mmap){
-            m_use_mmap = allow_mmap;
-        }
+        if (m_use_mmap) { m_use_mmap = allow_mmap; }
         if (!allow_mmap)
         {
             std::cerr << "Warning: Not enough memory for file mapping to be "
@@ -119,6 +119,14 @@ private:
         {
             m_offset = byte_pos;
             std::error_code error;
+            auto&& file = mio::detail::open_file(m_file_name,
+                                                 mio::access_mode::read, error);
+            if (mio::detail::query_file_size(file, error) < byte_pos)
+            {
+                // when we have enough memory to read the whole file, do that
+                m_offset = 0;
+            }
+
             m_memory_map.map(m_file_name, m_offset, m_block_size, error);
             if (error)
             {
@@ -128,11 +136,9 @@ private:
         }
         else
         {
-            if(m_input.is_open()){
-                m_input.close();
-            }
+            if (m_input.is_open()) { m_input.close(); }
             m_input.clear();
-            m_input.open(m_file_name.c_str(),std::ios::binary);
+            m_input.open(m_file_name.c_str(), std::ios::binary);
             if (byte_pos != 0)
             {
                 if (!m_input.seekg(byte_pos, std::ios_base::beg))
