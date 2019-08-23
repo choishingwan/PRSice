@@ -118,8 +118,6 @@ private:
             std::string file_name = m_genotype_file_names[file_idx];
             m_genotype_file.read(file_name, byte_pos, unfiltered_sample_ct4,
                                  reinterpret_cast<char*>(genotype));
-            // m_bgen_file.read((char*) genotype, unfiltered_sample_ct4);
-            // update the location to previous location
         }
         // if not, we will try to parse the binary GEN format into a plink
         // format (using the default intermediate flag = false)

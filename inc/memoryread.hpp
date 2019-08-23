@@ -10,7 +10,7 @@
 class MemoryRead
 {
 public:
-    MemoryRead();
+    MemoryRead(){}
     void read(const std::string& file, const unsigned long long& byte_pos,
               const unsigned long long read_size, char* result)
     {
@@ -49,9 +49,20 @@ public:
         }
         else
         {
+            assert(m_input.is_open());
             if (byte_pos != m_offset)
-            { m_input.seekg(byte_pos, std::ios_base::beg); }
-            m_input.read(result, read_size);
+            {
+                if (!m_input.seekg(byte_pos, std::ios_base::beg))
+                {
+                    throw std::runtime_error("Error: Cannot seek within file: "
+                                             + m_file_name);
+                }
+            }
+            if (!m_input.read(result, read_size))
+            {
+                throw std::runtime_error("Error: Cannot read file: "
+                                         + m_file_name);
+            }
             m_offset = read_size + byte_pos;
         }
     }
@@ -61,7 +72,8 @@ public:
         m_use_mmap = calculate_block_size(mem, data_size);
         if (!m_use_mmap)
         {
-            std::cerr << "Warning: Not enough memory for file mapping, will "
+            std::cerr << "Warning: Not enough memory for file mapping to be "
+                         "worth it, will "
                          "fall back to traditional file read"
                       << std::endl;
         }
@@ -112,13 +124,19 @@ private:
         }
         else
         {
-            m_input.open(m_file_name.c_str());
-            if (!m_input.is_open())
-            {
-                throw std::runtime_error("Error: Cannot open file: "
-                                         + m_file_name);
+            if(m_input.is_open()){
+                m_input.close();
             }
-            if (byte_pos != 0) { m_input.seekg(byte_pos, std::ios_base::beg); }
+            m_input.clear();
+            m_input.open(m_file_name.c_str(),std::ios::binary);
+            if (byte_pos != 0)
+            {
+                if (!m_input.seekg(byte_pos, std::ios_base::beg))
+                {
+                    throw std::runtime_error("Error: Cannot seek within file: "
+                                             + m_file_name);
+                }
+            }
         }
     }
 };
