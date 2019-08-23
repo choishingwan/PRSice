@@ -98,7 +98,11 @@ public:
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, const std::string& delim,
                       bool verbose);
-    void set_memory(const unsigned long long& mem) { m_allowed_memory = mem; }
+    void set_memory(const unsigned long long& mem, const bool enable_mem)
+    {
+        m_allowed_memory = mem;
+        if (enable_mem) { m_genotype_file.use_mmap(); }
+    }
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
     // us to do the regional filtering. However, as exclusion and extractions

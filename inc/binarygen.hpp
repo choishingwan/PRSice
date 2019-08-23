@@ -41,7 +41,6 @@ public:
               const bool ignore_fid, const bool keep_nonfounder,
               const bool keep_ambig, const bool is_ref, Reporter* reporter);
     ~BinaryGen();
-    void init_mmap(const unsigned long long&) {}
 
 private:
     typedef std::vector<std::vector<double>> Data;

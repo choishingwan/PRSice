@@ -1159,7 +1159,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             static_cast<double>(i_snp) / static_cast<double>(num_snp) * 100;
         if (progress - prev_progress > 0.01)
         {
-            // fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+            fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
             prev_progress = progress;
         }
         // get the index on target.m_existed_snp to the i_th most significant

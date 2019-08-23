@@ -858,12 +858,10 @@ void BinaryPlink::read_score(
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     unsigned long long cur_line;
-    size_t cur_file_idx;
     std::string file_name;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        cur_file_idx = cur_snp.file_index();
         file_name = m_genotype_file_names[cur_snp.file_index()] + ".bed";
         cur_line = cur_snp.byte_pos();
         // we now read the genotype from the file by calling
