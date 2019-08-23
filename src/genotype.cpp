@@ -16,6 +16,8 @@
 
 #include "genotype.hpp"
 
+unsigned long long Genotype::g_allowed_memory = 1e10;
+bool Genotype::g_allow_mmap = false;
 void Genotype::build_clump_windows()
 {
     // should sort w.r.t reference

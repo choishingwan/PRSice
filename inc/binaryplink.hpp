@@ -82,7 +82,7 @@ protected:
         // auto&& cur_map = m_genotype_files[file_idx];
         if (!m_genotype_file.mem_calculated())
         {
-            m_genotype_file.init_memory_map(m_allowed_memory,
+            m_genotype_file.init_memory_map(g_allowed_memory,
                                             unfiltered_sample_ct4);
         }
         // m_genotype_file.no_mmap();

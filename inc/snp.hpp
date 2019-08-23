@@ -458,18 +458,10 @@ public:
     void invalid() { m_is_valid = false; }
 
 private:
-    // basic info
-    // actually, the packing of the data is problematic and to enhance
-    // performance we might want to organize the data into way where it is
-    // easier to "cache" also use data types that are more friendly?
     std::vector<uintptr_t> m_flags;
-    // for referencing the corresponding m_memory_bed / m_bed_file in
-    // binaryplink
     std::string m_alt;
     std::string m_ref;
     std::string m_rs;
-    // std::string m_target_file;
-    // std::string m_ref_file;
     unsigned long long m_target_byte_pos = 0;
     unsigned long long m_ref_byte_pos = 0;
     double m_stat = 0.0;
@@ -477,8 +469,6 @@ private:
     double m_p_threshold = 0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
-    int m_category = -1;
-
     size_t m_chr = ~size_t(0);
     size_t m_low_bound = ~size_t(0);
     size_t m_up_bound = ~size_t(0);
@@ -488,11 +478,13 @@ private:
     size_t m_homcom = 0;
     size_t m_het = 0;
     size_t m_homrar = 0;
+    size_t m_max_flag_index = 0;
     size_t m_missing = 0;
     size_t m_ref_homcom = 0;
     size_t m_ref_het = 0;
     size_t m_ref_homrar = 0;
     size_t m_ref_missing = 0;
+    int m_category = -1;
     bool m_has_count = false;
     bool m_has_ref_count = false;
     bool m_has_expected = false;
@@ -501,8 +493,6 @@ private:
     bool m_flipped = false;
     bool m_ref_flipped = false;
     bool m_is_valid = true;
-    // prset related
-    size_t m_max_flag_index = 0;
 
     inline std::string complement(const std::string& allele) const
     {

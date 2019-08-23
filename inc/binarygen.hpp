@@ -106,7 +106,7 @@ private:
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
         if (!m_genotype_file.mem_calculated())
-        { m_genotype_file.init_memory_map(m_allowed_memory, m_data_size); }
+        { m_genotype_file.init_memory_map(g_allowed_memory, m_data_size); }
         if (m_ref_plink)
         {
             // when m_ref_plink is set, it suggest we are using the

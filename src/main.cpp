@@ -51,6 +51,7 @@ int main(int argc, char* argv[])
         {
             return -1; // all error messages should have printed
         }
+        Genotype::set_memory(commander.memory(), commander.enable_mmap());
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
@@ -72,8 +73,6 @@ int main(int argc, char* argv[])
         {
             // initialize the target object using the factory
             target_file = factory.createGenotype(commander, reporter);
-            target_file->set_memory(commander.memory(),
-                                    commander.enable_mmap());
             // load base file into memory
             const std::string base_name = misc::remove_extension<std::string>(
                 misc::base_name<std::string>(commander.base_name()));
@@ -120,8 +119,6 @@ int main(int argc, char* argv[])
                 reporter.report(message);
                 reference_file =
                     factory.createGenotype(commander, reporter, true);
-                reference_file->set_memory(commander.memory(),
-                                           commander.enable_mmap());
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
                 message.append(

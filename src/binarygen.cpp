@@ -1127,7 +1127,7 @@ void BinaryGen::hard_code_score(
             // Have intermediate file and have the counts
             if (!m_genotype_file.mem_calculated())
             {
-                m_genotype_file.init_memory_map(m_allowed_memory, m_data_size);
+                m_genotype_file.init_memory_map(g_allowed_memory, m_data_size);
             }
             // read in the genotype information to the genotype vector
             m_genotype_file.read(file_name, byte_pos, unfiltered_sample_ct4,
