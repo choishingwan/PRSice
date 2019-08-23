@@ -121,7 +121,7 @@ private:
             std::error_code error;
             auto&& file = mio::detail::open_file(m_file_name,
                                                  mio::access_mode::read, error);
-            if (mio::detail::query_file_size(file, error) < byte_pos)
+            if (mio::detail::query_file_size(file, error) < m_block_size)
             {
                 // when we have enough memory to read the whole file, do that
                 m_offset = 0;
