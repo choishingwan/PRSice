@@ -47,17 +47,6 @@ public:
                 const bool is_ref, Reporter* reporter);
     BinaryPlink() {}
     ~BinaryPlink();
-    void init_mmap(const unsigned long long& mem)
-    {
-        /*
-        m_genotype_files.resize(m_genotype_file_names.size());
-        std::error_code error;
-        for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
-        {
-            m_genotype_files[i].map(m_genotype_file_names[i] + ".bed", error);
-            if (error) { throw std::runtime_error(error.message()); }
-        }*/
-    }
 
 protected:
     std::vector<uintptr_t> m_sample_mask;
