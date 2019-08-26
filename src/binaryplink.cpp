@@ -23,6 +23,7 @@ BinaryPlink::BinaryPlink(const std::string& file_list, const std::string& file,
                          const bool keep_nonfounder, const bool keep_ambig,
                          const bool is_ref, Reporter* reporter)
 {
+    if (g_allow_mmap) { m_genotype_file.use_mmap(); }
     m_thread = thread;
     m_ignore_fid = ignore_fid;
     m_keep_nonfounder = keep_nonfounder;

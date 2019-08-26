@@ -25,6 +25,7 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
                      const bool keep_nonfounder, const bool keep_ambig,
                      const bool is_ref, Reporter* reporter)
 {
+    if (g_allow_mmap) { m_genotype_file.use_mmap(); }
     m_intermediate = use_inter;
     m_thread = thread;
     m_ignore_fid = ignore_fid;
