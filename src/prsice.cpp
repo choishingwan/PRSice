@@ -282,12 +282,21 @@ void PRSice::update_sample_included(const std::string& delim, Genotype& target)
     // store the matrix sequentially and the m_matrix should still correspond to
     // the phenotype vector and covariance matrix's order correctly
     m_matrix_index.clear();
-    size_t fid_length, iid_length;
+    long long fid_length, iid_length;
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
     {
         // got through each sample
-        fid_length = target.fid(i_sample).length();
-        iid_length = target.iid(i_sample).length();
+        // will be problematic if the fid and iid are too long
+        if (target.fid(i_sample).length()
+                > std::numeric_limits<long long>::max()
+            || target.iid(i_sample).length()
+                   > std::numeric_limits<long long>::max())
+        {
+            throw std::runtime_error(
+                "Error: FID / IID are pathologically long");
+        }
+        fid_length = static_cast<long long>(target.fid(i_sample).length());
+        iid_length = static_cast<long long>(target.iid(i_sample).length());
         if (m_max_fid_length < fid_length) m_max_fid_length = fid_length;
         if (m_max_iid_length < iid_length) m_max_iid_length = iid_length;
         // update the in regression flag according to covariate
@@ -1046,12 +1055,14 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
                 // we will calculate the the number of white space we need to
                 // skip to reach the current sample + threshold's output
                 // position
-                size_t loc = m_all_file.header_length
-                             + sample * (m_all_file.line_width + NEXT_LENGTH)
-                             + NEXT_LENGTH + m_all_file.skip_column_length
-                             + m_all_file.processed_threshold
-                             + m_all_file.processed_threshold * m_numeric_width;
-                m_all_out.seekp(static_cast<long long>(loc));
+                long long loc =
+                    m_all_file.header_length
+                    + static_cast<long long>(sample)
+                          * (m_all_file.line_width + NEXT_LENGTH)
+                    + NEXT_LENGTH + m_all_file.skip_column_length
+                    + m_all_file.processed_threshold
+                    + m_all_file.processed_threshold * m_numeric_width;
+                m_all_out.seekp(loc);
                 // then we will output the score
                 m_all_out << std::setprecision(static_cast<int>(m_precision))
                           << target.calculate_score(m_score, sample);
@@ -1100,6 +1111,7 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
         pheno_name = m_pheno_info.name[pheno_index];
     std::string output_prefix = commander.out();
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
+    output_prefix.append(".best");
     // we generate one best score file per phenotype. The reason for this is to
     // not make the best score file too big, and because each phenotype might
     // have different set of sample included in the regression due to
@@ -1115,16 +1127,44 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
     }
     else
     {
-        for (size_t sample = 0; sample < target.num_sample(); ++sample)
+        if (!m_quick_best)
         {
-            size_t loc = m_best_file.header_length
-                         + sample * (m_best_file.line_width + NEXT_LENGTH)
-                         + NEXT_LENGTH + m_best_file.skip_column_length
-                         + m_best_file.processed_threshold
-                         + m_best_file.processed_threshold * m_numeric_width;
-            m_best_out.seekp(static_cast<long long>(loc));
-            m_best_out << std::setprecision(static_cast<int>(m_precision))
-                       << m_best_sample_score[sample];
+            for (size_t sample = 0; sample < target.num_sample(); ++sample)
+            {
+                long long loc =
+                    m_best_file.header_length
+                    + static_cast<long long>(sample)
+                          * (m_best_file.line_width + NEXT_LENGTH)
+                    + NEXT_LENGTH + m_best_file.skip_column_length
+                    + m_best_file.processed_threshold
+                    + m_best_file.processed_threshold * m_numeric_width;
+                m_best_out.seekp(loc);
+                m_best_out << std::setprecision(static_cast<int>(m_precision))
+                           << m_best_sample_score[sample];
+            }
+        }
+        else
+        {
+            m_best_out.close();
+            m_best_out.clear();
+            m_best_out.open(output_prefix.c_str());
+            if (!m_best_out.is_open())
+            {
+                throw std::runtime_error(
+                    "Error: Cannot open best file for output: "
+                    + output_prefix);
+            }
+            m_best_out << "FID IID In_Regression PRS" << std::endl;
+            for (size_t sample = 0; sample < target.num_sample(); ++sample)
+            {
+                m_best_out << target.fid(sample) << " " << target.iid(sample)
+                           << " "
+                           << ((target.sample_in_regression(sample)) ? "Yes"
+                                                                     : "No")
+                           << " " << m_best_sample_score[sample] << "\n";
+            }
+            // can just close it as we assume we only need to do it once.
+            m_best_out.close();
         }
     }
     // once we finish outputing the result, we need to increment the
@@ -1524,7 +1564,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // higher to ensure we use up all precision
     std::string pheno_name = "";
     if (m_pheno_info.name.size() > 1)
-        pheno_name = m_pheno_info.name[static_cast<size_t>(pheno_index)];
+        pheno_name = m_pheno_info.name[pheno_index];
     std::string output_prefix = out;
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
     const std::string output_name = output_prefix;
@@ -1533,7 +1573,12 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // generate it once
     const std::string out_all = out + ".all.score";
     const std::string out_best = output_name + ".best";
-
+    const long long num_region = static_cast<long long>(region_name.size());
+    if (region_name.size() > std::numeric_limits<long long>::max())
+    {
+        throw std::runtime_error("Error: Too many regions, will cause integer "
+                                 "overflow when generating the best file");
+    }
     // .prsice output
     // we only need to generate the header for it
     if (!no_regress)
@@ -1567,43 +1612,44 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             header_line.append(" PRS");
         else
         {
-            for (size_t i = 0; i < region_name.size(); ++i)
+            for (long long i = 0; i < num_region; ++i)
             {
                 if (i == 1) continue;
-                header_line.append(" " + region_name[i]);
+                header_line.append(" " + region_name[static_cast<size_t>(i)]);
             }
+            m_quick_best = num_region > 2;
         }
         // the safetest way to calculate the length we need to speed is to
         // directly count the number of byte involved
-        const auto begin_byte = m_best_out.tellp();
+        const long long begin_byte = m_best_out.tellp();
         m_best_out << header_line << "\n";
-        const auto end_byte = m_best_out.tellp();
+        const long long end_byte = m_best_out.tellp();
         // we now know the exact number of byte the header contain and can
         // correctly skip it acordingly
         assert(end_byte >= begin_byte);
-        m_best_file.header_length = static_cast<size_t>(end_byte - begin_byte);
+        m_best_file.header_length = end_byte - begin_byte;
         // we will set the processed_threshold information to 0
         m_best_file.processed_threshold = 0;
 
         // each numeric output took 12 spaces, then for each output, there is
         // one space next to each
         m_best_file.line_width =
-            m_max_fid_length /* FID */ + 1       /* space */
-            + m_max_iid_length                   /* IID */
-            + 1 /* space */ + 3 /* Yes/No */ + 1 /* space */
-            + region_name.size()                 /* each region */
-                  * (m_numeric_width + 1 /* space */)
-            + 1 /* new line */;
+            m_max_fid_length /* FID */ + 1LL           /* space */
+            + m_max_iid_length                         /* IID */
+            + 1LL /* space */ + 3LL /* Yes/No */ + 1LL /* space */
+            + num_region                               /* each region */
+                  * (m_numeric_width + 1LL /* space */)
+            + 1LL /* new line */;
 
         m_best_file.skip_column_length =
-            m_max_fid_length + 1 + m_max_iid_length + 1 + 3 + 1;
+            m_max_fid_length + 1LL + m_max_iid_length + 1LL + 3LL + 1LL;
     }
 
     // also handle all score here
     // but we will only try and generate the all score file when we are dealing
     // with the first phenotype (pheno_index == 0)
     const bool all_scores = all_score && !pheno_index;
-    const bool print_background = (region_name.size() != 2);
+    const bool print_background = (num_region != 2);
     if (all_scores)
     {
         m_all_out.open(out_all.c_str());
@@ -1620,8 +1666,21 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // SNPs from the smaller threshold to the highest (therefore, the
         // processed_threshold index should be correct)
         std::sort(avail_thresholds.begin(), avail_thresholds.end());
-        const size_t num_thresholds = avail_thresholds.size();
-        const auto begin_byte = m_all_out.tellp();
+        if (avail_thresholds.size() > std::numeric_limits<long long>::max())
+        {
+            throw std::runtime_error("Error: Number of thresholds is too high, "
+                                     "will cause integer overflow");
+        }
+        const long long num_thresholds =
+            static_cast<long long>(avail_thresholds.size());
+        const long long begin_byte = m_all_out.tellp();
+        if (region_name.size() * avail_thresholds.size()
+            > std::numeric_limits<long long>::max())
+        {
+            throw std::runtime_error(
+                "Error: Too many combinations of number of regions and number "
+                "of thresholds, will cause integer overflow.");
+        }
         m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
         if (!m_perform_prset)
@@ -1637,16 +1696,18 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             }
         }
         m_all_out << "\n";
-        const auto end_byte = m_all_out.tellp();
+        const long long end_byte = m_all_out.tellp();
         // if the line is too long, we might encounter overflow
         assert(end_byte >= begin_byte);
-        m_all_file.header_length = static_cast<size_t>(end_byte - begin_byte);
+        m_all_file.header_length = end_byte - begin_byte;
         m_all_file.processed_threshold = 0;
-        m_all_file.line_width = m_max_fid_length + 1 + m_max_iid_length + 1
-                                + num_thresholds
-                                      * (region_name.size() - !print_background)
-                                      * (m_numeric_width + 1)
-                                + 1;
+        m_all_file.line_width =
+            m_max_fid_length + 1LL + m_max_iid_length + 1LL
+            + num_thresholds
+                  * (static_cast<long long>(region_name.size())
+                     - !print_background)
+                  * (m_numeric_width + 1LL)
+            + 1LL;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
     }
 
@@ -1660,7 +1721,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // when we print the best file, we want to also print whether the sample
         // is used in regression or not (so that user can easily reproduce their
         // results)
-        if (!no_regress)
+        if (!no_regress && !m_quick_best)
         {
             best_line =
                 name + " "
@@ -1681,8 +1742,8 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     }
 
     // another one spacing for new line (just to be safe)
-    m_all_file.line_width++;
-    m_best_file.line_width++;
+    ++m_all_file.line_width;
+    ++m_best_file.line_width;
     // don't need to close the files as they will automatically be closed when
     // we move out of the function
 }

@@ -54,10 +54,10 @@
 //#define THREAD_RET_TYPE unsigned __stdcall
 //#define THREAD_RETURN return 0
 // we give an extra space for window just in case
-#define NEXT_LENGTH 1
+#define NEXT_LENGTH 1LL
 #else
 #include <thread>
-#define NEXT_LENGTH 0
+#define NEXT_LENGTH 0LL
 //#include <pthread.h>
 #endif
 #ifdef __APPLE__
@@ -301,10 +301,10 @@ private:
     };
     struct column_file_info
     {
-        size_t header_length;
-        size_t skip_column_length;
-        size_t line_width;
-        size_t processed_threshold;
+        long long header_length;
+        long long skip_column_length;
+        long long line_width;
+        long long processed_threshold;
         column_file_info()
         {
             header_length = 0;
@@ -352,15 +352,15 @@ private:
     uint32_t m_analysis_done = 0;
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
-    size_t m_precision = 9;
+    long long m_precision = 9;
     // the 7 are:
     // 1 for sign
     // 1 for dot
     // 2 for e- (scientific)
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
-    size_t m_numeric_width = m_precision + 7;
-    size_t m_max_fid_length = 3;
-    size_t m_max_iid_length = 3;
+    long long m_numeric_width = m_precision + 7;
+    long long m_max_fid_length = 3;
+    long long m_max_iid_length = 3;
     int m_best_index = -1;
     size_t m_num_perm = 0;
     SCORING m_score = SCORING::AVERAGE;
@@ -371,6 +371,7 @@ private:
     bool m_perform_competitive = false;
     bool m_perform_perm = false;
     bool m_logit_perm = false;
+    bool m_quick_best = true;
     // Functions
 
     /*!
