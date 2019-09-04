@@ -2121,7 +2121,6 @@ void PRSice::null_set_no_thread(
                     se_vec = Pmat * se_vec;
                 }
                 t_value = std::fabs(beta(1) / se_vec(1));
-                std::cout << set_size.first << "\t" << t_value << std::endl;
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
