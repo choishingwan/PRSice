@@ -19,6 +19,7 @@
 #define PRSICE_REGRESSION_H_
 
 #include "dcdflib.h"
+#include "fastlm.hpp"
 #include "glm.hpp"
 #include "misc.hpp"
 #include <Eigen/Dense>
@@ -30,13 +31,12 @@
 #include <stdexcept>
 namespace Regression
 {
-void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
-                       double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, double& standard_error, size_t thread = 1,
-                       bool intercept = true);
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
          double& r2, double& coeff, double& standard_error, size_t thread = 1);
-
+void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
+            double& r2, double& r2_adjust, double& coeff,
+            double& standard_error, size_t thread, bool intercept,
+            int type = 0);
 }
 
 #endif /* PRSICE_REGRESSION_H_ */

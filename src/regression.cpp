@@ -18,50 +18,6 @@
 namespace Regression
 {
 
-// on purposely perform the copying of x
-void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
-                       double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, double& standard_error, size_t thread,
-                       bool intercept)
-{
-    Eigen::setNbThreads(static_cast<int>(thread));
-    // in more general cases, the following is needed (adding the intercept)
-    // but here in PRSice, we always include the intercept, so we will skip
-    // this to speed things up
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> z(A);
-    Eigen::VectorXd beta = z.solve(y);
-    Eigen::VectorXd fitted = A * beta;
-    double rss = (A * beta - y).squaredNorm();
-    double mss = (fitted.array() - fitted.mean()).pow(2).sum();
-    r2 = mss / (mss + rss);
-    Eigen::Index n = A.rows();
-    Eigen::Index rank = z.rank();
-    double rdf = static_cast<double>(n - rank);
-    long df_int = intercept; // 0 false 1 true
-    r2_adjust = 1.0 - (1.0 - r2) * (static_cast<double>(n - df_int) / rdf);
-    double resvar = rss / rdf;
-    Eigen::Index se_index = intercept;
-    for (Eigen::Index ind = 0; ind < beta.rows(); ++ind)
-    {
-        if (z.colsPermutation().indices()(ind) == intercept)
-        {
-            se_index = ind;
-            break;
-        }
-    }
-
-    Eigen::MatrixXd R =
-        z.matrixR().topLeftCorner(rank, rank).triangularView<Eigen::Upper>();
-    Eigen::VectorXd se =
-        ((R.transpose() * R).inverse().diagonal() * resvar).array().sqrt();
-    // Remember, only the coefficient's order is wrong e.g. intercept at the end
-    double tval = beta(intercept)
-                  / se(se_index); // only interested in the one coefficient
-    coeff = beta(intercept);
-    standard_error = se(se_index);
-    p_value = misc::calc_tprob(tval, n);
-}
-
 // This is an unsafe version of R's glm.fit
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
@@ -69,10 +25,45 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 {
     Binomial family = Binomial();
     Eigen::setNbThreads(static_cast<int>(thread));
-    GLM<Binomial> run_glm(x, y);
-    run_glm.init_parms(family);
-    run_glm.solve(family);
-    r2 = run_glm.get_r2(family);
+    GLM<Binomial> run_glm(x, y, family);
+    run_glm.init_parms();
+    run_glm.solve();
+    r2 = run_glm.get_r2();
     run_glm.get_stat(1, p_value, coeff, standard_error);
 }
+
+void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
+            double& r2, double& r2_adjust, double& coeff,
+            double& standard_error, size_t thread, bool intercept, int type)
+{
+    Eigen::setNbThreads(static_cast<int>(thread));
+    Eigen::Index n = X.rows();
+    if (n != y.rows()) { throw std::runtime_error("Error: Size mismatch"); }
+    lm ans;
+    switch (type)
+    {
+    case 0: ans = ColPivQR(X, y); break;
+    case 1: ans = QR(X, y); break;
+    case 2: ans = Llt(X, y); break;
+    case 3: ans = Ldlt(X, y); break;
+    case 4: ans = SVD(X, y); break;
+    case 5: ans = SymmEigen(X, y); break;
+    default: throw std::runtime_error("Error: Invalid regression type");
+    }
+    coeff = ans.coef()(1);
+    int rank = ans.rank();
+    Eigen::VectorXd resid = y - ans.fitted();
+    int df = (rank >= 0) ? n - X.cols() : n - rank;
+    double s = resid.norm() / std::sqrt(double(df));
+    Eigen::VectorXd se = s * ans.se();
+    standard_error = se(1);
+    double rss = resid.squaredNorm();
+    double mss = (ans.fitted().array() - ans.fitted().mean()).pow(2).sum();
+    r2 = mss / (mss + rss);
+    long df_int = intercept; // 0 false 1 true
+    r2_adjust = 1.0 - (1.0 - r2) * (static_cast<double>(n - df_int) / df);
+    double tval = coeff / standard_error;
+    p_value = misc::calc_tprob(tval, n);
+}
+
 }

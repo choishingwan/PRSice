@@ -11,6 +11,7 @@ SET(prsice_header
     commander.hpp
     dcdflib.h
     family.hpp
+    fastlm.hpp
     genotype.hpp
     genotypefactory.hpp
     glm.hpp
@@ -33,6 +34,7 @@ add_library(prsice_lib
     ${CMAKE_SOURCE_DIR}/src/binarygen.cpp
     ${CMAKE_SOURCE_DIR}/src/binaryplink.cpp
     ${CMAKE_SOURCE_DIR}/src/commander.cpp
+    ${CMAKE_SOURCE_DIR}/src/fastlm.cpp
     ${CMAKE_SOURCE_DIR}/src/genotype.cpp
     ${CMAKE_SOURCE_DIR}/src/misc.cpp
     ${CMAKE_SOURCE_DIR}/src/prsice.cpp

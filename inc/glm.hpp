@@ -10,12 +10,14 @@ class GLM
 {
 public:
     GLM(const Eigen::MatrixXd& X, const Eigen::VectorXd& Y,
-        const Eigen::VectorXd& weights, double tol = 1e-8, int maxit = 100)
+        const Eigen::VectorXd& weights, const family& fam, double tol = 1e-8,
+        int maxit = 100)
         : m_X(X)
         , m_Y(Y)
         , m_weights(weights)
         , m_nvars(X.cols())
         , m_nobs(X.rows())
+        , m_family(fam)
         , m_beta(X.cols())
         , m_beta_prev(X.cols())
         , m_eta(X.rows())
@@ -29,13 +31,14 @@ public:
         , m_tol(tol)
     {
     }
-    GLM(const Eigen::MatrixXd& X, const Eigen::VectorXd& Y, double tol = 1e-8,
-        int maxit = 100)
+    GLM(const Eigen::MatrixXd& X, const Eigen::VectorXd& Y, const family& fam,
+        double tol = 1e-8, int maxit = 100)
         : m_X(X)
         , m_Y(Y)
         , m_weights(Eigen::VectorXd::Constant(X.rows(), 1))
         , m_nvars(X.cols())
         , m_nobs(X.rows())
+        , m_family(fam)
         , m_beta(X.cols())
         , m_beta_prev(X.cols())
         , m_eta(X.rows())
@@ -52,22 +55,22 @@ public:
     virtual ~GLM() {}
 
 
-    void init_parms(const family& f, int type)
+    void init_parms(int type)
     {
         m_type = type;
         m_beta = Eigen::VectorXd::Zero(m_X.cols());
-        m_eta = f.link(f.initialize(m_Y, m_w));
-        m_mu = f.linkinv(m_eta);
-        if (!f.validmu(m_mu) && !f.valideta(m_eta))
+        m_eta = m_family.link(m_family.initialize(m_Y, m_w));
+        m_mu = m_family.linkinv(m_eta);
+        if (!m_family.validmu(m_mu) && !m_family.valideta(m_eta))
         {
             throw std::runtime_error("Error: GLM cannot find valid starting "
                                      "values");
         }
         // m_offset = Eigen::VectorXd::Zero(m_Y.rows());
-        update_dev_resids(f);
+        update_dev_resids();
         m_rank = m_nvars;
     }
-    void init_parms(const family& f)
+    void init_parms()
     {
         size_t qr_time = 2 * m_nobs * m_nvars * m_nvars
                          - (2.0 / 3.0) * m_nvars * m_nvars * m_nvars;
@@ -79,31 +82,31 @@ public:
             m_type = 2;
         }
         m_beta = Eigen::VectorXd::Zero(m_X.cols());
-        m_eta = f.link(f.initialize(m_Y, m_w));
-        m_mu = f.linkinv(m_eta);
-        if (!f.validmu(m_mu) && !f.valideta(m_eta))
+        m_eta = m_family.link(m_family.initialize(m_Y, m_w));
+        m_mu = m_family.linkinv(m_eta);
+        if (!m_family.validmu(m_mu) && !m_family.valideta(m_eta))
         {
             throw std::runtime_error("Error: GLM cannot find valid starting "
                                      "values");
         }
         // m_offset = Eigen::VectorXd::Zero(m_Y.rows());
-        update_dev_resids(f);
+        update_dev_resids();
         m_rank = m_nvars;
     }
-    int solve(const family& f, int maxit = 100)
+    int solve(int maxit = 100)
     {
         int i = 0;
         for (; i < maxit; ++i)
         {
-            update_var_mu(f);
-            update_mu_eta(f);
+            update_var_mu();
+            update_mu_eta();
             update_z();
             update_w();
             solve_wls();
             update_eta();
-            update_mu(f);
-            update_dev_resids(f);
-            run_step_halving(f, i);
+            update_mu();
+            update_dev_resids();
+            run_step_halving(i);
             if (std::isinf(m_dev) && i == 0)
             {
                 throw std::runtime_error("Error: cannot find valid starting "
@@ -122,9 +125,9 @@ public:
     Eigen::VectorXd get_se() const { return m_se; }
     double deviance() const { return m_dev; }
     bool has_converged() const { return m_converged; }
-    double get_r2(const family& f) const
+    double get_r2() const
     {
-        double nulldev = f.dev_resids_sum(
+        double nulldev = m_family.dev_resids_sum(
             m_Y, Eigen::VectorXd::Constant(m_nobs, m_Y.sum() / m_nobs),
             m_weights);
         return (1.0 - std::exp((m_dev - nulldev) / static_cast<double>(m_nobs)))
@@ -144,6 +147,7 @@ private:
     const Eigen::VectorXd m_weights;
     const Eigen::Index m_nvars;
     const Eigen::Index m_nobs;
+    family m_family;
     Eigen::LLT<Eigen::MatrixXd> m_Ch;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd> m_PQR;
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType m_Pmat;
@@ -171,9 +175,9 @@ private:
         return (std::fabs(m_dev - m_devold) / (0.1 + std::fabs(m_dev)) < m_tol);
     }
     void update_eta() { m_eta = m_X * m_beta; }
-    void update_var_mu(const family& f) { m_var_mu = f.variance(m_mu); }
-    void update_mu_eta(const family& f) { m_mu_eta = f.mu_eta(m_eta); }
-    void update_mu(const family& f) { m_mu = f.linkinv(m_eta); }
+    void update_var_mu() { m_var_mu = m_family.variance(m_mu); }
+    void update_mu_eta() { m_mu_eta = m_family.mu_eta(m_eta); }
+    void update_mu() { m_mu = m_family.linkinv(m_eta); }
     void update_z()
     {
         //   m_z = (m_eta.array() - m_offset.array())
@@ -186,13 +190,13 @@ private:
                   .array()
                   .sqrt();
     }
-    void step_halve(const family& f)
+    void step_halve()
     {
         m_beta = 0.5 * (m_beta.array() + m_beta_prev.array());
         update_eta();
-        update_mu(f);
+        update_mu();
     }
-    void run_step_halving(const family& f, int& iterr)
+    void run_step_halving(int& iterr)
     {
         // check for infinite deviance
         if (std::isinf(m_dev))
@@ -202,21 +206,21 @@ private:
             {
                 ++itrr;
                 if (itrr > m_maxit) break;
-                step_halve(f);
-                update_dev_resids_no_update(f);
+                step_halve();
+                update_dev_resids_no_update();
             }
         }
         // check for boundary violations
-        if (!f.valideta(m_eta) && f.validmu(m_mu))
+        if (!m_family.valideta(m_eta) && m_family.validmu(m_mu))
         {
             int itrr = 0;
-            while (!f.valideta(m_eta) && f.validmu(m_mu))
+            while (!m_family.valideta(m_eta) && m_family.validmu(m_mu))
             {
                 ++itrr;
                 if (itrr > m_maxit) break;
-                step_halve(f);
+                step_halve();
             }
-            update_dev_resids_no_update(f);
+            update_dev_resids_no_update();
         }
         if ((m_dev - m_devold) / (0.1 + std::abs(m_dev)) >= m_tol && iterr > 0)
         {
@@ -225,19 +229,19 @@ private:
             {
                 ++itrr;
                 if (itrr > m_maxit) break;
-                step_halve(f);
-                update_dev_resids_no_update(f);
+                step_halve();
+                update_dev_resids_no_update();
             }
         }
     }
-    void update_dev_resids_no_update(const family& f)
+    void update_dev_resids_no_update()
     {
-        m_dev = f.dev_resids_sum(m_Y, m_mu, m_weights);
+        m_dev = m_family.dev_resids_sum(m_Y, m_mu, m_weights);
     }
-    void update_dev_resids(const family& f)
+    void update_dev_resids()
     {
         m_devold = m_dev;
-        m_dev = f.dev_resids_sum(m_Y, m_mu, m_weights);
+        m_dev = m_family.dev_resids_sum(m_Y, m_mu, m_weights);
     }
 
     Eigen::MatrixXd XtWX() const

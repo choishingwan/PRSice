@@ -255,13 +255,12 @@ void PRSice::init_matrix(const Commander& c_commander, const size_t pheno_index,
         {
             // ignore the first column
             // and perform linear regression
-            Regression::linear_regression(
-                m_phenotype,
-                m_independent_variables.topRightCorner(
-                    m_independent_variables.rows(),
-                    m_independent_variables.cols() - 1),
-                m_null_p, m_null_r2, null_r2_adjust, m_null_coeff, m_null_se,
-                n_thread, true);
+            Regression::fastLm(m_phenotype,
+                               m_independent_variables.topRightCorner(
+                                   m_independent_variables.rows(),
+                                   m_independent_variables.cols() - 1),
+                               m_null_p, m_null_r2, null_r2_adjust,
+                               m_null_coeff, m_null_se, n_thread, true);
         }
     }
 }
@@ -1233,9 +1232,8 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     else
     {
         // we can run the linear regression
-        Regression::linear_regression(m_phenotype, m_independent_variables,
-                                      p_value, r2, r2_adjust, coefficient, se,
-                                      thread, true);
+        Regression::fastLm(m_phenotype, m_independent_variables, p_value, r2,
+                           r2_adjust, coefficient, se, thread, true);
     }
     // If this is the best r2, then we will add it
     int best_index = m_best_index;
@@ -2090,9 +2088,8 @@ void PRSice::null_set_no_thread(
             }
             else
             {
-                Regression::linear_regression(
-                    m_phenotype, m_independent_variables, obs_p, r2, r2_adjust,
-                    coefficient, se, 1, true);
+                Regression::fastLm(m_phenotype, m_independent_variables, obs_p,
+                                   r2, r2_adjust, coefficient, se, 1, true);
                 t_value = std::fabs(coefficient / se);
             }
             // set_size second contain the indexs to each set with this size
@@ -2216,8 +2213,8 @@ void PRSice::consume_prs(
         }
         else
         {
-            Regression::linear_regression(m_phenotype, independent, obs_p, r2,
-                                          r2_adjust, coefficient, se, 1, true);
+            Regression::fastLm(m_phenotype, independent, obs_p, r2, r2_adjust,
+                               coefficient, se, 1, true);
         }
         double t_value = std::fabs(coefficient / se);
         auto&& index = set_index[std::get<1>(prs_info)];
