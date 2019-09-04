@@ -6,10 +6,12 @@ lm::lm(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
     , m_y(y)
     , m_n(X.rows())
     , m_p(X.cols())
-    , m_coef(Eigen::VectorXd::Constant(m_p, 0))
+    , m_coef(Eigen::VectorXd::Constant(
+          m_p, std::numeric_limits<double>::quiet_NaN()))
     , m_r(-1)
     , m_fitted(m_n)
-    , m_se(Eigen::VectorXd::Constant(m_p, 0))
+    , m_se(Eigen::VectorXd::Constant(m_p,
+                                     std::numeric_limits<double>::quiet_NaN()))
     , m_usePrescribedThreshold(false)
 {
 }

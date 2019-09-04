@@ -38,7 +38,7 @@ public:
     const Eigen::VectorXd& se() const { return m_se; }
     const Eigen::VectorXd& coef() const { return m_coef; }
     const Eigen::VectorXd& fitted() const { return m_fitted; }
-    int rank() const { return m_r; }
+    Eigen::Index rank() const { return m_r; }
     // return a lm object without copying
     lm& setThreshold(const Eigen::MatrixXd::RealScalar&);
 
@@ -48,7 +48,7 @@ protected:
     Eigen::Index m_n;
     Eigen::Index m_p;
     Eigen::VectorXd m_coef;
-    int m_r;
+    Eigen::Index m_r;
     Eigen::VectorXd m_fitted;
     Eigen::VectorXd m_se;
     Eigen::MatrixXd::RealScalar m_prescribedThreshold;

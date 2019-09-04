@@ -81,15 +81,24 @@ public:
         : m_target_binary(commander.is_binary())
         , m_target(commander.target_name())
         , m_out(commander.out())
+        , m_seed(commander.seed())
         , m_score(commander.get_score())
         , m_missing_score(commander.get_missing_score())
         , m_reporter(reporter)
         , m_ignore_fid(commander.ignore_fid())
         , m_perform_prset(prset)
+        , m_logit_perm(commander.logit_perm())
+        , m_use_ref_maf(commander.use_ref_maf())
     {
+        m_require_standardize = (m_score == SCORING::STANDARDIZE);
         m_perform_perm = commander.num_perm(m_num_perm);
-        m_logit_perm = commander.logit_perm();
-        m_seed = commander.seed();
+        size_t num_set_perm;
+        if (commander.set_perm(num_set_perm))
+        {
+            m_num_perm = num_set_perm;
+            // we don't allow permutation together with set_perm
+            assert(!m_perform_perm);
+        }
         bool has_binary = false;
         for (auto b : m_target_binary)
         {
@@ -109,7 +118,8 @@ public:
                         "Warning: To speed up the permutation, "
                         "we perform linear regression instead of logistic "
                         "regression within the permutation and uses the "
-                        "p-value to rank the thresholds. Our assumptions "
+                        "absolute z-scores to rank the thresholds. Our "
+                        "assumptions "
                         "are as follow:\n";
                     message.append("1) Linear Regression & Logistic "
                                    "Regression produce similar p-values\n");
@@ -373,6 +383,9 @@ private:
     bool m_perform_perm = false;
     bool m_logit_perm = false;
     bool m_quick_best = true;
+    bool m_printed_warning = false;
+    bool m_require_standardize = false;
+    bool m_use_ref_maf = false;
     // Functions
 
     /*!
@@ -471,13 +484,9 @@ private:
      */
     void
     produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     Genotype& target,
-                     const std::vector<size_t>::const_iterator& bk_start_idx,
-                     const std::vector<size_t>::const_iterator& bk_end_idx,
-                     size_t num_consumer,
-                     std::map<size_t, std::vector<size_t>>& set_index,
-                     const size_t num_perm, const bool require_standardize,
-                     const bool use_ref_maf);
+                     Genotype& target, const size_t& num_background,
+                     std::vector<size_t> background, size_t num_consumer,
+                     std::map<size_t, std::vector<size_t>>& set_index);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis
@@ -491,35 +500,26 @@ private:
      * for a specific set
      * \param is_binary indicate if the phenotype is binary or not
      */
-    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     std::map<size_t, std::vector<size_t>>& set_index,
-                     std::vector<double>& obs_t_value,
-                     std::vector<std::atomic<size_t>>& set_perm_res,
-                     const bool is_binary);
-    /*!
-     * \brief Function responsible for running the permutation required for
-     * computing the competitive p-value
-     * \param target is the target genotype object
-     * \param set_index  is the dictionary for index of sets with the same size
-     * \param ori_t_value contain the observed T-value for each set
-     * \param set_perm_res is the vector storing the result of permutation.
-     * Counting the number of time the permuted T is bigger than the observed T
-     * for a specific set
-     * \param num_perm is the number of permutation to perform
-     * \param is_binary indicate if the phenotype is binary
-     * \param require_standardize indicate if we require the standardization of
-     * the genotype
-     */
-    void
-    null_set_no_thread(Genotype& target,
-                       const std::vector<size_t>::const_iterator& bk_start_idx,
-                       const std::vector<size_t>::const_iterator& bk_end_idx,
-                       const std::map<size_t, std::vector<size_t>>& set_index,
-                       std::vector<double>& obs_t_value,
-                       std::vector<std::atomic<size_t>>& set_perm_res,
-                       const size_t num_perm, const bool is_binary,
-                       const bool require_standardize, const bool use_ref_maf);
+    void consume_prs(
+        Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
+        std::map<size_t, std::vector<size_t>>& set_index,
+        std::vector<double>& obs_t_value,
+        std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
 
+    void null_set_no_thread(
+        Genotype& target, const size_t num_background,
+        std::vector<size_t> background,
+        const std::map<size_t, std::vector<size_t>>& set_index,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
+        std::vector<double>& obs_t_value,
+        std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
      * \param q is the queue for contacting the consumers

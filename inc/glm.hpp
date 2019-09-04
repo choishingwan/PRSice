@@ -74,9 +74,9 @@ public:
     {
         size_t qr_time = 2 * m_nobs * m_nvars * m_nvars
                          - (2.0 / 3.0) * m_nvars * m_nvars * m_nvars;
-        size_t llt_time = m_nobs * m_nvars * m_nvars
-                          + (4.0 / 3.0) * m_nvars * m_nvars * m_nvars;
-        if (qr_time <= llt_time) { m_type = 1; }
+        size_t fastqr_time = m_nobs * m_nvars * m_nvars
+                             + (4.0 / 3.0) * m_nvars * m_nvars * m_nvars;
+        if (qr_time <= fastqr_time) { m_type = 1; }
         else
         {
             m_type = 2;
@@ -121,8 +121,8 @@ public:
         save_se();
         return std::min(i + 1, maxit);
     }
-    Eigen::VectorXd get_beta() const { return m_beta; }
-    Eigen::VectorXd get_se() const { return m_se; }
+    const Eigen::VectorXd& get_beta() const { return m_beta; }
+    const Eigen::VectorXd& get_se() const { return m_se; }
     double deviance() const { return m_dev; }
     bool has_converged() const { return m_converged; }
     double get_r2() const

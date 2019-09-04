@@ -980,7 +980,6 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     const bool print_all_scores = c_commander.all_scores() && pheno_index == 0;
     const size_t num_thread = c_commander.thread();
     const bool non_cumulate = c_commander.non_cumulate();
-    const bool use_ref_maf = c_commander.use_ref_maf();
     const size_t num_samples_included = target.num_sample();
 
     std::vector<size_t>::const_iterator cur_start_idx =
@@ -1029,7 +1028,6 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
     size_t prs_result_idx = 0;
     double cur_threshold = 0.0;
     // we want to know if user want to obtain the standardized PRS
-    const bool require_standardize = (m_score == SCORING::STANDARDIZE);
     // print the progress bar
     print_progress();
     // indicate if this is the first run. If this is the first run, get_score
@@ -1043,7 +1041,7 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
 
     while (target.get_score(cur_start_idx, cur_end_idx, cur_threshold,
                             m_num_snp_included, non_cumulate,
-                            require_standardize, first_run, use_ref_maf))
+                            m_require_standardize, first_run, m_use_ref_maf))
     {
         m_analysis_done++;
         print_progress();
@@ -1402,7 +1400,7 @@ void PRSice::run_null_perm_no_thread(
     }
     else
     {
-        Eigen::VectorXd beta = Eigen::VectorXd::Zero(num_regress_sample);
+        Eigen::VectorXd beta;
         Eigen::VectorXd se;
         Eigen::VectorXd effects;
         while (processed < m_num_perm)
@@ -1429,11 +1427,15 @@ void PRSice::run_null_perm_no_thread(
             else
             {
                 effects = PQR.householderQ().adjoint() * perm_pheno;
+                beta = Eigen::VectorXd::Constant(
+                    p, std::numeric_limits<double>::quiet_NaN());
                 beta.head(rank) = R * effects.head(rank);
                 beta = Pmat * beta;
                 // create fitted values from effects
                 // (can't use X*m_coef if X is rank-deficient)
                 effects.tail(num_regress_sample - rank).setZero();
+                se = Eigen::VectorXd::Constant(
+                    p, std::numeric_limits<double>::quiet_NaN());
                 se.head(rank) = R.rowwise().norm();
                 se = Pmat * se;
             }
@@ -1536,13 +1538,16 @@ void PRSice::consume_null_pheno(
             }
             else
             {
-                beta = Eigen::VectorXd::Zero(n);
+                beta = Eigen::VectorXd::Constant(
+                    p, std::numeric_limits<double>::quiet_NaN());
                 effects = PQR.householderQ().adjoint() * std::get<0>(input);
                 beta.head(rank) = R * effects.head(rank);
                 beta = Pmat * beta;
                 // create fitted values from effects
                 // (can't use X*m_coef if X is rank-deficient)
                 effects.tail(n - rank).setZero();
+                se = Eigen::VectorXd::Constant(
+                    p, std::numeric_limits<double>::quiet_NaN());
                 se.head(rank) = R.rowwise().norm();
                 se = Pmat * se;
             }
@@ -2014,31 +2019,29 @@ void PRSice::summarize(const Commander& commander)
 
 PRSice::~PRSice() {}
 
+
 void PRSice::null_set_no_thread(
-    Genotype& target, const std::vector<size_t>::const_iterator& bk_start_idx,
-    const std::vector<size_t>::const_iterator& bk_end_idx,
+    Genotype& target, const size_t num_background,
+    std::vector<size_t> background,
     const std::map<size_t, std::vector<size_t>>& set_index,
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
+    const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
     std::vector<double>& obs_t_value,
-    std::vector<std::atomic<size_t>>& set_perm_res, const size_t num_perm,
-    const bool is_binary, const bool require_standardize,
-    const bool use_ref_maf)
+    std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary)
 {
-    // we need to know the size of the largest gene set (excluding the base
-    // and background) it's a map, last element should be the largest
+    // last key = largest set size
     const size_t max_size = set_index.rbegin()->first;
-    // need to count the number of permutation done
-    size_t processed = 0;
     const Eigen::Index num_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
-    double coefficient, se, r2, r2_adjust, obs_p, t_value;
+    const Eigen::Index p = m_independent_variables.cols();
+    double coefficient, se, r2, obs_p, t_value;
+    size_t processed = 0;
     std::mt19937 g(m_seed);
-    // we need to know how many background SNPs are there
-    const size_t num_background =
-        static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
-    std::vector<size_t> background(bk_start_idx, bk_end_idx);
-    // a boolean to tell the genotype class whether the PRS should be reset
     bool first_run = true;
-    while (processed < num_perm)
+    Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample);
+    Eigen::VectorXd beta, se_vec, effects;
+    while (processed < m_num_perm)
     {
         size_t begin = 0;
         // we will shuffle n where n is the set with the largest size
@@ -2047,11 +2050,10 @@ void PRSice::null_set_no_thread(
         size_t num_snp = max_size;
         while (num_snp--)
         {
-            std::uniform_int_distribution<int> dist(
-                static_cast<int>(begin), static_cast<int>(num_background) - 1);
-            int advance_index = dist(g);
-            std::swap(background[static_cast<size_t>(begin)],
-                      background[static_cast<size_t>(advance_index)]);
+            std::uniform_int_distribution<size_t> dist(begin,
+                                                       num_background - 1);
+            size_t advance_index = dist(g);
+            std::swap(background[begin], background[advance_index]);
             ++begin;
         }
         //  we have now selected N SNPs from the background. We can then
@@ -2060,81 +2062,92 @@ void PRSice::null_set_no_thread(
         size_t prev_size = 0;
         for (auto&& set_size : set_index)
         {
-            // now we iterate through each set size
-            // in theory this will reduce our I/O. If the set sizes
-            // are 10, 100 and 1000, then the number of SNPs we read
-            // per set will be 10, 90, 900. Which will help to reduce
-            // a lot of reading if the set sizes are very similar
-
-            // read in genotype here
             target.get_null_score(set_size.first, prev_size, background,
-                                  first_run, require_standardize, use_ref_maf);
-
-            // now that we've constructed the PRS, for any subsequent set
-            // sizes, we should not reset the PRS calculation until the next
-            // permutation, thus we need to set first_run to true
+                                  first_run, m_require_standardize,
+                                  m_use_ref_maf);
             first_run = false;
             prev_size = set_size.first;
-            // we have now read in the PRS and should now assign it to the
-            // m_independent_variables matrix
             for (Eigen::Index sample_id = 0; sample_id < num_sample;
                  ++sample_id)
             {
-                m_independent_variables(sample_id, 1) = target.calculate_score(
-                    m_score, m_matrix_index[static_cast<size_t>(sample_id)]);
+                if (m_logit_perm && is_binary)
+                {
+                    m_independent_variables(sample_id, 1) =
+                        target.calculate_score(
+                            m_score,
+                            m_matrix_index[static_cast<size_t>(sample_id)]);
+                }
+                else
+                {
+                    prs(sample_id) = target.calculate_score(
+                        m_score,
+                        m_matrix_index[static_cast<size_t>(sample_id)]);
+                }
             }
-            m_analysis_done++;
+            ++m_analysis_done;
             print_progress();
             //  we can now perform the glm or linear regression analysis
-            if (is_binary)
+            if (is_binary && m_logit_perm)
             {
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
                                 coefficient, se, 1);
                 t_value = std::fabs(coefficient / se);
-                // in GLM, p_value is calculated by t_value^2, so to mimic
-                // that, we also do t_value^2, though this should give the
-                // same result as abs(t_value) so we will just use
-                // abs(t-value) for both QT and binary traits t_value *=
-                // t_value;
             }
             else
             {
-                Regression::fastLm(m_phenotype, m_independent_variables, obs_p,
-                                   r2, r2_adjust, coefficient, se, 1, true);
-                t_value = std::fabs(coefficient / se);
+                // we will directly use the existing decomposition
+                if (p == rank)
+                {
+                    beta = PQR.solve(prs);
+                    se_vec = Pmat
+                             * PQR.matrixQR()
+                                   .topRows(p)
+                                   .triangularView<Eigen::Upper>()
+                                   .solve(lm::I_p(p))
+                                   .rowwise()
+                                   .norm();
+                }
+                else
+                {
+                    beta = Eigen::VectorXd::Constant(
+                        p, std::numeric_limits<double>::quiet_NaN());
+                    se_vec = Eigen::VectorXd::Constant(
+                        p, std::numeric_limits<double>::quiet_NaN());
+                    effects = PQR.householderQ().adjoint() * prs;
+                    beta.head(rank) = Rinv * effects.head(rank);
+                    beta = Pmat * beta;
+                    effects.tail(num_sample - rank).setZero();
+                    se_vec.head(rank) = Rinv.rowwise().norm();
+                    se_vec = Pmat * se_vec;
+                }
+                t_value = std::fabs(beta(1) / se_vec(1));
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
             { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
         }
-        processed++;
+        ++processed;
     }
 }
 
 void PRSice::produce_null_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q, Genotype& target,
-    const std::vector<size_t>::const_iterator& bk_start_idx,
-    const std::vector<size_t>::const_iterator& bk_end_idx, size_t num_consumer,
-    std::map<size_t, std::vector<size_t>>& set_index, const size_t num_perm,
-    const bool require_standardize, const bool use_ref_maf)
+    const size_t& num_background, std::vector<size_t> background,
+    size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index)
 {
     // we need to know the size of the biggest set
     const size_t max_size = set_index.rbegin()->first;
     const size_t num_sample = m_matrix_index.size();
     const size_t num_regress_sample =
         static_cast<size_t>(m_independent_variables.rows());
-    const size_t num_background =
-        static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
     size_t processed = 0;
     size_t prev_size = 0;
     size_t r;
     // we seed the random number generator
     std::mt19937 g(m_seed);
-    // get the SNP index for background
-    std::vector<size_t> background(bk_start_idx, bk_end_idx);
     bool first_run = true;
     std::vector<size_t>::size_type advance_index, begin;
-    while (processed < num_perm)
+    while (processed < m_num_perm)
     {
         // here we perform random sampling without replacement using the
         // Fisher-Yates shuffle algorithm
@@ -2156,7 +2169,8 @@ void PRSice::produce_null_prs(
         {
             // for each gene sets size, we calculate the PRS
             target.get_null_score(set_size.first, prev_size, background,
-                                  first_run, require_standardize, use_ref_maf);
+                                  first_run, m_require_standardize,
+                                  m_use_ref_maf);
             first_run = false;
             // we need to know how many SNPs we have already read, such that
             // we can skip reading this number of SNPs for the next set
@@ -2180,29 +2194,27 @@ void PRSice::produce_null_prs(
     }
     // send termination signal to the consumers
     q.completed();
-    /*
-    for (size_t i = 0; i < num_consumer; ++i) {
-        // termination signal is represented by an empty vector
-        q.emplace(std::make_pair(std::vector<double>(), 0), num_consumer);
-    }
-    */
 }
 
 
 void PRSice::consume_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
+    const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
     std::map<size_t, std::vector<size_t>>& set_index,
     std::vector<double>& obs_t_value,
     std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary)
 {
-    // we first make a local copy of the independent matrix to ensure thread
-    // safety
-    Eigen::MatrixXd independent = m_independent_variables;
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
+    const Eigen::Index p = m_independent_variables.cols();
+    Eigen::MatrixXd independent;
+    if (is_binary && m_logit_perm) independent = m_independent_variables;
+    Eigen::VectorXd beta, se_vec, effects, prs;
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector
-    double coefficient, se, r2, r2_adjust;
+    double coefficient, se, r2;
     double obs_p = 2.0; // for safety reason, make sure it is out bound
     // results from queue will be stored in the prs_info
     std::pair<std::vector<double>, size_t> prs_info;
@@ -2210,22 +2222,48 @@ void PRSice::consume_prs(
     while (!q.pop(prs_info))
     {
         // update the independent variable matrix with the new PRS
-        for (Eigen::Index i_sample = 0; i_sample < num_regress_sample;
-             ++i_sample)
+        if (is_binary && m_logit_perm)
         {
-            independent(i_sample, 1) =
-                std::get<0>(prs_info)[static_cast<size_t>(i_sample)];
-        }
-        // then perform regression analysis to obtain the t-value
-        if (is_binary)
-        {
+            for (Eigen::Index i_sample = 0; i_sample < num_regress_sample;
+                 ++i_sample)
+            {
+                independent(i_sample, 1) =
+                    std::get<0>(prs_info)[static_cast<size_t>(i_sample)];
+            }
             Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
                             se, 1);
         }
         else
         {
-            Regression::fastLm(m_phenotype, independent, obs_p, r2, r2_adjust,
-                               coefficient, se, 1, true);
+            prs = Eigen::Map<Eigen::VectorXd>(
+                std::get<0>(prs_info).data(),
+                static_cast<Eigen::Index>(num_regress_sample));
+            if (p == rank)
+            {
+                beta = PQR.solve(prs);
+                se_vec = Pmat
+                         * PQR.matrixQR()
+                               .topRows(p)
+                               .triangularView<Eigen::Upper>()
+                               .solve(lm::I_p(p))
+                               .rowwise()
+                               .norm();
+            }
+            else
+            {
+                effects = PQR.householderQ().adjoint() * prs;
+                beta = Eigen::VectorXd::Constant(
+                    p, std::numeric_limits<double>::quiet_NaN());
+                se_vec = Eigen::VectorXd::Constant(
+                    p, std::numeric_limits<double>::quiet_NaN());
+                beta.head(rank) = Rinv * effects.head(rank);
+                beta = Pmat * beta;
+                effects.tail(num_regress_sample - rank).setZero();
+                se_vec.head(rank) = Rinv.rowwise().norm();
+                se_vec = Pmat * se_vec;
+            }
+            coefficient = beta(1);
+            se = se_vec(1);
         }
         double t_value = std::fabs(coefficient / se);
         auto&& index = set_index[std::get<1>(prs_info)];
@@ -2248,9 +2286,7 @@ void PRSice::run_competitive(
     fprintf(stderr, "\nStart competitive permutation\n");
     size_t num_perm;
     if (!commander.set_perm(num_perm)) { return; }
-    const bool require_standardize = (m_score == SCORING::STANDARDIZE);
     const bool is_binary = m_target_binary[pheno_index];
-    const bool use_ref_maf = commander.use_ref_maf();
     const size_t num_prs_res = m_prs_summary.size();
     const size_t num_bk_snps =
         static_cast<size_t>(std::distance(bk_start_idx, bk_end_idx));
@@ -2264,6 +2300,48 @@ void PRSice::run_competitive(
     // start at 1 to avoid the base set
     size_t cur_set_index = 0;
     size_t max_set_size = 0;
+    // pre-decompose the Y+ cov matrix to speed up the permutation
+    if (is_binary && !m_printed_warning)
+    {
+        if (!m_logit_perm)
+        {
+            std::string message =
+                "Warning: To speed up the permutation, "
+                "we perform linear regression instead of logistic "
+                "regression within the permutation and uses the "
+                "absolute z-scores to rank the thresholds. As we assumption "
+                "Linear Regression & Logistic "
+                "Regression produce similar absolute z-scores\n\n";
+            m_reporter->report(message);
+        }
+        else
+        {
+            std::string message = "Warning: Using --logit-perm will be "
+                                  "ridiculously slow\n";
+            m_reporter->report(message);
+        }
+    }
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PQR;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType Pmat;
+    Eigen::Index rank;
+    const Eigen::Index p = m_independent_variables.cols();
+    Eigen::MatrixXd Rinv;
+    if (!m_logit_perm)
+    {
+        Eigen::MatrixXd YCov = m_independent_variables;
+        YCov.col(1) = m_phenotype;
+        PQR.compute(YCov);
+        Pmat = PQR.colsPermutation();
+        rank = PQR.rank();
+        if (rank != p)
+        {
+            Rinv = PQR.matrixQR()
+                       .topLeftCorner(rank, rank)
+                       .triangularView<Eigen::Upper>()
+                       .solve(Eigen::MatrixXd::Identity(rank, rank));
+        }
+    }
+    m_printed_warning = true;
     for (size_t i = 0; i < num_prs_res; ++i)
     {
         if (m_prs_summary[i].has_competitive || m_prs_summary[i].set == "Base")
@@ -2308,9 +2386,16 @@ void PRSice::run_competitive(
     size_t num_thread = commander.thread();
     const uintptr_t num_regress_sample =
         static_cast<uintptr_t>(m_independent_variables.rows());
+
+    // This is a rough estimate, we might be using more memory than indicated
+    // here
     const uintptr_t basic_memory_required_per_thread =
-        num_regress_sample * sizeof(double)
-        * (static_cast<uintptr_t>(m_independent_variables.cols()) * 6 + 15);
+        m_logit_perm
+            ? (4 * num_regress_sample
+               + 2ULL * static_cast<unsigned long long>(p) + 1ULL
+               + num_regress_sample * static_cast<unsigned long long>(p))
+                  * sizeof(double)
+            : num_regress_sample * sizeof(double);
     unsigned char* bigstack_ua = nullptr;
     for (; num_thread > 0; --num_thread)
     {
@@ -2346,15 +2431,16 @@ void PRSice::run_competitive(
         Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
         std::thread producer(&PRSice::produce_null_prs, this,
                              std::ref(set_perm_queue), std::ref(target),
-                             std::cref(bk_start_idx), std::cref(bk_end_idx),
-                             num_thread - 1, std::ref(set_index), num_perm,
-                             require_standardize, use_ref_maf);
+                             std::cref(num_bk_snps),
+                             std::vector<size_t>(bk_start_idx, bk_end_idx),
+                             num_thread - 1, std::ref(set_index));
         std::vector<std::thread> consumer_store;
         for (size_t i_thread = 0; i_thread < num_thread - 1; ++i_thread)
         {
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
-                std::ref(set_index), std::ref(obs_t_value),
+                std::cref(PQR), std::cref(Pmat), std::cref(Rinv),
+                std::cref(rank), std::ref(set_index), std::ref(obs_t_value),
                 std::ref(set_perm_res), is_binary));
         }
 
@@ -2365,9 +2451,10 @@ void PRSice::run_competitive(
     {
         // alternatively, if we only got one thread, we will use the no
         // thread function to reduce threading overhead
-        null_set_no_thread(target, bk_start_idx, bk_end_idx, set_index,
-                           obs_t_value, set_perm_res, num_perm, is_binary,
-                           require_standardize, use_ref_maf);
+        null_set_no_thread(target, num_bk_snps,
+                           std::vector<size_t>(bk_start_idx, bk_end_idx),
+                           set_index, PQR, Pmat, Rinv, rank, obs_t_value,
+                           set_perm_res, is_binary);
     }
     // start_index is the index of m_prs_summary[i], not the actual index
     // on set_perm_res.

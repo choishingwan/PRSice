@@ -51,9 +51,9 @@ void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
     default: throw std::runtime_error("Error: Invalid regression type");
     }
     coeff = ans.coef()(1);
-    int rank = ans.rank();
+    Eigen::Index rank = ans.rank();
     Eigen::VectorXd resid = y - ans.fitted();
-    int df = (rank >= 0) ? n - X.cols() : n - rank;
+    Eigen::Index df = (rank >= 0) ? n - X.cols() : n - rank;
     double s = resid.norm() / std::sqrt(double(df));
     Eigen::VectorXd se = s * ans.se();
     standard_error = se(1);
