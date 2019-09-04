@@ -1160,7 +1160,9 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index,
                            << " "
                            << ((target.sample_in_regression(sample)) ? "Yes"
                                                                      : "No")
-                           << " " << m_best_sample_score[sample] << "\n";
+                           << " "
+                           << std::setprecision(static_cast<int>(m_precision))
+                           << m_best_sample_score[sample] << "\n";
             }
             // can just close it as we assume we only need to do it once.
             m_best_out.close();
