@@ -18,6 +18,10 @@ public:
         return di;
     }
     Eigen::MatrixXd I_p() const { return Eigen::MatrixXd::Identity(m_p, m_p); }
+    static Eigen::MatrixXd I_p(const Eigen::Index& p)
+    {
+        return Eigen::MatrixXd::Identity(p, p);
+    }
     Eigen::MatrixXd XtX() const
     {
         return Eigen::MatrixXd(m_p, m_p)

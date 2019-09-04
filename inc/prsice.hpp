@@ -327,6 +327,7 @@ private:
 
     Eigen::MatrixXd m_independent_variables;
     Eigen::VectorXd m_phenotype;
+
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
@@ -537,8 +538,10 @@ private:
      */
     void consume_null_pheno(
         Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
-        const Eigen::VectorXd& pre_se, bool run_glm);
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& R, const Eigen::Index& rank, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation
      * \param decomposed is the pre-decomposed independent matrix. If run glm is
@@ -550,9 +553,10 @@ private:
      * precomputed matrix
      */
     void run_null_perm_no_thread(
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-        const Eigen::Index rank, const Eigen::VectorXd& pre_se,
-        const bool run_glm);
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& R, const Eigen::Index& rank, const bool run_glm);
 
     void parse_pheno(const bool binary, const std::string& pheno,
                      std::vector<double>& pheno_store, double& first_pheno,
