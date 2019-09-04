@@ -1631,7 +1631,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
                 if (i == 1) continue;
                 header_line.append(" " + region_name[static_cast<size_t>(i)]);
             }
-            m_quick_best = num_region > 2;
+            m_quick_best = num_region <= 2;
         }
         // the safetest way to calculate the length we need to speed is to
         // directly count the number of byte involved
@@ -2039,7 +2039,7 @@ void PRSice::null_set_no_thread(
     size_t processed = 0;
     std::mt19937 g(m_seed);
     bool first_run = true;
-    Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample);
+    Eigen::MatrixXd prs = m_independent_variables;
     Eigen::VectorXd beta, se_vec, effects;
     while (processed < m_num_perm)
     {
@@ -2079,7 +2079,7 @@ void PRSice::null_set_no_thread(
                 }
                 else
                 {
-                    prs(sample_id) = target.calculate_score(
+                    prs(sample_id, 1) = target.calculate_score(
                         m_score,
                         m_matrix_index[static_cast<size_t>(sample_id)]);
                 }
@@ -2121,6 +2121,7 @@ void PRSice::null_set_no_thread(
                     se_vec = Pmat * se_vec;
                 }
                 t_value = std::fabs(beta(1) / se_vec(1));
+                std::cout << set_size.first << "\t" << t_value << std::endl;
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
@@ -2209,9 +2210,8 @@ void PRSice::consume_prs(
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     const Eigen::Index p = m_independent_variables.cols();
-    Eigen::MatrixXd independent;
-    if (is_binary && m_logit_perm) independent = m_independent_variables;
-    Eigen::VectorXd beta, se_vec, effects, prs;
+    Eigen::MatrixXd independent = m_independent_variables;
+    Eigen::VectorXd beta, se_vec, effects;
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector
     double coefficient, se, r2;
@@ -2235,12 +2235,12 @@ void PRSice::consume_prs(
         }
         else
         {
-            prs = Eigen::Map<Eigen::VectorXd>(
+            independent.col(1) = Eigen::Map<Eigen::VectorXd>(
                 std::get<0>(prs_info).data(),
                 static_cast<Eigen::Index>(num_regress_sample));
             if (p == rank)
             {
-                beta = PQR.solve(prs);
+                beta = PQR.solve(independent);
                 se_vec = Pmat
                          * PQR.matrixQR()
                                .topRows(p)
@@ -2251,7 +2251,7 @@ void PRSice::consume_prs(
             }
             else
             {
-                effects = PQR.householderQ().adjoint() * prs;
+                effects = PQR.householderQ().adjoint() * independent;
                 beta = Eigen::VectorXd::Constant(
                     p, std::numeric_limits<double>::quiet_NaN());
                 se_vec = Eigen::VectorXd::Constant(
