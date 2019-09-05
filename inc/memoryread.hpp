@@ -69,14 +69,14 @@ public:
                          const unsigned long long& data_size)
     {
         bool allow_mmap = calculate_block_size(mem, data_size);
-        if (m_use_mmap) { m_use_mmap = allow_mmap; }
-        if (!allow_mmap)
+        if (!allow_mmap && m_use_mmap)
         {
             std::cerr << "Warning: Not enough memory for file mapping to be "
                          "worth it, will "
                          "fall back to traditional file read"
                       << std::endl;
         }
+        if (m_use_mmap) { m_use_mmap = allow_mmap; }
         m_mem_calculated = true;
     }
     bool mem_calculated() const { return m_mem_calculated; }
