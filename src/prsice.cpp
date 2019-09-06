@@ -1400,9 +1400,7 @@ void PRSice::run_null_perm_no_thread(
     }
     else
     {
-        Eigen::VectorXd beta;
-        Eigen::VectorXd se;
-        Eigen::VectorXd effects;
+        Eigen::VectorXd beta, se, effects, fitted;
         while (processed < m_num_perm)
         {
             // for quantitative trait, we can directly compute the results
@@ -2024,6 +2022,7 @@ void PRSice::null_set_no_thread(
     Genotype& target, const size_t num_background,
     std::vector<size_t> background,
     const std::map<size_t, std::vector<size_t>>& set_index,
+    const Eigen::MatrixXd& X,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
     const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
@@ -2035,12 +2034,13 @@ void PRSice::null_set_no_thread(
     const Eigen::Index num_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     const Eigen::Index p = m_independent_variables.cols();
-    double coefficient, se, r2, obs_p, t_value;
+    Eigen::Index df;
+    double coefficient, standard_error, r2, obs_p, t_value;
     size_t processed = 0;
     std::mt19937 g(m_seed);
     bool first_run = true;
-    Eigen::MatrixXd prs = m_independent_variables;
-    Eigen::VectorXd beta, se_vec, effects;
+    Eigen::VectorXd beta, se, effects, resid, fitted,
+        prs = Eigen::VectorXd::Zero(num_sample);
     while (processed < m_num_perm)
     {
         size_t begin = 0;
@@ -2079,7 +2079,7 @@ void PRSice::null_set_no_thread(
                 }
                 else
                 {
-                    prs(sample_id, 1) = target.calculate_score(
+                    prs(sample_id) = target.calculate_score(
                         m_score,
                         m_matrix_index[static_cast<size_t>(sample_id)]);
                 }
@@ -2090,8 +2090,8 @@ void PRSice::null_set_no_thread(
             if (is_binary && m_logit_perm)
             {
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
-                                coefficient, se, 1);
-                t_value = std::fabs(coefficient / se);
+                                coefficient, standard_error, 1);
+                t_value = std::fabs(coefficient / standard_error);
             }
             else
             {
@@ -2099,32 +2099,52 @@ void PRSice::null_set_no_thread(
                 if (p == rank)
                 {
                     beta = PQR.solve(prs);
-                    se_vec = Pmat
-                             * PQR.matrixQR()
-                                   .topRows(p)
-                                   .triangularView<Eigen::Upper>()
-                                   .solve(lm::I_p(p))
-                                   .rowwise()
-                                   .norm();
+                    fitted = X * beta;
+                    se = Pmat
+                         * PQR.matrixQR()
+                               .topRows(p)
+                               .triangularView<Eigen::Upper>()
+                               .solve(lm::I_p(p))
+                               .rowwise()
+                               .norm();
                 }
                 else
                 {
                     beta = Eigen::VectorXd::Constant(
                         p, std::numeric_limits<double>::quiet_NaN());
-                    se_vec = Eigen::VectorXd::Constant(
+                    se = Eigen::VectorXd::Constant(
                         p, std::numeric_limits<double>::quiet_NaN());
                     effects = PQR.householderQ().adjoint() * prs;
                     beta.head(rank) = Rinv * effects.head(rank);
                     beta = Pmat * beta;
                     effects.tail(num_sample - rank).setZero();
-                    se_vec.head(rank) = Rinv.rowwise().norm();
-                    se_vec = Pmat * se_vec;
+                    fitted = PQR.householderQ() * effects;
+                    se.head(rank) = Rinv.rowwise().norm();
+                    se = Pmat * se;
                 }
-                t_value = std::fabs(beta(1) / se_vec(1));
+                resid = prs - fitted;
+                df = (rank >= 0) ? num_sample - p : num_sample - rank;
+                double s = resid.norm() / std::sqrt(double(df));
+                se = s * se;
+                standard_error = se(1);
+                t_value = std::fabs(beta(1) / standard_error);
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
-            { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
+            {
+                if (set_size.first == 68 && processed < 100)
+                {
+                    std::ofstream debug;
+                    debug.open(
+                        std::string("DEBUG." + misc::to_string(processed))
+                            .c_str());
+                    debug << prs << std::endl;
+                    debug.close();
+                }
+                set_perm_res[set_index] += (obs_t_value[set_index] < t_value);
+                std::cout << set_size.first << "\t" << beta(1) << "\t" << se(1)
+                          << "\t" << obs_t_value[set_index] << std::endl;
+            }
         }
         ++processed;
     }
@@ -2199,6 +2219,7 @@ void PRSice::produce_null_prs(
 
 void PRSice::consume_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+    const Eigen::MatrixXd& X,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
     const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
@@ -2209,11 +2230,13 @@ void PRSice::consume_prs(
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     const Eigen::Index p = m_independent_variables.cols();
-    Eigen::MatrixXd independent = m_independent_variables;
-    Eigen::VectorXd beta, se_vec, effects;
+    Eigen::MatrixXd independent;
+    if (m_logit_perm && is_binary) independent = m_independent_variables;
+    Eigen::VectorXd beta, se, effects, prs, fitted, resid;
+    Eigen::Index df;
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector
-    double coefficient, se, r2;
+    double coefficient, standard_error, r2;
     double obs_p = 2.0; // for safety reason, make sure it is out bound
     // results from queue will be stored in the prs_info
     std::pair<std::vector<double>, size_t> prs_info;
@@ -2230,41 +2253,48 @@ void PRSice::consume_prs(
                     std::get<0>(prs_info)[static_cast<size_t>(i_sample)];
             }
             Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
-                            se, 1);
+                            standard_error, 1);
         }
         else
         {
-            independent.col(1) = Eigen::Map<Eigen::VectorXd>(
+            prs = Eigen::Map<Eigen::VectorXd>(
                 std::get<0>(prs_info).data(),
                 static_cast<Eigen::Index>(num_regress_sample));
             if (p == rank)
             {
-                beta = PQR.solve(independent);
-                se_vec = Pmat
-                         * PQR.matrixQR()
-                               .topRows(p)
-                               .triangularView<Eigen::Upper>()
-                               .solve(lm::I_p(p))
-                               .rowwise()
-                               .norm();
+                beta = PQR.solve(prs);
+                fitted = X * beta;
+                se = Pmat
+                     * PQR.matrixQR()
+                           .topRows(p)
+                           .triangularView<Eigen::Upper>()
+                           .solve(lm::I_p(p))
+                           .rowwise()
+                           .norm();
             }
             else
             {
-                effects = PQR.householderQ().adjoint() * independent;
+                effects = PQR.householderQ().adjoint() * prs;
                 beta = Eigen::VectorXd::Constant(
                     p, std::numeric_limits<double>::quiet_NaN());
-                se_vec = Eigen::VectorXd::Constant(
+                se = Eigen::VectorXd::Constant(
                     p, std::numeric_limits<double>::quiet_NaN());
                 beta.head(rank) = Rinv * effects.head(rank);
                 beta = Pmat * beta;
                 effects.tail(num_regress_sample - rank).setZero();
-                se_vec.head(rank) = Rinv.rowwise().norm();
-                se_vec = Pmat * se_vec;
+                fitted = PQR.householderQ() * effects;
+                se.head(rank) = Rinv.rowwise().norm();
+                se = Pmat * se;
             }
+            resid = prs - fitted;
+            df = (rank >= 0) ? num_regress_sample - p
+                             : num_regress_sample - rank;
+            double s = resid.norm() / std::sqrt(double(df));
+            se = s * se;
+            standard_error = se(1);
             coefficient = beta(1);
-            se = se_vec(1);
         }
-        double t_value = std::fabs(coefficient / se);
+        double t_value = std::fabs(coefficient / standard_error);
         auto&& index = set_index[std::get<1>(prs_info)];
         // we register the number of time a more significant / bigger
         // t-value is obtained when compared to the observed t-value
@@ -2325,9 +2355,10 @@ void PRSice::run_competitive(
     Eigen::Index rank;
     const Eigen::Index p = m_independent_variables.cols();
     Eigen::MatrixXd Rinv;
+    Eigen::MatrixXd YCov;
     if (!m_logit_perm)
     {
-        Eigen::MatrixXd YCov = m_independent_variables;
+        YCov = m_independent_variables;
         YCov.col(1) = m_phenotype;
         PQR.compute(YCov);
         Pmat = PQR.colsPermutation();
@@ -2438,9 +2469,9 @@ void PRSice::run_competitive(
         {
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
-                std::cref(PQR), std::cref(Pmat), std::cref(Rinv),
-                std::cref(rank), std::ref(set_index), std::ref(obs_t_value),
-                std::ref(set_perm_res), is_binary));
+                std::cref(YCov), std::cref(PQR), std::cref(Pmat),
+                std::cref(Rinv), std::cref(rank), std::ref(set_index),
+                std::ref(obs_t_value), std::ref(set_perm_res), is_binary));
         }
 
         producer.join();
@@ -2452,7 +2483,7 @@ void PRSice::run_competitive(
         // thread function to reduce threading overhead
         null_set_no_thread(target, num_bk_snps,
                            std::vector<size_t>(bk_start_idx, bk_end_idx),
-                           set_index, PQR, Pmat, Rinv, rank, obs_t_value,
+                           set_index, YCov, PQR, Pmat, Rinv, rank, obs_t_value,
                            set_perm_res, is_binary);
     }
     // start_index is the index of m_prs_summary[i], not the actual index

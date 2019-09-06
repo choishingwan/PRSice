@@ -502,6 +502,7 @@ private:
      */
     void consume_prs(
         Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+        const Eigen::MatrixXd& X,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
             Pmat,
@@ -514,6 +515,7 @@ private:
         Genotype& target, const size_t num_background,
         std::vector<size_t> background,
         const std::map<size_t, std::vector<size_t>>& set_index,
+        const Eigen::MatrixXd& X,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
             Pmat,
