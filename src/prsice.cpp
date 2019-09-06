@@ -1361,59 +1361,33 @@ void PRSice::run_null_perm_no_thread(
     // count the number of loop we've finished so far
     size_t processed = 0;
     // pre-initialize these parameters
-    double coefficient, se, r2, obs_p;
+    double coefficient, standard_error, r2, obs_p;
     double obs_t = -1;
 
-    if (run_glm)
+    Eigen::VectorXd beta, se, effects, fitted, resid;
+    Eigen::Index df;
+    while (processed < m_num_perm)
     {
-        // we we want to use the logistic regression
-        while (processed < m_num_perm)
+        // for quantitative trait, we can directly compute the results
+        // without re-computing the decomposition
+        perm_pheno = m_phenotype;
+        std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
+                     rand_gen);
+        m_analysis_done++;
+        print_progress();
+        if (run_glm)
         {
-            // reassign the phenotype matrix. This is to ensure single threading
-            // will produce the same result as multithreading given the same
-            // seed
-            perm_pheno = m_phenotype;
-            // random shuffle the phenotype matrix
-            std::shuffle(perm_pheno.data(),
-                         perm_pheno.data() + num_regress_sample, rand_gen);
-            // update the progress bar
-            m_analysis_done++;
-            print_progress();
-            // run the logistic regression on the permuted phenotype
             Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
-                            coefficient, se, 1);
-            obs_t = std::fabs(coefficient / se);
-            // note that for us to calculate the p-value from logistic
-            // regression, we take the square of obs_t, but abs should give us
-            // similar result and has the added benefit of not needing to worry
-            // about binary or QT when we process the permutation results. We
-            // therefore square the obs_t for the comparison (the higher the t,
-            // the most significant). We use T for it is slower to reach bound
-            // than p-value
-            //  obs_t *= obs_t;
-            // we then store the best t-value in our permutation results
-            m_perm_result[processed] =
-                std::max(obs_t, m_perm_result[processed]);
-            // we have finished the current analysis.
-            processed++;
+                            coefficient, standard_error, 1);
         }
-    }
-    else
-    {
-        Eigen::VectorXd beta, se, effects, fitted;
-        while (processed < m_num_perm)
+        else
         {
-            // for quantitative trait, we can directly compute the results
-            // without re-computing the decomposition
-            perm_pheno = m_phenotype;
-            std::shuffle(perm_pheno.data(),
-                         perm_pheno.data() + num_regress_sample, rand_gen);
-            m_analysis_done++;
-            print_progress();
-            // directly solve the current phenotype to obtain the required beta
+            // directly solve the current phenotype to obtain the required
+            // beta
             if (p == rank)
             {
                 beta = PQR.solve(perm_pheno);
+                fitted = m_independent_variables * beta;
                 se = Pmat
                      * PQR.matrixQR()
                            .topRows(p)
@@ -1432,21 +1406,29 @@ void PRSice::run_null_perm_no_thread(
                 // create fitted values from effects
                 // (can't use X*m_coef if X is rank-deficient)
                 effects.tail(num_regress_sample - rank).setZero();
+                fitted = PQR.householderQ() * effects;
                 se = Eigen::VectorXd::Constant(
                     p, std::numeric_limits<double>::quiet_NaN());
                 se.head(rank) = R.rowwise().norm();
                 se = Pmat * se;
             }
-            // we take the absolute of the T-value as we only concern about the
-            // magnitude
-            obs_t = std::fabs(beta(1) / se(1));
-            // for T-value, we need the maximum T, not the smallest
-            m_perm_result[processed] =
-                std::max(obs_t, m_perm_result[processed]);
-            processed++;
+            // we take the absolute of the T-value as we only concern about
+            // the magnitude
+            resid = perm_pheno - fitted;
+            df = (rank >= 0) ? num_regress_sample - p
+                             : num_regress_sample - rank;
+            double s = resid.norm() / std::sqrt(double(df));
+            se = s * se;
+            coefficient = beta(1);
+            standard_error = se(1);
         }
+        obs_t = std::fabs(coefficient / standard_error);
+        m_perm_result[processed] = std::max(obs_t, m_perm_result[processed]);
+        // we have finished the current analysis.
+        ++processed;
     }
 }
+
 
 void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                             size_t num_consumer)
@@ -1500,9 +1482,10 @@ void PRSice::consume_null_pheno(
     // it is important we don't mix up the permutation order as we're supposed
     // to mimic re-running PRSice N times with different permutation
     std::vector<size_t> temp_index;
-    Eigen::VectorXd beta, se, effects;
+    Eigen::VectorXd beta, se, effects, fitted, resid;
+    Eigen::Index df;
     std::pair<Eigen::VectorXd, size_t> input;
-    double coefficient, se_res, r2, obs_p;
+    double coefficient, standard_error, r2, obs_p;
     double obs_t = -1;
     while (!q.pop(input))
     {
@@ -1514,18 +1497,14 @@ void PRSice::consume_null_pheno(
             // and the second entry is the index. We will pass the phenotype for
             // GLM analysis if required
             Regression::glm(std::get<0>(input), m_independent_variables, obs_p,
-                            r2, coefficient, se_res, 1);
-            obs_t = std::fabs(coefficient / se_res);
-            // although the obs_t^2 is used for calculation of p-value, abs
-            // should give us similar result and allow us to use the same
-            // comparison method to process the permutation results obs_t *=
-            // obs_t;
+                            r2, coefficient, standard_error, 1);
         }
         else
         {
             if (p == rank)
             {
                 beta = PQR.solve(std::get<0>(input));
+                fitted = m_independent_variables * beta;
                 se = Pmat
                      * PQR.matrixQR()
                            .topRows(p)
@@ -1544,13 +1523,20 @@ void PRSice::consume_null_pheno(
                 // create fitted values from effects
                 // (can't use X*m_coef if X is rank-deficient)
                 effects.tail(n - rank).setZero();
+                fitted = PQR.householderQ() * effects;
                 se = Eigen::VectorXd::Constant(
                     p, std::numeric_limits<double>::quiet_NaN());
                 se.head(rank) = R.rowwise().norm();
                 se = Pmat * se;
             }
-            obs_t = std::fabs(beta(1) / se(1));
+            coefficient = beta(1);
+            resid = std::get<0>(input) - fitted;
+            df = (rank >= 0) ? n - p : n - rank;
+            double s = resid.norm() / std::sqrt(double(df));
+            se = s * se;
+            standard_error = se(1);
         }
+        obs_t = std::fabs(coefficient / standard_error);
         temp_store.push_back(obs_t);
         temp_index.push_back(std::get<1>(input));
     }
