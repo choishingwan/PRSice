@@ -37,8 +37,8 @@ public:
     SNP() {}
     SNP(const std::string& rs_id, const size_t chr, const size_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
-        const double& stat, const double& p_value, const int category,
-        const double p_threshold)
+        const double& stat, const double& p_value,
+        const unsigned long long category, const double p_threshold)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -212,7 +212,7 @@ public:
 
     size_t chr() const { return m_chr; }
     size_t loc() const { return m_loc; }
-    int category() const { return m_category; }
+    unsigned long long category() const { return m_category; }
     /*!
      * \brief Get the p-value of the SNP
      * \return the p-value of the SNP
@@ -484,7 +484,7 @@ private:
     size_t m_ref_het = 0;
     size_t m_ref_homrar = 0;
     size_t m_ref_missing = 0;
-    int m_category = -1;
+    unsigned long long m_category = 0;
     bool m_has_count = false;
     bool m_has_ref_count = false;
     bool m_has_expected = false;

@@ -984,14 +984,16 @@ bool PRSice::run_prsice(const Commander& c_commander, const size_t pheno_index,
 
     std::vector<size_t>::const_iterator cur_start_idx =
         region_membership.cbegin();
-    std::advance(cur_start_idx, region_start_idx[region_index]);
+    std::advance(cur_start_idx,
+                 static_cast<long>(region_start_idx[region_index]));
     std::vector<size_t>::const_iterator cur_end_idx =
         region_membership.cbegin();
     if (region_index + 1 >= region_start_idx.size())
     { cur_end_idx = region_membership.cend(); }
     else
     {
-        std::advance(cur_end_idx, region_start_idx[region_index + 1]);
+        std::advance(cur_end_idx,
+                     static_cast<long>(region_start_idx[region_index + 1]));
     }
 
     Eigen::initParallel();

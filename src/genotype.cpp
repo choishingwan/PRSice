@@ -212,7 +212,7 @@ void Genotype::read_base(
     size_t num_maf_filter = 0;
     int32_t chr_code;
     std::streampos file_length = 0;
-    int category = -1;
+    unsigned long long category = 0;
     bool to_remove = false;
     bool gz_input = false;
     try
@@ -485,7 +485,7 @@ void Genotype::read_base(
             ++num_ambiguous;
             if (!keep_ambig) continue;
         }
-        category = -1;
+        category = 0;
         pthres = 0.0;
         if (fastscore)
         { category = calculate_category(pvalue, barlevels, pthres); }
@@ -1016,7 +1016,7 @@ void Genotype::efficient_clumping(Genotype& reference)
     // The following two vectors are used for storing the intermediate output.
     // Again, put memory allocation at the beginning
     std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uint32_t> index_tots(6);
+    std::vector<uintptr_t> index_tots(6);
     // pre-allocate the memory without bothering the memory pool stuff
     std::vector<uint32_t> ld_missing_count(m_max_window_size);
     // This is a data mask used by PLINK in the calculation of R2. Preallocate
@@ -1123,13 +1123,13 @@ void Genotype::efficient_clumping(Genotype& reference)
     // force 64-byte align to make cache line sensitivity work (from PLINK, not
     // familiar with computer programming to know this...)
     // will stay with the old style cast to avoid trouble
-    bigstack_initial_base =
-        (unsigned char*) round_up_pow2((uintptr_t) bigstack_ua, CACHELINE);
+    bigstack_initial_base = reinterpret_cast<unsigned char*>(
+        round_up_pow2(reinterpret_cast<uintptr_t>(bigstack_ua), CACHELINE));
 
     // window data is the pointer walking through the allocated memory
     uintptr_t* window_data = nullptr;
     // now we can point the window pointer to the start of the allocated memory
-    window_data = (uintptr_t*) bigstack_initial_base;
+    window_data = reinterpret_cast<uintptr_t*>(bigstack_initial_base);
     uintptr_t* window_data_ptr = nullptr;
     unsigned char* g_bigstack_end = &(
         bigstack_initial_base[(static_cast<uintptr_t>(malloc_size_mb) * 1048576
@@ -1141,7 +1141,8 @@ void Genotype::efficient_clumping(Genotype& reference)
     // and max_window_size is the number of windows we can handle in one round
     // given the memory that we have. 1 window = 1 SNP
     uintptr_t max_window_size =
-        (((uintptr_t) g_bigstack_end) - ((uintptr_t) bigstack_initial_base))
+        ((reinterpret_cast<uintptr_t>(g_bigstack_end))
+         - (reinterpret_cast<uintptr_t>(bigstack_initial_base)))
         / (founder_ctv2 * sizeof(intptr_t));
 
     g_bigstack_end = nullptr;
@@ -1555,9 +1556,9 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
     // we will get anything from (prev_size , set_size]
     assert(prev_size < set_size);
     std::vector<size_t>::iterator select_start = background_list.begin();
-    std::advance(select_start, prev_size);
+    std::advance(select_start, static_cast<long>(prev_size));
     std::vector<size_t>::iterator select_end = background_list.begin();
-    std::advance(select_end, set_size);
+    std::advance(select_end, static_cast<long>(set_size));
     std::sort(select_start, select_end);
     read_score(select_start, select_end, first_run, use_ref_maf);
     if (require_statistic)
@@ -1591,7 +1592,7 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
         return false;
     // reset number of SNPs if we don't need cumulative PRS
     if (non_cumulate) num_snp_included = 0;
-    int cur_category = m_existed_snps[(*start_index)].category();
+    unsigned long long cur_category = m_existed_snps[(*start_index)].category();
     cur_threshold = m_existed_snps[(*start_index)].get_threshold();
     std::vector<size_t>::const_iterator region_end = start_index;
     for (; region_end != end_index; ++region_end)
@@ -1863,40 +1864,40 @@ uint32_t Genotype::em_phase_hethet_nobase(uint32_t* counts, uint32_t is_x1,
 {
     // if is_x1 and/or is_x2 is set, counts[9]..[17] are male-only
     // counts.
-    double known11 = (double) (2 * counts[0] + counts[1] + counts[3]);
-    double known12 = (double) (2 * counts[2] + counts[1] + counts[5]);
-    double known21 = (double) (2 * counts[6] + counts[3] + counts[7]);
-    double known22 = (double) (2 * counts[8] + counts[5] + counts[7]);
+    double known11 = static_cast<double>(2 * counts[0] + counts[1] + counts[3]);
+    double known12 = static_cast<double>(2 * counts[2] + counts[1] + counts[5]);
+    double known21 = static_cast<double>(2 * counts[6] + counts[3] + counts[7]);
+    double known22 = static_cast<double>(2 * counts[8] + counts[5] + counts[7]);
     if (is_x1 || is_x2)
     {
         if (is_x1 && is_x2)
         {
-            known11 -= (double) ((int32_t) counts[9]);
-            known12 -= (double) ((int32_t) counts[11]);
-            known21 -= (double) ((int32_t) counts[15]);
-            known22 -= (double) ((int32_t) counts[17]);
+            known11 -= static_cast<double>(static_cast<int32_t>(counts[9]));
+            known12 -= static_cast<double>(static_cast<int32_t>(counts[11]));
+            known21 -= static_cast<double>(static_cast<int32_t>(counts[15]));
+            known22 -= static_cast<double>(static_cast<int32_t>(counts[17]));
         }
         else if (is_x1)
         {
-            known11 -=
-                ((double) (2 * counts[9] + counts[10])) * (1.0 - SQRT_HALF);
-            known12 -=
-                ((double) (2 * counts[11] + counts[10])) * (1.0 - SQRT_HALF);
-            known21 -=
-                ((double) (2 * counts[15] + counts[16])) * (1.0 - SQRT_HALF);
-            known22 -=
-                ((double) (2 * counts[17] + counts[16])) * (1.0 - SQRT_HALF);
+            known11 -= (static_cast<double>(2 * counts[9] + counts[10]))
+                       * (1.0 - SQRT_HALF);
+            known12 -= (static_cast<double>(2 * counts[11] + counts[10]))
+                       * (1.0 - SQRT_HALF);
+            known21 -= (static_cast<double>(2 * counts[15] + counts[16]))
+                       * (1.0 - SQRT_HALF);
+            known22 -= (static_cast<double>(2 * counts[17] + counts[16]))
+                       * (1.0 - SQRT_HALF);
         }
         else
         {
-            known11 -=
-                ((double) (2 * counts[9] + counts[12])) * (1.0 - SQRT_HALF);
-            known12 -=
-                ((double) (2 * counts[11] + counts[12])) * (1.0 - SQRT_HALF);
-            known21 -=
-                ((double) (2 * counts[15] + counts[14])) * (1.0 - SQRT_HALF);
-            known22 -=
-                ((double) (2 * counts[17] + counts[14])) * (1.0 - SQRT_HALF);
+            known11 -= (static_cast<double>(2 * counts[9] + counts[12]))
+                       * (1.0 - SQRT_HALF);
+            known12 -= (static_cast<double>(2 * counts[11] + counts[12]))
+                       * (1.0 - SQRT_HALF);
+            known21 -= (static_cast<double>(2 * counts[15] + counts[14]))
+                       * (1.0 - SQRT_HALF);
+            known22 -= (static_cast<double>(2 * counts[17] + counts[14]))
+                       * (1.0 - SQRT_HALF);
         }
     }
     return em_phase_hethet(known11, known12, known21, known22, counts[4],

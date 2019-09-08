@@ -508,23 +508,29 @@ protected:
      * \param no_full indicate if we want the p=1 threshold
      * \return the category where this SNP belongs to
      */
-    int calculate_category(const double& pvalue, const double& bound_start,
-                           const double& bound_inter, const double& bound_end,
-                           double& pthres, const bool no_full)
+    unsigned long long calculate_category(const double& pvalue,
+                                          const double& bound_start,
+                                          const double& bound_inter,
+                                          const double& bound_end,
+                                          double& pthres, const bool no_full)
     {
         // NOTE: Threshold is x < p <= end and minimum category is 0
-        int category = 0;
+        unsigned long long category = 0;
+        double division;
         if (pvalue > bound_end && !no_full)
         {
-            category = static_cast<int>(
-                std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
+            division = (bound_end + 0.1 - bound_start) / bound_inter;
+            category = static_cast<unsigned long long>(std::ceil(division));
             pthres = 1.0;
         }
         else
         {
-            category = static_cast<int>(
-                std::ceil((pvalue - bound_start) / bound_inter));
-            category = (category < 0) ? 0 : category;
+            if (pvalue > bound_start
+                || misc::logically_equal(pvalue, bound_start))
+            {
+                division = (pvalue - bound_start) / bound_inter;
+                category = static_cast<unsigned long long>(std::ceil(division));
+            }
             pthres = category * bound_inter + bound_start;
         }
         return category;
@@ -537,20 +543,21 @@ protected:
      * \param pthres the p-value threshold this SNP belong to
      * \return the category of this SNP
      */
-    int calculate_category(const double& pvalue,
-                           const std::vector<double>& barlevels, double& pthres)
+    unsigned long long calculate_category(const double& pvalue,
+                                          const std::vector<double>& barlevels,
+                                          double& pthres)
     {
-        for (size_t i = 0; i < barlevels.size(); ++i)
+        for (unsigned long long i = 0; i < barlevels.size(); ++i)
         {
             if (pvalue < barlevels[i]
                 || misc::logically_equal(pvalue, barlevels[i]))
             {
                 pthres = barlevels[i];
-                return static_cast<int>(i);
+                return i;
             }
         }
         pthres = 1.0;
-        return static_cast<int>(barlevels.size());
+        return static_cast<unsigned long long>(barlevels.size());
     }
 
     /*!
