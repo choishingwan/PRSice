@@ -212,6 +212,41 @@ public:
     size_t chr() const { return m_chr; }
     size_t loc() const { return m_loc; }
     unsigned long long category() const { return m_category; }
+    void set_category(unsigned long long& cur_category, double& cur_p_start,
+                      const double& upper, const double& inter)
+    {
+        if (m_p_value <= cur_p_start + inter) { m_category = cur_category; }
+        else if (m_p_value > upper)
+        {
+            if (!misc::logically_equal(cur_p_start, upper))
+            {
+                cur_p_start = upper;
+                ++cur_category;
+            }
+            m_category = cur_category;
+        }
+        else
+        {
+            // this is a new threshold
+            ++cur_category;
+            m_category = cur_category;
+            // need to find the new cur_p_start and account for the possibility
+            // that the two SNPs have drastically different p-value (or the
+            // p-value step size are set too small)
+            while ((m_p_value - cur_p_start) / inter
+                   >= std::numeric_limits<unsigned long long>::max())
+            {
+                // too far away
+                cur_p_start +=
+                    inter * std::numeric_limits<unsigned long long>::max();
+            }
+            // here, the distance between the start and current p-value should
+            // be within  doable distance
+            unsigned long long step = static_cast<unsigned long long>(
+                (m_p_value - cur_p_start) / inter);
+            cur_p_start += inter * step;
+        }
+    }
     /*!
      * \brief Get the p-value of the SNP
      * \return the p-value of the SNP

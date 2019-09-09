@@ -242,7 +242,8 @@ int main(int argc, char* argv[])
             std::vector<size_t> region_start_idx;
             std::vector<size_t>::const_iterator background_start_idx,
                 background_end_idx;
-            target_file->prepare_prsice();
+            target_file->prepare_prsice(commander.lower(), commander.init(),
+                                        commander.upper());
             target_file->build_membership_matrix(
                 region_membership, region_start_idx, num_regions,
                 commander.out(), region_names, commander.print_snp());

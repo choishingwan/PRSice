@@ -1405,9 +1405,35 @@ void Genotype::efficient_clumping(Genotype& reference)
 }
 
 
-bool Genotype::prepare_prsice()
+bool Genotype::prepare_prsice(const double& lower, const double& inter,
+                              const double& upper)
 {
     if (m_existed_snps.size() == 0) return false;
+    if (m_very_small_thresholds)
+    {
+        // need to loop through the SNPs to check
+        std::sort(begin(m_existed_snps), end(m_existed_snps),
+                  [](SNP const& t1, SNP const& t2) {
+                      if (misc::logically_equal(t1.p_value(), t2.p_value()))
+                      {
+                          if (t1.chr() == t2.chr())
+                          {
+                              if (t1.loc() == t2.loc())
+                              { return t1.rs() < t2.rs(); }
+                              else
+                                  return t1.loc() < t2.loc();
+                          }
+                          else
+                              return t1.chr() < t2.chr();
+                      }
+                      else
+                          return t1.p_value() < t2.p_value();
+                  });
+        unsigned long long cur_category = 0;
+        double prev_p = lower;
+        for (auto&& snp : m_existed_snps)
+        { snp.set_category(cur_category, prev_p, upper, inter); }
+    }
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {
                   if (t1.category() == t2.category())
@@ -1505,7 +1531,8 @@ void Genotype::build_membership_matrix(
         {
             std::string error_message =
                 "Error: None of the gene sets contain any SNP(s) after "
-                "clumping. Have you provided the correct input? E.g. GMT file "
+                "clumping. Have you provided the correct input? E.g. GMT "
+                "file "
                 "containing Entrez ID with GTF files that uses the Ensembl "
                 "gene ID?\n";
             throw std::runtime_error(error_message);
@@ -1559,9 +1586,9 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
 {
 
     if (m_existed_snps.empty() || set_size >= m_existed_snps.size()) return;
-    // we will initailize a selected_snp_index containing the index of SNPs that
-    // we'd like to add / assign to our PRS in the current round.
-    // we will get anything from (prev_size , set_size]
+    // we will initailize a selected_snp_index containing the index of SNPs
+    // that we'd like to add / assign to our PRS in the current round. we
+    // will get anything from (prev_size , set_size]
     assert(prev_size < set_size);
     std::vector<size_t>::iterator select_start = background_list.begin();
     std::advance(select_start, static_cast<long>(prev_size));

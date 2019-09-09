@@ -18,7 +18,7 @@ protected:
     double p = 0.0;
     double p_threshold = 1;
     size_t chr = 1, loc = 1;
-    int category = 1;
+    unsigned long long category = 1;
     void SetUp() override
     {
         snp = SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
@@ -239,7 +239,7 @@ TEST(SNP_MATCHING, FLIPPING_AC)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // Flipping occurrs
@@ -275,7 +275,7 @@ TEST(SNP_MATCHING, INDEL)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // Flipping occurrs
@@ -302,7 +302,7 @@ TEST(SNP_MATCHING, FLIPPING_GT)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // change referenace and alt using add_target function
@@ -332,7 +332,7 @@ TEST(SNP_MATCHING, NO_ALT_AC)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
@@ -375,7 +375,7 @@ TEST(SNP_MATCHING, CHR_POS_MATCHING)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
@@ -404,7 +404,7 @@ TEST(SNP_MATCHING, NO_CHR_MATCHING)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = ~size_t(0), loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
@@ -428,7 +428,7 @@ TEST(SNP_MATCHING, NO_BP_MATCHING)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
@@ -466,7 +466,7 @@ TEST(SNP_BOUND, SET_LOW_BOUND)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     ASSERT_EQ(snp.low_bound(), ~size_t(0));
@@ -483,7 +483,7 @@ TEST(SNP_BOUND, SET_UP_BOUND)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     ASSERT_EQ(snp.low_bound(), ~size_t(0));
