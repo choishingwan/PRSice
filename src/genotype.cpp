@@ -491,8 +491,16 @@ void Genotype::read_base(
         { category = calculate_category(pvalue, barlevels, pthres); }
         else
         {
-            category = calculate_category(pvalue, bound_start, bound_inter,
-                                          bound_end, pthres, no_full);
+            try
+            {
+                category = calculate_category(pvalue, bound_start, bound_inter,
+                                              bound_end, pthres, no_full);
+            }
+            catch (const std::runtime_error&)
+            {
+                m_very_small_thresholds = true;
+                category = 0;
+            }
         }
         m_existed_snps_index[rs_id] = m_existed_snps.size();
         m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
