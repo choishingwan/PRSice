@@ -494,6 +494,7 @@ protected:
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
     bool m_memory_initialized = false;
+    bool m_very_small_thresholds = false;
     Reporter* m_reporter;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
@@ -520,6 +521,11 @@ protected:
         if (pvalue > bound_end && !no_full)
         {
             division = (bound_end + 0.1 - bound_start) / bound_inter;
+            if (division > std::numeric_limits<unsigned long long>::max())
+            {
+                throw std::runtime_error(
+                    "Error: Number of threshold required are too large");
+            }
             category = static_cast<unsigned long long>(std::ceil(division));
             pthres = 1.0;
         }
@@ -529,6 +535,11 @@ protected:
                 || misc::logically_equal(pvalue, bound_start))
             {
                 division = (pvalue - bound_start) / bound_inter;
+                if (division > std::numeric_limits<unsigned long long>::max())
+                {
+                    throw std::runtime_error(
+                        "Error: Number of threshold required are too large");
+                }
                 category = static_cast<unsigned long long>(std::ceil(division));
             }
             pthres = category * bound_inter + bound_start;
@@ -604,7 +615,8 @@ protected:
      * m_tmp_genotype (optional)
      * \return vector containing the sample information
      */
-    virtual std::vector<Sample_ID> gen_sample_vector(const std::string& delim)
+    virtual std::vector<Sample_ID>
+    gen_sample_vector(const std::string& /*delim*/)
     {
         return std::vector<Sample_ID>(0);
     }
