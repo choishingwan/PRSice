@@ -44,13 +44,12 @@ public:
         , m_rs(rs_id)
         , m_stat(stat)
         , m_p_value(p_value)
+        , m_p_threshold(p_threshold)
         , m_chr(chr)
         , m_loc(loc)
+        , m_category(category)
     {
         m_has_count = false;
-        assert(category < 0);
-        m_category = category;
-        m_p_threshold = p_threshold;
     }
 
     virtual ~SNP();
