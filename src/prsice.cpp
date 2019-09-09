@@ -2119,20 +2119,7 @@ void PRSice::null_set_no_thread(
             }
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
-            {
-                if (set_size.first == 68 && processed < 100)
-                {
-                    std::ofstream debug;
-                    debug.open(
-                        std::string("DEBUG." + misc::to_string(processed))
-                            .c_str());
-                    debug << prs << std::endl;
-                    debug.close();
-                }
-                set_perm_res[set_index] += (obs_t_value[set_index] < t_value);
-                std::cout << set_size.first << "\t" << beta(1) << "\t" << se(1)
-                          << "\t" << obs_t_value[set_index] << std::endl;
-            }
+            { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
         }
         ++processed;
     }
