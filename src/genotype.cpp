@@ -1431,8 +1431,22 @@ bool Genotype::prepare_prsice(const double& lower, const double& inter,
                   });
         unsigned long long cur_category = 0;
         double prev_p = lower;
+        bool has_warned = false, cur_warn;
         for (auto&& snp : m_existed_snps)
-        { snp.set_category(cur_category, prev_p, upper, inter); }
+        {
+            snp.set_category(cur_category, prev_p, upper, inter, cur_warn);
+            if (cur_warn && !has_warned)
+            {
+                has_warned = true;
+                std::string message =
+                    "Warning: P-value threshold steps are too small. While we "
+                    "can still try and generate appropriate thresholds, it is "
+                    "likely to suffer from numeric instability, i.e. the "
+                    "number representing the p-value threshold of the current "
+                    "SNP will only have precision up to 15 digits";
+                m_reporter->report(message);
+            }
+        }
     }
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {

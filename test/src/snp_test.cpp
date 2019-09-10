@@ -970,4 +970,62 @@ TEST(SNP_BASIC, SET_EXPECTED)
     ASSERT_DOUBLE_EQ(snp.get_expected(false), maf);
     ASSERT_DOUBLE_EQ(snp.get_expected(true), ref_maf);
 }
+
+// test the post-hoc category assignment for ridiculously small interval size
+TEST(SNP_CATEGORY, BASIC_CALCULATION)
+{
+    // we assume the calculation is sorted.
+    std::string rs = "SNP";
+    std::string a1 = "A", a2 = "C";
+    size_t chr = 1;
+    size_t loc = 1;
+    double stat = 1;
+    double p_value = 1e-50;
+    unsigned long long category = 1;
+    double p_threshold = 1e-50;
+    SNP snp(rs, chr, loc, a1, a2, stat, p_value, category, p_threshold);
+    double inter = 1e-41, upper = 0.5, lower = 1e-40;
+    unsigned long long cur_category = 0;
+    unsigned long long before = cur_category;
+    bool warning = false;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    // p-value is lower than the lowest, category should equal to cur_category
+    ASSERT_EQ(snp.category(), before);
+    cur_category = 10;
+    before = cur_category;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    // p-value is lower than the lowest, category should equal to cur_category
+    ASSERT_EQ(snp.category(), before);
+    // now change lower to a much smaller value
+    cur_category = 10;
+    before = cur_category;
+    inter = 1e-61;
+    lower = 1e-60;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    ASSERT_EQ(snp.category(), before + 1);
+    ASSERT_EQ(before + 1, cur_category);
+    // change it to even smaller values
+    inter = 7e-151;
+    lower = 1e-150;
+    cur_category = 10;
+    before = cur_category;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_TRUE(warning);
+    ASSERT_EQ(snp.category(), before + 1);
+    ASSERT_EQ(before + 1, cur_category);
+    p_value = 0.1;
+    SNP snp2(rs, chr, loc, a1, a2, stat, p_value, category, p_threshold);
+    inter = 0.03;
+    lower = 0.001;
+    cur_category = 10;
+    before = cur_category;
+    snp2.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    ASSERT_EQ(before + 1, cur_category);
+}
+
+
 #endif // SNP_TEST_HPP

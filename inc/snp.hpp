@@ -60,56 +60,18 @@ public:
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
     }
-    /*
-    void add_reference(const std::string& ref_file,
-                       const unsigned long long ref_byte_pos, const bool
-    flip)
-    {
-        m_ref_file = ref_file;
-        m_ref_byte_pos = ref_byte_pos;
-        m_ref_flipped = flip;
-    }*/
-    // use by bgen to redirect read to the intermediate file
-    //    void update_reference(const std::string& ref_file,
-    //                          const unsigned long long ref_byte_pos)
-    //    {
-    //        m_ref_file = ref_file;
-    //        m_ref_byte_pos = ref_byte_pos;
-    //    }
     void update_reference(const size_t& ref_idx,
                           const unsigned long long ref_byte_pos)
     {
         m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
     }
-    //    void update_target(const std::string& target_file,
-    //                       const unsigned long long byte_pos)
-    //    {
-    //        m_target_file = target_file;
-    //        m_target_byte_pos = byte_pos;
-    //    }
     void update_target(const size_t& target_idx,
                        const unsigned long long byte_pos)
     {
         m_target_index = target_idx;
         m_target_byte_pos = byte_pos;
     }
-    //    void add_target(const std::string& target_file,
-    //                    const unsigned long long target_byte_pos, const size_t
-    //                    chr, const size_t loc, const std::string& ref, const
-    //                    std::string& alt, const bool flipping)
-    //    {
-    //        m_target_file = target_file;
-    //        m_target_byte_pos = target_byte_pos;
-    //        // set reference to target by default
-    //        m_ref_file = target_file;
-    //        m_ref_byte_pos = target_byte_pos;
-    //        m_chr = chr;
-    //        m_loc = loc;
-    //        m_flipped = flipping;
-    //        m_ref = ref;
-    //        m_alt = alt;
-    //    }
     void add_target(const size_t& target_idx,
                     const unsigned long long target_byte_pos, const size_t chr,
                     const size_t loc, const std::string& ref,
@@ -125,18 +87,6 @@ public:
         m_ref = ref;
         m_alt = alt;
     }
-    //    void add_reference(const std::string& ref_file,
-    //                       const unsigned long long ref_byte_pos,
-    //                       const size_t homcom, const size_t het,
-    //                       const size_t homrar, const size_t missing)
-    //    {
-    //        m_ref_file = ref_file;
-    //        m_ref_byte_pos = ref_byte_pos;
-    //        m_homcom = homcom;
-    //        m_ref_het = het;
-    //        m_ref_homrar = homrar;
-    //        m_ref_missing = missing;
-    //    }
     void add_reference(const size_t& ref_idx,
                        const unsigned long long ref_byte_pos,
                        const size_t homcom, const size_t het,
@@ -212,10 +162,14 @@ public:
     size_t chr() const { return m_chr; }
     size_t loc() const { return m_loc; }
     unsigned long long category() const { return m_category; }
+
     void set_category(unsigned long long& cur_category, double& cur_p_start,
-                      const double& upper, const double& inter)
+                      const double& upper, const double& inter, bool& warning)
     {
-        if (m_p_value <= cur_p_start + inter) { m_category = cur_category; }
+        warning = false;
+        if (m_p_value <= cur_p_start + inter)
+        { // do nothing
+        }
         else if (m_p_value > upper)
         {
             if (!misc::logically_equal(cur_p_start, upper))
@@ -223,29 +177,26 @@ public:
                 cur_p_start = upper;
                 ++cur_category;
             }
-            m_category = cur_category;
         }
         else
         {
             // this is a new threshold
             ++cur_category;
-            m_category = cur_category;
-            // need to find the new cur_p_start and account for the possibility
-            // that the two SNPs have drastically different p-value (or the
-            // p-value step size are set too small)
-            while ((m_p_value - cur_p_start) / inter
-                   >= std::numeric_limits<unsigned long long>::max())
-            {
-                // too far away
-                cur_p_start +=
-                    inter * std::numeric_limits<unsigned long long>::max();
-            }
-            // here, the distance between the start and current p-value should
-            // be within  doable distance
-            unsigned long long step = static_cast<unsigned long long>(
-                (m_p_value - cur_p_start) / inter);
-            cur_p_start += inter * step;
+            // there will be imprecision w.r.t new
+            std::cerr << m_p_value << "\t" << cur_p_start << "\t" << inter
+                      << std::endl;
+            if ((m_p_value - cur_p_start) / inter
+                > std::numeric_limits<unsigned long long>::max())
+            { warning = true; }
+            // use log to help with the numeric stability
+            double interval =
+                std::log(m_p_value - cur_p_start) - std::log(inter);
+            interval = std::floor(std::exp(interval));
+            cur_p_start += std::exp(std::log(interval) + std::log(inter));
         }
+        m_category = cur_category;
+        m_p_threshold = cur_p_start;
+        return;
     }
     /*!
      * \brief Get the p-value of the SNP
