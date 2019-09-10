@@ -216,20 +216,62 @@ protected:
         assert(!attribute_str.empty());
         gene_id = "";
         gene_name = "";
-        std::vector<std::string> attributes = misc::split(attribute_str, ";");
+        std::size_t prev = 0, pos;
+        const std::string separators = ";";
+        std::string substr;
         std::vector<std::string> token;
         bool found_id = false, found_name = false;
-        for (auto&& a : attributes)
+        while ((pos = attribute_str.find_first_of(separators, prev))
+               != std::string::npos)
         {
-            // remove space before the attribute name
-            misc::trim(a);
-            if (a.rfind("gene_id", 0) == 0)
+            if (pos > prev)
             {
-                token = misc::split(a, " ");
+                substr = attribute_str.substr(prev, pos - prev);
+                misc::trim(substr);
+                if (substr.rfind("gene_id", 0) == 0)
+                {
+                    token = misc::split(substr, " ");
+                    if (token.size() != 2)
+                    {
+                        throw std::runtime_error(
+                            "Error: Malformed attribute value: " + substr);
+                    }
+                    gene_id = token.back();
+                    gene_id.erase(
+                        std::remove(gene_id.begin(), gene_id.end(), '\"'),
+                        gene_id.end());
+                    if (found_name) return true;
+                    found_id = true;
+                }
+                else if (substr.rfind("gene_name", 0) == 0)
+                {
+                    token = misc::split(substr, " ");
+                    if (token.size() != 2)
+                    {
+                        throw std::runtime_error(
+                            "Error: Malformed attribute value: " + substr);
+                    }
+                    gene_name = token.back();
+                    gene_name.erase(
+                        std::remove(gene_name.begin(), gene_name.end(), '\"'),
+                        gene_name.end());
+                    if (found_id) return true;
+                    found_name = true;
+                }
+            }
+            prev = pos + 1;
+        }
+        if (prev < attribute_str.length())
+        {
+            substr = attribute_str.substr(prev, std::string::npos);
+            misc::trim(substr);
+            if (substr.rfind("gene_id", 0) == 0)
+            {
+                token = misc::split(substr, " ");
                 if (token.size() != 2)
                 {
                     throw std::runtime_error(
-                        "Error: Malformed attribute value: " + a);
+                        "Error: Malformed attribute value: " + substr);
                 }
                 gene_id = token.back();
                 gene_id.erase(std::remove(gene_id.begin(), gene_id.end(), '\"'),
@@ -237,13 +279,13 @@ protected:
                 if (found_name) return true;
                 found_id = true;
             }
-            else if (a.rfind("gene_name", 0) == 0)
+            else if (substr.rfind("gene_name", 0) == 0)
             {
-                token = misc::split(a, " ");
+                token = misc::split(substr, " ");
                 if (token.size() != 2)
                 {
                     throw std::runtime_error(
-                        "Error: Malformed attribute value: " + a);
+                        "Error: Malformed attribute value: " + substr);
                 }
                 gene_name = token.back();
                 gene_name.erase(

@@ -433,7 +433,6 @@ void Region::load_gtf(
                 "Error: Cannot open GTF (gz) to read!\n";
             throw std::runtime_error(error_message);
         }
-        gz_input = true;
     }
     else
     {
@@ -465,7 +464,7 @@ void Region::load_gtf(
         // skip headers
         if (line.empty() || line[0] == '#') continue;
         // we don't count the header lines
-        num_line++;
+        ++num_line;
         misc::split(token, line, "\t");
         // convert chr string into consistent chr_coding
         chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
@@ -478,7 +477,7 @@ void Region::load_gtf(
             throw std::runtime_error(error_message);
         }
         if (chr_code < 0 || chr_code >= MAX_POSSIBLE_CHROM || chr > max_chr)
-        { chr_exclude++; }
+        { ++chr_exclude; }
         else if (in_feature(token[+GTF::FEATURE], m_feature))
         {
             start = 0;
@@ -539,7 +538,7 @@ void Region::load_gtf(
         }
         else
         {
-            exclude_feature++;
+            ++exclude_feature;
         }
     }
     std::string message = "";
