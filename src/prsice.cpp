@@ -2027,8 +2027,25 @@ void PRSice::null_set_no_thread(
     size_t processed = 0;
     std::mt19937 g(m_seed);
     bool first_run = true;
-    Eigen::VectorXd beta, se, effects, resid, fitted,
+    Eigen::VectorXd beta, se, effects, resid, fitted, se_base,
         prs = Eigen::VectorXd::Zero(num_sample);
+    if (p == rank)
+    {
+        se_base = Pmat
+                  * PQR.matrixQR()
+                        .topRows(p)
+                        .triangularView<Eigen::Upper>()
+                        .solve(lm::I_p(p))
+                        .rowwise()
+                        .norm();
+    }
+    else
+    {
+        se_base = Eigen::VectorXd::Constant(
+            p, std::numeric_limits<double>::quiet_NaN());
+        se_base.head(rank) = Rinv.rowwise().norm();
+        se_base = Pmat * se_base;
+    }
     while (processed < m_num_perm)
     {
         size_t begin = 0;
@@ -2088,32 +2105,21 @@ void PRSice::null_set_no_thread(
                 {
                     beta = PQR.solve(prs);
                     fitted = X * beta;
-                    se = Pmat
-                         * PQR.matrixQR()
-                               .topRows(p)
-                               .triangularView<Eigen::Upper>()
-                               .solve(lm::I_p(p))
-                               .rowwise()
-                               .norm();
                 }
                 else
                 {
                     beta = Eigen::VectorXd::Constant(
-                        p, std::numeric_limits<double>::quiet_NaN());
-                    se = Eigen::VectorXd::Constant(
                         p, std::numeric_limits<double>::quiet_NaN());
                     effects = PQR.householderQ().adjoint() * prs;
                     beta.head(rank) = Rinv * effects.head(rank);
                     beta = Pmat * beta;
                     effects.tail(num_sample - rank).setZero();
                     fitted = PQR.householderQ() * effects;
-                    se.head(rank) = Rinv.rowwise().norm();
-                    se = Pmat * se;
                 }
                 resid = prs - fitted;
                 df = (rank >= 0) ? num_sample - p : num_sample - rank;
                 double s = resid.norm() / std::sqrt(double(df));
-                se = s * se;
+                se = s * se_base;
                 standard_error = se(1);
                 t_value = std::fabs(beta(1) / standard_error);
             }
@@ -2207,7 +2213,24 @@ void PRSice::consume_prs(
     const Eigen::Index p = m_independent_variables.cols();
     Eigen::MatrixXd independent;
     if (m_logit_perm && is_binary) independent = m_independent_variables;
-    Eigen::VectorXd beta, se, effects, prs, fitted, resid;
+    Eigen::VectorXd beta, se, effects, prs, fitted, resid, se_base;
+    if (p == rank)
+    {
+        se_base = Pmat
+                  * PQR.matrixQR()
+                        .topRows(p)
+                        .triangularView<Eigen::Upper>()
+                        .solve(lm::I_p(p))
+                        .rowwise()
+                        .norm();
+    }
+    else
+    {
+        se_base = Eigen::VectorXd::Constant(
+            p, std::numeric_limits<double>::quiet_NaN());
+        se_base.head(rank) = Rinv.rowwise().norm();
+        se_base = Pmat * se_base;
+    }
     Eigen::Index df;
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector
@@ -2239,33 +2262,22 @@ void PRSice::consume_prs(
             {
                 beta = PQR.solve(prs);
                 fitted = X * beta;
-                se = Pmat
-                     * PQR.matrixQR()
-                           .topRows(p)
-                           .triangularView<Eigen::Upper>()
-                           .solve(lm::I_p(p))
-                           .rowwise()
-                           .norm();
             }
             else
             {
                 effects = PQR.householderQ().adjoint() * prs;
                 beta = Eigen::VectorXd::Constant(
                     p, std::numeric_limits<double>::quiet_NaN());
-                se = Eigen::VectorXd::Constant(
-                    p, std::numeric_limits<double>::quiet_NaN());
                 beta.head(rank) = Rinv * effects.head(rank);
                 beta = Pmat * beta;
                 effects.tail(num_regress_sample - rank).setZero();
                 fitted = PQR.householderQ() * effects;
-                se.head(rank) = Rinv.rowwise().norm();
-                se = Pmat * se;
             }
             resid = prs - fitted;
             df = (rank >= 0) ? num_regress_sample - p
                              : num_regress_sample - rank;
             double s = resid.norm() / std::sqrt(double(df));
-            se = s * se;
+            se = s * se_base;
             standard_error = se(1);
             coefficient = beta(1);
         }
