@@ -49,3 +49,7 @@ PRSice-2 exploit this property, such that the permutation analysis is performed 
 As we re-seed the random number generator for each p-value threshold, we ensure the random phenotypes generated in each p-value thresholds
 to be identical, therefore allowing us to reuse the calculated PRS, and also reuse the decomosed matrix, which leads to significant speed 
 up of the permutation process.
+
+!!! note
+    
+    With binary traits, unless `--logit-perm` is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics
