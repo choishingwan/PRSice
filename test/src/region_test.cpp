@@ -1,4 +1,4 @@
-#ifndef REGION_TEST_HPP
+﻿#ifndef REGION_TEST_HPP
 #define REGION_TEST_HPP
 #include "genotype.hpp"
 #include "global.hpp"
@@ -15,7 +15,7 @@ TEST(REGION, SINGLE_INIT)
     std::string range = "chr2:1234";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
@@ -54,7 +54,7 @@ TEST(REGION, INVALID_INPUT)
     std::string range = "chr2:1234:456";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         FAIL();
@@ -70,7 +70,7 @@ TEST(REGION, SINGLE_RANGE_INIT)
     std::string range = "chr2:1234-1357";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
@@ -87,7 +87,7 @@ TEST(REGION, SINGLE_RANGE_WRONG)
     std::string range = "chr2:12341-1357";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         FAIL();
@@ -102,7 +102,7 @@ TEST(REGION, MULTI_RANGE_INIT)
     std::string range = "chr6:369-4321,chr2:1234-1357";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
@@ -117,7 +117,7 @@ TEST(REGION, MULTI_MIX_INIT)
     std::string range = "chr6:369-4321,chr2:1234";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
@@ -132,7 +132,7 @@ TEST(REGION, MULTI_MORE_MIX_INIT)
     std::string range = "chr6:369-4321,chr2:1234,chr1:312345-9437690";
     try
     {
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
     }
@@ -147,7 +147,7 @@ TEST(REGION, WRONG_INPUT)
     try
     {
         std::string range = "chr1";
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         // in this case, we will assume this is a bed file, but we can't read
@@ -164,7 +164,7 @@ TEST(REGION, WRONG_RANGE_FORMAT)
     try
     {
         std::string range = "chr1:1-2-3";
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         FAIL();
@@ -179,7 +179,7 @@ TEST(REGION, RANGE_PARSE_PROBLEM)
     try
     {
         std::string range = "chr1:1-,2";
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         exclusion_region.clear();
         FAIL();
@@ -196,9 +196,9 @@ TEST(REGION, MULTI_CHROMOSOME)
     {
         // we want to test if the chromosome parsing work as expected
         std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrX:10";
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
-        ASSERT_EQ(exclusion_region.size(), CHROM_X + 1);
+        ASSERT_EQ(exclusion_region.size(), 20 + 1);
         exclusion_region.clear();
     }
     catch (...)
@@ -213,7 +213,7 @@ TEST(REGION, MULTI_CHROMOSOME_INVALID)
     {
         // we want to test if the chromosome parsing work as expected
         std::string range = "chr1:1,chr10:1,chr2:132,chr20:12,chrA:10";
-        std::vector<IITree<int, int>> exclusion_region;
+        std::vector<IITree<size_t, size_t>> exclusion_region;
         Region::generate_exclusion(exclusion_region, range);
         ASSERT_EQ(exclusion_region.size(), 21);
         exclusion_region.clear();
@@ -225,16 +225,15 @@ TEST(REGION, MULTI_CHROMOSOME_INVALID)
 }
 class REGION_EX_STRING : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         std::string range = "chr2:1234";
         Region::generate_exclusion(exclusion_region, range);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -263,9 +262,8 @@ TEST_F(REGION_EX_STRING, FINE_SEQUENT_SEARCH)
 
 class REGION_EX_STRING_REGION : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         // inclusion range
@@ -273,7 +271,7 @@ protected:
         Region::generate_exclusion(exclusion_region, range);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -302,9 +300,8 @@ TEST_F(REGION_EX_STRING_REGION, SEQ_LOW_BOUND)
 
 class REGION_STRING_MIX : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         // we need to account for both range and single base input
@@ -317,7 +314,7 @@ protected:
         Region::generate_exclusion(exclusion_region, range);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -370,9 +367,8 @@ TEST_F(REGION_STRING_MIX, RUN_OVER)
 
 class REGION_BED_MIN_TAB_NO_OVER : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -410,7 +406,7 @@ protected:
         Region::generate_exclusion(exclusion_region, bed_name);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -488,9 +484,8 @@ TEST_F(REGION_BED_MIN_TAB_NO_OVER, RANDOM_ORDER)
 
 class REGION_BED_MIN_TAB : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -533,7 +528,7 @@ protected:
         Region::generate_exclusion(exclusion_region, bed_name);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -592,9 +587,8 @@ TEST_F(REGION_BED_MIN_TAB, CHECK_INCLUSION_OVERLAPPED)
 
 class REGION_BED_MIN_SPACE : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -637,7 +631,7 @@ protected:
         Region::generate_exclusion(exclusion_region, bed_name);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -696,9 +690,8 @@ TEST_F(REGION_BED_MIN_SPACE, CHECK_INCLUSION_OVERLAPPED)
 
 class REGION_BED_5_COLUMN : public ::testing::Test
 {
-
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         // not enough for stand yet
@@ -742,7 +735,7 @@ protected:
         Region::generate_exclusion(exclusion_region, bed_name);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -803,7 +796,7 @@ class REGION_BED_WITH_STRAND : public ::testing::Test
     // For exclusion, strand information should not alter result (window padding
     // should all be 0)
 protected:
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     void SetUp() override
     {
         std::ofstream bed_file;
@@ -846,7 +839,7 @@ protected:
         Region::generate_exclusion(exclusion_region, bed_name);
     }
     void TearDown() override { exclusion_region.clear(); }
-    bool in_region(int chr, int loc)
+    bool in_region(size_t chr, size_t loc)
     {
         return Genotype::within_region(exclusion_region, chr, loc);
     }
@@ -917,7 +910,7 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
              << "3 3209\n"
              << "21 43440\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
@@ -930,10 +923,42 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN)
     }
     exclusion_region.clear();
 }
-TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN_SET)
+
+
+class REGION_MALFORM_BED_MASTER : public ::testing::Test
+{
+protected:
+    FAKE_REGION* region;
+    std::string bed_name;
+    Reporter* reporter;
+    void SetUp() override
+    {
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        size_t window_5 = 0;
+        size_t window_3 = 0;
+        std::string gtf = "";
+        std::vector<std::string> msigdb;
+        std::vector<std::string> snp_set;
+        std::string background = "";
+        bed_name = path + "Test.bed";
+        std::vector<std::string> bed = {bed_name};
+        bool genome_wide_background = false;
+        reporter = new Reporter(std::string(path + "LOG"));
+        region = new FAKE_REGION(bed, feature, msigdb, snp_set, background, gtf,
+                                 window_5, window_3, genome_wide_background,
+                                 reporter);
+    }
+
+    void TearDown() override
+    {
+        delete region;
+        delete reporter;
+    }
+};
+TEST_F(REGION_MALFORM_BED_MASTER, NOT_ENOUGH_COLUMN_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -943,33 +968,22 @@ TEST(REGION_MALFORM_BED, NOT_ENOUGH_COLUMN_SET)
              << "3 3209\n"
              << "21 43440\n"; // overlap
     bed_file.close();
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::cerr << "Finished writing bed" << std::endl;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        std::cerr << "Start generating region" << std::endl;
+        region->generate_regions(gene_sets, snp_in_sets, 22);
+        std::cerr << "failed" << std::endl;
         FAIL();
     }
     catch (...)
     {
+        std::cerr << "Success" << std::endl;
         SUCCEED();
     }
-    gene_sets.clear();
+    std::cerr << "Completed" << std::endl;
 }
 
 TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
@@ -985,7 +999,7 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
@@ -1000,10 +1014,9 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND)
 }
 
 
-TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, INCONSISTEN_COLUMN_STRAND_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1013,26 +1026,11 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1045,7 +1043,7 @@ TEST(REGION_MALFORM_BED, INCONSISTEN_COLUMN_STRAND_SET)
 TEST(REGION_MALFORM_BED, NOT_FOUND)
 {
     std::string bed_name = path + "404.bed";
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
@@ -1062,7 +1060,7 @@ TEST(REGION_MALFORM_BED, NOT_FOUND)
 TEST(REGION_MALFORM_BED, MALFORM_INPUT_FORMAT)
 {
     std::string bed_name = path + "Test.bed:Name:Wrong";
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
@@ -1075,30 +1073,15 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_FORMAT)
     }
     exclusion_region.clear();
 }
-TEST(REGION_MALFORM_BED, NOT_FOUND_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, NOT_FOUND_SET)
 {
-    std::string bed_name = path + "404.bed";
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::remove(bed_name.c_str());
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1113,24 +1096,24 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_SET)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         // we want to penalize any form of malformed input
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1140,10 +1123,9 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_SET)
 }
 
 
-TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, UNSUPPORTED_STRAND_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1153,26 +1135,11 @@ TEST(REGION_MALFORM_BED, UNSUPPORTED_STRAND_SET)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1195,7 +1162,7 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1221,7 +1188,7 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1246,7 +1213,7 @@ TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1272,7 +1239,7 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1299,7 +1266,7 @@ TEST(REGION_MALFORM_BED, SMALLER_END)
              << "3 123141 3209 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1312,10 +1279,9 @@ TEST(REGION_MALFORM_BED, SMALLER_END)
     exclusion_region.clear();
 }
 
-TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, NEGATIVE_COORDINATE_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1326,26 +1292,11 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE_SET)
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
 
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1354,10 +1305,9 @@ TEST(REGION_MALFORM_BED, NEGATIVE_COORDINATE_SET)
     }
 }
 
-TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, INVALID_COORDINATE_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1368,26 +1318,11 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
 
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1397,10 +1332,9 @@ TEST(REGION_MALFORM_BED, INVALID_COORDINATE_SET)
 }
 
 
-TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, NEGATIVE_END_COORDINATE_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1410,26 +1344,12 @@ TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
              << "3 3209 -123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1439,10 +1359,9 @@ TEST(REGION_MALFORM_BED, NEGATIVE_END_COORDINATE_SET)
 }
 
 
-TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, INVALID_END_COORDINATE_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1452,26 +1371,11 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
              << "3 3209 ABC . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1480,10 +1384,9 @@ TEST(REGION_MALFORM_BED, INVALID_END_COORDINATE_SET)
     }
 }
 
-TEST(REGION_MALFORM_BED, SMALLER_END_SET)
+TEST_F(REGION_MALFORM_BED_MASTER, SMALLER_END_SET)
 {
     std::ofstream bed_file;
-    std::string bed_name = path + "Test.bed";
     bed_file.open(bed_name.c_str());
     if (!bed_file.is_open())
     { throw std::runtime_error("Error: Cannot open bed file"); }
@@ -1493,26 +1396,11 @@ TEST(REGION_MALFORM_BED, SMALLER_END_SET)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::vector<std::string> bed = {bed_name};
-    std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1562,21 +1450,21 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::vector<std::string> bed;
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    size_t num_regions = Region::generate_regions(
-        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-        genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-        reporter);
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf, window_5,
+                       window_3, genome_wide_background, &reporter);
+    size_t num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+    region_names = region.get_names();
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
     // there will always be 2 regions
@@ -1589,8 +1477,8 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     const size_t required_size = BITCT_TO_WORDCT(num_regions);
     std::vector<uintptr_t> index(required_size, 0);
     // this is a SNP found in the bed file, but as we have not generated the
-    // region (we haven't use the bed file), this will always be considered as
-    // not found
+    // region (we haven't use the bed file), this will always be considered
+    // as not found
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
                              5, 50533 + 1, genome_wide_background);
     ASSERT_EQ(index, not_found);
@@ -1613,23 +1501,23 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_TRACE)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -1655,23 +1543,24 @@ TEST(REGION_STD_BED_INPUT, DUPLICATED_SET_NAME)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::vector<std::string> bed = {std::string(bed_name + ":Base")};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        size_t num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed, snp_set, background, 22,
-            reporter);
+        FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        size_t num_regions =
+            region.generate_regions(gene_sets, snp_in_sets, 22);
         // only base and background, skip the set as it is named as Base
         ASSERT_EQ(num_regions, 2);
     }
@@ -1697,23 +1586,23 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+        FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -1736,8 +1625,8 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
              << "browser hide all useScore=1\n"
              << "2 19182 32729 . . .\n";
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1762,8 +1651,8 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_TRACK)
                 "useScore=1\n"
              << "2 19182 32729 . . .\n";
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1787,7 +1676,7 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_EXCLUSION)
     bed_file << "#CHR START END\n"
              << "2 19182 32729 . . .\n";
     bed_file.close();
-    std::vector<IITree<int, int>> exclusion_region;
+    std::vector<IITree<size_t, size_t>> exclusion_region;
     try
     {
         // we want to penalize any form of malformed input
@@ -1815,24 +1704,25 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> region_names;
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         // malformed anything are considered as fatal
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf, msigdb, bed, snp_set, background, 22,
-                                 reporter);
+
+        FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -1844,8 +1734,8 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
 class REGION_STD_BED : public ::testing::Test
 {
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0};
     std::vector<std::string> region_names;
@@ -1894,24 +1784,25 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
+        size_t window_5 = 0;
+        size_t window_3 = 0;
         std::string gtf = "";
-        std::string msigdb = "";
-        std::string snp_set = "";
+        std::vector<std::string> msigdb;
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> bed_names = {bed_name};
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
-            22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
         // 2 because 1 is reserved for background and 2 is the first set
         SET_BIT(2, found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -1966,8 +1857,8 @@ TEST_F(REGION_STD_BED, MID_NOT_FOUND)
 class REGION_CHR_BED : public ::testing::Test
 {
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0};
     std::vector<std::string> region_names;
@@ -2016,24 +1907,26 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
+        size_t window_5 = 0;
+        size_t window_3 = 0;
         std::string gtf = "";
-        std::string msigdb = "";
-        std::string snp_set = "";
+        std::vector<std::string> msigdb;
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> bed_names = {bed_name};
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
-            22, reporter);
+
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
         // 2 because 1 is reserved for background and 2 is the first set
         SET_BIT(2, found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -2087,8 +1980,8 @@ class REGION_STD_BED_PAD : public ::testing::Test
 {
     // test window padding
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0};
     std::vector<std::string> region_names;
@@ -2137,24 +2030,26 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 10;
-        int window_3 = 20;
+        size_t window_5 = 10;
+        size_t window_3 = 20;
         std::string gtf = "";
-        std::string msigdb = "";
-        std::string snp_set = "";
+        std::vector<std::string> msigdb;
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> bed_names = {bed_name};
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
-            22, reporter);
+
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
         // 2 because 1 is reserved for background and 2 is the first set
         SET_BIT(2, found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -2194,8 +2089,8 @@ class REGION_MINIMUM_BED_PAD : public ::testing::Test
 {
     // test window padding
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     std::vector<uintptr_t> found = {0};
     std::vector<std::string> region_names;
@@ -2233,24 +2128,26 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 10;
-        int window_3 = 20;
+        size_t window_5 = 10;
+        size_t window_3 = 20;
         std::string gtf = "";
-        std::string msigdb = "";
-        std::string snp_set = "";
+        std::vector<std::string> msigdb;
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> bed_names = {bed_name};
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf, msigdb, bed_names, snp_set, background,
-            22, reporter);
+
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
+                           window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
         // 2 because 1 is reserved for background and 2 is the first set
         SET_BIT(2, found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -2264,8 +2161,8 @@ TEST_F(REGION_MINIMUM_BED_PAD, CHECK_PAD)
     // We will see how the padding change the inclusion criteria
     // this SNP doesn't contain the strand info, we should assume the start
     // is the 5' end
-    // we always pad 10 bp to the 5' and 20 to the 3' when strand info is not
-    // available
+    // we always pad 10 bp to the 5' and 20 to the 3' when strand info is
+    // not available
     EXPECT_EQ(get_flag(3, 29863 + 1 - 11).front(), not_found.front());
     EXPECT_EQ(get_flag(3, 29863 + 1 - 10).front(), found.front());
     EXPECT_EQ(get_flag(3, 29863 + 1).front(), found.front());
@@ -2301,22 +2198,21 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
 
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::string background = "";
     std::vector<std::string> bed_names = {std::string(bed_name + ":Name"),
                                           second_bed_name};
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    size_t num_regions = Region::generate_regions(
-        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-        genome_wide_background, gtf, msigdb, bed_names, snp_set, background, 22,
-        reporter);
+    FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
+                       window_5, window_3, genome_wide_background, &reporter);
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    size_t num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+    std::vector<std::string> region_names = region.get_names();
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
@@ -2348,20 +2244,19 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
         bed_name,
         std::string(second_bed_name + ":Name"),
     };
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::string gtf = "";
-    std::string msigdb = "";
-    std::string snp_set = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
     std::string background = "";
-    std::vector<std::string> region_names;
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    size_t num_regions = Region::generate_regions(
-        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-        genome_wide_background, gtf, msigdb, bed_names, snp_set, background, 22,
-        reporter);
+    FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
+                       window_5, window_3, genome_wide_background, &reporter);
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    size_t num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+    std::vector<std::string> region_names = region.get_names();
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
@@ -2373,30 +2268,45 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
 // msigdb read
 
 // Any error in the GTF file will lead to throw
-TEST(REGION_GTF_BASIC, NOT_EXIST)
+
+class REGION_GTF : public ::testing::Test
 {
+protected:
+    FAKE_REGION* region;
+    Reporter* reporter;
     std::string gtf_name = path + "Test.gtf";
+    void SetUp() override
+    {
+        reporter = new Reporter(std::string(path + "LOG"));
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        size_t window_5 = 0;
+        size_t window_3 = 0;
+        std::vector<std::string> msigdb;
+        std::vector<std::string> snp_set;
+        std::vector<std::string> bed;
+        std::string background = "";
+        bool genome_wide_background = false;
+        region = new FAKE_REGION(bed, feature, msigdb, snp_set, background,
+                                 gtf_name, window_5, window_3,
+                                 genome_wide_background, reporter);
+    }
+
+    void TearDown() override
+    {
+        delete region;
+        delete reporter;
+    }
+};
+
+TEST_F(REGION_GTF, NOT_EXIST)
+{
     remove(gtf_name.c_str());
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
-        FAIL();
+        region->generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -2404,31 +2314,17 @@ TEST(REGION_GTF_BASIC, NOT_EXIST)
     }
 }
 
-TEST(REGION_GTF_BASIC, EMPTY)
+TEST_F(REGION_GTF, EMPTY)
 {
-    std::string gtf_name = path + "Test.gtf";
+    std::remove(gtf_name.c_str());
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2437,42 +2333,31 @@ TEST(REGION_GTF_BASIC, EMPTY)
     }
 }
 
-TEST(REGION_GTF_BASIC, ALL_REGION_REMOVE)
+TEST_F(REGION_GTF, ALL_REGION_REMOVE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tstop_codon\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tfive_prime_utr\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2481,37 +2366,24 @@ TEST(REGION_GTF_BASIC, ALL_REGION_REMOVE)
     }
 }
 
-TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
+TEST_F(REGION_GTF, MALFORMAT_SPACE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1 havana gene 11869 14409 . + . gene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2519,42 +2391,32 @@ TEST(REGION_GTF_BASIC, MALFORMAT_SPACE)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, NEGATIVE_START_COORDINATE)
+TEST_F(REGION_GTF, NEGATIVE_START_COORDINATE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t-11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2563,42 +2425,31 @@ TEST(REGION_GTF_BASIC, NEGATIVE_START_COORDINATE)
     }
 }
 
-TEST(REGION_GTF_BASIC, NEGATIVE_END_COORDINATE)
+TEST_F(REGION_GTF, NEGATIVE_END_COORDINATE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t11869\t-14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2607,42 +2458,31 @@ TEST(REGION_GTF_BASIC, NEGATIVE_END_COORDINATE)
     }
 }
 
-TEST(REGION_GTF_BASIC, SINGLE_FEATURE_REMOVE)
+TEST_F(REGION_GTF, SINGLE_FEATURE_REMOVE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\t5'UTR\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -2651,42 +2491,31 @@ TEST(REGION_GTF_BASIC, SINGLE_FEATURE_REMOVE)
     }
 }
 
-TEST(REGION_GTF_BASIC, SINGLE_CHR_REMOVE)
+TEST_F(REGION_GTF, SINGLE_CHR_REMOVE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "67\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -2696,62 +2525,57 @@ TEST(REGION_GTF_BASIC, SINGLE_CHR_REMOVE)
 }
 
 
-TEST(REGION_GTF_BASIC, MULTI_CHR_REMOVE)
+TEST_F(REGION_GTF, MULTI_CHR_REMOVE)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "67\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
            "976\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
            "68\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
            "913\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
 
 
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -2759,41 +2583,30 @@ TEST(REGION_GTF_BASIC, MULTI_CHR_REMOVE)
         FAIL();
     }
 }
-TEST(REGION_GTF_BASIC, NO_GENE_ID)
+TEST_F(REGION_GTF, NO_GENE_ID)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\t"
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2803,42 +2616,30 @@ TEST(REGION_GTF_BASIC, NO_GENE_ID)
 }
 
 
-TEST(REGION_GTF_BASIC, NO_BOTH_ID)
+TEST_F(REGION_GTF, NO_BOTH_ID)
 {
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\t"
            "gene_version \"5\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2846,71 +2647,32 @@ TEST(REGION_GTF_BASIC, NO_BOTH_ID)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, NO_GZ)
+
+TEST_F(REGION_GTF, BIGGER_START)
 {
-    std::string gtf_name = path + "404.gz";
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
-    try
-    {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
-TEST(REGION_GTF_BASIC, BIGGER_START)
-{
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t14409\t11869\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::vector<IITree<int, int>> gene_sets;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<std::string> bed_names = {};
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2918,43 +2680,31 @@ TEST(REGION_GTF_BASIC, BIGGER_START)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
+TEST_F(REGION_GTF, UNDEFINED_STRAND)
 {
-
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t11869\t14409\t.\t@\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -2962,10 +2712,8 @@ TEST(REGION_GTF_BASIC, UNDEFINED_STRAND)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
+TEST_F(REGION_GTF, TAB_ATTRIBUTE)
 {
-
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
@@ -2973,33 +2721,22 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
            "\"ENSG00000223972\";\t"
            "gene_version\t\"5\";\tgene_name\t\"DDX11L1\";\tgene_source\t"
            "\"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\";\thavana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -3007,42 +2744,30 @@ TEST(REGION_GTF_BASIC, TAB_ATTRIBUTE)
         SUCCEED();
     }
 }
-TEST(REGION_GTF_BASIC, NO_GENE_ID_2)
+TEST_F(REGION_GTF, NO_GENE_ID_2)
 {
-
-    std::string gtf_name = path + "Test.gtf";
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "1\thavana\tgene\t11869\t14409\t.\t@\t.\tgene_id "
            "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
            "1\thavana\tgene\t11869\t14409\t.\t+\t.\t"
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source \"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; havana_gene "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -3055,8 +2780,8 @@ class REGION_GTF_FEATURE : public ::testing::Test
     // For exclusion, strand information should not alter result (window
     // padding should all be 0)
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     size_t num_regions;
     size_t required_size;
@@ -3087,7 +2812,8 @@ protected:
                "havana_gene "
                "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
-               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_id "
+               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_"
+               "id "
                "\"ENSG00000255790\"; gene_version \"5\"; transcript_id "
                "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
                "\"RP11-711K1.7\"; gene_source \"havana\"; gene_biotype "
@@ -3095,17 +2821,21 @@ protected:
                "havana_gene_version \"2\"; transcript_name "
                "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
                "transcript_biotype \"sense_intronic\"; havana_transcript "
-               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; "
+               "tag "
                "\"basic\"; transcript_support_level \"4\";\n"
 
-               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-"
+               "\t1\tgene_"
                "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
-               "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+               "\"ENST00000261833\"; transcript_version \"11\"; "
+               "exon_number "
                "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
                "transcript_name \"CIT-001\"; transcript_source "
-               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; "
+               "tag "
                "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
                "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
                "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
@@ -3117,7 +2847,8 @@ protected:
                "\"2\"; gene_name \"PIGB\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000172654\"; havana_gene_version \"1\"; "
-               "transcript_name \"PIGB-201\"; transcript_source \"ensembl\"; "
+               "transcript_name \"PIGB-201\"; transcript_source "
+               "\"ensembl\"; "
                "transcript_biotype \"protein_coding\"; protein_id "
                "\"ENSP00000438963\"; protein_version \"2\"; tag \"basic\"; "
                "transcript_support_level \"5\";\n";
@@ -3135,24 +2866,24 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
-        std::string msigdb = "";
-        std::string snp_set = "";
+        size_t window_5 = 0;
+        size_t window_3 = 0;
+        std::vector<std::string> msigdb = {gmt_name};
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         SET_BIT(0, not_found.data());
-        // because we use genome_wide_background, which should have same bit set
-        // as base
+        // because we use genome_wide_background, which should have same bit
+        // set as base
         SET_BIT(1, not_found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -3167,8 +2898,8 @@ class REGION_GTF_GZ : public ::testing::Test
     // For exclusion, strand information should not alter result (window
     // padding should all be 0)
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     size_t num_regions;
     size_t required_size;
@@ -3200,7 +2931,8 @@ protected:
                "havana_gene "
                "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
-               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_id "
+               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_"
+               "id "
                "\"ENSG00000255790\"; gene_version \"5\"; transcript_id "
                "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
                "\"RP11-711K1.7\"; gene_source \"havana\"; gene_biotype "
@@ -3208,17 +2940,21 @@ protected:
                "havana_gene_version \"2\"; transcript_name "
                "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
                "transcript_biotype \"sense_intronic\"; havana_transcript "
-               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; "
+               "tag "
                "\"basic\"; transcript_support_level \"4\";\n"
 
-               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-"
+               "\t1\tgene_"
                "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
-               "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+               "\"ENST00000261833\"; transcript_version \"11\"; "
+               "exon_number "
                "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
                "transcript_name \"CIT-001\"; transcript_source "
-               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; "
+               "tag "
                "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
                "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
                "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
@@ -3230,7 +2966,8 @@ protected:
                "\"2\"; gene_name \"PIGB\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000172654\"; havana_gene_version \"1\"; "
-               "transcript_name \"PIGB-201\"; transcript_source \"ensembl\"; "
+               "transcript_name \"PIGB-201\"; transcript_source "
+               "\"ensembl\"; "
                "transcript_biotype \"protein_coding\"; protein_id "
                "\"ENSP00000438963\"; protein_version \"2\"; tag \"basic\"; "
                "transcript_support_level \"5\";\n";
@@ -3248,24 +2985,24 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
-        std::string msigdb = "";
-        std::string snp_set = "";
+        size_t window_5 = 0;
+        size_t window_3 = 0;
+        std::vector<std::string> msigdb = {gmt_name};
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         SET_BIT(0, not_found.data());
-        // because we use genome_wide_background, which should have same bit set
-        // as base
+        // because we use genome_wide_background, which should have same bit
+        // set as base
         SET_BIT(1, not_found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -3333,8 +3070,8 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET4)
     std::vector<uintptr_t> found = {0};
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
-    // + 1 because 0 base, otherwise, we need to +2 to set number as base and
-    // background
+    // + 1 because 0 base, otherwise, we need to +2 to set number as base
+    // and background
     SET_BIT(4 + 1, found.data());
     SET_BIT(6 + 1, found.data());
     ASSERT_EQ(get_flag(12, 119697658).front(), not_found.front());
@@ -3360,8 +3097,8 @@ TEST_F(REGION_GTF_FEATURE, FOUND_SNP_SET5)
 class REGION_GTF_PAD : public ::testing::Test
 {
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     size_t num_regions;
     size_t required_size;
@@ -3392,7 +3129,8 @@ protected:
                "havana_gene "
                "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
 
-               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_id "
+               "12\thavana\ttranscript\t11399381\t11486678\t.\t-\t.\tgene_"
+               "id "
                "\"ENSG00000255790\"; gene_version \"5\"; transcript_id "
                "\"ENST00000538349\"; transcript_version \"5\"; gene_name "
                "\"RP11-711K1.7\"; gene_source \"havana\"; gene_biotype "
@@ -3400,17 +3138,21 @@ protected:
                "havana_gene_version \"2\"; transcript_name "
                "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
                "transcript_biotype \"sense_intronic\"; havana_transcript "
-               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; "
+               "tag "
                "\"basic\"; transcript_support_level \"4\";\n"
 
-               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-"
+               "\t1\tgene_"
                "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
-               "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+               "\"ENST00000261833\"; transcript_version \"11\"; "
+               "exon_number "
                "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
                "transcript_name \"CIT-001\"; transcript_source "
-               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; "
+               "tag "
                "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
                "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
                "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
@@ -3422,7 +3164,8 @@ protected:
                "\"2\"; gene_name \"PIGB\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000172654\"; havana_gene_version \"1\"; "
-               "transcript_name \"PIGB-201\"; transcript_source \"ensembl\"; "
+               "transcript_name \"PIGB-201\"; transcript_source "
+               "\"ensembl\"; "
                "transcript_biotype \"protein_coding\"; protein_id "
                "\"ENSP00000438963\"; protein_version \"2\"; tag \"basic\"; "
                "transcript_support_level \"5\";\n";
@@ -3439,25 +3182,25 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 10;
-        int window_3 = 20;
-        std::string msigdb = "";
-        std::string snp_set = "";
+        size_t window_5 = 10;
+        size_t window_3 = 20;
+        std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+        std::vector<std::string> msigdb = {gmt_name};
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         SET_BIT(0, not_found.data());
-        // because we use genome_wide_background, which should have same bit set
-        // as base
+        // because we use genome_wide_background, which should have same bit
+        // set as base
         SET_BIT(1, not_found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -3535,8 +3278,8 @@ TEST_F(REGION_GTF_PAD, FOUND_SNP_SET5)
 class REGION_GTF_MULTI_EX : public ::testing::Test
 {
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     size_t num_regions;
     size_t required_size;
@@ -3579,17 +3322,21 @@ protected:
                "havana_gene_version \"2\"; transcript_name "
                "\"RP11-711K1.7-001\"; transcript_source \"havana\"; "
                "transcript_biotype \"sense_intronic\"; havana_transcript "
-               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; tag "
+               "\"OTTHUMT00000402313\"; havana_transcript_version \"2\"; "
+               "tag "
                "\"basic\"; transcript_support_level \"4\";\n"
 
-               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-\t1\tgene_"
+               "12\tensembl_havana\tCDS\t119697659\t119697838\t.\t-"
+               "\t1\tgene_"
                "id \"ENSG00000122966\"; gene_version \"14\"; transcript_id "
-               "\"ENST00000261833\"; transcript_version \"11\"; exon_number "
+               "\"ENST00000261833\"; transcript_version \"11\"; "
+               "exon_number "
                "\"45\"; gene_name \"CIT\"; gene_source \"ensembl_havana\"; "
                "gene_biotype \"protein_coding\"; havana_gene "
                "\"OTTHUMG00000134325\"; havana_gene_version \"8\"; "
                "transcript_name \"CIT-001\"; transcript_source "
-               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; tag "
+               "\"ensembl_havana\"; transcript_biotype \"protein_coding\"; "
+               "tag "
                "\"CCDS\"; ccds_id \"CCDS9192\"; havana_transcript "
                "\"OTTHUMT00000259410\"; havana_transcript_version \"4\"; "
                "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
@@ -3605,25 +3352,25 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
-        std::string msigdb = "";
-        std::string snp_set = "";
+        size_t window_5 = 0;
+        size_t window_3 = 0;
+        std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+        std::vector<std::string> msigdb = {gmt_name};
+        std::vector<std::string> snp_set;
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {};
-        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         SET_BIT(0, not_found.data());
-        // because we use genome_wide_background, which should have same bit set
-        // as base
+        // because we use genome_wide_background, which should have same bit
+        // set as base
         SET_BIT(1, not_found.data());
         required_size = BITCT_TO_WORDCT(num_regions);
     }
-    std::vector<uintptr_t> get_flag(const int chr, const int bp)
+    std::vector<uintptr_t> get_flag(const size_t chr, const size_t bp)
     {
         std::vector<uintptr_t> index(required_size, 0);
         Genotype::construct_flag("", gene_sets, snp_in_sets, index,
@@ -3685,14 +3432,46 @@ TEST_F(REGION_GTF_MULTI_EX, SIMPLE_MULTI)
     ASSERT_EQ(get_flag(12, 119697838).front(), found.front());
     ASSERT_EQ(get_flag(12, 119697839).front(), not_found.front());
 }
-TEST(REGION_MSIGDB, NAME_CROSS_CHR)
+class REGION_MSIGDB : public ::testing::Test
 {
-    // This should be ok? Transplicing or something like that?
+protected:
+    FAKE_REGION* region;
+    Reporter* reporter;
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
-    std::ofstream gtf, gmt;
+    void SetUp() override
+    {
+        std::ofstream gmt;
+        gmt.open(gmt_name.c_str());
+        gmt << "SET1 DDX11L1" << std::endl;
+        gmt << "SET2 CIT" << std::endl;
+        gmt.close();
+        reporter = new Reporter(std::string(path + "LOG"));
+        std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                            "CDS"};
+        size_t window_5 = 0;
+        size_t window_3 = 0;
+        std::vector<std::string> msigdb = {gmt_name};
+        std::vector<std::string> snp_set;
+        std::vector<std::string> bed;
+        std::string background = "";
+
+        bool genome_wide_background = false;
+        region = new FAKE_REGION(bed, feature, msigdb, snp_set, background,
+                                 gtf_name, window_5, window_3,
+                                 genome_wide_background, reporter);
+    }
+
+    void TearDown() override
+    {
+        delete region;
+        delete reporter;
+    }
+};
+TEST_F(REGION_MSIGDB, NAME_CROSS_CHR)
+{
+    std::ofstream gtf;
     gtf.open(gtf_name.c_str());
-    gmt.open(gmt_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "#!genome - version GRCh38\n"
            "#!genome - date 2013 - 12\n"
@@ -3738,28 +3517,11 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
            "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
            "\"basic\"; transcript_support_level \"1\";\n";
     gtf.close();
-    gmt << "SET1 DDX11L1" << std::endl;
-    gmt << "SET2 CIT" << std::endl;
-    gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -3767,97 +3529,11 @@ TEST(REGION_MSIGDB, NAME_CROSS_CHR)
         FAIL();
     }
 }
-
-TEST(REGION_MSIGDB, CHR_OVER)
-{
-    // invalid chromosome, skip region
-    std::string gtf_name = path + "Test.gtf";
-    std::string gmt_name = path + "Test.gmt";
-    std::ofstream gtf, gmt;
-    gtf.open(gtf_name.c_str());
-    gmt.open(gmt_name.c_str());
-    gtf << "#!genome-build GRCh38.p7\n"
-           "#!genome - version GRCh38\n"
-           "#!genome - date 2013 - 12\n"
-           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
-           "#!genebuild - last - updated 2016 - 06\n"
-           "ABC\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
-           "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
-           "\"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
-           "havana_gene "
-           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
-
-           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
-           "\"ENSG00000223972\"; "
-           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
-           "\"havana\"; "
-           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
-           "havana_gene "
-           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
-    gtf.close();
-    gmt << "SET1 DDX11L1" << std::endl;
-    gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
-    try
-    {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
-        // now check if we can ge the correct structure
-        // should be empty, because we have no valid set region
-        // the size will be 2, because chr1 will be translate to 1 and we
-        // use the chr as index. Might want to -1 for memory compactness.
-        // but for now, keep it this way
-        ASSERT_EQ(gene_sets.size(), 2);
-    }
-    catch (const std::runtime_error& error)
-    {
-        std::cerr << error.what() << std::endl;
-        FAIL();
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    try
-    {
-        feature = {"exon", "protein_coding", "CDS"};
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
-        // now check if we can ge the correct structure
-        // should be empty, because we have no valid set region
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
-TEST(REGION_MSIGDB, ID_CROSS_CHR)
+TEST_F(REGION_MSIGDB, ID_CROSS_CHR)
 {
     // This should be ok? Transplicing or something like that?
-    std::string gtf_name = path + "Test.gtf";
-    std::string gmt_name = path + "Test.gmt";
-    std::ofstream gtf, gmt;
+    std::ofstream gtf;
     gtf.open(gtf_name.c_str());
-    gmt.open(gmt_name.c_str());
     gtf << "#!genome-build GRCh38.p7\n"
            "#!genome - version GRCh38\n"
            "#!genome - date 2013 - 12\n"
@@ -3903,28 +3579,11 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
            "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
            "\"basic\"; transcript_support_level \"1\";\n";
     gtf.close();
-    gmt << "SET1 DDX11L1" << std::endl;
-    gmt << "SET2 CIT" << std::endl;
-    gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string msigdb = "";
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, msigdb, bed_names, snp_set,
-                                 background, 22, reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         SUCCEED();
     }
     catch (...)
@@ -3932,36 +3591,14 @@ TEST(REGION_MSIGDB, ID_CROSS_CHR)
         FAIL();
     }
 }
-
-
-TEST(REGION_MSIGDB, NO_GTF)
+TEST_F(REGION_MSIGDB, NO_GTF)
 {
-    // This should be ok? Transplicing or something like that?
-
-    std::string gmt_name = path + "Test.gmt";
-    std::ofstream gtf, gmt;
-    gmt.open(gmt_name.c_str());
-    gmt << "SET1 DDX11L1" << std::endl;
-    gmt << "SET2 CIT" << std::endl;
-    gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::remove(gtf_name.c_str());
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background, "",
-                                 gmt_name, bed_names, snp_set, background, 22,
-                                 reporter);
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -3969,12 +3606,8 @@ TEST(REGION_MSIGDB, NO_GTF)
         SUCCEED();
     }
 }
-
-TEST(REGION_MSIGDB, DUP_SET_NAME)
+TEST_F(REGION_MSIGDB, DUP_SET_NAME)
 {
-    // This should be ok? Transplicing or something like that?
-    std::string gtf_name = path + "Test.gtf";
-    std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
     gtf.open(gtf_name.c_str());
     gmt.open(gmt_name.c_str());
@@ -4026,25 +3659,13 @@ TEST(REGION_MSIGDB, DUP_SET_NAME)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET1 CIT" << std::endl;
     gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
         // it is ok to have duplicate, but the second set will be ignored
-        size_t num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        size_t num_regions =
+            region->generate_regions(gene_sets, snp_in_sets, 22);
         // base, background and one unique set
         ASSERT_EQ(num_regions, 3);
     }
@@ -4053,10 +3674,8 @@ TEST(REGION_MSIGDB, DUP_SET_NAME)
         FAIL();
     }
 }
-
-TEST(REGION_MSIGDB, INVALID_MSIG_FORMAT)
+TEST_F(REGION_MSIGDB, INVALID_MSIG_FORMAT)
 {
-    // This should be ok? Transplicing or something like that?
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
@@ -4111,26 +3730,11 @@ TEST(REGION_MSIGDB, INVALID_MSIG_FORMAT)
     gmt << "SET2" << std::endl;
     gmt << "SET3 ENSG00000122966" << std::endl;
     gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::string snp_set = "";
-    std::string background = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        // it is ok to have duplicate, but the second set will be ignored
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
-        // base, background and one unique set
+        region->generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -4138,9 +3742,92 @@ TEST(REGION_MSIGDB, INVALID_MSIG_FORMAT)
         SUCCEED();
     }
 }
-TEST(REGION_MSIGDB, WRONG_MSIG_NAME)
+TEST(REGION_MSIGDB_SPECIAL, CHR_OVER)
 {
-    // This should be ok? Transplicing or something like that?
+    // invalid chromosome, skip region
+    std::string gtf_name = path + "Test.gtf";
+    std::string gmt_name = path + "Test.gmt";
+    std::ofstream gtf, gmt;
+    gtf.open(gtf_name.c_str());
+    gmt.open(gmt_name.c_str());
+    gtf << "#!genome-build GRCh38.p7\n"
+           "#!genome - version GRCh38\n"
+           "#!genome - date 2013 - 12\n"
+           "#!genome - build - accession NCBI : GCA_000001405 .22\n"
+           "#!genebuild - last - updated 2016 - 06\n"
+           "ABC\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n"
+
+           "1\thavana\tgene\t11869\t14409\t.\t+\t.\tgene_id "
+           "\"ENSG00000223972\"; "
+           "gene_version \"5\"; gene_name \"DDX11L1\"; gene_source "
+           "\"havana\"; "
+           "gene_biotype \"transcribed_unprocessed_pseudogene\"; "
+           "havana_gene "
+           "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
+    gtf.close();
+    gmt << "SET1 DDX11L1" << std::endl;
+    gmt.close();
+    Reporter reporter(std::string(path + "LOG"));
+    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
+                                        "CDS"};
+    size_t window_5 = 0;
+    size_t window_3 = 0;
+    bool genome_wide_background = false;
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_set;
+    std::string background = "";
+    std::vector<std::string> region_names;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::vector<std::string> bed_names = {};
+    try
+    {
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
+        // now check if we can ge the correct structure
+        // should be empty, because we have no valid set region
+        // the size will be 2, because chr1 will be translate to 1 and we
+        // use the chr as index. Might want to -1 for memory compactness.
+        // but for now, keep it this way
+        ASSERT_EQ(gene_sets.size(), 2);
+    }
+    catch (const std::runtime_error& error)
+    {
+        std::cerr << error.what() << std::endl;
+        FAIL();
+    }
+    catch (...)
+    {
+        FAIL();
+    }
+    try
+    {
+        feature = {"exon", "protein_coding", "CDS"};
+
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
+        // now check if we can ge the correct structure
+        // should be empty, because we have no valid set region
+        ASSERT_TRUE(gene_sets.empty());
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+TEST(REGION_MSIGDB_SPECIAL, WRONG_MSIG_NAME)
+{
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
@@ -4197,22 +3884,23 @@ TEST(REGION_MSIGDB, WRONG_MSIG_NAME)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "";
+    std::vector<std::string> msigdb = {"404.gmt"};
+    std::vector<std::string> snp_set;
     std::string background = "";
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<std::string> bed_names = {};
+    std::remove("404.gmt");
     try
     {
-        // We should fail if we can't find the MSigDB file
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, "404.gmt", bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -4220,10 +3908,8 @@ TEST(REGION_MSIGDB, WRONG_MSIG_NAME)
         SUCCEED();
     }
 }
-
 TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
 {
-    // This should be ok? Transplicing or something like that?
     std::string snp_set_name = path + "snp_set";
     std::ofstream snp_set;
     snp_set.open(snp_set_name.c_str());
@@ -4232,20 +3918,23 @@ TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
+    std::vector<std::string> msigdb;
+    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    snp_set_name.append(":Name:Wrong");
+    std::vector<std::string> snp_sets = {snp_set_name};
+    std::string gtf_name = "", background = "";
     try
     {
-        Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":Name:Wrong", background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -4256,25 +3945,27 @@ TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
 
 TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
 {
-    // This should be ok? Transplicing or something like that?
     std::string snp_set_name = path + "404_set";
+    std::remove(snp_set_name.c_str());
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_sets = {snp_set_name};
+    std::string gtf_name = "", background = "";
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set_name,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -4282,10 +3973,8 @@ TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
         SUCCEED();
     }
 }
-
 TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
 {
-    // This should be ok? Transplicing or something like that?
     std::string snp_set_name = path + "Base";
     std::ofstream snp_set;
     snp_set.open(snp_set_name.c_str());
@@ -4295,31 +3984,31 @@ TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_sets = {snp_set_name};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-            background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         ASSERT_EQ(num_regions, 2);
     }
-    catch (const std::runtime_error& re)
+    catch (const std::runtime_error&)
     {
         FAIL();
     }
 }
-
 TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
 {
-    // This should be ok? Transplicing or something like that?
     std::string snp_set_name = path + "snp_set";
     std::ofstream snp_set;
     snp_set.open(snp_set_name.c_str());
@@ -4329,71 +4018,82 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> msigdb;
+    std::vector<std::string> snp_sets = {snp_set_name};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
+        // we should have the 3 sets, the base, the SNP_SET and the background
+        ASSERT_EQ(num_regions, 3);
+        // for single set, we use the file name as the set name
+        ASSERT_STREQ(region_names[2].c_str(), "snp_set");
     }
     catch (...)
     {
         FAIL();
     }
-    // we should have the 3 sets, the base, the SNP_SET and the background
-    ASSERT_EQ(num_regions, 3);
-    // for single set, we use the file name as the set name
-    ASSERT_STREQ(region_names[2].c_str(), "snp_set");
-    // Or we allow user defined name
-    snp_set_name.append(":SNP_SET");
-    region_names.clear();
-    num_regions = Region::generate_regions(
-        gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-        genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-        background, 22, reporter);
-    ASSERT_EQ(num_regions, 3);
-    ASSERT_STREQ(region_names[2].c_str(), "SNP_SET");
-    ASSERT_EQ(snp_in_sets.size(), 4);
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
-        index(required_size, 0);
-    // here, we don't provide anything for background construction,
-    // and as we set genome_wide_background as false, we will never
-    // set the bit for background
-    SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
-    SET_BIT(0, not_found.data());
-    Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), not_found.front());
-    Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
+    try
+    {
+        // Or we allow user defined name
+        snp_set_name.append(":SNP_SET");
+        snp_sets.clear();
+        snp_sets.push_back(snp_set_name);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
+        std::cerr << "Test" << std::endl;
+        ASSERT_EQ(num_regions, 3);
+        ASSERT_STREQ(region_names[2].c_str(), "SNP_SET");
+        ASSERT_EQ(snp_in_sets.size(), 4);
+        const size_t required_size = BITCT_TO_WORDCT(num_regions);
+        // we can simply check if the target SNPs are located in snp_in_sets
+        // we have 1245
+        std::vector<uintptr_t> found(required_size, 0),
+            not_found(required_size, 0), index(required_size, 0);
+        // here, we don't provide anything for background construction,
+        // and as we set genome_wide_background as false, we will never
+        // set the bit for background
+        SET_BIT(0, found.data());
+        SET_BIT(2, found.data());
+        SET_BIT(0, not_found.data());
+        Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), not_found.front());
+        Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+    }
+    catch (...)
+    {
+        FAIL();
+    }
 }
 
 TEST(REGION_SNP_SET, MULTI_SNP_SET)
 {
-    // This should be ok? Transplicing or something like that?
     std::string snp_set_name = path + "snp_set";
     std::ofstream snp_set;
     snp_set.open(snp_set_name.c_str());
@@ -4407,86 +4107,90 @@ TEST(REGION_SNP_SET, MULTI_SNP_SET)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> region_names, msigdb,
+        snp_sets = {snp_set_name + ":SNP_SET"};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
     {
-        // we don't want multi-set
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":SNP_SET", background, 22, reporter);
-        SUCCEED();
+        // we don't want name for multi-set
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        FAIL();
     }
     catch (...)
     {
-        FAIL();
+        SUCCEED();
     }
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-            background, 22, reporter);
+        snp_sets.clear();
+        snp_sets.push_back(snp_set_name);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
+        // we should have the 7 sets, the base, the SNP_SET and the background
+        ASSERT_EQ(num_regions, 7);
+        // For multi-set, we always use the first row as their name
+        ASSERT_STREQ(region_names[2].c_str(), "SET_1");
+        ASSERT_STREQ(region_names[3].c_str(), "SET_2");
+        ASSERT_STREQ(region_names[4].c_str(), "SET_3");
+        ASSERT_STREQ(region_names[5].c_str(), "SET_4");
+        ASSERT_STREQ(region_names[6].c_str(), "SET_5");
+
+        // now check inclusion
+        const size_t required_size = BITCT_TO_WORDCT(num_regions);
+        // we can simply check if the target SNPs are located in snp_in_sets
+        // we have 1245
+        std::vector<uintptr_t> found(required_size, 0),
+            not_found(required_size, 0), index(required_size, 0);
+        SET_BIT(0, found.data());
+        SET_BIT(2, found.data());
+        SET_BIT(4, found.data());
+        SET_BIT(0, not_found.data());
+        // SNP_2 1,3
+        Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // SNP_32 3
+        found.front() = 0;
+        SET_BIT(0, found.data());
+        SET_BIT(4, found.data());
+        Genotype::construct_flag("SNP_32", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // SNP_912 5
+        found.front() = 0;
+        SET_BIT(0, found.data());
+        SET_BIT(6, found.data());
+        Genotype::construct_flag("SNP_912", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // we can simply check if the target SNPs are located in snp_in_sets
+        // we have 1245
+        // should still work without initializing the index
+        index.clear();
+        Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
+                                 required_size, -1, -1, genome_wide_background);
         SUCCEED();
     }
     catch (...)
     {
         FAIL();
     }
-    // we should have the 7 sets, the base, the SNP_SET and the background
-    ASSERT_EQ(num_regions, 7);
-    // For multi-set, we always use the first row as their name
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-
-    // now check inclusion
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    std::vector<uintptr_t> found(required_size, 0), not_found(required_size, 0),
-        index(required_size, 0);
-    SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
-    SET_BIT(4, found.data());
-    SET_BIT(0, not_found.data());
-    // SNP_2 1,3
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // SNP_32 3
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(4, found.data());
-    Genotype::construct_flag("SNP_32", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // SNP_912 5
-    found.front() = 0;
-    SET_BIT(0, found.data());
-    SET_BIT(6, found.data());
-    Genotype::construct_flag("SNP_912", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
 }
 
 TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
 {
-    // This should be ok? Transplicing or something like that?
     std::string snp_set_name = path + "snp_set";
     std::ofstream snp_set;
     snp_set.open(snp_set_name.c_str());
@@ -4500,21 +4204,21 @@ TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
+    std::vector<std::string> region_names, msigdb, snp_sets = {snp_set_name};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::string gtf_name = "", background = "";
     size_t num_regions;
     try
     {
-        // we don't want multi-set
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":SNP_SET", background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        region_names = region.get_names();
     }
     catch (...)
     {
@@ -4527,81 +4231,6 @@ TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
     ASSERT_STREQ(region_names[4].c_str(), "SET_4");
     ASSERT_STREQ(region_names[5].c_str(), "SET_5");
 }
-
-
-TEST(REGION, UNINIT_INDEX)
-{
-    // This should be ok? Transplicing or something like that?
-    std::string snp_set_name = path + "snp_set";
-    std::ofstream snp_set;
-    snp_set.open(snp_set_name.c_str());
-    snp_set << "SET_1 SNP_1 SNP_2 SNP_4 SNP_5\n";
-    snp_set << "SET_2 SNP_12 SNP_8974 SNP_82 SNP_98\n";
-    snp_set << "SET_3 www.google.com SNP_32 SNP_2 SNP_137 SNP_824\n";
-    snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
-    snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
-    snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
-    std::vector<std::string> feature = {"exon", "gene", "protein_coding",
-                                        "CDS"};
-    std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
-    bool genome_wide_background = false;
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::string gtf_name = "", gmt_name = "", background = "";
-    size_t num_regions;
-    try
-    {
-        // we don't want multi-set
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names,
-            snp_set_name + ":SNP_SET", background, 22, reporter);
-        SUCCEED();
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-    try
-    {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set_name,
-            background, 22, reporter);
-        SUCCEED();
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-    // we should have the 7 sets, the base, the SNP_SET and the background
-    ASSERT_EQ(num_regions, 7);
-    // For multi-set, we always use the first row as their name
-    ASSERT_STREQ(region_names[2].c_str(), "SET_1");
-    ASSERT_STREQ(region_names[3].c_str(), "SET_2");
-    ASSERT_STREQ(region_names[4].c_str(), "SET_3");
-    ASSERT_STREQ(region_names[5].c_str(), "SET_4");
-    ASSERT_STREQ(region_names[6].c_str(), "SET_5");
-
-    // now check inclusion
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    // we can simply check if the target SNPs are located in snp_in_sets
-    // we have 1245
-    // should still work without initializing the index
-    std::vector<uintptr_t> index;
-    Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                             required_size, -1, -1, genome_wide_background);
-}
-
 
 TEST(REGION_BACKGROUND, GTF_BACKGROUND)
 {
@@ -4661,23 +4290,21 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::vector<std::string> bed_names = {}, snp_set, msigdb = {gmt_name};
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -4760,23 +4387,21 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = true;
-    std::string snp_set = "";
     std::string background = "";
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-    std::vector<std::string> bed_names = {};
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::vector<std::string> bed_names = {}, snp_set, msigdb = {gmt_name};
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -4790,8 +4415,8 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
     SET_BIT(0, found.data());
     SET_BIT(1, found.data());
     // 12 11399381 11486678
-    // SNP not in any location will still be included in the background (genome
-    // wide background)
+    // SNP not in any location will still be included in the background
+    // (genome wide background)
     Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
                              12, 1139, genome_wide_background);
     ASSERT_EQ(index.front(), found.front());
@@ -4854,82 +4479,99 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
+    std::string gtf_name = "";
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    std::vector<std::string> snp_set, msigdb;
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+
+        // we should have the 3 sets, the base, the bed and the background
+        ASSERT_EQ(num_regions, 3);
+        const size_t required_size = BITCT_TO_WORDCT(num_regions);
+        std::vector<uintptr_t> not_found = {0};
+        std::vector<uintptr_t> found = {0}, index = {0};
+        SET_BIT(0, not_found.data());
+        SET_BIT(0, found.data());
+        SET_BIT(1, found.data());
+        // 4  3016 87782
+        //"4 20139 97433 . . .\n"
+        // 4  87000 should be found in both the set and the background
+        // 13 53970 should only be found in the background
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 3015 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), not_found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 3016 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 3017 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 20138 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // found in both background and the bed file
+        SET_BIT(2, found.data());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 20139 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 20140 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 87781 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        found.front() = 0;
+        // only found in bed but not background
+        SET_BIT(0, found.data());
+        SET_BIT(2, found.data());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 87782 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 4, 87783 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        found.front() = 0;
+        // found in all
+        SET_BIT(0, found.data());
+        SET_BIT(1, found.data());
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 13, 53970 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), found.front());
+        // anything on chromosome 17 should only be found in the base
+        Genotype::construct_flag("", gene_sets, snp_in_sets, index,
+                                 required_size, 17, 53970 + 1,
+                                 genome_wide_background);
+        ASSERT_EQ(index.front(), not_found.front());
+    }
+    catch (const std::runtime_error& e)
+    {
+        e.what();
+        FAIL();
     }
     catch (...)
     {
         FAIL();
     }
-    // we should have the 3 sets, the base, the bed and the background
-    ASSERT_EQ(num_regions, 3);
-    const size_t required_size = BITCT_TO_WORDCT(num_regions);
-    std::vector<uintptr_t> not_found = {0};
-    std::vector<uintptr_t> found = {0}, index = {0};
-    SET_BIT(0, not_found.data());
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
-    // 4  3016 87782
-    //"4 20139 97433 . . .\n"
-    // 4  87000 should be found in both the set and the background
-    // 13 53970 should only be found in the background
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3015 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), not_found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3016 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 3017 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20138 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // found in both background and the bed file
-    SET_BIT(2, found.data());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20139 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 20140 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87781 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    // only found in bed but not background
-    SET_BIT(0, found.data());
-    SET_BIT(2, found.data());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87782 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             4, 87783 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    found.front() = 0;
-    // found in all
-    SET_BIT(0, found.data());
-    SET_BIT(1, found.data());
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             13, 53970 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), found.front());
-    // anything on chromosome 17 should only be found in the base
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             17, 53970 + 1, genome_wide_background);
-    ASSERT_EQ(index.front(), not_found.front());
 }
 
 TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
@@ -4984,21 +4626,20 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {bed_name};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -5065,7 +4706,6 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
 
 TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
 {
-    // This should be ok? Transplicing or something like that?
     std::string gtf_name = path + "Test.gtf";
     std::string gmt_name = path + "Test.gmt";
     std::ofstream gtf, gmt;
@@ -5131,21 +4771,19 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::vector<std::string> region_names, msigdb = {gmt_name}, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -5301,20 +4939,19 @@ TEST(REGION_BACKGROUND, INVALID_FORMAT)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5375,20 +5012,19 @@ TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5449,20 +5085,19 @@ TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5523,20 +5158,19 @@ TEST(REGION_BACKGROUND, NEGATIVE_END)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5596,20 +5230,19 @@ TEST(REGION_BACKGROUND, NEGATIVE_START)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5670,20 +5303,19 @@ TEST(REGION_BACKGROUND, INVALID_END)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5743,20 +5375,19 @@ TEST(REGION_BACKGROUND, INVALID_START)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5817,19 +5448,19 @@ TEST(REGION_BACKGROUND, SMALLER_END)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5841,25 +5472,25 @@ TEST(REGION_BACKGROUND, NOT_FOUND)
 {
     std::ofstream bed_file;
     std::string background = path + "404.bed";
+    std::remove(background.c_str());
     background.append(":bed");
     std::vector<std::string> bed_names;
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
-
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        Region::generate_regions(gene_sets, region_names, snp_in_sets, feature,
-                                 window_5, window_3, genome_wide_background,
-                                 gtf_name, gmt_name, bed_names, snp_set,
-                                 background, 22, reporter);
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        region.generate_regions(gene_sets, snp_in_sets, 22);
         FAIL();
     }
     catch (...)
@@ -5921,21 +5552,20 @@ TEST(REGION_BACKGROUND, SKIP_CHR)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 0;
-    int window_3 = 0;
+    size_t window_5 = 0;
+    size_t window_3 = 0;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -6052,21 +5682,20 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 10;
-    int window_3 = 20;
+    size_t window_5 = 10;
+    size_t window_3 = 20;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {
@@ -6221,21 +5850,20 @@ TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
-    int window_5 = 10;
-    int window_3 = 20;
+    size_t window_5 = 10;
+    size_t window_3 = 20;
     bool genome_wide_background = false;
-    std::string snp_set = "", gtf_name = "", gmt_name = "";
-    std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::string gtf_name = "", gmt_name = "";
+    std::vector<std::string> region_names, msigdb, snp_set;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     size_t num_regions;
     try
     {
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
-        SUCCEED();
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
     }
     catch (...)
     {

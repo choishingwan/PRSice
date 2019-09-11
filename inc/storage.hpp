@@ -25,7 +25,7 @@
 struct PRS
 {
     double prs;
-    int num_snp;
+    size_t num_snp;
     PRS() : prs(0.0), num_snp(0) {}
 };
 

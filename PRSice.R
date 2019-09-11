@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.5"
+r.version <- "2.2.7"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -289,19 +289,23 @@ help_message <-
 \nMisc:\n
     --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
+    --enable-mmap           Enable memory mapping. This will provide a\n
+                            small speed boost if large amount of memory\n
+                            is available and if all genotypes were stored\n
+                            in the same file\n
     --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
+    --keep-ambig            Keep ambiguous SNPs. Only use this option\n
+                            if you are certain that the base and target\n
+                            has the same A1 and A2 alleles\n
     --id-delim              This parameter causes sample IDs to be parsed as\n
                             <FID><delimiter><IID>; the default delimiter\n
                             is '_'. \n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
-    --keep-ambig            Keep ambiguous SNPs. Only use this option\n
-                            if you are certain that the base and target\n
-                            has the same A1 and A2 alleles\n
     --memory                Maximum memory usage allowed. PRSice will try\n
                            its best to honor this setting\n
     --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
@@ -532,6 +536,7 @@ option_list <- list(
   make_option(c("--all-score"), action = "store_true", dest="all_score"),
   make_option(c("--exclude"), type = "character"),
   make_option(c("--extract"), type = "character"),
+  make_option(c("--enable-mmap"), action = "store_true", dest = "enable_mmap"),
   make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
   make_option(c("--id-delim"), type="character"),
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
@@ -679,6 +684,7 @@ flags <-
         "all-score",
         "allow-inter",
         "beta",
+        "enable-mmap",
         "fastscore",
         "ignore-fid",
         "index",

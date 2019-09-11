@@ -11,19 +11,20 @@ class GENOTYPE_BASIC : public Genotype, public ::testing::Test
 TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITHOUT_HASH)
 {
     std::string name = "Test";
-    m_genotype_files = set_genotype_files(name);
-    ASSERT_STREQ(m_genotype_files.front().c_str(), name.c_str());
-    ASSERT_EQ(m_genotype_files.size(), 1);
+    m_genotype_file_names = set_genotype_files(name);
+    ASSERT_STREQ(m_genotype_file_names.front().c_str(), name.c_str());
+    ASSERT_EQ(m_genotype_file_names.size(), 1);
 }
 TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITH_HASH)
 {
     std::string name = "chr#test";
     m_autosome_ct = 22;
-    m_genotype_files = set_genotype_files(name);
-    ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i) {
+    m_genotype_file_names = set_genotype_files(name);
+    ASSERT_EQ(m_genotype_file_names.size(), m_autosome_ct);
+    for (size_t i = 1; i <= m_autosome_ct; ++i)
+    {
         std::string name = "chr" + std::to_string(i) + "test";
-        ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
+        ASSERT_STREQ(m_genotype_file_names[i - 1].c_str(), name.c_str());
     }
 }
 
@@ -33,14 +34,17 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_MULTI_HASH)
     // substituted
     std::string name = "chr#test#";
     m_autosome_ct = 22;
-    m_genotype_files = set_genotype_files(name);
-    ASSERT_EQ(m_genotype_files.size(), m_autosome_ct);
-    for (size_t i = 1; i <= m_autosome_ct; ++i) {
+    m_genotype_file_names = set_genotype_files(name);
+    ASSERT_EQ(m_genotype_file_names.size(), m_autosome_ct);
+    for (size_t i = 1; i <= m_autosome_ct; ++i)
+    {
         std::string name =
             "chr" + std::to_string(i) + "test" + std::to_string(i);
-        ASSERT_STREQ(m_genotype_files[i - 1].c_str(), name.c_str());
+        ASSERT_STREQ(m_genotype_file_names[i - 1].c_str(), name.c_str());
     }
 }
+
+
 // init_chr
 // chr_code_check
 // load_snp_list
@@ -76,7 +80,7 @@ TEST_F(GENOTYPE_BASIC, AMBIGUOUS)
 
 TEST_F(GENOTYPE_BASIC, CATEGORY)
 {
-    int category;
+    unsigned long long category;
     double pthres;
     bool not_include_pt1 = true;
     // anything less than lowest threshold is consider 0
@@ -112,7 +116,7 @@ TEST_F(GENOTYPE_BASIC, CATEGORY)
 }
 TEST_F(GENOTYPE_BASIC, BAR_LEVELS)
 {
-    int category;
+    unsigned long long category;
     double pthres;
     std::vector<double> barlevels = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
     // anything less than lowest threshold is consider 0
@@ -129,6 +133,4 @@ TEST_F(GENOTYPE_BASIC, BAR_LEVELS)
     ASSERT_EQ(category, 7);
     ASSERT_DOUBLE_EQ(pthres, 1);
 }
-
-
 #endif // GENOTYPE_TEST_HPP

@@ -17,16 +17,10 @@
 #ifndef THREAD_QUEUE_H
 #define THREAD_QUEUE_H
 
-#include <queue>
-#ifdef _WIN32
-#include <mingw.condition_variable.h>
-#include <mingw.mutex.h>
-#include <mingw.thread.h>
-#else
 #include <condition_variable>
 #include <mutex>
+#include <queue>
 #include <thread>
-#endif
 
 template <typename T>
 class Thread_Queue

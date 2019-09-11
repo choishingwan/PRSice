@@ -41,8 +41,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.2.6";
-const std::string date = "2019-08-05";
+const std::string version = "2.2.7";
+const std::string date = "2019-09-11";
 class Commander
 {
 public:
@@ -67,52 +67,18 @@ public:
      * \brief Get the base info score threshold
      * \return return the base info score filtering threshold, 0.0 if not used
      */
-    double base_info_score() const
-    {
-        if (!m_provided_info_threshold) return 0.0;
-        return m_base_info_threshold;
-    }
-    /*!
-     * \brief Return if base info score filtering should be performed
-     * \return T if it should be
-     */
-    bool perform_base_info_score_filter() const
-    {
-        return m_provided_info_threshold;
-    }
+    double base_info_score() const { return m_base_info_threshold; }
     /*!
      * \brief Get the base maf threshold for controls
      * \return return the maf base control filtering threshold, 0.0 if not used
      */
-    double maf_base_control() const
-    {
-        if (!m_perform_base_maf_control_filter) return 0.0;
-        return m_control_maf_threshold;
-    }
-    /*!
-     * \brief Return if base maf control filter should be performed
-     * \return  T if it should be
-     */
-    bool perform_maf_base_control_filter() const
-    {
-        return m_perform_base_maf_control_filter;
-    }
+    double maf_base_control() const { return m_control_maf_threshold; }
+
     /*!
      * \brief Get the base maf threshold for cases
      * \return return the maf base case filtering threshold, 0.0 if not used
      */
-    double maf_base_case() const
-    {
-        if (!m_perform_base_maf_case_filter) return 0.0;
-        return m_case_maf_threshold;
-    } /*!
-       * \brief Return if base maf case filter should be performed
-       * \return  T if it should be
-       */
-    bool perform_maf_base_case_filter() const
-    {
-        return m_perform_base_maf_case_filter;
-    }
+    double maf_base_case() const { return m_case_maf_threshold; }
     /*!
      * \brief Check if column input is in index form
      * \return true if input is in index
@@ -177,12 +143,12 @@ public:
      * \brief Get the index of the covariates
      * \return The column index of the covariates
      */
-    std::vector<uint32_t> get_cov_index() const { return m_col_index_of_cov; }
+    std::vector<size_t> get_cov_index() const { return m_col_index_of_cov; }
     /*!
      * \brief Get the index of the covariate that are factor
      * \return The column index of the factor covariates
      */
-    std::vector<uint32_t> get_factor_cov_index() const
+    std::vector<size_t> get_factor_cov_index() const
     {
         return m_col_index_of_factor_cov;
     }
@@ -353,11 +319,12 @@ public:
      * \param detected should be the available memory
      * \return Maximum memory we can use
      */
-    size_t max_memory(const size_t detected) const
+    unsigned long long max_memory(const unsigned long long detected) const
     {
         return (!m_provided_memory || m_memory > detected) ? detected
                                                            : m_memory;
     }
+    unsigned long long memory() const { return m_memory; }
     /*!
      * \brief Return the full bar level
      * \return the vector containing the sorted bar levels
@@ -505,12 +472,12 @@ public:
      * \brief Return the msigdb file name
      * \return MSigDB file name
      */
-    std::string msigdb() const { return m_msigdb; }
+    std::vector<std::string> msigdb() const { return m_msigdb; }
     /*!
      * \brief snp_set return file name containing SNP set(s)
      * \return File name containing the SNP set(s)
      */
-    std::string snp_set() const { return m_snp_set; }
+    std::vector<std::string> snp_set() const { return m_snp_set; }
 
     /*!
      * \brief Return file name containing background regions
@@ -538,28 +505,12 @@ public:
      * \return True if we want the whole genome to be used as the background
      */
     bool genome_wide_background() const { return m_full_background; }
-    int window_5() const
-    {
-        if (m_window_5 < 0)
-        {
-            throw std::runtime_error("Error: Length of 5' extension must be "
-                                     "greater than or equal to zero!");
-        }
-        return m_window_5;
-    }
+    size_t window_5() const { return m_window_5; }
     /*!
      * \brief Return the 3' extension of regions in \b bp
      * \return The length of extension to 3' regions
      */
-    int window_3() const
-    {
-        if (m_window_3 < 0)
-        {
-            throw std::runtime_error("Error: Length of 5' extension must be "
-                                     "greater than or equal to zero!");
-        }
-        return m_window_3;
-    }
+    size_t window_3() const { return m_window_3; }
     // target
     /*!
      * \brief Return the target file name
@@ -649,7 +600,7 @@ public:
      * \return True if non-founders should be included
      */
     bool nonfounders() const { return m_include_nonfounders; }
-
+    bool enable_mmap() const { return m_enable_mmap; }
     bool use_ref_maf() const { return m_use_ref_maf; }
     double ref_dose_thres() const { return m_ref_dose_thres; }
     double target_dose_thres() const { return m_target_dose_thres; }
@@ -657,15 +608,17 @@ public:
 protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
+    std::vector<std::string> m_bed_files;
     std::vector<std::string> m_cov_colname;
     std::vector<std::string> m_factor_cov;
-    std::vector<std::string> m_bed_files;
+    std::vector<std::string> m_msigdb;
     std::vector<std::string> m_feature;
     std::vector<std::string> m_pheno_col;
+    std::vector<std::string> m_snp_set;
     std::vector<double> m_barlevel;
     std::vector<double> m_prevalence;
-    std::vector<uint32_t> m_col_index_of_cov;
-    std::vector<uint32_t> m_col_index_of_factor_cov;
+    std::vector<size_t> m_col_index_of_cov;
+    std::vector<size_t> m_col_index_of_factor_cov;
     std::vector<size_t> m_base_col_index;
     std::vector<bool> m_base_has_col;
     std::vector<bool> m_is_binary;
@@ -676,9 +629,7 @@ private:
     std::string m_target_type = "bed";
     std::string m_pheno_file = "";
     std::string m_gtf = "";
-    std::string m_msigdb = "";
     std::string m_background = "";
-    std::string m_snp_set = "";
     std::string m_cov_file;
     std::string m_base_file = "";
     std::string m_chr = "CHR";
@@ -722,19 +673,20 @@ private:
     double m_target_hard_threshold = 0.1;
     double m_target_maf = 0.0;
     double m_target_info_score = 0.0;
-    size_t m_memory = 0;
+    unsigned long long m_memory = 1e10;
+    size_t m_clump_distance = 250000;
     size_t m_permutation = 0;
     size_t m_set_perm = 0;
+    size_t m_window_5 = 0;
+    size_t m_window_3 = 0;
     std::random_device::result_type m_seed = std::random_device()();
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring_method = SCORING::AVERAGE;
     MODEL m_genetic_model = MODEL::ADDITIVE;
 
-    int m_clump_distance = 250000;
     int m_thread = 1;
-    int m_window_5 = 0;
-    int m_window_3 = 0;
     int m_allow_inter = false;
+    int m_enable_mmap = false;
     int m_fastscore = false;
     int m_full_background = false;
     int m_ignore_fid = false;
@@ -768,8 +720,7 @@ private:
     bool m_provided_bp = false;
     bool m_provided_p_value = false;
     bool m_provided_info_threshold = false;
-    bool m_perform_base_maf_control_filter = false;
-    bool m_perform_base_maf_case_filter = false;
+    bool m_perform_base_maf_filter = false;
     bool m_use_proxy_clump = false;
     bool m_perform_ref_geno_filter = false;
     bool m_perform_ref_hard_thresholding = false;
@@ -901,7 +852,6 @@ private:
         if (message.find(c) == message.end()) { message[c] = input; }
         else
         {
-            // we will append instead of overwrite
             message[c] = "," + input;
         }
         if (!input.empty() && input.back() == ',')
@@ -917,70 +867,35 @@ private:
             {
                 // check if this is true or false, if, not, try parsing
                 std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
-                if (bin.length() == 1)
-                {
-                    switch (bin.at(0))
-                    {
-                    case 'T': target.push_back(true); break;
-                    case 'F': target.push_back(false); break;
-                    default:
-                        error_message.append(
-                            "Error: Invalid argument passed to " + c + ": "
-                            + input
-                            + "! Require binary arguments e.g. T/F, "
-                              "True/False\n");
-                        return false;
-                    }
-                }
-                else if (bin == "TRUE")
-                {
-                    target.push_back(true);
-                }
-                else if (bin == "FALSE")
+                if (bin == "T" || bin == "TRUE") { target.push_back(true); }
+                else if (bin == "F" || bin == "FALSE")
                 {
                     target.push_back(false);
                 }
                 // we likely have numeric input
                 else
                 {
-                    // only allow T/F for simplicity
-                    // no point being paritally lazy with 2True, right?
-                    char value = bin.at(bin.length() - 1);
-                    std::string prefix = bin.substr(0, bin.size() - 1);
-                    int num = 0;
+                    std::string value_str = bin.substr(bin.length() - 1);
                     try
                     {
-                        switch (value)
+                        size_t repeat =
+                            misc::string_to_size_t(value_str.c_str());
+                        bool value;
+                        if (bin.back() == 'T') { value = true; }
+                        else if (bin.back() == 'F')
                         {
-                        case 'T':
-                            num = misc::convert<int>(prefix);
-                            for (int i = 0; i < num; ++i)
-                            { target.push_back(true); }
-                            break;
-                        case 'F':
-                            num = misc::convert<int>(prefix);
-                            for (int i = 0; i < num; ++i)
-                            { target.push_back(false); }
-                            break;
-                        default:
-                            error_message.append(
-                                "Error: Invalid argument passed to " + c + ": "
-                                + input
-                                + "! Require binary arguments e.g. T/F, "
-                                  "True/False\n");
-                            return false;
+                            value = false;
                         }
+                        else
+                        {
+                            throw std::runtime_error("");
+                        }
+                        for (size_t i = 0; i < repeat; ++i)
+                        { target.push_back(value); }
                     }
-                    catch (...)
+                    catch (const std::runtime_error&)
                     {
-                        // to capture problem when we cannot convert prefix
-                        // into number
-                        error_message.append(
-                            "Error: Invalid argument passed to " + c + ": "
-                            + input
-                            + "! Require binary arguments e.g. T/F, "
-                              "True/False\n");
-                        return false;
+                        throw std::runtime_error("");
                     }
                 }
             }
@@ -1008,7 +923,6 @@ private:
                                    const std::string& c,
                                    std::string& error_message)
     {
-
         if (input.empty()) return;
         if (message.find(c) == message.end()) { message[c] = input; }
         else
@@ -1252,7 +1166,7 @@ private:
         message["missing"] = input;
         return true;
     }
-    std::vector<std::string> transform_covariate(std::string& cov);
+    std::vector<std::string> transform_covariate(const std::string& cov_in);
     /*!
      * \brief Simply store the string input into the target variable
      * \param input The input string
@@ -1268,7 +1182,6 @@ private:
                            const std::string& c, std::string& error_message,
                            bool add_quote = false)
     {
-
         if (message.find(c) != message.end())
         {
             error_message.append("Warning: Duplicated argument --" + c + "\n");
@@ -1300,7 +1213,7 @@ private:
         { error_messages.append("Warning: Duplicated argument --memory\n"); }
         try
         {
-            size_t memory = misc::convert<size_t>(input);
+            size_t memory = misc::convert<unsigned long long>(input);
             m_memory = memory;
         }
         catch (...)
@@ -1314,47 +1227,64 @@ private:
                     std::string unit = in.substr(in.length() - 2);
                     std::string value = in.substr(0, in.length() - 2);
                     if (unit == "KB")
-                    { m_memory = misc::convert<size_t>(value) * 1024; }
+                    {
+                        m_memory =
+                            misc::convert<unsigned long long>(value) * 1024;
+                        message["memory"] = misc::to_string(value) + "KB";
+                    }
                     else if (unit == "MB")
                     {
-                        m_memory = misc::convert<size_t>(value) * 1024 * 1024;
+                        m_memory = misc::convert<unsigned long long>(value)
+                                   * 1024 * 1024;
+                        message["memory"] = misc::to_string(value) + "MB";
                     }
                     else if (unit == "GB")
                     {
-                        m_memory =
-                            misc::convert<size_t>(value) * 1024 * 1024 * 1024;
+                        m_memory = misc::convert<unsigned long long>(value)
+                                   * 1024 * 1024 * 1024;
+                        message["memory"] = misc::to_string(value) + "GB";
                     }
                     else if (unit == "TB")
                     {
-                        m_memory = misc::convert<size_t>(value) * 1024 * 1024
-                                   * 1024 * 1024;
+                        m_memory = misc::convert<unsigned long long>(value)
+                                   * 1024 * 1024 * 1024 * 1024;
+                        message["memory"] = misc::to_string(value) + "TB";
                     }
                     else
                     {
                         // maybe only one input?
-                        unit = input.substr(in.length() - 1);
-                        value = input.substr(0, in.length() - 1);
+                        unit = in.substr(in.length() - 1);
+                        value = in.substr(0, in.length() - 1);
                         if (unit == "B")
-                        { m_memory = misc::convert<size_t>(value); }
+                        {
+                            m_memory = misc::convert<unsigned long long>(value);
+                            message["memory"] = misc::to_string(value) + "B";
+                        }
                         else if (unit == "K")
                         {
-                            m_memory = misc::convert<size_t>(value) * 1024;
+                            m_memory =
+                                misc::convert<unsigned long long>(value) * 1024;
+                            message["memory"] = misc::to_string(value) + "KB";
                         }
                         else if (unit == "M")
                         {
-                            m_memory =
-                                misc::convert<size_t>(value) * 1024 * 1024;
+                            m_memory = misc::convert<unsigned long long>(value)
+                                       * 1024 * 1024;
+                            message["memory"] = misc::to_string(value) + "MB";
                         }
                         else if (unit == "G")
                         {
-                            m_memory = misc::convert<size_t>(value) * 1024
-                                       * 1024 * 1024;
+                            m_memory = misc::convert<unsigned long long>(value)
+                                       * 1024 * 1024 * 1024;
+                            message["memory"] = misc::to_string(value) + "GB";
                         }
                         else if (unit == "T")
                         {
-                            m_memory = misc::convert<size_t>(value) * 1024
-                                       * 1024 * 1024 * 1024;
+                            m_memory = misc::convert<unsigned long long>(value)
+                                       * 1024 * 1024 * 1024 * 1024;
+                            message["memory"] = misc::to_string(value) + "TB";
                         }
+                        std::cerr << "New memory: " << m_memory << std::endl;
                     }
                 }
                 catch (...)
@@ -1375,25 +1305,46 @@ private:
         return true;
     }
 
-    inline int set_distance(const std::string& input,
-                            const std::string& command, int default_unit,
-                            std::map<std::string, std::string>& message,
-                            bool& error, std::string& error_messages)
+    inline bool valid_distance(const std::string& str, const size_t& unit,
+                               size_t& res, std::string& error_messages)
     {
-        std::string in = input;
+        double cur_dist = misc::convert<double>(str) * unit;
+        res = static_cast<size_t>(cur_dist);
+        if (trunc(cur_dist) != cur_dist)
+        {
+            error_messages.append("Error: Non-integer distance obtained: "
+                                  + misc::to_string(str) + " x "
+                                  + misc::to_string(unit) + "\n");
+        }
+        return (trunc(cur_dist) == cur_dist);
+    }
+    inline size_t set_distance(const std::string& input,
+                               const std::string& command, size_t default_unit,
+                               std::map<std::string, std::string>& message,
+                               bool& error, std::string& error_messages)
+    {
         if (message.find(command) != message.end())
         {
             error_messages.append("Warning: Duplicated argument --" + command
                                   + "\n");
         }
+        std::string in = input;
+        std::transform(in.begin(), in.end(), in.begin(), ::tolower);
+        const size_t u = 1000;
         message[command] = in;
-        int dist;
+        size_t dist = 0;
+        bool cur_error = false;
         try
         {
             // when no unit is provided, we multiply based on default
-            dist =
-                static_cast<int>(misc::convert<double>(input) * default_unit);
-            if (default_unit == 1000)
+            cur_error =
+                !valid_distance(input, default_unit, dist, error_messages);
+            if (cur_error)
+            {
+                error = true;
+                return ~size_t(0);
+            }
+            if (default_unit == u)
                 message[command] = input + "kb";
             else
                 message[command] = input + "bp";
@@ -1401,92 +1352,44 @@ private:
         }
         catch (...)
         {
-            // contain MB KB or B here
             if (input.length() >= 2)
             {
                 try
                 {
-                    std::transform(in.begin(), in.end(), in.begin(), ::toupper);
                     std::string unit = in.substr(in.length() - 2);
+                    size_t multiplication = 1;
                     std::string value = in.substr(0, in.length() - 2);
-                    if (unit == "BP")
-                    {
-                        dist = static_cast<int>(misc::convert<double>(value));
-                        message[command] = value + "bp";
-                        return dist;
-                    }
-                    else if (unit == "KB")
-                    {
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000);
-                        message[command] = value + "kb";
-                        return dist;
-                    }
-                    else if (unit == "MB")
-                    {
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000 * 1000);
-                        message[command] = value + "mb";
-                        return dist;
-                    }
-                    else if (unit == "GB")
-                    {
-                        // kinda stupid here, but whatever
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000 * 1000 * 1000);
-                        message[command] = value + "gb";
-                        return dist;
-                    }
-                    else if (unit == "TB")
-                    {
-                        // way too much....
-                        dist = static_cast<int>(misc::convert<double>(value)
-                                                * 1000 * 1000 * 1000 * 1000);
-                        message[command] = value + "tb";
-                        return dist;
-                    }
+                    if (unit == "bp") {}
+                    else if (unit == "kb")
+                        multiplication = u;
+                    else if (unit == "mb")
+                        multiplication = u * u;
+                    else if (unit == "gb")
+                        multiplication = u * u * u;
+                    else if (unit == "tb")
+                        multiplication = u * u * u * u;
                     else
                     {
-                        // maybe only one input?
-                        unit = input.substr(in.length() - 1);
-                        value = input.substr(0, in.length() - 1);
-                        if (unit == "B" || unit == "b")
+                        unit = in.substr(in.length() - 1);
+                        value = in.substr(0, in.length() - 1);
+                        if (unit == "b") {}
+                        else if (unit == "k")
+                            multiplication = u;
+                        else if (unit == "m")
+                            multiplication = u * u;
+                        else if (unit == "g")
+                            multiplication = u * u * u;
+                        else if (unit == "t")
+                            multiplication = u * u * u * u;
+                        else
                         {
-                            dist =
-                                static_cast<int>(misc::convert<double>(value));
-                            message[command] = value + "bb";
-                            return dist;
-                        }
-                        else if (unit == "K" || unit == "k")
-                        {
-                            dist = static_cast<int>(misc::convert<double>(value)
-                                                    * 1000);
-                            message[command] = value + "kb";
-                            return dist;
-                        }
-                        else if (unit == "M" || unit == "m")
-                        {
-                            dist = static_cast<int>(misc::convert<double>(value)
-                                                    * 1000 * 1000);
-                            message[command] = value + "mb";
-                            return dist;
-                        }
-                        else if (unit == "G" || unit == "g")
-                        {
-                            dist = static_cast<int>(misc::convert<double>(value)
-                                                    * 1000 * 1000 * 1000);
-                            message[command] = value + "gb";
-                            return dist;
-                        }
-                        else if (unit == "T" || unit == "t")
-                        {
-                            dist =
-                                static_cast<int>(misc::convert<double>(value)
-                                                 * 1000 * 1000 * 1000 * 1000);
-                            message[command] = value + "tb";
-                            return dist;
+                            throw std::runtime_error("");
                         }
                     }
+                    error |= !valid_distance(value, multiplication, dist,
+                                             error_messages);
+                    message[command] = value + unit;
+                    return dist;
                 }
                 catch (...)
                 {
@@ -1494,7 +1397,7 @@ private:
                                           + in);
                     message.erase(command);
                     error = true;
-                    return 0;
+                    return ~size_t(0);
                 }
             }
             else
@@ -1502,11 +1405,11 @@ private:
                 error_messages.append("Error: Undefined distance input: " + in);
                 message.erase(command);
                 error = true;
-                return 0;
+                return ~size_t(0);
             }
         }
         error = true;
-        return 0;
+        return ~size_t(0);
     }
     /*!
      * \brief Get the column index based on file header and the input string
@@ -1516,12 +1419,18 @@ private:
      * not found
      */
     inline bool index_check(const std::string& target,
-                            const std::vector<std::string>& ref,
-                            size_t& index) const
+                            const std::vector<std::string>& ref, size_t& index,
+                            bool case_sensitive = true) const
     {
+        std::string tmp = "";
         for (size_t i = 0; i < ref.size(); ++i)
         {
-            if (target == ref[i])
+            tmp = ref[i];
+            if (!case_sensitive)
+            {
+                std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::toupper);
+            }
+            if (target == tmp)
             {
                 index = i;
                 return true;
@@ -1642,6 +1551,23 @@ private:
             control = false;
         }
         return true;
+    }
+
+    bool in_file(const std::vector<std::string>& column_names,
+                 const std::string& field, const std::string& field_name,
+                 std::map<std::string, std::string>& message, BASE_INDEX index,
+                 bool case_sensitive = true)
+    {
+        size_t col_index;
+        bool has_col =
+            index_check(field, column_names, col_index, case_sensitive);
+        if (has_col)
+        {
+            m_base_col_index[+index] = col_index;
+            message[field_name] = field;
+        }
+        m_base_has_col[+index] = has_col;
+        return has_col;
     }
 };
 

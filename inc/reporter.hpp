@@ -29,22 +29,16 @@
 class Reporter
 {
 public:
-    Reporter()
-    {
-        m_error_prefix_size = m_error_prefix.size();
-        m_warning_prefix_size = m_warning_prefix.size();
-    }
+    Reporter() {}
     Reporter(const std::string& log_name, size_t width = 60) : m_width(width)
     {
         m_log_file.open(log_name.c_str());
         if (!m_log_file.is_open())
         {
-            std::string error_message =
-                "Error: " + log_name + " cannot be open";
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: " + log_name + " cannot be open");
         }
-        m_error_prefix_size = m_error_prefix.size();
-        m_warning_prefix_size = m_warning_prefix.size();
+        // m_error_prefix_size = m_error_prefix.size();
+        // m_warning_prefix_size = m_warning_prefix.size();
     }
     void initiailize(const std::string& log_name, size_t width = 60)
     {
@@ -53,18 +47,20 @@ public:
         m_log_file.open(log_name.c_str());
         if (!m_log_file.is_open())
         {
-            std::string error_message =
-                "Error: " + log_name + " cannot be open";
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: " + log_name + " cannot be open");
         }
     }
     virtual ~Reporter() {}
     void report(const std::string& input, bool wrap = true);
 
+
 private:
     std::ofstream m_log_file;
     const std::string m_error_prefix = "Error:";
     const std::string m_warning_prefix = "Warning:";
+    const size_t m_error_prefix_size = 6;
+    const size_t m_warning_prefix_size = 8;
+    size_t m_width = 60;
 #if defined(WIN32) || defined(_WIN32) \
     || defined(__WIN32) && !defined(__CYGWIN__)
     const std::string m_error_color_start = "";
@@ -75,9 +71,6 @@ private:
     const std::string m_warning_color_start = "\033[1;33m";
     const std::string m_color_end = "\033[0m";
 #endif
-    size_t m_width = 60;
-    size_t m_error_prefix_size;
-    size_t m_warning_prefix_size;
 };
 
 #endif /* REPORTER_HPP_ */

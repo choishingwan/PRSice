@@ -41,23 +41,21 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #ifdef _WIN32
-#include <mingw.mutex.h>
-#include <mingw.thread.h>
 #include <process.h>
 #include <windows.h>
 //#define pthread_t HANDLE
 //#define THREAD_RET_TYPE unsigned __stdcall
 //#define THREAD_RETURN return 0
 // we give an extra space for window just in case
-#define NEXT_LENGTH 1
+#define NEXT_LENGTH 1LL
 #else
-#include <thread>
-#define NEXT_LENGTH 0
+#define NEXT_LENGTH 0LL
 //#include <pthread.h>
 #endif
 #ifdef __APPLE__
@@ -77,18 +75,28 @@ public:
      * \param commander contains all user input
      * \param reporter is the logger
      */
-    PRSice(const Commander& commander, const bool prset, Reporter& reporter)
+    PRSice(const Commander& commander, const bool prset, Reporter* reporter)
         : m_target_binary(commander.is_binary())
         , m_target(commander.target_name())
         , m_out(commander.out())
+        , m_seed(commander.seed())
         , m_score(commander.get_score())
         , m_missing_score(commander.get_missing_score())
+        , m_reporter(reporter)
         , m_ignore_fid(commander.ignore_fid())
         , m_perform_prset(prset)
+        , m_logit_perm(commander.logit_perm())
+        , m_use_ref_maf(commander.use_ref_maf())
     {
+        m_require_standardize = (m_score == SCORING::STANDARDIZE);
         m_perform_perm = commander.num_perm(m_num_perm);
-        m_logit_perm = commander.logit_perm();
-        m_seed = commander.seed();
+        size_t num_set_perm;
+        if (commander.set_perm(num_set_perm))
+        {
+            m_num_perm = num_set_perm;
+            // we don't allow permutation together with set_perm
+            assert(!m_perform_perm);
+        }
         bool has_binary = false;
         for (auto b : m_target_binary)
         {
@@ -108,7 +116,8 @@ public:
                         "Warning: To speed up the permutation, "
                         "we perform linear regression instead of logistic "
                         "regression within the permutation and uses the "
-                        "p-value to rank the thresholds. Our assumptions "
+                        "absolute z-scores to rank the thresholds. Our "
+                        "assumptions "
                         "are as follow:\n";
                     message.append("1) Linear Regression & Logistic "
                                    "Regression produce similar p-values\n");
@@ -116,13 +125,13 @@ public:
                     message.append("If you must, you can run logistic "
                                    "regression instead by setting the "
                                    "--logit-perm flag\n\n");
-                    reporter.report(message);
+                    m_reporter->report(message);
                 }
                 else
                 {
                     std::string message = "Warning: Using --logit-perm can be "
                                           "ridiculously slow\n";
-                    reporter.report(message);
+                    m_reporter->report(message);
                 }
             }
         }
@@ -138,7 +147,7 @@ public:
      */
     void pheno_check(const std::string& file_name,
                      const std::vector<std::string>& col_names,
-                     const std::vector<bool>& is_binary, Reporter& reporter);
+                     const std::vector<bool>& is_binary);
     // init_matrix whenever phenotype changes
     /*!
      * \brief init_matrix will initialize the independent and dependent matrix
@@ -149,8 +158,7 @@ public:
      * \param reporter is the logger
      */
     void init_matrix(const Commander& c_commander, const size_t pheno_index,
-                     const std::string& delim, Genotype& target,
-                     Reporter& reporter);
+                     const std::string& delim, Genotype& target);
     /*!
      * \brief Return the total number of phenotype involved
      * \return the total number of phenotype to process
@@ -212,7 +220,7 @@ public:
      * \param c_commander contains all user input
      * \param reporter is the logger
      */
-    void summarize(const Commander& c_commander, Reporter& reporter);
+    void summarize(const Commander& c_commander);
     /*!
      * \brief Calculate the number of processes required
      * \param commander the user input, provide information on the number of
@@ -271,8 +279,7 @@ public:
     run_competitive(Genotype& target,
                     const std::vector<size_t>::const_iterator& bk_start_idx,
                     const std::vector<size_t>::const_iterator& bk_end_idx,
-                    const Commander& commander, const size_t pheno_index,
-                    Reporter& reporter);
+                    const Commander& commander, const size_t pheno_index);
 
 
 protected:
@@ -302,10 +309,17 @@ private:
     };
     struct column_file_info
     {
-        int header_length;
-        int skip_column_length;
-        int line_width;
-        int processed_threshold;
+        long long header_length;
+        long long skip_column_length;
+        long long line_width;
+        long long processed_threshold;
+        column_file_info()
+        {
+            header_length = 0;
+            skip_column_length = 0;
+            line_width = 0;
+            processed_threshold = 0;
+        }
     };
     struct Pheno_Info
     {
@@ -321,6 +335,7 @@ private:
 
     Eigen::MatrixXd m_independent_variables;
     Eigen::VectorXd m_phenotype;
+
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
     std::vector<prsice_result> m_prs_results;
     std::vector<prsice_summary> m_prs_summary; // for multiple traits
@@ -346,24 +361,29 @@ private:
     uint32_t m_analysis_done = 0;
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
-    int32_t m_precision = 9;
+    long long m_precision = 9;
     // the 7 are:
     // 1 for sign
     // 1 for dot
     // 2 for e- (scientific)
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
-    int32_t m_numeric_width = m_precision + 7;
-    int32_t m_max_fid_length = 3;
-    int32_t m_max_iid_length = 3;
+    long long m_numeric_width = m_precision + 7;
+    long long m_max_fid_length = 3;
+    long long m_max_iid_length = 3;
     int m_best_index = -1;
     size_t m_num_perm = 0;
     SCORING m_score = SCORING::AVERAGE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    Reporter* m_reporter;
     bool m_ignore_fid = false;
     bool m_perform_prset = false;
     bool m_perform_competitive = false;
     bool m_perform_perm = false;
     bool m_logit_perm = false;
+    bool m_quick_best = true;
+    bool m_printed_warning = false;
+    bool m_require_standardize = false;
+    bool m_use_ref_maf = false;
     // Functions
 
     /*!
@@ -390,8 +410,7 @@ private:
      * \param reporter is the logger
      */
     void gen_pheno_vec(Genotype& target, const std::string& pheno_file_name,
-                       const size_t pheno_index, const std::string& delim,
-                       Reporter& reporter);
+                       const size_t pheno_index, const std::string& delim);
     /*!
      * \brief Function to generate the m_independent_variable matrix
      * \param c_cov_file is the name of the covariate file
@@ -404,10 +423,10 @@ private:
      * \param reporter is the logger
      */
     void gen_cov_matrix(const std::string& c_cov_file,
-                        const std::vector<std::string> cov_header_name,
-                        const std::vector<uint32_t> cov_header_index,
-                        const std::vector<uint32_t> factor_cov_index,
-                        const std::string& delim, Reporter& reporter);
+                        const std::vector<std::string>& cov_header_name,
+                        const std::vector<size_t>& cov_header_index,
+                        const std::vector<size_t>& factor_cov_index,
+                        const std::string& delim);
     /*!
      * \brief Function use to process the covariate file, should be able to
      * determine the level of factors
@@ -424,12 +443,12 @@ private:
      */
     void process_cov_file(
         const std::string& cov_file,
-        const std::vector<uint32_t>& factor_cov_index,
+        const std::vector<size_t>& factor_cov_index,
         std::vector<size_t>& cov_start_index,
-        const std::vector<uint32_t>& cov_index,
+        const std::vector<size_t>& cov_index,
         const std::vector<std::string>& cov_name,
         std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
-        size_t& num_column, const std::string& delim, Reporter& reporter);
+        size_t& num_column, const std::string& delim);
 
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
@@ -463,13 +482,9 @@ private:
      */
     void
     produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     Genotype& target,
-                     const std::vector<size_t>::const_iterator& bk_start_idx,
-                     const std::vector<size_t>::const_iterator& bk_end_idx,
-                     size_t num_consumer,
-                     std::map<size_t, std::vector<size_t>>& set_index,
-                     const size_t num_perm, const bool require_standardize,
-                     const bool use_ref_maf);
+                     Genotype& target, const size_t& num_background,
+                     std::vector<size_t> background, size_t num_consumer,
+                     std::map<size_t, std::vector<size_t>>& set_index);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
      * and perform the regression analysis
@@ -483,35 +498,28 @@ private:
      * for a specific set
      * \param is_binary indicate if the phenotype is binary or not
      */
-    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     std::map<size_t, std::vector<size_t>>& set_index,
-                     std::vector<double>& obs_t_value,
-                     std::vector<std::atomic<size_t>>& set_perm_res,
-                     const bool is_binary);
-    /*!
-     * \brief Function responsible for running the permutation required for
-     * computing the competitive p-value
-     * \param target is the target genotype object
-     * \param set_index  is the dictionary for index of sets with the same size
-     * \param ori_t_value contain the observed T-value for each set
-     * \param set_perm_res is the vector storing the result of permutation.
-     * Counting the number of time the permuted T is bigger than the observed T
-     * for a specific set
-     * \param num_perm is the number of permutation to perform
-     * \param is_binary indicate if the phenotype is binary
-     * \param require_standardize indicate if we require the standardization of
-     * the genotype
-     */
-    void
-    null_set_no_thread(Genotype& target,
-                       const std::vector<size_t>::const_iterator& bk_start_idx,
-                       const std::vector<size_t>::const_iterator& bk_end_idx,
-                       const std::map<size_t, std::vector<size_t>>& set_index,
-                       std::vector<double>& obs_t_value,
-                       std::vector<std::atomic<size_t>>& set_perm_res,
-                       const size_t num_perm, const bool is_binary,
-                       const bool require_standardize, const bool use_ref_maf);
+    void consume_prs(
+        Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+        const Eigen::MatrixXd& X,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
+        std::map<size_t, std::vector<size_t>>& set_index,
+        std::vector<double>& obs_t_value,
+        std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
 
+    void null_set_no_thread(
+        Genotype& target, const size_t num_background,
+        std::vector<size_t> background,
+        const std::map<size_t, std::vector<size_t>>& set_index,
+        const Eigen::MatrixXd& X,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
+        std::vector<double>& obs_t_value,
+        std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
      * \param q is the queue for contacting the consumers
@@ -530,8 +538,10 @@ private:
      */
     void consume_null_pheno(
         Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed, int rank,
-        const Eigen::VectorXd& pre_se, bool run_glm);
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& R, const Eigen::Index& rank, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation
      * \param decomposed is the pre-decomposed independent matrix. If run glm is
@@ -543,9 +553,15 @@ private:
      * precomputed matrix
      */
     void run_null_perm_no_thread(
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& decomposed,
-        const Eigen::Index rank, const Eigen::VectorXd& pre_se,
-        const bool run_glm);
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& R, const Eigen::Index& rank, const bool run_glm);
+
+    void parse_pheno(const bool binary, const std::string& pheno,
+                     std::vector<double>& pheno_store, double& first_pheno,
+                     bool& more_than_one_pheno, size_t& num_case,
+                     size_t& num_control, int& max_pheno_code);
 };
 
 #endif // PRSICE_H

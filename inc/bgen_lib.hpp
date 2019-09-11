@@ -7,6 +7,7 @@
 #ifndef BGEN_REFERENCE_IMPLEMENTATION_HPP
 #define BGEN_REFERENCE_IMPLEMENTATION_HPP
 
+#include "memoryread.hpp"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -104,7 +105,8 @@ void zlib_uncompress(byte_t const* begin, byte_t const* const end,
     int result =
         uncompress(reinterpret_cast<Bytef*>(&dest->operator[](0)), &dest_size,
                    reinterpret_cast<Bytef const*>(begin), source_size);
-    assert(result == Z_OK);
+    if (result != Z_OK)
+        throw std::runtime_error("Error: Cannot decompress bgen zlib");
     assert(dest_size % sizeof(T) == 0);
     dest->resize(dest_size / sizeof(T));
 }
@@ -297,6 +299,11 @@ namespace bgen
     // appear in the buffer).
     void read_genotype_data_block(std::istream& aStream, Context const& context,
                                   std::vector<byte_t>* buffer1);
+    void read_genotype_data_block(MemoryRead& aStream,
+                                  const std::string& file_name,
+                                  Context const& context,
+                                  std::vector<byte_t>* buffer1,
+                                  const unsigned long long idx);
 
     // Low-level function which uncompresses probability data stored in the
     // genotype data block contained in the first buffer into a second buffer
@@ -381,9 +388,16 @@ namespace bgen
     // values using the setter object provided. The buffers are used as
     // intermediate storage and will be resized to fit data as needed.
     template <typename Setter>
+    void read_and_parse_genotype_data_block(std::istream& aStream,
+                                            Context const& context,
+                                            Setter& setter,
+                                            std::vector<byte_t>* buffer1,
+                                            std::vector<byte_t>* buffer2);
+    template <typename Setter>
     void read_and_parse_genotype_data_block(
-        std::istream& aStream, Context const& context, Setter& setter,
-        std::vector<byte_t>* buffer1, std::vector<byte_t>* buffer2, bool quick);
+        MemoryRead& aStream, const std::string& file_name,
+        Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
+        std::vector<byte_t>* buffer2, unsigned long long idx);
 }
 }
 
@@ -426,7 +440,19 @@ namespace bgen
         read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
                                    integer_ptr);
     }
-
+    template <typename IntegerType>
+    void read_little_endian_integer(MemoryRead& in_stream,
+                                    const std::string& file_name,
+                                    IntegerType* integer_ptr,
+                                    const unsigned long long idx)
+    {
+        byte_t buffer[sizeof(IntegerType)];
+        in_stream.read(file_name, idx, sizeof(IntegerType),
+                       reinterpret_cast<char*>(buffer));
+        // if (!in_stream) { throw BGenError(); }
+        read_little_endian_integer(buffer, buffer + sizeof(IntegerType),
+                                   integer_ptr);
+    }
     template <typename IntegerType>
     void read_length_followed_by_data(std::istream& in_stream,
                                       IntegerType* length_ptr,
@@ -1479,6 +1505,17 @@ namespace bgen
                                             std::vector<byte_t>* buffer2)
     {
         read_genotype_data_block(aStream, context, buffer1);
+        uncompress_probability_data(context, *buffer1, buffer2);
+        parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
+                               context, setter);
+    }
+    template <typename Setter>
+    void read_and_parse_genotype_data_block(
+        MemoryRead& aStream, const std::string& file_name,
+        Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
+        std::vector<byte_t>* buffer2, const unsigned long long idx)
+    {
+        read_genotype_data_block(aStream, file_name, context, buffer1, idx);
         uncompress_probability_data(context, *buffer1, buffer2);
         parse_probability_data(&(*buffer2)[0], &(*buffer2)[0] + buffer2->size(),
                                context, setter);

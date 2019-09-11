@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 /usr/local/Cellar/mingw-w64/5.0.4_1/toolchain-i686/bin/i686-w64-mingw32-gcc -O3 -Wall -c -o adler32.o adler32.c
 /usr/local/Cellar/mingw-w64/5.0.4_1/toolchain-i686/bin/i686-w64-mingw32-gcc -O3 -Wall -c -o compress.o compress.c
 /usr/local/Cellar/mingw-w64/5.0.4_1/toolchain-i686/bin/i686-w64-mingw32-gcc -O3 -Wall -c -o crc32.o crc32.c

@@ -34,8 +34,12 @@
 #include <fstream>
 #include <functional>
 #include <memory>
+#include <memoryread.hpp>
+#include <mio.hpp>
+#include <mutex>
 #include <random>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -43,14 +47,6 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
-
-#ifdef _WIN32
-#include <mingw.mutex.h>
-#include <mingw.thread.h>
-#else
-#include <mutex>
-#include <thread>
-#endif
 // class BinaryPlink;
 // class BinaryGen;
 #define MULTIPLEX_LD 1920
@@ -95,23 +91,26 @@ public:
      */
     void load_samples(const std::string& keep_file,
                       const std::string& remove_file, const std::string& delim,
-                      bool verbose, Reporter& reporter);
-
+                      bool verbose);
+    static void set_memory(const unsigned long long& mem, const bool enable_mem)
+    {
+        g_allowed_memory = mem;
+        g_allow_mmap = enable_mem;
+    }
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
     // us to do the regional filtering. However, as exclusion and extractions
     // are based on the SNP ID, we can be confident that they were already done
     // in read_base
     void load_snps(const std::string& out,
-                   const std::vector<IITree<int, int>>& exclusion_regions,
-                   bool verbose, Reporter& reporter,
-                   Genotype* target = nullptr);
+                   const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+                   bool verbose, Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(
         const double& maf_threshold, const double& geno_threshold,
         const double& info_threshold, const bool maf_filter,
         const bool geno_filter, const bool info_filter, const bool hard_coded,
-        bool verbose, Reporter& reporter, Genotype* target = nullptr);
+        bool verbose, Genotype* target = nullptr);
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -159,8 +158,7 @@ public:
      * calculation instead of the haplotype likelihood clumping. If this is
      * true, efficient_clumping will call the pearson_clumping algorithm
      */
-    void efficient_clumping(Genotype& reference, Reporter& reporter,
-                            bool const use_pearson);
+    void efficient_clumping(Genotype& reference);
     /*!
      * \brief This function helps to load all command line dependencies into the
      * object so that we don't need to pass along the commander any more
@@ -216,7 +214,8 @@ public:
      * m_existed_snp vector according to their p-value.
      * \return True if there are SNPs to process
      */
-    bool prepare_prsice();
+    bool prepare_prsice(const double& lower, const double& inter,
+                        const double& upper);
     /*!
      * \brief This function will return the sample ID
      * \param i is the index of the sample
@@ -336,20 +335,19 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
+    void snp_extraction(const std::string& extract_snps,
+                        const std::string& exclude_snps);
     void read_base(const std::string& base_file,
                    const std::vector<size_t>& col_index,
                    const std::vector<bool>& has_col,
                    const std::vector<double>& barlevels,
                    const double& bound_start, const double& bound_inter,
-                   const double& bound_end, const std::string& exclude_snps,
-                   const std::string& extract_snps,
-                   const std::vector<IITree<int, int>>& exclusion_region,
+                   const double& bound_end,
+                   const std::vector<IITree<size_t, size_t>>& exclusion_region,
                    const double& maf_control, const double& maf_case,
-                   const double& info_threshold, const bool maf_control_filter,
-                   const bool maf_case_filter, const bool info_filter,
-                   const bool fastscore, const bool no_full, const bool is_beta,
-                   const bool is_index, const bool keep_ambig,
-                   Reporter& reporter);
+                   const double& info_threshold, const bool fastscore,
+                   const bool no_full, const bool is_beta, const bool is_index,
+                   const bool keep_ambig);
     void build_clump_windows();
     void build_membership_matrix(std::vector<size_t>& region_membership,
                                  std::vector<size_t>& region_start_idx,
@@ -363,22 +361,23 @@ public:
                    double& cur_threshold, uint32_t& num_snp_included,
                    const bool non_cumulate, const bool require_statistic,
                    const bool first_run, const bool use_ref_maf);
-    static bool within_region(const std::vector<IITree<int, int>>& cr,
-                              const int chr, const int loc)
+    static bool within_region(const std::vector<IITree<size_t, size_t>>& cr,
+                              const size_t chr, const size_t loc)
     {
         std::vector<size_t> output;
-        if (chr < 0) return false;
-        if (static_cast<size_t>(chr) >= cr.size()) return false;
-        cr[static_cast<size_t>(chr)].overlap(loc - 1, loc + 1, output);
+        if (chr >= cr.size()) return false;
+        size_t start = (loc == 0) ? 1 : loc;
+        cr[chr].overlap(start, loc + 1, output);
         return !output.empty();
     }
 
 
     static void construct_flag(
-        const std::string& rs, const std::vector<IITree<int, int>>& gene_sets,
-        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
-        std::vector<uintptr_t>& flag, const size_t required_size, const int chr,
-        const int bp, const bool genome_wide_background)
+        const std::string& rs,
+        const std::vector<IITree<size_t, size_t>>& gene_sets,
+        const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
+        std::vector<uintptr_t>& flag, const size_t required_size,
+        const size_t chr, const size_t bp, const bool genome_wide_background)
     {
         if (flag.size() != required_size) { flag.resize(required_size); }
         std::fill(flag.begin(), flag.end(), 0);
@@ -386,17 +385,17 @@ public:
         if (genome_wide_background) { SET_BIT(1, flag.data()); }
         // because the chromosome number is undefined. It will not be presented
         // in any of the region (we filter out any region with undefined chr)
-        if (chr >= 0 && !gene_sets.empty())
+        if (!gene_sets.empty())
         {
             std::vector<size_t> out;
-            if (static_cast<size_t>(chr) >= gene_sets.size()) return;
-            gene_sets[static_cast<size_t>(chr)].overlap(bp - 1, bp + 1, out);
-            int idx;
+            if (chr >= gene_sets.size()) return;
+            gene_sets[chr].overlap(bp - 1, bp + 1, out);
+            size_t idx;
             for (auto&& j : out)
             {
-                idx = gene_sets[static_cast<size_t>(chr)].data(j);
+                idx = gene_sets[chr].data(j);
                 // idx= cr_label(gene_sets, b[j]);
-                SET_BIT(static_cast<size_t>(idx), flag.data());
+                SET_BIT(idx, flag.data());
             }
         }
         if (snp_in_sets.empty() || rs.empty()) return;
@@ -408,8 +407,8 @@ public:
         return;
     }
     void add_flags(
-        const std::vector<IITree<int, int>>& cr,
-        const std::unordered_map<std::string, std::vector<int>>& snp_in_sets,
+        const std::vector<IITree<size_t, size_t>>& cr,
+        const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
         const size_t num_sets, const bool genome_wide_background);
 
 protected:
@@ -419,13 +418,15 @@ protected:
     friend class BinaryGen;
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
+    MemoryRead m_genotype_file;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
-    std::vector<std::string> m_genotype_files;
+    std::vector<std::string> m_genotype_file_names;
+    std::vector<mio::mmap_source> m_genotype_files;
     std::vector<double> m_thresholds;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
@@ -453,19 +454,20 @@ protected:
     double m_homrar_weight = 2;
     size_t m_num_thresholds = 0;
     size_t m_thread = 1; // number of final samples
+    size_t m_max_window_size = 0;
     size_t m_num_ambig = 0;
     size_t m_num_maf_filter = 0;
     size_t m_num_geno_filter = 0;
     size_t m_num_info_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
+    static unsigned long long g_allowed_memory;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_clump_distance = 0;
     uintptr_t m_sample_ct = 0;
     uintptr_t m_founder_ct = 0;
     uintptr_t m_marker_ct = 0;
-    intptr_t m_max_window_size = 0;
     uint32_t m_max_category = 0;
     uint32_t m_autosome_ct = 0;
     uint32_t m_max_code = 0;
@@ -475,6 +477,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    static bool g_allow_mmap;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
     bool m_is_ref = false;
@@ -485,6 +488,9 @@ protected:
     bool m_hard_coded = false;
     bool m_expect_reference = false;
     bool m_mismatch_file_output = false;
+    bool m_memory_initialized = false;
+    bool m_very_small_thresholds = false;
+    Reporter* m_reporter;
     MODEL m_model = MODEL::ADDITIVE;
     MISSING_SCORE m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING m_scoring = SCORING::AVERAGE;
@@ -498,23 +504,39 @@ protected:
      * \param no_full indicate if we want the p=1 threshold
      * \return the category where this SNP belongs to
      */
-    int calculate_category(const double& pvalue, const double& bound_start,
-                           const double& bound_inter, const double& bound_end,
-                           double& pthres, const bool no_full)
+    unsigned long long calculate_category(const double& pvalue,
+                                          const double& bound_start,
+                                          const double& bound_inter,
+                                          const double& bound_end,
+                                          double& pthres, const bool no_full)
     {
         // NOTE: Threshold is x < p <= end and minimum category is 0
-        int category = 0;
+        unsigned long long category = 0;
+        double division;
         if (pvalue > bound_end && !no_full)
         {
-            category = static_cast<int>(
-                std::ceil((bound_end + 0.1 - bound_start) / bound_inter));
+            division = (bound_end + 0.1 - bound_start) / bound_inter;
+            if (division > std::numeric_limits<unsigned long long>::max())
+            {
+                throw std::runtime_error(
+                    "Error: Number of threshold required are too large");
+            }
+            category = static_cast<unsigned long long>(std::ceil(division));
             pthres = 1.0;
         }
         else
         {
-            category = static_cast<int>(
-                std::ceil((pvalue - bound_start) / bound_inter));
-            category = (category < 0) ? 0 : category;
+            if (pvalue > bound_start
+                || misc::logically_equal(pvalue, bound_start))
+            {
+                division = (pvalue - bound_start) / bound_inter;
+                if (division > std::numeric_limits<unsigned long long>::max())
+                {
+                    throw std::runtime_error(
+                        "Error: Number of threshold required are too large");
+                }
+                category = static_cast<unsigned long long>(std::ceil(division));
+            }
             pthres = category * bound_inter + bound_start;
         }
         return category;
@@ -527,20 +549,21 @@ protected:
      * \param pthres the p-value threshold this SNP belong to
      * \return the category of this SNP
      */
-    int calculate_category(const double& pvalue,
-                           const std::vector<double>& barlevels, double& pthres)
+    unsigned long long calculate_category(const double& pvalue,
+                                          const std::vector<double>& barlevels,
+                                          double& pthres)
     {
-        for (size_t i = 0; i < barlevels.size(); ++i)
+        for (unsigned long long i = 0; i < barlevels.size(); ++i)
         {
             if (pvalue < barlevels[i]
                 || misc::logically_equal(pvalue, barlevels[i]))
             {
                 pthres = barlevels[i];
-                return static_cast<int>(i);
+                return i;
             }
         }
         pthres = 1.0;
-        return static_cast<int>(barlevels.size());
+        return static_cast<unsigned long long>(barlevels.size());
     }
 
     /*!
@@ -587,14 +610,15 @@ protected:
      * m_tmp_genotype (optional)
      * \return vector containing the sample information
      */
-    virtual std::vector<Sample_ID> gen_sample_vector(const std::string& delim)
+    virtual std::vector<Sample_ID>
+    gen_sample_vector(const std::string& /*delim*/)
     {
         return std::vector<Sample_ID>(0);
     }
 
-    virtual void
-    gen_snp_vector(const std::vector<IITree<int, int>>& /*exclusion_regions*/,
-                   const std::string& /*out_prefix*/, Genotype* /*target*/)
+    virtual void gen_snp_vector(
+        const std::vector<IITree<size_t, size_t>>& /*exclusion_regions*/,
+        const std::string& /*out_prefix*/, Genotype* /*target*/)
     {
     }
     virtual void calc_freq_gen_inter(
@@ -603,6 +627,97 @@ protected:
         const bool /*geno_filter*/, const bool /*info_filter*/,
         const bool /*hard_coded*/, Genotype* /*target=nullptr*/)
     {
+    }
+    void read_prs(std::vector<uintptr_t>& genotype, const size_t ploidy,
+                  const double stat, const double adj_score,
+                  const double miss_score, const size_t miss_count,
+                  const double homcom_weight, const double het_weight,
+                  const double homrar_weight, const bool not_first)
+    {
+        uintptr_t* lbptr = genotype.data();
+        uintptr_t ulii;
+        uint32_t uii;
+        uint32_t ujj;
+        uint32_t ukk;
+        uii = 0;
+        ulii = 0;
+        do
+        {
+            // ulii contain the numeric representation of the current genotype
+            ulii = ~(*lbptr++);
+            if (uii + BITCT2 > m_unfiltered_sample_ct)
+            {
+                // this is PLINK, not sure exactly what this is about
+                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                        - ONELU;
+            }
+            // ujj sample index of the current genotype block
+            ujj = 0;
+            while (ujj < BITCT)
+            {
+                // go through the whole genotype block
+                // ukk is the current genotype
+                ukk = (ulii >> ujj) & 3;
+                // and the sample index can be calculated as uii+(ujj/2)
+                if (uii + (ujj / 2) >= m_sample_ct) { break; }
+                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
+                // now we will get all genotypes (0, 1, 2, 3)
+                if (not_first)
+                {
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp += ploidy;
+                        sample_prs.prs += homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp += miss_count;
+                        sample_prs.prs += miss_score;
+                        break;
+                    }
+                }
+                else
+                {
+                    switch (ukk)
+                    {
+                    default:
+                        // true = 1, false = 0
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homcom_weight * stat - adj_score;
+                        break;
+                    case 1:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = het_weight * stat - adj_score;
+                        break;
+                    case 3:
+                        sample_prs.num_snp = ploidy;
+                        sample_prs.prs = homrar_weight * stat - adj_score;
+                        break;
+                    case 2:
+                        // handle missing sample
+                        sample_prs.num_snp = miss_count;
+                        sample_prs.prs = miss_score;
+                        break;
+                    }
+                }
+                // ulii &= ~((3 * ONELU) << ujj);
+                // as each sample is represented by two byte, we will add 2 to
+                // the index
+                ujj += 2;
+            }
+            // uii is the number of samples we have finished so far
+            uii += BITCT2;
+        } while (uii < m_sample_ct);
     }
 
     /*!
@@ -614,8 +729,8 @@ protected:
      * the thrid parameter
      */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
-                                      const std::streampos /*byte_pos*/,
-                                      const std::string& /*file_name*/)
+                                      const unsigned long long /*byte_pos*/,
+                                      const size_t& /*file_index*/)
     {
     }
     virtual void
@@ -641,9 +756,17 @@ protected:
      * \param reporter the logger
      * \returnan unordered_set use for checking if the SNP is in the file
      */
-    std::unordered_set<std::string> load_snp_list(std::string input,
-                                                  Reporter& reporter);
-
+    std::unordered_set<std::string> load_snp_list(const std::string& input);
+    void shrink_snp_vector(const std::vector<bool>& retain)
+    {
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&retain, this](const SNP& s) {
+                               return !retain[(&s - &*begin(m_existed_snps))];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
+    }
     /** Misc information **/
     // uint32_t m_hh_exists;
     /*!
@@ -664,6 +787,7 @@ protected:
     {
         // the allele should all be in upper case but whatever
         // true if equal
+        if (ref_allele.empty() || alt_allele.empty()) return false;
         if (ref_allele == alt_allele) return true;
         return (ref_allele == "A" && alt_allele == "T")
                || (alt_allele == "A" && ref_allele == "T")
@@ -770,887 +894,6 @@ protected:
                        double known22, double center_ct_d, double freq11,
                        double freq12, double freq21, double freq22,
                        double half_hethet_share, double freq11_incr);
-    uint32_t load_and_split3(uintptr_t* rawbuf, uint32_t unfiltered_sample_ct,
-                             uintptr_t* casebuf, uint32_t case_ctv,
-                             uint32_t ctrl_ctv, uint32_t do_reverse,
-                             uint32_t is_case_only, uintptr_t* nm_info_ptr);
-    void two_locus_count_table(uintptr_t* lptr1, uintptr_t* lptr2,
-                               uint32_t* counts_3x3, uint32_t sample_ctv3,
-                               uint32_t is_zmiss2);
-    void two_locus_count_table_zmiss1(uintptr_t* lptr1, uintptr_t* lptr2,
-                                      uint32_t* counts_3x3,
-                                      uint32_t sample_ctv3, uint32_t is_zmiss2);
-#ifdef __LP64__
-    void two_locus_3x3_tablev(__m128i* vec1, __m128i* vec2,
-                              uint32_t* counts_3x3, uint32_t sample_ctv6,
-                              uint32_t iter_ct);
-
-    inline void two_locus_3x3_zmiss_tablev(__m128i* veca0, __m128i* vecb0,
-                                           uint32_t* counts_3x3,
-                                           uint32_t sample_ctv6)
-    {
-        const __m128i m1 = {FIVEMASK, FIVEMASK};
-        const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
-        const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-        __m128i* vecb1 = &(vecb0[sample_ctv6]);
-        __m128i* veca1 = &(veca0[sample_ctv6]);
-        __m128i* vend;
-        __m128i loadera0;
-        __m128i loaderb0;
-        __m128i loaderb1;
-        __m128i loadera1;
-        __m128i countx00;
-        __m128i countx01;
-        __m128i countx11;
-        __m128i countx10;
-        __m128i county00;
-        __m128i county01;
-        __m128i county11;
-        __m128i county10;
-        __univec acc00;
-        __univec acc01;
-        __univec acc11;
-        __univec acc10;
-        uint32_t ct2;
-        while (sample_ctv6 >= 30)
-        {
-            sample_ctv6 -= 30;
-            vend = &(veca0[30]);
-            acc00.vi = _mm_setzero_si128();
-            acc01.vi = _mm_setzero_si128();
-            acc11.vi = _mm_setzero_si128();
-            acc10.vi = _mm_setzero_si128();
-            do
-            {
-            two_locus_3x3_zmiss_tablev_outer:
-                loadera0 = *veca0++;
-                loaderb0 = *vecb0++;
-                loaderb1 = *vecb1++;
-                loadera1 = *veca1++;
-                countx00 = _mm_and_si128(loadera0, loaderb0);
-                countx01 = _mm_and_si128(loadera0, loaderb1);
-                countx11 = _mm_and_si128(loadera1, loaderb1);
-                countx10 = _mm_and_si128(loadera1, loaderb0);
-                countx00 = _mm_sub_epi64(
-                    countx00, _mm_and_si128(_mm_srli_epi64(countx00, 1), m1));
-                countx01 = _mm_sub_epi64(
-                    countx01, _mm_and_si128(_mm_srli_epi64(countx01, 1), m1));
-                countx11 = _mm_sub_epi64(
-                    countx11, _mm_and_si128(_mm_srli_epi64(countx11, 1), m1));
-                countx10 = _mm_sub_epi64(
-                    countx10, _mm_and_si128(_mm_srli_epi64(countx10, 1), m1));
-                countx00 = _mm_add_epi64(
-                    _mm_and_si128(countx00, m2),
-                    _mm_and_si128(_mm_srli_epi64(countx00, 2), m2));
-                countx01 = _mm_add_epi64(
-                    _mm_and_si128(countx01, m2),
-                    _mm_and_si128(_mm_srli_epi64(countx01, 2), m2));
-                countx11 = _mm_add_epi64(
-                    _mm_and_si128(countx11, m2),
-                    _mm_and_si128(_mm_srli_epi64(countx11, 2), m2));
-                countx10 = _mm_add_epi64(
-                    _mm_and_si128(countx10, m2),
-                    _mm_and_si128(_mm_srli_epi64(countx10, 2), m2));
-            two_locus_3x3_zmiss_tablev_one_left:
-                loadera0 = *veca0++;
-                loaderb0 = *vecb0++;
-                loaderb1 = *vecb1++;
-                loadera1 = *veca1++;
-                county00 = _mm_and_si128(loadera0, loaderb0);
-                county01 = _mm_and_si128(loadera0, loaderb1);
-                county11 = _mm_and_si128(loadera1, loaderb1);
-                county10 = _mm_and_si128(loadera1, loaderb0);
-                county00 = _mm_sub_epi64(
-                    county00, _mm_and_si128(_mm_srli_epi64(county00, 1), m1));
-                county01 = _mm_sub_epi64(
-                    county01, _mm_and_si128(_mm_srli_epi64(county01, 1), m1));
-                county11 = _mm_sub_epi64(
-                    county11, _mm_and_si128(_mm_srli_epi64(county11, 1), m1));
-                county10 = _mm_sub_epi64(
-                    county10, _mm_and_si128(_mm_srli_epi64(county10, 1), m1));
-                countx00 = _mm_add_epi64(
-                    countx00,
-                    _mm_add_epi64(
-                        _mm_and_si128(county00, m2),
-                        _mm_and_si128(_mm_srli_epi64(county00, 2), m2)));
-                countx01 = _mm_add_epi64(
-                    countx01,
-                    _mm_add_epi64(
-                        _mm_and_si128(county01, m2),
-                        _mm_and_si128(_mm_srli_epi64(county01, 2), m2)));
-                countx11 = _mm_add_epi64(
-                    countx11,
-                    _mm_add_epi64(
-                        _mm_and_si128(county11, m2),
-                        _mm_and_si128(_mm_srli_epi64(county11, 2), m2)));
-                countx10 = _mm_add_epi64(
-                    countx10,
-                    _mm_add_epi64(
-                        _mm_and_si128(county10, m2),
-                        _mm_and_si128(_mm_srli_epi64(county10, 2), m2)));
-                acc00.vi = _mm_add_epi64(
-                    acc00.vi,
-                    _mm_add_epi64(
-                        _mm_and_si128(countx00, m4),
-                        _mm_and_si128(_mm_srli_epi64(countx00, 4), m4)));
-                acc01.vi = _mm_add_epi64(
-                    acc01.vi,
-                    _mm_add_epi64(
-                        _mm_and_si128(countx01, m4),
-                        _mm_and_si128(_mm_srli_epi64(countx01, 4), m4)));
-                acc11.vi = _mm_add_epi64(
-                    acc11.vi,
-                    _mm_add_epi64(
-                        _mm_and_si128(countx11, m4),
-                        _mm_and_si128(_mm_srli_epi64(countx11, 4), m4)));
-                acc10.vi = _mm_add_epi64(
-                    acc10.vi,
-                    _mm_add_epi64(
-                        _mm_and_si128(countx10, m4),
-                        _mm_and_si128(_mm_srli_epi64(countx10, 4), m4)));
-            } while (veca0 < vend);
-            const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-            acc00.vi =
-                _mm_add_epi64(_mm_and_si128(acc00.vi, m8),
-                              _mm_and_si128(_mm_srli_epi64(acc00.vi, 8), m8));
-            acc01.vi =
-                _mm_add_epi64(_mm_and_si128(acc01.vi, m8),
-                              _mm_and_si128(_mm_srli_epi64(acc01.vi, 8), m8));
-            acc11.vi =
-                _mm_add_epi64(_mm_and_si128(acc11.vi, m8),
-                              _mm_and_si128(_mm_srli_epi64(acc11.vi, 8), m8));
-            acc10.vi =
-                _mm_add_epi64(_mm_and_si128(acc10.vi, m8),
-                              _mm_and_si128(_mm_srli_epi64(acc10.vi, 8), m8));
-            counts_3x3[0] +=
-                ((acc00.u8[0] + acc00.u8[1]) * 0x1000100010001LLU) >> 48;
-            counts_3x3[1] +=
-                ((acc01.u8[0] + acc01.u8[1]) * 0x1000100010001LLU) >> 48;
-            counts_3x3[4] +=
-                ((acc11.u8[0] + acc11.u8[1]) * 0x1000100010001LLU) >> 48;
-            counts_3x3[3] +=
-                ((acc10.u8[0] + acc10.u8[1]) * 0x1000100010001LLU) >> 48;
-        }
-        if (sample_ctv6)
-        {
-            vend = &(veca0[sample_ctv6]);
-            ct2 = sample_ctv6 % 2;
-            sample_ctv6 = 0;
-            acc00.vi = _mm_setzero_si128();
-            acc01.vi = _mm_setzero_si128();
-            acc11.vi = _mm_setzero_si128();
-            acc10.vi = _mm_setzero_si128();
-            if (ct2)
-            {
-                countx00 = _mm_setzero_si128();
-                countx01 = _mm_setzero_si128();
-                countx11 = _mm_setzero_si128();
-                countx10 = _mm_setzero_si128();
-                goto two_locus_3x3_zmiss_tablev_one_left;
-            }
-            goto two_locus_3x3_zmiss_tablev_outer;
-        }
-    }
-#endif
-
-    // mask_buf has the same size as the geno_buf and is used in later situation
-    // missing_ct_ptr seems to be a int for number of missing
-    // in plink, because they use multi-threading, they use a vector for this
-    // but as we are clumping, we can't do multi-threading in the way
-    // plink does (though might be possible if we start to incorporate the
-    // highly complicated memory pool of plink)
-    void ld_process_load2(uintptr_t* geno_buf, uintptr_t* mask_buf,
-                          uint32_t* missing_ct_ptr, uint32_t founder_ct,
-                          uint32_t is_x, uintptr_t* founder_male_include2)
-    {
-        // if is_x is always false, then we can safely ignore
-        // founder_male_include2
-        uintptr_t* geno_ptr = geno_buf;
-        uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(founder_ct);
-        uintptr_t* geno_end = &(geno_buf[founder_ctl2]);
-        uintptr_t* mask_buf_ptr = mask_buf;
-        uintptr_t cur_geno;
-        uintptr_t shifted_masked_geno;
-        uintptr_t new_geno;
-        uintptr_t new_mask;
-        do
-        {
-            cur_geno = *geno_ptr;
-            shifted_masked_geno = (cur_geno >> 1) & FIVEMASK;
-            new_geno = cur_geno - shifted_masked_geno;
-            *geno_ptr++ = new_geno;
-            new_mask = (((~cur_geno) & FIVEMASK) | shifted_masked_geno) * 3;
-            *mask_buf_ptr++ = new_mask;
-        } while (geno_ptr < geno_end);
-        if (is_x)
-        {
-            geno_ptr = geno_buf;
-            do
-            {
-                new_geno = *geno_ptr;
-                *geno_ptr++ = new_geno
-                              + ((~(new_geno | (new_geno >> 1)))
-                                 & (*founder_male_include2++));
-            } while (geno_ptr < geno_end);
-        }
-        if (founder_ct % BITCT2)
-        {
-            mask_buf[founder_ct / BITCT2] &=
-                (ONELU << (2 * (founder_ct % BITCT2))) - ONELU;
-        }
-        *missing_ct_ptr =
-            founder_ct - (popcount_longs(mask_buf, founder_ctl2) / 2);
-    }
-
-
-// amazing bitwise R2 calculation function from PLINK
-#ifdef __LP64__
-    static inline void ld_dot_prod_batch(__m128i* vec1, __m128i* vec2,
-                                         __m128i* mask1, __m128i* mask2,
-                                         int32_t* return_vals, uint32_t iters)
-    {
-        // Main routine for computation of \sum_i^M (x_i - \mu_x)(y_i - \mu_y),
-        // where x_i, y_i \in \{-1, 0, 1\}, but there are missing values.
-        //
-        //
-        // We decompose this sum into
-        //   \sum_i x_iy_i - \mu_y\sum_i x_i - \mu_x\sum_i y_i +
-        //   (M - # missing)\mu_x\mu_y.
-        // *Without* missing values, this can be handled very cleanly.  The last
-        // three terms can all be precomputed, and \sum_i x_iy_i can be handled
-        // in a manner very similar to bitwise Hamming distance.  This is
-        // several times as fast as the lookup tables used for relationship
-        // matrices.
-        //
-        // Unfortunately, when missing values are present,
-        // \mu_y\sum_{i: nonmissing from y} x_i and
-        // \mu_x\sum_{i: nonmissing from x} y_i must also be evaluated (and, in
-        // practice, \mu_y\sum_{i: nonmissing from y} x_i^2 and
-        // \mu_x\sum_{i: nonmissing from x} y_i^2 should be determined here as
-        // well); this removes much of the speed advantage, and the best
-        // applications of the underlying ternary dot product algorithm used
-        // here lie elsewhere. Nevertheless, it is still faster, so we use it.
-        // (possible todo: accelerated function when there really are no missing
-        // values, similar to what is now done for --fast-epistasis)
-        //
-        //
-        // Input:
-        // * vec1 and vec2 are encoded -1 -> 00, 0/missing -> 01, 1 -> 10.
-        // * mask1 and mask2 mask out missing values (i.e. 00 for missing, 11
-        // for
-        //   nonmissing).
-        // * return_vals provides space for return values.
-        // * iters is the number of 48-byte windows to process, anywhere from 1
-        // to 10
-        //   inclusive.
-        //
-        // This function performs the update
-        //   return_vals[0] += (-N) + \sum_i x_iy_i
-        //   return_vals[1] += N_y + \sum_{i: nonmissing from y} x_i
-        //   return_vals[2] += N_x + \sum_{i: nonmissing from x} y_i
-        //   return_vals[3] += N_y - \sum_{i: nonmissing from y} x_i^2
-        //   return_vals[4] += N_x - \sum_{i: nonmissing from x} y_i^2
-        // where N is the number of samples processed after applying the
-        // missingness masks indicated by the subscripts.
-        //
-        // Computation of terms [1]-[4] is based on the identity
-        //   N_y + \sum_{i: nonmissing from y} x_i = popcount2(vec1 & mask2)
-        // where "popcount2" refers to starting with two-bit integers instead of
-        // one-bit integers in our summing process (this allows us to skip a few
-        // operations).  (Once we can assume the presence of hardware popcount,
-        // a slightly different implementation may be better.)
-        //
-        // The trickier [0] computation currently proceeds as follows:
-        //
-        // 1. zcheck := (vec1 | vec2) & 0x5555...
-        // Detects whether at least one member of the pair has a 0/missing
-        // value.
-        //
-        // 2. popcount2(((vec1 ^ vec2) & (0xaaaa... - zcheck)) | zcheck)
-        // Subtracting this *from* a bias will give us our desired \sum_i x_iy_i
-        // dot product.
-        //
-        // MULTIPLEX_LD sets of values are usually handled per function call. If
-        // fewer values are present, the ends of all input vectors should be
-        // zeroed out.
-
-        const __m128i m1 = {FIVEMASK, FIVEMASK};
-        const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
-        const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-        __m128i loader1;
-        __m128i loader2;
-        __m128i sum1;
-        __m128i sum2;
-        __m128i sum11;
-        __m128i sum22;
-        __m128i sum12;
-        __m128i tmp_sum1;
-        __m128i tmp_sum2;
-        __m128i tmp_sum12;
-        __univec acc;
-        __univec acc1;
-        __univec acc2;
-        __univec acc11;
-        __univec acc22;
-        acc.vi = _mm_setzero_si128();
-        acc1.vi = _mm_setzero_si128();
-        acc2.vi = _mm_setzero_si128();
-        acc11.vi = _mm_setzero_si128();
-        acc22.vi = _mm_setzero_si128();
-        do
-        {
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            sum1 = *mask2++;
-            sum2 = *mask1++;
-            sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-            // sum11 = _mm_and_si128(_mm_and_si128(_mm_xor_si128(sum1, m1), m1),
-            // loader1); sum22 = _mm_and_si128(_mm_and_si128(_mm_xor_si128(sum2,
-            // m1), m1), loader2);
-            sum1 = _mm_and_si128(sum1, loader1);
-            sum2 = _mm_and_si128(sum2, loader2);
-            sum11 = _mm_and_si128(sum1, m1);
-            sum22 = _mm_and_si128(sum2, m1);
-            // use andnot to eliminate need for 0xaaaa... to occupy an xmm
-            // register
-            loader1 = _mm_andnot_si128(_mm_add_epi64(m1, sum12),
-                                       _mm_xor_si128(loader1, loader2));
-            sum12 = _mm_or_si128(sum12, loader1);
-
-            // sum1, sum2, and sum12 now store the (biased) two-bit sums of
-            // interest; merge to 4 bits to prevent overflow.  this merge can be
-            // postponed for sum11 and sum22 because the individual terms are
-            // 0/1 instead of 0/1/2.
-            sum1 = _mm_add_epi64(_mm_and_si128(sum1, m2),
-                                 _mm_and_si128(_mm_srli_epi64(sum1, 2), m2));
-            sum2 = _mm_add_epi64(_mm_and_si128(sum2, m2),
-                                 _mm_and_si128(_mm_srli_epi64(sum2, 2), m2));
-            sum12 = _mm_add_epi64(_mm_and_si128(sum12, m2),
-                                  _mm_and_si128(_mm_srli_epi64(sum12, 2), m2));
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum1 = *mask2++;
-            tmp_sum2 = *mask1++;
-            tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-            tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
-            tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
-            sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
-            sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
-            loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
-                                       _mm_xor_si128(loader1, loader2));
-            tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
-
-            sum1 = _mm_add_epi64(
-                sum1,
-                _mm_add_epi64(_mm_and_si128(tmp_sum1, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
-            sum2 = _mm_add_epi64(
-                sum2,
-                _mm_add_epi64(_mm_and_si128(tmp_sum2, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
-            sum12 = _mm_add_epi64(
-                sum12,
-                _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum1 = *mask2++;
-            tmp_sum2 = *mask1++;
-            tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-            tmp_sum1 = _mm_and_si128(tmp_sum1, loader1);
-            tmp_sum2 = _mm_and_si128(tmp_sum2, loader2);
-            sum11 = _mm_add_epi64(sum11, _mm_and_si128(tmp_sum1, m1));
-            sum22 = _mm_add_epi64(sum22, _mm_and_si128(tmp_sum2, m1));
-            loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
-                                       _mm_xor_si128(loader1, loader2));
-            tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
-
-            sum1 = _mm_add_epi64(
-                sum1,
-                _mm_add_epi64(_mm_and_si128(tmp_sum1, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum1, 2), m2)));
-            sum2 = _mm_add_epi64(
-                sum2,
-                _mm_add_epi64(_mm_and_si128(tmp_sum2, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum2, 2), m2)));
-            sum11 = _mm_add_epi64(_mm_and_si128(sum11, m2),
-                                  _mm_and_si128(_mm_srli_epi64(sum11, 2), m2));
-            sum22 = _mm_add_epi64(_mm_and_si128(sum22, m2),
-                                  _mm_and_si128(_mm_srli_epi64(sum22, 2), m2));
-            sum12 = _mm_add_epi64(
-                sum12,
-                _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
-
-            acc1.vi = _mm_add_epi64(
-                acc1.vi,
-                _mm_add_epi64(_mm_and_si128(sum1, m4),
-                              _mm_and_si128(_mm_srli_epi64(sum1, 4), m4)));
-            acc2.vi = _mm_add_epi64(
-                acc2.vi,
-                _mm_add_epi64(_mm_and_si128(sum2, m4),
-                              _mm_and_si128(_mm_srli_epi64(sum2, 4), m4)));
-            acc11.vi = _mm_add_epi64(
-                acc11.vi,
-                _mm_add_epi64(_mm_and_si128(sum11, m4),
-                              _mm_and_si128(_mm_srli_epi64(sum11, 4), m4)));
-            acc22.vi = _mm_add_epi64(
-                acc22.vi,
-                _mm_add_epi64(_mm_and_si128(sum22, m4),
-                              _mm_and_si128(_mm_srli_epi64(sum22, 4), m4)));
-            acc.vi = _mm_add_epi64(
-                acc.vi,
-                _mm_add_epi64(_mm_and_si128(sum12, m4),
-                              _mm_and_si128(_mm_srli_epi64(sum12, 4), m4)));
-        } while (--iters);
-        // moved down because we've almost certainly run out of xmm registers
-        const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-#if MULTIPLEX_LD > 960
-        acc1.vi = _mm_add_epi64(_mm_and_si128(acc1.vi, m8),
-                                _mm_and_si128(_mm_srli_epi64(acc1.vi, 8), m8));
-        acc2.vi = _mm_add_epi64(_mm_and_si128(acc2.vi, m8),
-                                _mm_and_si128(_mm_srli_epi64(acc2.vi, 8), m8));
-        acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
-                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
-#else
-        acc1.vi = _mm_and_si128(
-            _mm_add_epi64(acc1.vi, _mm_srli_epi64(acc1.vi, 8)), m8);
-        acc2.vi = _mm_and_si128(
-            _mm_add_epi64(acc2.vi, _mm_srli_epi64(acc2.vi, 8)), m8);
-        acc.vi =
-            _mm_and_si128(_mm_add_epi64(acc.vi, _mm_srli_epi64(acc.vi, 8)), m8);
-#endif
-        acc11.vi = _mm_and_si128(
-            _mm_add_epi64(acc11.vi, _mm_srli_epi64(acc11.vi, 8)), m8);
-        acc22.vi = _mm_and_si128(
-            _mm_add_epi64(acc22.vi, _mm_srli_epi64(acc22.vi, 8)), m8);
-
-        return_vals[0] -= ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
-        return_vals[1] +=
-            ((acc1.u8[0] + acc1.u8[1]) * 0x1000100010001LLU) >> 48;
-        return_vals[2] +=
-            ((acc2.u8[0] + acc2.u8[1]) * 0x1000100010001LLU) >> 48;
-        return_vals[3] +=
-            ((acc11.u8[0] + acc11.u8[1]) * 0x1000100010001LLU) >> 48;
-        return_vals[4] +=
-            ((acc22.u8[0] + acc22.u8[1]) * 0x1000100010001LLU) >> 48;
-    }
-
-    void ld_dot_prod(uintptr_t* vec1, uintptr_t* vec2, uintptr_t* mask1,
-                     uintptr_t* mask2, int32_t* return_vals,
-                     uint32_t batch_ct_m1, uint32_t last_batch_size)
-    {
-        while (batch_ct_m1--)
-        {
-            ld_dot_prod_batch((__m128i*) vec1, (__m128i*) vec2,
-                              (__m128i*) mask1, (__m128i*) mask2, return_vals,
-                              MULTIPLEX_LD / 192);
-            vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
-            vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
-            mask1 = &(mask1[MULTIPLEX_LD / BITCT2]);
-            mask2 = &(mask2[MULTIPLEX_LD / BITCT2]);
-        }
-        ld_dot_prod_batch((__m128i*) vec1, (__m128i*) vec2, (__m128i*) mask1,
-                          (__m128i*) mask2, return_vals, last_batch_size);
-    }
-
-    static inline int32_t ld_dot_prod_nm_batch(__m128i* vec1, __m128i* vec2,
-                                               uint32_t iters)
-    {
-        // faster ld_dot_prod_batch() for no-missing-calls case.
-        const __m128i m1 = {FIVEMASK, FIVEMASK};
-        const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
-        const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-        const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-        __m128i loader1;
-        __m128i loader2;
-        __m128i sum12;
-        __m128i tmp_sum12;
-        __univec acc;
-        acc.vi = _mm_setzero_si128();
-        do
-        {
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-            loader1 = _mm_andnot_si128(_mm_add_epi64(m1, sum12),
-                                       _mm_xor_si128(loader1, loader2));
-            sum12 = _mm_or_si128(sum12, loader1);
-            sum12 = _mm_add_epi64(_mm_and_si128(sum12, m2),
-                                  _mm_and_si128(_mm_srli_epi64(sum12, 2), m2));
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-            loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
-                                       _mm_xor_si128(loader1, loader2));
-            tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
-            sum12 = _mm_add_epi64(
-                sum12,
-                _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum12 = _mm_and_si128(_mm_or_si128(loader1, loader2), m1);
-            loader1 = _mm_andnot_si128(_mm_add_epi64(m1, tmp_sum12),
-                                       _mm_xor_si128(loader1, loader2));
-            tmp_sum12 = _mm_or_si128(loader1, tmp_sum12);
-            sum12 = _mm_add_epi64(
-                sum12,
-                _mm_add_epi64(_mm_and_si128(tmp_sum12, m2),
-                              _mm_and_si128(_mm_srli_epi64(tmp_sum12, 2), m2)));
-
-            acc.vi = _mm_add_epi64(
-                acc.vi,
-                _mm_add_epi64(_mm_and_si128(sum12, m4),
-                              _mm_and_si128(_mm_srli_epi64(sum12, 4), m4)));
-        } while (--iters);
-#if MULTIPLEX_LD > 960
-        acc.vi = _mm_add_epi64(_mm_and_si128(acc.vi, m8),
-                               _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
-#else
-        acc.vi =
-            _mm_and_si128(_mm_add_epi64(acc.vi, _mm_srli_epi64(acc.vi, 8)), m8);
-#endif
-        return (uint32_t)(((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48);
-    }
-
-    int32_t ld_dot_prod_nm(uintptr_t* vec1, uintptr_t* vec2,
-                           uint32_t founder_ct, uint32_t batch_ct_m1,
-                           uint32_t last_batch_size)
-    {
-        // accelerated implementation for no-missing-loci case
-        int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--)
-        {
-            result -= ld_dot_prod_nm_batch((__m128i*) vec1, (__m128i*) vec2,
-                                           MULTIPLEX_LD / 192);
-            vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
-            vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
-        }
-        result -= ld_dot_prod_nm_batch((__m128i*) vec1, (__m128i*) vec2,
-                                       last_batch_size);
-        return result;
-    }
-#else
-    static inline void ld_dot_prod_batch(uintptr_t* vec1, uintptr_t* vec2,
-                                         uintptr_t* mask1, uintptr_t* mask2,
-                                         int32_t* return_vals, uint32_t iters)
-    {
-        uint32_t final_sum1 = 0;
-        uint32_t final_sum2 = 0;
-        uint32_t final_sum11 = 0;
-        uint32_t final_sum22 = 0;
-        uint32_t final_sum12 = 0;
-        uintptr_t loader1;
-        uintptr_t loader2;
-        uintptr_t sum1;
-        uintptr_t sum2;
-        uintptr_t sum11;
-        uintptr_t sum22;
-        uintptr_t sum12;
-        uintptr_t tmp_sum1;
-        uintptr_t tmp_sum2;
-        uintptr_t tmp_sum12;
-        do
-        {
-            // (The important part of the header comment on the 64-bit version
-            // is copied below.)
-            //
-            // Input:
-            // * vec1 and vec2 are encoded -1 -> 00, 0/missing -> 01, 1 -> 10.
-            // * mask1 and mask2 mask out missing values (i.e. 00 for missing,
-            // 11 for
-            //   nonmissing).
-            // * return_vals provides space for return values.
-            // * iters is the number of 12-byte windows to process, anywhere
-            // from 1 to
-            //   40 inclusive.  (No, this is not the interface you'd use for a
-            //   general-purpose library.)  [32- and 64-bit differ here.]
-            //
-            // This function performs the update
-            //   return_vals[0] += (-N) + \sum_i x_iy_i
-            //   return_vals[1] += N_y + \sum_{i: nonmissing from y} x_i
-            //   return_vals[2] += N_x + \sum_{i: nonmissing from x} y_i
-            //   return_vals[3] += N_y - \sum_{i: nonmissing from y} x_i^2
-            //   return_vals[4] += N_x - \sum_{i: nonmissing from x} y_i^2
-            // where N is the number of samples processed after applying the
-            // missingness masks indicated by the subscripts.
-            //
-            // Computation of terms [1]-[4] is based on the identity
-            //   N_y + \sum_{i: nonmissing from y} x_i = popcount2(vec1 & mask2)
-            // where "popcount2" refers to starting with two-bit integers
-            // instead of one-bit integers in our summing process (this allows
-            // us to skip a few operations).  (Once we can assume the presence
-            // of hardware popcount, a slightly different implementation may be
-            // better.)
-            //
-            // The trickier [0] computation currently proceeds as follows:
-            //
-            // 1. zcheck := (vec1 | vec2) & 0x5555...
-            // Detects whether at least one member of the pair has a 0/missing
-            // value.
-            //
-            // 2. popcount2(((vec1 ^ vec2) & (0xaaaa... - zcheck)) | zcheck)
-            // Subtracting this *from* a bias will give us our desired \sum_i
-            // x_iy_i dot product.
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            sum1 = *mask2++;
-            sum2 = *mask1++;
-            sum12 = (loader1 | loader2) & FIVEMASK;
-
-            sum1 = sum1 & loader1;
-            sum2 = sum2 & loader2;
-            loader1 = (loader1 ^ loader2) & (AAAAMASK - sum12);
-            sum12 = sum12 | loader1;
-            sum11 = sum1 & FIVEMASK;
-            sum22 = sum2 & FIVEMASK;
-
-            sum1 = (sum1 & 0x33333333) + ((sum1 >> 2) & 0x33333333);
-            sum2 = (sum2 & 0x33333333) + ((sum2 >> 2) & 0x33333333);
-            sum12 = (sum12 & 0x33333333) + ((sum12 >> 2) & 0x33333333);
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum1 = *mask2++;
-            tmp_sum2 = *mask1++;
-            tmp_sum12 = (loader1 | loader2) & FIVEMASK;
-            tmp_sum1 = tmp_sum1 & loader1;
-            tmp_sum2 = tmp_sum2 & loader2;
-
-            loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
-            tmp_sum12 = tmp_sum12 | loader1;
-            sum11 += tmp_sum1 & FIVEMASK;
-            sum22 += tmp_sum2 & FIVEMASK;
-
-            sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
-            sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
-            sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum1 = *mask2++;
-            tmp_sum2 = *mask1++;
-            tmp_sum12 = (loader1 | loader2) & FIVEMASK;
-
-            tmp_sum1 = tmp_sum1 & loader1;
-            tmp_sum2 = tmp_sum2 & loader2;
-            loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
-            tmp_sum12 = tmp_sum12 | loader1;
-            sum11 += tmp_sum1 & FIVEMASK;
-            sum22 += tmp_sum2 & FIVEMASK;
-
-            sum1 += (tmp_sum1 & 0x33333333) + ((tmp_sum1 >> 2) & 0x33333333);
-            sum2 += (tmp_sum2 & 0x33333333) + ((tmp_sum2 >> 2) & 0x33333333);
-            sum11 = (sum11 & 0x33333333) + ((sum11 >> 2) & 0x33333333);
-            sum22 = (sum22 & 0x33333333) + ((sum22 >> 2) & 0x33333333);
-            sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
-
-            sum1 = (sum1 & 0x0f0f0f0f) + ((sum1 >> 4) & 0x0f0f0f0f);
-            sum2 = (sum2 & 0x0f0f0f0f) + ((sum2 >> 4) & 0x0f0f0f0f);
-            sum11 = (sum11 & 0x0f0f0f0f) + ((sum11 >> 4) & 0x0f0f0f0f);
-            sum22 = (sum22 & 0x0f0f0f0f) + ((sum22 >> 4) & 0x0f0f0f0f);
-            sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
-
-            // technically could do the multiply-and-shift only once every two
-            // rounds
-            final_sum1 += (sum1 * 0x01010101) >> 24;
-            final_sum2 += (sum2 * 0x01010101) >> 24;
-            final_sum11 += (sum11 * 0x01010101) >> 24;
-            final_sum22 += (sum22 * 0x01010101) >> 24;
-            final_sum12 += (sum12 * 0x01010101) >> 24;
-        } while (--iters);
-        return_vals[0] -= final_sum12;
-        return_vals[1] += final_sum1;
-        return_vals[2] += final_sum2;
-        return_vals[3] += final_sum11;
-        return_vals[4] += final_sum22;
-    }
-
-    void ld_dot_prod(uintptr_t* vec1, uintptr_t* vec2, uintptr_t* mask1,
-                     uintptr_t* mask2, int32_t* return_vals,
-                     uint32_t batch_ct_m1, uint32_t last_batch_size)
-    {
-        while (batch_ct_m1--)
-        {
-            ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals,
-                              MULTIPLEX_LD / 48);
-            vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
-            vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
-            mask1 = &(mask1[MULTIPLEX_LD / BITCT2]);
-            mask2 = &(mask2[MULTIPLEX_LD / BITCT2]);
-        }
-        ld_dot_prod_batch(vec1, vec2, mask1, mask2, return_vals,
-                          last_batch_size);
-    }
-
-    static inline int32_t ld_dot_prod_nm_batch(uintptr_t* vec1, uintptr_t* vec2,
-                                               uint32_t iters)
-    {
-        uint32_t final_sum12 = 0;
-        uintptr_t loader1;
-        uintptr_t loader2;
-        uintptr_t sum12;
-        uintptr_t tmp_sum12;
-        do
-        {
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            sum12 = (loader1 | loader2) & FIVEMASK;
-            loader1 = (loader1 ^ loader2) & (AAAAMASK - sum12);
-            sum12 = sum12 | loader1;
-            sum12 = (sum12 & 0x33333333) + ((sum12 >> 2) & 0x33333333);
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum12 = (loader1 | loader2) & FIVEMASK;
-            loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
-            tmp_sum12 = tmp_sum12 | loader1;
-            sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
-
-            loader1 = *vec1++;
-            loader2 = *vec2++;
-            tmp_sum12 = (loader1 | loader2) & FIVEMASK;
-            loader1 = (loader1 ^ loader2) & (AAAAMASK - tmp_sum12);
-            tmp_sum12 = tmp_sum12 | loader1;
-            sum12 += (tmp_sum12 & 0x33333333) + ((tmp_sum12 >> 2) & 0x33333333);
-            sum12 = (sum12 & 0x0f0f0f0f) + ((sum12 >> 4) & 0x0f0f0f0f);
-
-            final_sum12 += (sum12 * 0x01010101) >> 24;
-        } while (--iters);
-        return final_sum12;
-    }
-
-    int32_t ld_dot_prod_nm(uintptr_t* vec1, uintptr_t* vec2,
-                           uint32_t founder_ct, uint32_t batch_ct_m1,
-                           uint32_t last_batch_size)
-    {
-        int32_t result = (int32_t) founder_ct;
-        while (batch_ct_m1--)
-        {
-            result -= ld_dot_prod_nm_batch(vec1, vec2, MULTIPLEX_LD / 48);
-            vec1 = &(vec1[MULTIPLEX_LD / BITCT2]);
-            vec2 = &(vec2[MULTIPLEX_LD / BITCT2]);
-        }
-        result -= ld_dot_prod_nm_batch(vec1, vec2, last_batch_size);
-        return result;
-    }
-#endif // __LP64__
-
-
-    uint32_t ld_missing_ct_intersect(uintptr_t* lptr1, uintptr_t* lptr2,
-                                     uintptr_t word12_ct, uintptr_t word12_rem,
-                                     uintptr_t lshift_last)
-    {
-        // variant of popcount_longs_intersect()
-        uintptr_t tot = 0;
-        uintptr_t* lptr1_end2;
-#ifdef __LP64__
-        const __m128i m1 = {FIVEMASK, FIVEMASK};
-        const __m128i m2 = {0x3333333333333333LLU, 0x3333333333333333LLU};
-        const __m128i m4 = {0x0f0f0f0f0f0f0f0fLLU, 0x0f0f0f0f0f0f0f0fLLU};
-        const __m128i m8 = {0x00ff00ff00ff00ffLLU, 0x00ff00ff00ff00ffLLU};
-        __m128i* vptr1 = (__m128i*) lptr1;
-        __m128i* vptr2 = (__m128i*) lptr2;
-        __m128i* vend1;
-        __m128i loader1;
-        __m128i loader2;
-        __univec acc;
-
-        while (word12_ct >= 10)
-        {
-            word12_ct -= 10;
-            vend1 = &(vptr1[60]);
-        ld_missing_ct_intersect_main_loop:
-            acc.vi = _mm_setzero_si128();
-            do
-            {
-                loader1 =
-                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1);
-                loader2 =
-                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1);
-                loader1 = _mm_add_epi64(
-                    loader1,
-                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-                loader2 = _mm_add_epi64(
-                    loader2,
-                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-                loader1 = _mm_add_epi64(
-                    loader1,
-                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-                loader2 = _mm_add_epi64(
-                    loader2,
-                    _mm_andnot_si128(_mm_or_si128(*vptr2++, *vptr1++), m1));
-                loader1 = _mm_add_epi64(
-                    _mm_and_si128(loader1, m2),
-                    _mm_and_si128(_mm_srli_epi64(loader1, 2), m2));
-                loader1 = _mm_add_epi64(
-                    loader1,
-                    _mm_add_epi64(
-                        _mm_and_si128(loader2, m2),
-                        _mm_and_si128(_mm_srli_epi64(loader2, 2), m2)));
-                acc.vi = _mm_add_epi64(
-                    acc.vi, _mm_add_epi64(
-                                _mm_and_si128(loader1, m4),
-                                _mm_and_si128(_mm_srli_epi64(loader1, 4), m4)));
-            } while (vptr1 < vend1);
-            acc.vi =
-                _mm_add_epi64(_mm_and_si128(acc.vi, m8),
-                              _mm_and_si128(_mm_srli_epi64(acc.vi, 8), m8));
-            tot += ((acc.u8[0] + acc.u8[1]) * 0x1000100010001LLU) >> 48;
-        }
-        if (word12_ct)
-        {
-            vend1 = &(vptr1[word12_ct * 6]);
-            word12_ct = 0;
-            goto ld_missing_ct_intersect_main_loop;
-        }
-        lptr1 = (uintptr_t*) vptr1;
-        lptr2 = (uintptr_t*) vptr2;
-#else
-        uintptr_t* lptr1_end = &(lptr1[word12_ct * 12]);
-        uintptr_t tmp_stor;
-        uintptr_t loader1;
-        uintptr_t loader2;
-        while (lptr1 < lptr1_end)
-        {
-            loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader1 = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
-            loader1 += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
-            tmp_stor = (loader1 & 0x0f0f0f0f) + ((loader1 >> 4) & 0x0f0f0f0f);
-
-            loader1 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader2 = (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader1 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader2 += (~((*lptr1++) | (*lptr2++))) & FIVEMASK;
-            loader1 = (loader1 & 0x33333333) + ((loader1 >> 2) & 0x33333333);
-            loader1 += (loader2 & 0x33333333) + ((loader2 >> 2) & 0x33333333);
-            tmp_stor += (loader1 & 0x0f0f0f0f) + ((loader1 >> 4) & 0x0f0f0f0f);
-            tot += (tmp_stor * 0x01010101) >> 24;
-        }
-#endif
-        lptr1_end2 = &(lptr1[word12_rem]);
-        while (lptr1 < lptr1_end2)
-        { tot += popcount2_long((~((*lptr1++) | (*lptr2++))) & FIVEMASK); }
-        if (lshift_last)
-        {
-            tot += popcount2_long(((~((*lptr1) | (*lptr2))) & FIVEMASK)
-                                  << lshift_last);
-        }
-        return tot;
-    }
 };
 
 #endif /* SRC_GENOTYPE_HPP_ */

@@ -19,6 +19,7 @@
 #define PRSICE_REGRESSION_H_
 
 #include "dcdflib.h"
+#include "fastlm.hpp"
 #include "glm.hpp"
 #include "misc.hpp"
 #include <Eigen/Dense>
@@ -30,33 +31,12 @@
 #include <stdexcept>
 namespace Regression
 {
-void linear_regression(const Eigen::VectorXd& y, const Eigen::MatrixXd& A,
-                       double& p_value, double& r2, double& r2_adjust,
-                       double& coeff, double& standard_error, size_t thread = 1,
-                       bool intercept = true);
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
          double& r2, double& coeff, double& standard_error, size_t thread = 1);
-
-Eigen::VectorXd logit_linkinv(const Eigen::VectorXd& eta);
-Eigen::VectorXd logit_variance(const Eigen::VectorXd& eta);
-Eigen::VectorXd logit_mu_eta(const Eigen::VectorXd& eta);
-Eigen::VectorXd binomial_dev_resids(const Eigen::VectorXd& y,
-                                    const Eigen::VectorXd& mu,
-                                    const Eigen::VectorXd& wt);
-double binomial_dev_resids_sum(const Eigen::VectorXd& y,
-                               const Eigen::VectorXd& mu,
-                               const Eigen::VectorXd& wt);
-void logit_both(const Eigen::VectorXd& eta, Eigen::VectorXd& g,
-                Eigen::VectorXd& gprime);
-
-inline double y_log_y(double y, double mu)
-{
-    return (!misc::logically_equal(y, 0)) ? (y * log(y / mu)) : 0;
-}
-inline Eigen::MatrixXd I_p(Eigen::Index p)
-{
-    return Eigen::MatrixXd::Identity(p, p);
-}
+void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
+            double& r2, double& r2_adjust, double& coeff,
+            double& standard_error, size_t thread, bool intercept,
+            int type = 0);
 }
 
 #endif /* PRSICE_REGRESSION_H_ */

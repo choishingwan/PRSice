@@ -27,69 +27,59 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
-
+static_assert(sizeof(std::streamsize) <= sizeof(unsigned long long),
+              "streampos larger than long long, don't know how to proceed. "
+              "Please use PRSice on another machine");
 class Genotype;
 class SNP
 {
 public:
     SNP() {}
-    SNP(const std::string& rs_id, const int chr, const int loc,
+    SNP(const std::string& rs_id, const size_t chr, const size_t loc,
         const std::string& ref_allele, const std::string& alt_allele,
-        const double& stat, const double& p_value, const int category,
-        const double p_threshold)
+        const double& stat, const double& p_value,
+        const unsigned long long category, const double p_threshold)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
         , m_stat(stat)
         , m_p_value(p_value)
+        , m_p_threshold(p_threshold)
         , m_chr(chr)
         , m_loc(loc)
+        , m_category(category)
     {
         m_has_count = false;
-        assert(category < 0);
-        m_category = category;
-        m_p_threshold = p_threshold;
     }
 
     virtual ~SNP();
-    /*!
-     * \brief This is to change the m_ref_file and m_ref_byte_pos to account for
-     * reference panel. Without reference panel, ref_file and byte_pos equals to
-     * those observed in target
-     * \param ref_file is the file name of the reference panel that contain this
-     * SNP
-     * \param ref_byte_pos is the location of this SNP on the reference panel
-     * file
-     */
-    void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos, const bool flip)
+    void add_reference(const size_t& ref_idx,
+                       const unsigned long long ref_byte_pos, const bool flip)
     {
-        m_ref_file = ref_file;
+        m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
         m_ref_flipped = flip;
     }
-    // use by bgen to redirect read to the intermediate file
-    void update_reference(const std::string& ref_file,
-                          const std::streampos ref_byte_pos)
+    void update_reference(const size_t& ref_idx,
+                          const unsigned long long ref_byte_pos)
     {
-        m_ref_file = ref_file;
+        m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
     }
-    void update_target(const std::string& target_file,
-                       const std::streampos byte_pos)
+    void update_target(const size_t& target_idx,
+                       const unsigned long long byte_pos)
     {
-        m_target_file = target_file;
+        m_target_index = target_idx;
         m_target_byte_pos = byte_pos;
     }
-    void add_target(const std::string& target_file,
-                    const std::streampos target_byte_pos, const int chr,
-                    const int loc, const std::string& ref,
+    void add_target(const size_t& target_idx,
+                    const unsigned long long target_byte_pos, const size_t chr,
+                    const size_t loc, const std::string& ref,
                     const std::string& alt, const bool flipping)
     {
-        m_target_file = target_file;
+        m_target_index = target_idx;
         m_target_byte_pos = target_byte_pos;
-        // set reference to target by default
-        m_ref_file = target_file;
+        m_ref_index = target_idx;
         m_ref_byte_pos = target_byte_pos;
         m_chr = chr;
         m_loc = loc;
@@ -97,12 +87,12 @@ public:
         m_ref = ref;
         m_alt = alt;
     }
-    void add_reference(const std::string& ref_file,
-                       const std::streampos ref_byte_pos, const size_t homcom,
-                       const size_t het, const size_t homrar,
-                       const size_t missing)
+    void add_reference(const size_t& ref_idx,
+                       const unsigned long long ref_byte_pos,
+                       const size_t homcom, const size_t het,
+                       const size_t homrar, const size_t missing)
     {
-        m_ref_file = ref_file;
+        m_ref_index = ref_idx;
         m_ref_byte_pos = ref_byte_pos;
         m_homcom = homcom;
         m_ref_het = het;
@@ -129,12 +119,14 @@ public:
      * flipped = true
      * \return true if it is a match
      */
-    inline bool matching(intptr_t chr, intptr_t loc, std::string& ref,
+    inline bool matching(size_t chr, size_t loc, std::string& ref,
                          std::string& alt, bool& flipped)
     {
         // should be trimmed
-        if (chr != -1 && m_chr != -1 && chr != m_chr) { return false; }
-        if (loc != -1 && m_loc != -1 && loc != m_loc) { return false; }
+        if (chr != ~size_t(0) && m_chr != ~size_t(0) && chr != m_chr)
+        { return false; }
+        if (loc != ~size_t(0) && m_loc != ~size_t(0) && loc != m_loc)
+        { return false; }
         flipped = false;
         if (m_ref == ref)
         {
@@ -167,9 +159,43 @@ public:
             return false; // cannot flip nor match
     }
 
-    int chr() const { return m_chr; }
-    int loc() const { return m_loc; }
-    int category() const { return m_category; }
+    size_t chr() const { return m_chr; }
+    size_t loc() const { return m_loc; }
+    unsigned long long category() const { return m_category; }
+
+    void set_category(unsigned long long& cur_category, double& cur_p_start,
+                      const double& upper, const double& inter, bool& warning)
+    {
+        warning = false;
+        if (m_p_value <= cur_p_start + inter)
+        { // do nothing
+        }
+        else if (m_p_value > upper)
+        {
+            if (!misc::logically_equal(cur_p_start, upper))
+            {
+                cur_p_start = upper;
+                ++cur_category;
+            }
+        }
+        else
+        {
+            // this is a new threshold
+            ++cur_category;
+            // there will be imprecision w.r.t new
+            if ((m_p_value - cur_p_start) / inter
+                > std::numeric_limits<unsigned long long>::max())
+            { warning = true; }
+            // use log to help with the numeric stability
+            double interval =
+                std::log(m_p_value - cur_p_start) - std::log(inter);
+            interval = std::floor(std::exp(interval));
+            cur_p_start += std::exp(std::log(interval) + std::log(inter));
+        }
+        m_category = cur_category;
+        m_p_threshold = cur_p_start;
+        return;
+    }
     /*!
      * \brief Get the p-value of the SNP
      * \return the p-value of the SNP
@@ -186,10 +212,12 @@ public:
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    std::streampos byte_pos() const { return m_target_byte_pos; }
-    std::streampos ref_byte_pos() const { return m_ref_byte_pos; }
-    std::string file_name() const { return m_target_file; }
-    std::string ref_file_name() const { return m_ref_file; }
+    unsigned long long byte_pos() const { return m_target_byte_pos; }
+    unsigned long long ref_byte_pos() const { return m_ref_byte_pos; }
+    // std::string file_name() const { return m_target_file; }
+    // std::string ref_file_name() const { return m_ref_file; }
+    size_t file_index() const { return m_target_index; }
+    size_t ref_file_index() const { return m_ref_index; }
     std::string rs() const { return m_rs; }
     std::string ref() const { return m_ref; }
     std::string alt() const { return m_alt; }
@@ -208,7 +236,7 @@ public:
         return (IS_SET(m_flags.data(), i));
     }
 
-    void set_flag(const size_t num_region, const std::vector<uintptr_t> flags)
+    void set_flag(const size_t num_region, const std::vector<uintptr_t>& flags)
     {
         m_max_flag_index = BITCT_TO_WORDCT(num_region);
         m_flags = flags;
@@ -289,13 +317,13 @@ public:
      * is used as the index
      * \param low the designated bound index
      */
-    void set_low_bound(int low) { m_low_bound = low; }
+    void set_low_bound(size_t low) { m_low_bound = low; }
     /*!
      * \brief Set the upper boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
      * \param up the designated bound index
      */
-    void set_up_bound(int up) { m_up_bound = up; }
+    void set_up_bound(size_t up) { m_up_bound = up; }
     /*!
      * \brief get_counts will return the current genotype count for this SNP.
      * Return true if this was previously calculated (and indicate the need of
@@ -395,12 +423,12 @@ public:
      * \brief Obtain the upper bound of the clump region correspond to this SNP
      * \return the upper bound of the region
      */
-    int up_bound() const { return m_up_bound; }
+    size_t up_bound() const { return m_up_bound; }
     /*!
      * \brief Obtain the lower bound of the clump region correspond to this SNP
      * \return the lower bound of the region
      */
-    int low_bound() const { return m_low_bound; }
+    size_t low_bound() const { return m_low_bound; }
     void set_expected(double expected) { m_expected_value = expected; }
     void set_ref_expected(double expected) { m_ref_expected_value = expected; }
     bool has_expected() const { return m_has_expected; }
@@ -413,36 +441,33 @@ public:
     void invalid() { m_is_valid = false; }
 
 private:
-    // basic info
-    // actually, the packing of the data is problematic and to enhance
-    // performance we might want to organize the data into way where it is
-    // easier to "cache" also use data types that are more friendly?
     std::vector<uintptr_t> m_flags;
     std::string m_alt;
     std::string m_ref;
     std::string m_rs;
-    std::string m_target_file;
-    std::string m_ref_file;
-    std::streampos m_target_byte_pos;
-    std::streampos m_ref_byte_pos;
+    unsigned long long m_target_byte_pos = 0;
+    unsigned long long m_ref_byte_pos = 0;
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
-    int m_chr = -1;
-    int m_category = -1;
-    int m_loc = -1;
-    int m_low_bound = 0;
-    int m_up_bound = 0;
+    size_t m_chr = ~size_t(0);
+    size_t m_low_bound = ~size_t(0);
+    size_t m_up_bound = ~size_t(0);
+    size_t m_target_index = ~size_t(0);
+    size_t m_ref_index = ~size_t(0);
+    size_t m_loc = ~size_t(0);
     size_t m_homcom = 0;
     size_t m_het = 0;
     size_t m_homrar = 0;
+    size_t m_max_flag_index = 0;
     size_t m_missing = 0;
     size_t m_ref_homcom = 0;
     size_t m_ref_het = 0;
     size_t m_ref_homrar = 0;
     size_t m_ref_missing = 0;
+    unsigned long long m_category = 0;
     bool m_has_count = false;
     bool m_has_ref_count = false;
     bool m_has_expected = false;
@@ -451,8 +476,6 @@ private:
     bool m_flipped = false;
     bool m_ref_flipped = false;
     bool m_is_valid = true;
-    // prset related
-    size_t m_max_flag_index = 0;
 
     inline std::string complement(const std::string& allele) const
     {

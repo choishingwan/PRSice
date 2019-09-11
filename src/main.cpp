@@ -51,26 +51,22 @@ int main(int argc, char* argv[])
         {
             return -1; // all error messages should have printed
         }
+        Genotype::set_memory(commander.memory(), commander.enable_mmap());
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
-        // cgranges_t* exclusion_region = cr_init();
-        std::vector<IITree<int, int>> exclusion_regions;
+        std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
-        // now we index cr
-        // cr_index(exclusion_region);
-
         // this allow us to generate the appropriate object (i.e. binaryplink /
         // binarygen)
-        double maf, geno, info, hard_threshold;
-        bool maf_filter, geno_filter, hard_coded, info_filter, init_ref = false;
+        double maf, geno, info;
+        bool init_ref = false;
         // load the filtering parameters for the target file
-        maf_filter = commander.target_maf(maf);
-        geno_filter = commander.target_geno(geno);
-        info_filter = commander.target_info(info);
-        hard_threshold = commander.get_target_hard_threshold();
-        hard_coded = commander.hard_coded();
+        bool maf_filter = commander.target_maf(maf);
+        bool geno_filter = commander.target_geno(geno);
+        bool info_filter = commander.target_info(info);
+        bool hard_coded = commander.hard_coded();
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
         try
@@ -84,18 +80,16 @@ int main(int argc, char* argv[])
             message.append(
                 "==================================================");
             reporter.report(message);
+            target_file->snp_extraction(commander.extract_file(),
+                                        commander.exclude_file());
             target_file->read_base(
                 commander.base_name(), commander.index(), commander.has_col(),
                 commander.bar_levels(), commander.lower(), commander.inter(),
-                commander.upper(), commander.exclude_file(),
-                commander.extract_file(), exclusion_regions,
+                commander.upper(), exclusion_regions,
                 commander.maf_base_control(), commander.maf_base_case(),
-                commander.base_info_score(),
-                commander.perform_maf_base_control_filter(),
-                commander.perform_maf_base_case_filter(),
-                commander.perform_base_info_score_filter(),
-                commander.fastscore(), commander.no_full(), commander.beta(),
-                commander.is_index(), commander.keep_ambig(), reporter);
+                commander.base_info_score(), commander.fastscore(),
+                commander.no_full(), commander.beta(), commander.is_index(),
+                commander.keep_ambig());
             // no longer need the exclusion region object
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
@@ -104,7 +98,7 @@ int main(int argc, char* argv[])
             reporter.report(message);
             target_file->load_samples(commander.keep_sample_file(),
                                       commander.remove_sample_file(),
-                                      commander.delim(), verbose, reporter);
+                                      commander.delim(), verbose);
             // For bgen or any format that require intermediate generation, we
             // need to know if a reference file is going to be used, therefore
             // decide if we are going to generate the target intermediate or the
@@ -115,11 +109,11 @@ int main(int argc, char* argv[])
             // included so that we can ignore SNPs not found in GWAS
             // when we do geno and maf
             // Finally, we can read in the SNP information
-            target_file->load_snps(commander.out(), exclusion_regions, verbose,
-                                   reporter);
+            target_file->load_snps(commander.out(), exclusion_regions, verbose);
             // now load the reference file
-            if ((!commander.no_clump() && commander.use_ref())
-                || commander.use_ref_maf())
+            // initialize the memory map file
+            if (commander.use_ref()
+                && (!commander.no_clump() || commander.use_ref_maf()))
             {
                 message = "Start processing reference\n";
                 reporter.report(message);
@@ -130,12 +124,12 @@ int main(int argc, char* argv[])
                 message.append(
                     "==================================================");
                 reporter.report(message);
-                reference_file->load_samples(
-                    commander.ref_keep_file(), commander.ref_remove_file(),
-                    commander.delim(), verbose, reporter);
+                reference_file->load_samples(commander.ref_keep_file(),
+                                             commander.ref_remove_file(),
+                                             commander.delim(), verbose);
                 // load the reference file
                 reference_file->load_snps(commander.out(), exclusion_regions,
-                                          verbose, reporter, target_file);
+                                          verbose, target_file);
             }
             exclusion_regions.clear();
             // with the reference file read, we can start doing filtering and
@@ -155,55 +149,50 @@ int main(int argc, char* argv[])
                 // i.e after clumping, to speed up the process
                 target_file->calc_freqs_and_intermediate(
                     maf, geno, info, maf_filter, geno_filter, info_filter,
-                    hard_coded, true, reporter);
+                    hard_coded, true);
             }
-
             maf_filter = commander.ref_maf(maf);
             geno_filter = commander.ref_geno(geno);
             info_filter = commander.ref_info(info);
             hard_coded = commander.ref_hard_threshold();
-            hard_threshold = commander.get_ref_hard_threshold();
             bool has_ref_maf = false;
-            if (init_ref
-                && (maf_filter || geno_filter || info_filter
-                    || commander.use_inter()))
+            if (init_ref)
             {
-                // we only go through the reference file if we are
-                // 1. Need the reference MAF
-                // 2. Need to filter the reference file (need hard code info)
-                // 3. Need to generate an intermediate file for clumping
-                message =
-                    "Calculate MAF and perform filtering on reference SNPs\n";
-                message.append(
-                    "==================================================");
-                reporter.report(message);
-                reference_file->calc_freqs_and_intermediate(
-                    maf, geno, info, maf_filter, geno_filter, info_filter,
-                    hard_coded, true, reporter, target_file);
-                has_ref_maf = true;
+                if (maf_filter || geno_filter || info_filter
+                    || commander.use_inter())
+                {
+                    // we only go through the reference file if we are
+                    // 1. Need the reference MAF
+                    // 2. Need to filter the reference file (need hard code
+                    // info)
+                    // 3. Need to generate an intermediate file for clumping
+                    message = "Calculate MAF and perform filtering on "
+                              "reference SNPs\n";
+                    message.append("======================================="
+                                   "===========");
+                    reporter.report(message);
+                    reference_file->calc_freqs_and_intermediate(
+                        maf, geno, info, maf_filter, geno_filter, info_filter,
+                        hard_coded, true, target_file);
+                    has_ref_maf = true;
+                }
             }
-            // now should get the correct MAF and should have filtered the SNPs
-            // accordingly
-            // Generate Region flag information
-            std::vector<std::string> region_names;
-            std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-            size_t num_regions;
-            // cgranges_t* gene_sets = cr_init();
-            std::vector<IITree<int, int>> gene_sets;
-            num_regions = Region::generate_regions(
-                gene_sets, region_names, snp_in_sets, commander.feature(),
-                commander.window_5(), commander.window_3(),
-                commander.genome_wide_background(), commander.gtf(),
-                commander.msigdb(), commander.bed(), commander.snp_set(),
-                commander.background(), target_file->max_chr(), reporter);
+            // now should get the correct MAF and should have filtered the
+            // SNPs accordingly Generate Region flag information
+            Region region(commander, &reporter);
+            std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+            std::vector<IITree<size_t, size_t>> gene_sets;
+            size_t num_regions = region.generate_regions(
+                gene_sets, snp_in_sets, target_file->max_chr());
+            std::vector<std::string> region_names = region.get_names();
             target_file->add_flags(gene_sets, snp_in_sets, num_regions,
                                    commander.genome_wide_background());
-            // cr_destroy(gene_sets);
+
             gene_sets.clear();
             // start processing other files before doing clumping
-            PRSice prsice(commander, num_regions > 2, reporter);
+            PRSice prsice(commander, num_regions > 2, &reporter);
             prsice.pheno_check(commander.pheno_file(), commander.pheno_col(),
-                               commander.is_binary(), reporter);
+                               commander.is_binary());
             // Store relevant parameters to the target object
             target_file->set_info(commander);
             if (!commander.no_clump())
@@ -224,24 +213,20 @@ int main(int argc, char* argv[])
                 }
                 // now perform clumping
                 target_file->efficient_clumping(
-                    commander.use_ref() ? *reference_file : *target_file,
-                    reporter, commander.pearson());
+                    commander.use_ref() ? *reference_file : *target_file);
                 // immediately free the memory
             }
             if (init_ref)
             {
                 if (commander.use_ref_maf() && !has_ref_maf)
                 {
-                    // doesn't need to worry about generating the intermediate
-                    // file as we will always have the reference maf if we are
-                    // going to generate the intermediate file
                     message = "Calculate MAF based on Reference\n";
-                    message.append(
-                        "==================================================");
+                    message.append("======================================="
+                                   "===========");
                     reporter.report(message);
                     reference_file->calc_freqs_and_intermediate(
                         maf, geno, info, maf_filter, geno_filter, info_filter,
-                        hard_coded, true, reporter, target_file);
+                        hard_coded, true, target_file);
                 }
                 delete reference_file;
             }
@@ -257,28 +242,34 @@ int main(int argc, char* argv[])
             std::vector<size_t> region_start_idx;
             std::vector<size_t>::const_iterator background_start_idx,
                 background_end_idx;
-            target_file->prepare_prsice();
+            target_file->prepare_prsice(commander.lower(), commander.inter(),
+                                        commander.upper());
             target_file->build_membership_matrix(
                 region_membership, region_start_idx, num_regions,
                 commander.out(), region_names, commander.print_snp());
             background_start_idx = region_membership.cbegin();
-            std::advance(background_start_idx, region_start_idx[1]);
+            std::advance(background_start_idx,
+                         static_cast<long>(region_start_idx[1]));
             background_end_idx = region_membership.cbegin();
             if (num_regions > 2)
-            { std::advance(background_end_idx, region_start_idx[2]); }
+            {
+                std::advance(background_end_idx,
+                             static_cast<long>(region_start_idx[2]));
+            }
             // we can now quickly check if any of the region are empty
             bool has_empty_region = false;
             std::ofstream empty_region;
             std::string empty_region_name = commander.out() + ".xregion";
             // region_start_idx size always = num_regions
+            // check regions to see if there are any empty regions
             for (size_t i = 2; i < region_start_idx.size(); ++i)
             {
                 size_t cur_idx = region_start_idx[i];
-                if (i + 1 >= region_start_idx[i])
+                if (i + 1 >= region_start_idx.size())
                 {
+                    // this is the last set
                     if (cur_idx == region_membership.size())
                     {
-                        // this is empty
                         if (!has_empty_region)
                         {
                             empty_region.open(empty_region_name.c_str());
@@ -324,7 +315,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Processing the %zu th phenotype\n",
                         i_pheno + 1);
                 prsice.init_matrix(commander, i_pheno, commander.delim(),
-                                   *target_file, reporter);
+                                   *target_file);
                 fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(commander.out(), commander.all_scores(),
                                    commander.has_prevalence(), *target_file,
@@ -362,14 +353,14 @@ int main(int argc, char* argv[])
                     // and user request it
                     prsice.run_competitive(*target_file, background_start_idx,
                                            background_end_idx, commander,
-                                           i_pheno, reporter);
+                                           i_pheno);
                 }
             }
             prsice.print_progress(true);
             fprintf(stderr, "\n");
             if (!commander.no_regress())
                 // now generate the summary file
-                prsice.summarize(commander, reporter);
+                prsice.summarize(commander);
         }
         catch (const std::invalid_argument& ia)
         {

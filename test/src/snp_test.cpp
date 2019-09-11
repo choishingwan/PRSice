@@ -6,6 +6,7 @@
 #include "snp.hpp"
 #include "gtest/gtest.h"
 #include <vector>
+
 class SNP_INIT_TEST : public ::testing::Test
 {
 protected:
@@ -16,8 +17,8 @@ protected:
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = 1;
+    size_t chr = 1, loc = 1;
+    unsigned long long category = 1;
     void SetUp() override
     {
         snp = SNP(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
@@ -35,9 +36,9 @@ TEST_F(SNP_INIT_TEST, INIT_TEST)
     ASSERT_EQ(snp.chr(), chr);
     ASSERT_EQ(snp.loc(), loc);
     // The file information should be missing thus far
-    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.file_index(), ~size_t(0));
     ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
     ASSERT_EQ(snp.ref_byte_pos(), 0);
     // When initialize without count, has_count (return value of get_counts)
     // should be false
@@ -52,9 +53,9 @@ TEST_F(SNP_INIT_TEST, INIT_TEST)
     ASSERT_DOUBLE_EQ(snp.p_value(), p);
     ASSERT_DOUBLE_EQ(snp.get_threshold(), p_threshold);
     ASSERT_EQ(snp.category(), category);
-    // default bounaries is always 0
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
+    // default bounaries is always ~size_t(0)
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
+    ASSERT_EQ(snp.up_bound(), ~size_t(0));
     ASSERT_EQ(homcom, 0);
     ASSERT_EQ(het, 0);
     ASSERT_EQ(homrar, 0);
@@ -64,24 +65,24 @@ TEST_F(SNP_INIT_TEST, INIT_TEST)
 TEST_F(SNP_INIT_TEST, ADD_REF)
 {
     // default, reference are empty
-    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.file_index(), ~size_t(0));
     // and the bytepos is 0
     ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
     ASSERT_EQ(snp.ref_byte_pos(), 0);
     // we also need to know if we are flipping
-    snp.add_reference("Reference", 1, true);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
+    snp.add_reference(0, 1, true);
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), 1);
     // should not touch target's flip flag
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_TRUE(snp.is_ref_flipped());
-    snp.add_reference("Reference", 1, false);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
+    snp.add_reference(0, 1, false);
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), 1);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
-    snp.add_reference("Reference", 13789560123, true);
+    snp.add_reference(0, 13789560123, true);
     ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
 }
 
@@ -89,24 +90,24 @@ TEST_F(SNP_INIT_TEST, ADD_REF)
 TEST_F(SNP_INIT_TEST, UPDATE_REF)
 {
     // default, reference are empty
-    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.file_index(), ~size_t(0));
     // and the bytepos is 0
     ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
     ASSERT_EQ(snp.ref_byte_pos(), 0);
     // we also need to know if we are flipping
-    snp.add_reference("Reference", 1, true);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Reference");
+    snp.add_reference(0, 1, true);
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), 1);
     // should not touch target's flip flag
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_TRUE(snp.is_ref_flipped());
-    snp.add_reference("Reference", 13789560123, false);
+    snp.add_reference(0, 13789560123, false);
     ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
-    snp.update_reference("Another", 18691);
-    ASSERT_STREQ(snp.ref_file_name().c_str(), "Another");
+    snp.update_reference(1, 18691);
+    ASSERT_EQ(snp.ref_file_index(), 1);
     ASSERT_EQ(snp.ref_byte_pos(), 18691);
     // update won't touch the flip only different really...
     ASSERT_FALSE(snp.is_flipped());
@@ -116,25 +117,24 @@ TEST_F(SNP_INIT_TEST, UPDATE_REF)
 TEST_F(SNP_INIT_TEST, ADD_TARGET)
 {
     // default, target are empty
-    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.file_index(), ~size_t(0));
     // and the bytepos is 0
     ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
     ASSERT_EQ(snp.ref_byte_pos(), 0);
     // we also need to know if we are flipping
-    int new_chr = 2;
-    int new_loc = 3;
+    size_t new_chr = 2;
+    size_t new_loc = 3;
     std::string new_ref = "C";
     std::string new_alt = "G";
     std::string target_name = "Target";
-    std::streampos new_pos = 1;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
-                   true);
+    unsigned long long new_pos = 1;
+    snp.add_target(0, new_pos, new_chr, new_loc, new_ref, new_alt, true);
     // check if the names are updated correctly
-    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.file_index(), 0);
     ASSERT_EQ(snp.byte_pos(), new_pos);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), new_pos);
     ASSERT_EQ(snp.chr(), new_chr);
     ASSERT_EQ(snp.loc(), new_loc);
@@ -143,38 +143,35 @@ TEST_F(SNP_INIT_TEST, ADD_TARGET)
     ASSERT_TRUE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
     // check none-flip
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
-                   false);
+    snp.add_target(1, new_pos, new_chr, new_loc, new_ref, new_alt, false);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
     new_loc = 189560123;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
-                   false);
+    snp.add_target(1, new_pos, new_chr, new_loc, new_ref, new_alt, false);
     ASSERT_EQ(snp.byte_pos(), new_pos);
 }
 
 TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
 {
     // default, target are empty
-    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.file_index(), ~size_t(0));
     // and the bytepos is 0
     ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
     ASSERT_EQ(snp.ref_byte_pos(), 0);
     // we also need to know if we are flipping
-    int new_chr = 2;
-    int new_loc = 3;
+    size_t new_chr = 2;
+    size_t new_loc = 3;
     std::string new_ref = "C";
     std::string new_alt = "G";
     std::string target_name = "Target";
-    std::streampos new_pos = 1;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
-                   true);
+    unsigned long long new_pos = 1;
+    snp.add_target(0, new_pos, new_chr, new_loc, new_ref, new_alt, true);
     // check if the names are updated correctly
-    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.file_index(), 0);
     ASSERT_EQ(snp.byte_pos(), new_pos);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), new_pos);
     ASSERT_EQ(snp.chr(), new_chr);
     ASSERT_EQ(snp.loc(), new_loc);
@@ -184,39 +181,38 @@ TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
     ASSERT_FALSE(snp.is_ref_flipped());
     // check update
     std::string new_target_name = "Test";
-    std::streampos updated_pos = 1426;
-    snp.update_target(new_target_name, updated_pos);
+    unsigned long long updated_pos = 1426;
+    snp.update_target(1, updated_pos);
     ASSERT_EQ(snp.byte_pos(), updated_pos);
-    ASSERT_STREQ(new_target_name.c_str(), snp.file_name().c_str());
+    ASSERT_EQ(snp.file_index(), 1);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), new_pos);
 }
 
 TEST_F(SNP_INIT_TEST, TARGET_AND_REF)
 {
     // default, target are empty
-    ASSERT_TRUE(snp.file_name().empty());
+    ASSERT_EQ(snp.file_index(), ~size_t(0));
     // and the bytepos is 0
     ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_TRUE(snp.ref_file_name().empty());
+    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
     ASSERT_EQ(snp.ref_byte_pos(), 0);
     // we also need to know if we are flipping
-    int new_chr = 2;
-    int new_loc = 3;
+    size_t new_chr = 2;
+    size_t new_loc = 3;
     std::string new_ref = "C";
     std::string new_alt = "G";
     std::string target_name = "Target";
-    std::streampos new_pos = 1;
+    unsigned long long new_pos = 1;
     std::string ref_name = "reference";
-    std::streampos new_ref_pos = 19;
-    snp.add_target(target_name, new_pos, new_chr, new_loc, new_ref, new_alt,
-                   true);
+    unsigned long long new_ref_pos = 19;
+    snp.add_target(0, new_pos, new_chr, new_loc, new_ref, new_alt, true);
     // check if the names are updated correctly
-    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.file_index(), 0);
     ASSERT_EQ(snp.byte_pos(), new_pos);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_STREQ(snp.ref_file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.ref_file_index(), 0);
     ASSERT_EQ(snp.ref_byte_pos(), new_pos);
     ASSERT_EQ(snp.chr(), new_chr);
     ASSERT_EQ(snp.loc(), new_loc);
@@ -225,13 +221,13 @@ TEST_F(SNP_INIT_TEST, TARGET_AND_REF)
     ASSERT_TRUE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
     // check none-flip
-    snp.add_reference(ref_name, new_ref_pos, false);
+    snp.add_reference(1, new_ref_pos, false);
     ASSERT_TRUE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
-    ASSERT_STREQ(snp.file_name().c_str(), target_name.c_str());
+    ASSERT_EQ(snp.file_index(), 0);
     ASSERT_EQ(snp.byte_pos(), new_pos);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_STREQ(snp.ref_file_name().c_str(), ref_name.c_str());
+    ASSERT_EQ(snp.ref_file_index(), 1);
     ASSERT_EQ(snp.ref_byte_pos(), new_ref_pos);
 }
 
@@ -243,8 +239,8 @@ TEST(SNP_MATCHING, FLIPPING_AC)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = 1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // Flipping occurrs
     bool flipped = false;
@@ -279,8 +275,8 @@ TEST(SNP_MATCHING, INDEL)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = 1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // Flipping occurrs
     bool flipped = false;
@@ -306,8 +302,8 @@ TEST(SNP_MATCHING, FLIPPING_GT)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = 1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // change referenace and alt using add_target function
     ASSERT_TRUE(snp.matching(chr, loc, alt, ref, flipped));
@@ -336,8 +332,8 @@ TEST(SNP_MATCHING, NO_ALT_AC)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = 1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
     alt = "C";
@@ -379,8 +375,8 @@ TEST(SNP_MATCHING, CHR_POS_MATCHING)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = 1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
     // chromosome mismatch
@@ -408,8 +404,8 @@ TEST(SNP_MATCHING, NO_CHR_MATCHING)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = -1, loc = 1;
+    unsigned long long category = 1;
+    size_t chr = ~size_t(0), loc = 1;
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
     // When chr is -1, we don't care if it is different as we assume it is
@@ -432,8 +428,8 @@ TEST(SNP_MATCHING, NO_BP_MATCHING)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = -1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     bool flipped = false;
     // When bp is -1, we don't care if it is different as we assume it is
@@ -453,7 +449,7 @@ TEST(SNP_CLUMP, SET_CLUMP)
     double p = 0.0;
     double p_threshold = 1;
     int category = 1;
-    int chr = 1, loc = -1;
+    size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // default of clump should be false
     ASSERT_FALSE(snp.clumped());
@@ -470,14 +466,14 @@ TEST(SNP_BOUND, SET_LOW_BOUND)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = -1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.up_bound(), 0);
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
+    ASSERT_EQ(snp.up_bound(), ~size_t(0));
     snp.set_low_bound(10);
     ASSERT_EQ(snp.low_bound(), 10);
-    ASSERT_EQ(snp.up_bound(), 0);
+    ASSERT_EQ(snp.up_bound(), ~size_t(0));
 }
 TEST(SNP_BOUND, SET_UP_BOUND)
 {
@@ -487,14 +483,14 @@ TEST(SNP_BOUND, SET_UP_BOUND)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
-    int chr = 1, loc = -1;
+    unsigned long long category = 1;
+    size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
-    ASSERT_EQ(snp.low_bound(), 0);
-    ASSERT_EQ(snp.low_bound(), 0);
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
     snp.set_up_bound(10);
     ASSERT_EQ(snp.up_bound(), 10);
-    ASSERT_EQ(snp.low_bound(), 0);
+    ASSERT_EQ(snp.low_bound(), ~size_t(0));
 }
 
 TEST(SNP_TEST, SORT_BY_P_CHR)
@@ -539,8 +535,8 @@ class SNP_REGION : public ::testing::Test
     // For exclusion, strand information should not alter result (window
     // padding should all be 0)
 protected:
-    std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-    std::vector<IITree<int, int>> gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<uintptr_t> not_found = {0};
     size_t num_regions;
     size_t required_size;
@@ -618,18 +614,16 @@ protected:
         Reporter reporter(std::string(path + "LOG"));
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
-        int window_5 = 0;
-        int window_3 = 0;
-        std::string msigdb = "";
-        std::string snp_set = "";
+        size_t window_5 = 0;
+        size_t window_3 = 0;
         std::string background = "";
         std::vector<std::string> region_names;
-        std::vector<std::string> bed_names = {};
-        std::unordered_map<std::string, std::vector<int>> snp_in_sets;
-        num_regions = Region::generate_regions(
-            gene_sets, region_names, snp_in_sets, feature, window_5, window_3,
-            genome_wide_background, gtf_name, gmt_name, bed_names, snp_set,
-            background, 22, reporter);
+        std::vector<std::string> bed_names = {}, snp_set, msigdb = {gmt_name};
+        std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
+        FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
+                           gtf_name, window_5, window_3, genome_wide_background,
+                           &reporter);
+        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
         required_size = BITCT_TO_WORDCT(num_regions);
         SET_BIT(0, not_found.data());
     }
@@ -653,16 +647,17 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
     // genome_wide_background is set to true. All SNPs therefore have their
     // background bit set no matter what
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -674,16 +669,16 @@ TEST_F(SNP_REGION, BASE_SET1_STANDARD)
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost the base and background flag
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 2 || i == 7) { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -742,16 +737,17 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -763,16 +759,16 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_NO_GO)
     ASSERT_FALSE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost the base flag
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
-        if (i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 2 || i == 7) { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -797,16 +793,17 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
 
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
 
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should not acquire the flag from base_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(set_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(set_snp.in(i)); }
         else
         {
             ASSERT_FALSE(set_snp.in(i));
@@ -816,11 +813,11 @@ TEST_F(SNP_REGION, BASE_SET1_PROXY_GO)
     // will set clumped to true to protect itself
     ASSERT_TRUE(base_snp.clumped());
     ASSERT_TRUE(set_snp.clumped());
-    for (size_t i = 0; i < num_regions; ++i) {
+    for (size_t i = 0; i < num_regions; ++i)
+    {
         // we should have acquire the flag from set_snp
-        if (i == 0 || i == 1 || i == 2 || i == 7) {
-            ASSERT_TRUE(base_snp.in(i));
-        }
+        if (i == 0 || i == 1 || i == 2 || i == 7)
+        { ASSERT_TRUE(base_snp.in(i)); }
         else
         {
             ASSERT_FALSE(base_snp.in(i));
@@ -876,7 +873,8 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
     ASSERT_TRUE(set_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
     ASSERT_TRUE(set_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
         ASSERT_FALSE(set_snp.in(i));
@@ -889,14 +887,13 @@ TEST_F(SNP_REGION, BASE_BASE_STANDARD)
     ASSERT_TRUE(set_snp.clumped());
     ASSERT_TRUE(base_snp.in(0));
     ASSERT_TRUE(base_snp.in(1));
-    for (size_t i = 2; i < num_regions; ++i) {
+    for (size_t i = 2; i < num_regions; ++i)
+    {
         // we should not acquire the flag from set_snp
         ASSERT_FALSE(base_snp.in(i));
     }
     // the set SNP should've lost all flags
-    for (size_t i = 0; i < num_regions; ++i) {
-        ASSERT_FALSE(set_snp.in(i));
-    }
+    for (size_t i = 0; i < num_regions; ++i) { ASSERT_FALSE(set_snp.in(i)); }
 }
 
 TEST(SNP_COUNTS, SET_COUNTS)
@@ -950,7 +947,7 @@ TEST(SNP_COUNTS, SET_REF_COUNTS)
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
     ASSERT_EQ(d, 0);
-    base_snp.add_reference("Test", 1, true);
+    base_snp.add_reference(0, 1, true);
     base_snp.set_ref_counts(10, 20, 30, 40);
     // now flipped
     base_snp.get_counts(a, b, c, d, true);
@@ -973,4 +970,62 @@ TEST(SNP_BASIC, SET_EXPECTED)
     ASSERT_DOUBLE_EQ(snp.get_expected(false), maf);
     ASSERT_DOUBLE_EQ(snp.get_expected(true), ref_maf);
 }
+
+// test the post-hoc category assignment for ridiculously small interval size
+TEST(SNP_CATEGORY, BASIC_CALCULATION)
+{
+    // we assume the calculation is sorted.
+    std::string rs = "SNP";
+    std::string a1 = "A", a2 = "C";
+    size_t chr = 1;
+    size_t loc = 1;
+    double stat = 1;
+    double p_value = 1e-50;
+    unsigned long long category = 1;
+    double p_threshold = 1e-50;
+    SNP snp(rs, chr, loc, a1, a2, stat, p_value, category, p_threshold);
+    double inter = 1e-41, upper = 0.5, lower = 1e-40;
+    unsigned long long cur_category = 0;
+    unsigned long long before = cur_category;
+    bool warning = false;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    // p-value is lower than the lowest, category should equal to cur_category
+    ASSERT_EQ(snp.category(), before);
+    cur_category = 10;
+    before = cur_category;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    // p-value is lower than the lowest, category should equal to cur_category
+    ASSERT_EQ(snp.category(), before);
+    // now change lower to a much smaller value
+    cur_category = 10;
+    before = cur_category;
+    inter = 1e-61;
+    lower = 1e-60;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    ASSERT_EQ(snp.category(), before + 1);
+    ASSERT_EQ(before + 1, cur_category);
+    // change it to even smaller values
+    inter = 7e-151;
+    lower = 1e-150;
+    cur_category = 10;
+    before = cur_category;
+    snp.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_TRUE(warning);
+    ASSERT_EQ(snp.category(), before + 1);
+    ASSERT_EQ(before + 1, cur_category);
+    p_value = 0.1;
+    SNP snp2(rs, chr, loc, a1, a2, stat, p_value, category, p_threshold);
+    inter = 0.03;
+    lower = 0.001;
+    cur_category = 10;
+    before = cur_category;
+    snp2.set_category(cur_category, lower, upper, inter, warning);
+    ASSERT_FALSE(warning);
+    ASSERT_EQ(before + 1, cur_category);
+}
+
+
 #endif // SNP_TEST_HPP
