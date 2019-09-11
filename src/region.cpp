@@ -449,7 +449,7 @@ void Region::load_gtf(
     {
         stream = &(gtf_file);
     }
-    std::vector<std::string> token, attribute, extract;
+    std::vector<std::string> token(9), attribute, extract;
     std::string chr_str, name, id, line;
     int chr_code;
     size_t chr, start, end;

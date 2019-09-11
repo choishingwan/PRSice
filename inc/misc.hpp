@@ -295,15 +295,33 @@ inline std::vector<std::string> split(const std::string& seq,
 inline void split(std::vector<std::string>& result, const std::string& seq,
                   const std::string& separators = "\t ")
 {
-    std::size_t prev = 0, pos;
-    result.clear();
+    std::size_t prev = 0, pos, size = 0;
+    const size_t init = result.size();
+    // assuming we have the same size
+    // result.clear();
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
     {
-        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
+        if (pos > prev)
+        {
+            if (init <= size)
+            { result.emplace_back(seq.substr(prev, pos - prev)); }
+            else
+            {
+                result[size] = seq.substr(prev, pos - prev);
+            }
+            ++size;
+        }
         prev = pos + 1;
     }
     if (prev < seq.length())
-        result.emplace_back(seq.substr(prev, std::string::npos));
+    {
+        if (init <= size)
+        { result.emplace_back(seq.substr(prev, std::string::npos)); }
+        else
+        {
+            result[size] = seq.substr(prev, std::string::npos);
+        }
+    }
 }
 template <typename T>
 inline T convert(const std::string& str)
