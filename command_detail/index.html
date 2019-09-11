@@ -144,6 +144,10 @@
                     
     <a class="" href="../decisions/">Development Decisions</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../resources/">Useful Resources</a>
+                </li>
     </ul>
 	    </li>
           
@@ -861,6 +865,16 @@ phenotype or if the target phenotype is quantitative</p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>This will generate a huge file</p>
+</div>
+</li>
+<li>
+<p><code>--enable-mmap</code></p>
+<p>Enable memory mapping. This will provide a small speed boost if large amount of memory
+is available and if all genotypes were stored in the same file</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you don't have enough memory, and if your genotypes were stored in different files, 
+memory mapping will actually slow down PRSice. </p>
 </div>
 </li>
 <li>

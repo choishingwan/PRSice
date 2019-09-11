@@ -171,6 +171,10 @@
                     
     <a class="" href="../decisions/">Development Decisions</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../resources/">Useful Resources</a>
+                </li>
     </ul>
 	    </li>
           
@@ -539,6 +543,10 @@ PRSice-2 exploit this property, such that the permutation analysis is performed 
 <p>As we re-seed the random number generator for each p-value threshold, we ensure the random phenotypes generated in each p-value thresholds
 are identical, allowing us to reuse the calculated PRS and the decomosed matrix, which leads to significant speed 
 up of the permutation process.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>With binary traits, unless <code>--logit-perm</code> is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics</p>
+</div>
 <h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
 <h2 id="bar-plot">Bar Plot<a class="headerlink" href="#bar-plot" title="Permanent link">&para;</a></h2>
 <div class="admonition note">

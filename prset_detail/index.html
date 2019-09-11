@@ -102,6 +102,8 @@
         
             <li><a class="toctree-l4" href="#bed-files">Bed Files</a></li>
         
+            <li><a class="toctree-l4" href="#snp-set-files">SNP Set Files</a></li>
+        
         </ul>
     
 
@@ -123,6 +125,12 @@
     
 
     <li class="toctree-l3"><a href="#competitive-p-value-calculation">Competitive P-value Calculation</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l4" href="#computation-algorithm">Computation Algorithm</a></li>
+        
+        </ul>
     
 
     <li class="toctree-l3"><a href="#output-data">Output Data</a></li>
@@ -165,6 +173,10 @@
                 <li class="">
                     
     <a class="" href="../decisions/">Development Decisions</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../resources/">Useful Resources</a>
                 </li>
     </ul>
 	    </li>
@@ -272,6 +284,13 @@ Alternatively, you can specify the features using the <code>--feature</code> com
 <p class="admonition-title">Note</p>
 <p>An annoying feature of bed file is that it starts with 0 whereas for example, the plink formats starts the coordinates at 1. So do remember to -1 from the region start when you build your own bed file from scratch.</p>
 </div>
+<h2 id="snp-set-files">SNP Set Files<a class="headerlink" href="#snp-set-files" title="Permanent link">&para;</a></h2>
+<p>Finally, PRSet also allow SNP sets, input via the <code>--snp-set</code> option.</p>
+<p>Two different formats are allowed</p>
+<ul>
+<li>SNP list format, a file containing a single column of SNP ID. Name of the set will be the file name or can be provided using <code>--snp-set File:Name</code></li>
+<li>MSigDB format: Each row represent a single SNP set with the first column containing the name of the SNP set.</li>
+</ul>
 <h1 id="clumping-in-prset">Clumping in PRSet<a class="headerlink" href="#clumping-in-prset" title="Permanent link">&para;</a></h1>
 <p>In PRSice-2, clumping is performed to account for linkage disequilibrium (LD) between SNPs.
 However, when performing set based analysis, special care are required to perform clumping. 
@@ -405,6 +424,26 @@ To obtain a competitive p-value, PRSet can perform a permutation analysis as fol
 </ol>
 </li>
 </ol>
+<h2 id="computation-algorithm">Computation Algorithm<a class="headerlink" href="#computation-algorithm" title="Permanent link">&para;</a></h2>
+<p>Due to the number of operation required, the set based permutation are extremely time consuming. To speed up the set based permutation, we noted that in regression,</p>
+<p>$$
+Y\sim X\beta+C+\epsilon
+$$
+and </p>
+<div class="arithmatex">\[
+X\sim Y\beta+C+\epsilon
+\]</div>
+<p>will generate the same t-statistic for <span class="arithmatex">\(X\)</span> in the first equation and <span class="arithmatex">\(Y\)</span> in the second equation. Based on this observation, we can then do the following</p>
+<ol>
+<li>Generate a matrix <span class="arithmatex">\(A\)</span> containing the phenotype of interest and the covariates</li>
+<li>Decompose matrix <span class="arithmatex">\(A\)</span></li>
+<li>For each new PRS calculated, solve <span class="arithmatex">\(PRS=A\beta+\epsilon\)</span> and obtain the t-statistic. These t-statistics are then used to construct the null distribution, allow us to obtain the competitive p-value</li>
+</ol>
+<p>As we only need to do the decomposition once, this should significantly increase the speed of set based permutation. In our test, for the TOY data, with <code>--set-perm 5000</code>, we can speed up the set-based permutation by around 20~25%</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>With binary traits, unless <code>--logit-perm</code> is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics</p>
+</div>
 <h1 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h1>
 <h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
 <p>A file containing the PRS model fit across thresholds is named <strong>[Name].prsice</strong>, where <strong>[Name]</strong> is the
