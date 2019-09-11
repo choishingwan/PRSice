@@ -36,8 +36,10 @@
 #include <memory>
 #include <memoryread.hpp>
 #include <mio.hpp>
+#include <mutex>
 #include <random>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -45,14 +47,6 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
-
-#ifdef _WIN32
-#include <mingw.mutex.h>
-#include <mingw.thread.h>
-#else
-#include <mutex>
-#include <thread>
-#endif
 // class BinaryPlink;
 // class BinaryGen;
 #define MULTIPLEX_LD 1920

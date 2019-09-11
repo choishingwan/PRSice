@@ -41,13 +41,12 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #ifdef _WIN32
-#include <mingw.mutex.h>
-#include <mingw.thread.h>
 #include <process.h>
 #include <windows.h>
 //#define pthread_t HANDLE
@@ -56,7 +55,6 @@
 // we give an extra space for window just in case
 #define NEXT_LENGTH 1LL
 #else
-#include <thread>
 #define NEXT_LENGTH 0LL
 //#include <pthread.h>
 #endif
