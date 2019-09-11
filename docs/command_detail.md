@@ -654,6 +654,15 @@ This page contains all command available in PRSice.
     !!! warning
         This will generate a huge file
 
+- `--enable-mmap`
+           
+    Enable memory mapping. This will provide a small speed boost if large amount of memory
+    is available and if all genotypes were stored in the same file
+
+    !!! Warning
+        If you don't have enough memory, and if your genotypes were stored in different files, 
+        memory mapping will actually slow down PRSice. 
+
 - `--exclude`
 
     File contains SNPs to be excluded from the analysis.

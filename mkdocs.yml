@@ -16,6 +16,7 @@ nav:
     - Developers:
         - Compile from Source: compilation.md
         - Development Decisions: decisions.md
+        - Useful Resources: resources.md
 
     - Misc:
         - Additional Steps for MAC and Window users: extra_steps.md
