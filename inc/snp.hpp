@@ -183,8 +183,6 @@ public:
             // this is a new threshold
             ++cur_category;
             // there will be imprecision w.r.t new
-            std::cerr << m_p_value << "\t" << cur_p_start << "\t" << inter
-                      << std::endl;
             if ((m_p_value - cur_p_start) / inter
                 > std::numeric_limits<unsigned long long>::max())
             { warning = true; }
