@@ -1469,6 +1469,7 @@ void Genotype::build_membership_matrix(
     const bool print_snps)
 {
     std::vector<std::vector<size_t>> temporary_storage(num_sets);
+    m_set_thresholds.resize(num_sets);
     std::vector<size_t> idx;
     std::unordered_set<double> threshold;
     std::ofstream snp_out;
@@ -1495,6 +1496,11 @@ void Genotype::build_membership_matrix(
         for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
         {
             auto&& snp = m_existed_snps[i_snp];
+            for (size_t s = 0; s < num_sets; ++s)
+            {
+                if (snp.in(s))
+                { m_set_thresholds[s].insert(snp.get_threshold()); }
+            }
             prev_idx = 0;
             if (threshold.find(snp.get_threshold()) == threshold.end())
             {
@@ -1589,6 +1595,8 @@ void Genotype::build_membership_matrix(
                 region_membership[i_snp] = i_snp;
             }
         }
+        for (auto&& thres : m_thresholds)
+        { m_set_thresholds.front().insert(thres); }
     }
 }
 

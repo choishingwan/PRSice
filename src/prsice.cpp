@@ -1649,7 +1649,6 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
     // but we will only try and generate the all score file when we are dealing
     // with the first phenotype (pheno_index == 0)
     const bool all_scores = all_score && !pheno_index;
-    const bool print_background = (num_region != 2);
     if (all_scores)
     {
         m_all_out.open(out_all.c_str());
@@ -1662,6 +1661,23 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         // we need to know the number of available thresholds so that we can
         // know how many white spaces we need to pad in
         std::vector<double> avail_thresholds = target.get_thresholds();
+        std::vector<std::set<double>> set_thresholds =
+            target.get_set_thresholds();
+        unsigned long long total_set_thresholds = 0;
+        for (size_t thres = 0; thres < set_thresholds.size(); ++thres)
+        {
+            if (thres == 1) continue;
+            if (total_set_thresholds
+                    == std::numeric_limits<unsigned long long>::max()
+                || total_set_thresholds > std::numeric_limits<long long>::max())
+            {
+                throw std::runtime_error(
+                    "Error: Too many combinations of number of regions and "
+                    "number "
+                    "of thresholds, will cause integer overflow.");
+            }
+            total_set_thresholds += set_thresholds[thres].size();
+        }
         // we want the threshold to be in sorted order as we will process the
         // SNPs from the smaller threshold to the highest (therefore, the
         // processed_threshold index should be correct)
@@ -1671,16 +1687,7 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
             throw std::runtime_error("Error: Number of thresholds is too high, "
                                      "will cause integer overflow");
         }
-        const long long num_thresholds =
-            static_cast<long long>(avail_thresholds.size());
         const long long begin_byte = m_all_out.tellp();
-        if (region_name.size() * avail_thresholds.size()
-            > std::numeric_limits<long long>::max())
-        {
-            throw std::runtime_error(
-                "Error: Too many combinations of number of regions and number "
-                "of thresholds, will cause integer overflow.");
-        }
         m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
         if (!m_perform_prset)
@@ -1689,9 +1696,12 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         }
         else
         {
-            for (size_t i = 0; i < region_name.size() - 1; ++i)
+            // don't output all score for background
+            // not all set has snps in all threshold
+            for (size_t i = 0; i < region_name.size(); ++i)
             {
-                for (auto& thres : avail_thresholds)
+                if (i == 1) continue;
+                for (auto& thres : set_thresholds[i])
                 { m_all_out << " " << region_name[i] << "_" << thres; }
             }
         }
@@ -1701,13 +1711,10 @@ void PRSice::prep_output(const std::string& out, const bool all_score,
         assert(end_byte >= begin_byte);
         m_all_file.header_length = end_byte - begin_byte;
         m_all_file.processed_threshold = 0;
-        m_all_file.line_width =
-            m_max_fid_length + 1LL + m_max_iid_length + 1LL
-            + num_thresholds
-                  * (static_cast<long long>(region_name.size())
-                     - !print_background)
-                  * (m_numeric_width + 1LL)
-            + 1LL;
+        m_all_file.line_width = m_max_fid_length + 1LL + m_max_iid_length + 1LL
+                                + static_cast<long long>(total_set_thresholds)
+                                      * (m_numeric_width + 1LL)
+                                + 1LL;
         m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
     }
 

@@ -38,6 +38,7 @@
 #include <mio.hpp>
 #include <mutex>
 #include <random>
+#include <set>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -356,6 +357,10 @@ public:
                                  const bool print_snps);
     size_t num_threshold() const { return m_num_thresholds; }
     std::vector<double> get_thresholds() const { return m_thresholds; }
+    std::vector<std::set<double>> get_set_thresholds() const
+    {
+        return m_set_thresholds;
+    }
     bool get_score(std::vector<size_t>::const_iterator& start_index,
                    const std::vector<size_t>::const_iterator& end_index,
                    double& cur_threshold, uint32_t& num_snp_included,
@@ -423,6 +428,7 @@ protected:
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
+    std::vector<std::set<double>> m_set_thresholds;
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_file_names;
