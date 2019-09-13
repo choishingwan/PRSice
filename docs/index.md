@@ -15,10 +15,10 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.6](https://github.com/choishingwan/PRSice/releases/download/2.2.6/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.6](https://github.com/choishingwan/PRSice/releases/download/2.2.6/PRSice_mac.zip) |
-| Windows 32-bit | [v2.2.6](https://github.com/choishingwan/PRSice/releases/download/2.2.6/PRSice_win32.zip) |
-| Windows 64-bit | [v2.2.6](https://github.com/choishingwan/PRSice/releases/download/2.2.6/PRSice_win64.zip) |
+| Linux 64-bit | [v2.2.7](https://github.com/choishingwan/PRSice/releases/download/2.2.7/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.7](https://github.com/choishingwan/PRSice/releases/download/2.2.7/PRSice_mac.zip) |
+| Windows 32-bit | [v2.2.7](https://github.com/choishingwan/PRSice/releases/download/2.2.7/PRSice_win32.zip) |
+| Windows 64-bit | [v2.2.7](https://github.com/choishingwan/PRSice/releases/download/2.2.7/PRSice_win64.zip) |
 
 !!! Caution 
 
@@ -101,5 +101,5 @@ PRSice-2 and all new functionalities are coded by:
 PRSice is a software package written in C++ (main) and R (plotting).
 The code relies partially on those written in PLINK by [Christopher Chang](https://www.cog-genomics.org/software).
 Management of BGEN file is based on BGEN lib written by [Gavin Band](https://bitbucket.org/gavinband/bgen).
-We also utilize the [Eigen C++](https://eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library and [mingw-std-threads](https://github.com/meganz/mingw-std-threads).
+We also utilize the [Eigen C++](https://eigen.tuxfamily.org) library, the [gzstream](http://www.cs.unc.edu/Research/compgeom/gzstream/) library. 
 

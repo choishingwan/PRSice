@@ -58,3 +58,22 @@ Rscript PRSice.R \
 
 !!! Note
     Both bed and GTF+MSigDB input can be used together
+
+## With SNP Set
+Finally, if you want to construct sets based on a list of SNPs, you can use `--snp-set`:
+
+``` bash hl_lines="7 8"
+Rscript PRSice.R \
+    --prsice ./bin/PRSice \
+    --base TOY_BASE_GWAS.assoc \
+    --target TOY_TARGET_DATA \
+    --binary-target T \
+    --thread 1 \
+    --snp-set A.snp:A,B.snp \
+    --multi-plot 10
+```
+
+Two different format are allowed:
+
+- SNP Set list format: A file containing a single column of SNP ID. Name of the set will be the file name or can be provided using `--snp-set File:Name`
+- MSigDB format: Each row represent a single SNP set with the first column containing the name of the SNP set.

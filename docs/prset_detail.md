@@ -50,6 +50,14 @@ PRSet will read in any number of bed files (comma separated) and use the file na
 
     An annoying feature of bed file is that it starts with 0 whereas for example, the plink formats starts the coordinates at 1. So do remember to -1 from the region start when you build your own bed file from scratch.
 
+## SNP Set Files
+Finally, PRSet also allow SNP sets, input via the `--snp-set` option.
+
+Two different formats are allowed
+
+- SNP list format, a file containing a single column of SNP ID. Name of the set will be the file name or can be provided using `--snp-set File:Name`
+- MSigDB format: Each row represent a single SNP set with the first column containing the name of the SNP set.
+
 # Clumping in PRSet
 In PRSice-2, clumping is performed to account for linkage disequilibrium (LD) between SNPs.
 However, when performing set based analysis, special care are required to perform clumping. 
@@ -130,6 +138,30 @@ To obtain a competitive p-value, PRSet can perform a permutation analysis as fol
 \text{Competitive-}P = \frac{\sum_{n=1}^NI(P_{null}\lt P_observed)+1}{N+1}
         $$
         where $I(.)$ is the indicator function. 
+
+## Computation Algorithm
+Due to the number of operation required, the set based permutation are extremely time consuming. To speed up the set based permutation, we noted that in regression,
+
+$$
+Y\sim X\beta+C+\epsilon
+$$
+and 
+
+$$
+X\sim Y\beta+C+\epsilon
+$$
+
+will generate the same t-statistic for $X$ in the first equation and $Y$ in the second equation. Based on this observation, we can then do the following
+
+1. Generate a matrix $A$ containing the phenotype of interest and the covariates
+2. Decompose matrix $A$
+3. For each new PRS calculated, solve $PRS=A\beta+\epsilon$ and obtain the t-statistic. These t-statistics are then used to construct the null distribution, allow us to obtain the competitive p-value
+
+As we only need to do the decomposition once, this should significantly increase the speed of set based permutation. In our test, for the TOY data, with `--set-perm 5000`, we can speed up the set-based permutation by around 20~25%
+
+!!! note
+    
+    With binary traits, unless `--logit-perm` is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics
 
 # Output Data
 

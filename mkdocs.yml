@@ -1,7 +1,7 @@
 site_name: PRSice-2
 repo_url: https://github.com/choishingwan/PRSice
 site_author: Shing Wan CHOI
-pages:
+nav:
     - index.md
     - Quick Start:
         - PRSice: quick_start.md
@@ -16,6 +16,7 @@ pages:
     - Developers:
         - Compile from Source: compilation.md
         - Development Decisions: decisions.md
+        - Useful Resources: resources.md
 
     - Misc:
         - Additional Steps for MAC and Window users: extra_steps.md

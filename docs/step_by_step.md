@@ -309,6 +309,7 @@ where $I(.)$ is the indicator function.
     the observed phenotypic variance explained, R^2^, remains unadjusted and is affected by overfitting. 
     Therefore, it is imperative to perform out-of-samp,le prediction, or cross-validation to evaluate the predictive accuracy of PRS. 
 
+
 ## Computation Algorithm
 In reality, PRSice-2 exploit certain property of random number generation to speed up the permutation analysis. 
 
@@ -329,6 +330,9 @@ As we re-seed the random number generator for each p-value threshold, we ensure 
 are identical, allowing us to reuse the calculated PRS and the decomosed matrix, which leads to significant speed 
 up of the permutation process.
 
+!!! note
+    
+    With binary traits, unless `--logit-perm` is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics
 
 # Output of Results
 ## Bar Plot
