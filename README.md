@@ -40,15 +40,7 @@ make
 ```
 
 ### Citation 
-If you PRSice in any published work, please cite both the software (as an electronic resource/URL):
-
-Package: PRSice [version]
-
-Authors: Shing Wan Choi and Paul O'Reilly
-
-URL: https://github.com/choishingwan/PRSice
-
-and the manuscript:
+If you PRSice in any published work, please cite the following manuscript:
 
 Choi SW, and O’Reilly PF. "PRSice-2: Polygenic Risk Score Software for Biobank-Scale Data." GigaScience 8, no. 7 (July 1, 2019). https://doi.org/10.1093/gigascience/giz082.
 
