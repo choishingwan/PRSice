@@ -278,7 +278,7 @@ public:
         if (target.clumped()) return;
         // we need to check if the target SNP is completely clumped (e.g. no
         // longer representing any set)
-        bool completed = false;
+        unsigned long long remained_flag = 0;
         // if we want to use proxy, and that our r2 is higher than
         // the proxy threshold, we will do the proxy clumping
         if (use_proxy && r2 > proxy)
@@ -293,7 +293,7 @@ public:
             // for proxy clumping, the target SNP will always be removed after
             // the clump as the current SNP will represent all sets the target
             // SNP is a member of
-            completed = true;
+            remained_flag = 0;
         }
         else
         {
@@ -310,10 +310,10 @@ public:
                     ^ (m_flags[i_flag] & target.m_flags[i_flag]);
                 // if all flags of the target SNP == 0, it means that it no
                 // longer represent any gene set and is consided as "clumped"
-                completed = (target.m_flags[i_flag] == 0);
+                remained_flag += (target.m_flags[i_flag] != 0);
             }
         }
-        if (completed)
+        if (remained_flag == 0)
         {
             // if the target SNP no longer represent any gene set, it is
             // considered as clumped and can be removed
