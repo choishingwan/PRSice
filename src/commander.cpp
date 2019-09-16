@@ -1,4 +1,4 @@
-// This file is part of PRSice-2, copyright (C) 2016-2019
+﻿// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1023,17 +1023,17 @@ void Commander::set_help_message()
           "                            use value larger than 10,000\n"
           "    --print-snp             Print all SNPs that remains in the "
           "analysis \n"
-          "							after clumping is performed. For PRSet, Y "
-          "\n"
-          "							indicate the SNPs falls within the gene "
+          "                            after clumping is performed. For PRSet, "
+          "Y \n"
+          "                            indicate the SNPs falls within the gene "
           "set \n"
-          "							of interest and N otherwise. If only "
+          "                            of interest and N otherwise. If only "
           "PRSice \n"
-          "							is performed, a single \"gene set\" called "
-          "\n"
-          "							\"Base\" will be presented with all "
+          "                            is performed, a single \"gene set\" "
+          "called \n"
+          "                            \"Base\" will be presented with all "
           "entries\n"
-          "							marked as Y\n"
+          "                            marked as Y\n"
           "    --seed          | -s    Seed used for permutation. If not "
           "provided,\n"
           "                            system time will be used as seed. When "
