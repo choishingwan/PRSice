@@ -264,7 +264,7 @@ public:
             "rs741139",  "rs9604772",  "rs9606045", " rs74277584",
             "rs9609078", "rs28699499", "rs139938",  "rs2413597",
             "rs713898",  "rs13056402", "rs5758191", "rs76458331",
-            "rs731857",  "rs5995756"};
+            "rs731857",  "rs5757721"};
         if (problem.find(m_rs) != problem.end()
             || problem.find(target.rs()) != problem.end())
         {
