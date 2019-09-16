@@ -2421,11 +2421,15 @@ void PRSice::run_competitive(
                   * sizeof(double)
             : num_regress_sample * sizeof(double);
     unsigned char* bigstack_ua = nullptr;
+    std::cerr << "User requested " << num_thread << std::endl;
+    std::cerr << "Member required per thread: "
+              << basic_memory_required_per_thread << std::endl;
     for (; num_thread > 0; --num_thread)
     {
         bigstack_ua = reinterpret_cast<unsigned char*>(
             malloc(basic_memory_required_per_thread * num_thread * 1048576
                    * sizeof(char)));
+        std::cerr << "Mallocing: " << num_thread << std::endl;
         if (bigstack_ua)
         {
             // enough memory
