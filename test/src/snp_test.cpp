@@ -440,6 +440,8 @@ TEST(SNP_MATCHING, NO_BP_MATCHING)
     flipped = false;
 }
 
+// TODO: Need ore extensive clumping test. Need to test the set based clumping
+// situation
 TEST(SNP_CLUMP, SET_CLUMP)
 {
     std::string rs = "Test";
@@ -448,7 +450,7 @@ TEST(SNP_CLUMP, SET_CLUMP)
     double stat = 0.0;
     double p = 0.0;
     double p_threshold = 1;
-    int category = 1;
+    unsigned long long category = 1;
     size_t chr = 1, loc = ~size_t(0);
     SNP snp(rs, chr, loc, ref, alt, stat, p, category, p_threshold);
     // default of clump should be false

@@ -2414,23 +2414,23 @@ void PRSice::run_competitive(
     // This is a rough estimate, we might be using more memory than indicated
     // here
     const uintptr_t basic_memory_required_per_thread =
-        m_logit_perm
-            ? (4 * num_regress_sample
-               + 2ULL * static_cast<unsigned long long>(p) + 1ULL
-               + num_regress_sample * static_cast<unsigned long long>(p))
-                  * sizeof(double)
-            : num_regress_sample * sizeof(double);
-    unsigned char* bigstack_ua = nullptr;
+        m_logit_perm ? (
+            4 * num_regress_sample + 2ULL * static_cast<unsigned long long>(p)
+            + 1ULL + num_regress_sample * static_cast<unsigned long long>(p))
+                     : num_regress_sample;
+
     for (; num_thread > 0; --num_thread)
     {
-        bigstack_ua = reinterpret_cast<unsigned char*>(
-            malloc(basic_memory_required_per_thread * num_thread * 1048576
-                   * sizeof(char)));
-        if (bigstack_ua)
+        double* bigstack = nullptr;
+        try
         {
-            // enough memory
-            delete bigstack_ua;
+            bigstack =
+                new double[basic_memory_required_per_thread * num_thread];
+            delete bigstack;
             break;
+        }
+        catch (const std::bad_alloc&)
+        {
         }
     }
     if (num_thread == 0)
