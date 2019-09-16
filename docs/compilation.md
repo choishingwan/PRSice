@@ -23,9 +23,9 @@ Then the PRSice executable will be located within PRSice/bin
 
 If you don't have git installed, you can still do
 ```
-curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.7 > PRSice.tar.gz
+curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.8 > PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.2.7
+cd PRSice-2.2.8
 mkdir build
 cd build
 cmake ../
@@ -46,9 +46,9 @@ Then PRSice will be located in the current directory
 
 Alternatively, if you don't have git installed, you can still do
 ```
-curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.7 > PRSice.tar.gz
+curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.8 > PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.2.7.beta
+cd PRSice-2.2.8.beta
 g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
 ```
 
