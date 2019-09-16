@@ -2418,9 +2418,6 @@ void PRSice::run_competitive(
             4 * num_regress_sample + 2ULL * static_cast<unsigned long long>(p)
             + 1ULL + num_regress_sample * static_cast<unsigned long long>(p))
                      : num_regress_sample;
-    std::cerr << "User requested " << num_thread << std::endl;
-    std::cerr << "Member required per thread: "
-              << basic_memory_required_per_thread << std::endl;
 
     for (; num_thread > 0; --num_thread)
     {

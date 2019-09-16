@@ -259,22 +259,6 @@ public:
     void clump(SNP& target, double r2, bool use_proxy, double proxy = 2)
     {
         // if the target is already clumped, we will do nothing
-
-        const std::unordered_set<std::string> problem = {
-            "rs741139",  "rs9604772",  "rs9606045", " rs74277584",
-            "rs9609078", "rs28699499", "rs139938",  "rs2413597",
-            "rs713898",  "rs13056402", "rs5758191", "rs76458331",
-            "rs731857",  "rs5757721"};
-        if (problem.find(m_rs) != problem.end()
-            || problem.find(target.rs()) != problem.end())
-        {
-            std::cout << "Pair: " << m_rs << "\t" << target.rs() << std::endl;
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
-            {
-                std::cout << "Flag: " << std::hex << m_flags[i_flag] << "\t"
-                          << target.m_flags[i_flag] << std::dec << std::endl;
-            }
-        }
         if (target.clumped()) return;
         // we need to check if the target SNP is completely clumped (e.g. no
         // longer representing any set)
@@ -321,17 +305,6 @@ public:
         }
         m_clumped = true;
         // protect from other SNPs tempering its flags
-        if (problem.find(m_rs) != problem.end()
-            || problem.find(target.rs()) != problem.end())
-        {
-            std::cout << "After Pair: " << m_rs << "\t" << target.rs() << "\t"
-                      << m_clumped << "\t" << target.clumped() << std::endl;
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
-            {
-                std::cout << "Flag: " << std::hex << m_flags[i_flag] << "\t"
-                          << target.m_flags[i_flag] << std::dec << std::endl;
-            }
-        }
     }
 
     /*!
