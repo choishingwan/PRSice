@@ -1178,6 +1178,11 @@ void Genotype::efficient_clumping(Genotype& reference)
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
         // read in the current SNP
         auto&& cur_target_snp = m_existed_snps[cur_snp_index];
+        if (cur_target_snp.rs() == "rs5757721")
+        {
+            std::cout << "Find problem: " << cur_target_snp.clumped()
+                      << std::endl;
+        }
         if (cur_target_snp.clumped() || cur_target_snp.p_value() > m_clump_p)
             // ignore any SNP that are clumped or that has a p-value higher than
             // the clump-p threshold
@@ -1306,6 +1311,12 @@ void Genotype::efficient_clumping(Genotype& reference)
                     r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
                 }
             }
+            if (cur_target_snp.rs() == "rs5757721"
+                || pair_target_snp.rs() == "rs5757721")
+            {
+                std::cout << cur_target_snp.rs() << "\t" << pair_target_snp.rs()
+                          << "\t" << r2 << std::endl;
+            }
             if (r2 >= min_r2)
             {
                 // if the R2 between two SNP is higher than the minim threshold,
@@ -1371,6 +1382,12 @@ void Genotype::efficient_clumping(Genotype& reference)
                 }
             }
             // now perform clumping if required
+            if (cur_target_snp.rs() == "rs5757721"
+                || pair_target_snp.rs() == "rs5757721")
+            {
+                std::cout << cur_target_snp.rs() << "\t" << pair_target_snp.rs()
+                          << "\t" << r2 << std::endl;
+            }
             if (r2 >= min_r2)
             {
                 cur_target_snp.clump(pair_target_snp, r2, m_use_proxy,
