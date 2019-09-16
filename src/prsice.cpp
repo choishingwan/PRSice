@@ -2330,11 +2330,17 @@ void PRSice::run_competitive(
         {
             std::string message =
                 "Warning: To speed up the permutation, "
-                "we perform linear regression instead of logistic "
-                "regression within the permutation and uses the "
-                "absolute z-scores to rank the thresholds. As we assumption "
-                "Linear Regression & Logistic "
-                "Regression produce similar absolute z-scores\n\n";
+                "linear regression instead of logistic "
+                "regression were performed within the permutation, and "
+                "constructs the null distribution using the absolute "
+                "z-scores. This is based on the assumption that "
+                "linear Regression & logistic "
+                "regression should produce similar absolute z-scores. In "
+                "addition, the regression equation changed from "
+                "Phenotype~PRS+Covariates to PRS~Phenotype+Covariate. This two "
+                "equations should generate simliar z-score for the independent "
+                "variable and will allow us to perform some optimizations to "
+                "speed up the permutation\n\n";
             m_reporter->report(message);
         }
         else
