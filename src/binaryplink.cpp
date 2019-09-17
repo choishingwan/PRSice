@@ -319,24 +319,20 @@ void BinaryPlink::calc_freq_gen_inter(
             cur_file_idx = snp.file_index();
             byte_pos = snp.byte_pos();
         }
-        auto&& cur_map = m_genotype_files[cur_file_idx];
-        const unsigned long long max_file_size = cur_map.mapped_length();
-
-        // read in the genotype information to the genotype vector
-        if (byte_pos + unfiltered_sample_ct4 > max_file_size)
+        bed_name = m_genotype_file_names[cur_file_idx] + ".bed";
+        // we now read the genotype from the file by calling
+        // load_and_collapse_incl
+        // important point to note here is the use of m_sample_include and
+        // m_sample_ct instead of using the m_founder m_founder_info as the
+        // founder vector is for LD calculation whereas the sample_include is
+        // for PRS
+        if (!m_genotype_file.mem_calculated())
         {
-            std::string error_message =
-                "Erorr: Reading out of bound: " + misc::to_string(byte_pos)
-                + " " + misc::to_string(unfiltered_sample_ct4) + " "
-                + misc::to_string(max_file_size);
-            throw std::runtime_error(error_message);
+            m_genotype_file.init_memory_map(g_allowed_memory,
+                                            unfiltered_sample_ct4);
         }
-        char* geno = reinterpret_cast<char*>(m_tmp_genotype.data());
-        for (unsigned long long i = 0; i < unfiltered_sample_ct4; ++i)
-        {
-            *geno = cur_map[byte_pos + i];
-            ++geno;
-        }
+        m_genotype_file.read(bed_name, byte_pos, unfiltered_sample_ct4,
+                             reinterpret_cast<char*>(m_tmp_genotype.data()));
         // calculate the MAF using PLINK2 function
         single_marker_freqs_and_hwe(
             unfiltered_sample_ctv2, m_tmp_genotype.data(),
