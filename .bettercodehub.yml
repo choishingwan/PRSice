@@ -1,2 +1,4 @@
+component_depth: 1
+languages: cpp
 exclude:
 - /lib/.*
