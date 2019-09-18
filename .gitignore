@@ -21,5 +21,4 @@ site/
 test/data/bk/*
 test/data/*
 zlib*
-lib/eigen-git-mirror
 *.user*
