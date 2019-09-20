@@ -117,6 +117,7 @@ provide it with
 ```
 --target <bgen prefix>,<sample file>
 ```
+
 !!! Note
 
     The sample file is required even if `--no-regress` is set as the sample ID is required for output. This requirement might be losen in future versions
