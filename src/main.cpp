@@ -347,7 +347,8 @@ int main(int argc, char* argv[])
                                               i_region);
                     }
                 }
-                if (!commander.no_regress() && commander.perform_set_perm())
+                if (!commander.no_regress() && commander.perform_set_perm()
+                    && region_names.size() > 2)
                 {
                     // only perform permutation if regression is performed
                     // and user request it

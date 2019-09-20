@@ -20,8 +20,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
-
-
+find_path(EIGEN_INCLUDE_DIR
+    NAME EIGEN
+    PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib/eigen-git-mirror/)
+if((NOT ${EIGEN_INCLUDE_DIR}) OR (NOT EXISTS ${EIGEN_INCLUDE_DIR}))
+    execute_process(COMMAND git submodule update --init -- lib/eigen-git-mirror/
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    set(EIGEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/eigen-git-mirror/)
+endif()
+include_directories(${EIGEN_INCLUDE_DIR})
 add_library(coverage_config INTERFACE)
 option(CODE_COVERAGE "Enable coverage reporting" OFF)
 if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
