@@ -913,11 +913,15 @@ void BinaryPlink::read_score(
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-        if (cur_snp.is_flipped()) { std::swap(homcom_weight, homrar_weight); }
         maf =
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
             / (static_cast<double>((homcom_ct + het_ct + homrar_ct) * ploidy));
+        if (cur_snp.is_flipped())
+        {
+            std::swap(homcom_weight, homrar_weight);
+            maf = 1.0 - maf;
+        }
         stat = cur_snp.stat();
         adj_score = 0;
         if (is_centre) { adj_score = ploidy * stat * maf; }
