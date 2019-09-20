@@ -361,6 +361,9 @@ You can enable the support by including the zstd library and changing the <em>bg
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
 a phenotype file (<code>--pheno</code>). Alternatively, if you have a sample file containing the phenotype information, you can 
 provide it with</p>
+<div class="codehilite"><pre><span></span>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
+</pre></div>
+
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The sample file is required even if <code>--no-regress</code> is set as the sample ID is required for output. This requirement might be losen in future versions</p>
