@@ -1157,7 +1157,7 @@ void BinaryGen::hard_code_score(
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-        maf =
+        maf = 1.0-
             static_cast<double>(homcom_weight * homcom_ct + het_ct * het_weight
                                 + homrar_weight * homrar_ct)
             / (static_cast<double>(homcom_ct + het_ct + homrar_ct) * ploidy);
