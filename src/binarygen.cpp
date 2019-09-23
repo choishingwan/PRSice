@@ -45,12 +45,13 @@ BinaryGen::BinaryGen(const std::string& list_file, const std::string& file,
     // main use of following function is to set the max code
     init_chr();
     std::string message = "Initializing Genotype";
-    std::string file_name;
+    std::string file_name = file;
     const bool is_list = !(list_file.empty());
     std::vector<std::string> token;
-    if (!is_list) { token = misc::split(file, ","); }
+    if (!is_list) { token = misc::split(file_name, ","); }
     else
     {
+        file_name = list_file;
         token = misc::split(file_name, ",");
     }
     const bool external_sample = (token.size() == 2);
