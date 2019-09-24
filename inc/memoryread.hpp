@@ -68,15 +68,20 @@ public:
     void init_memory_map(const unsigned long long mem,
                          const unsigned long long& data_size)
     {
-        bool allow_mmap = calculate_block_size(mem, data_size);
-        if (!allow_mmap && m_use_mmap)
+        if (m_use_mmap)
         {
-            std::cerr << "Warning: Not enough memory for file mapping to be "
-                         "worth it, will "
-                         "fall back to traditional file read"
-                      << std::endl;
+
+            bool allow_mmap = calculate_block_size(mem, data_size);
+            if (!allow_mmap)
+            {
+                std::cerr
+                    << "Warning: Not enough memory for file mapping to be "
+                       "worth it, will "
+                       "fall back to traditional file read"
+                    << std::endl;
+            }
+            m_use_mmap = allow_mmap;
         }
-        if (m_use_mmap) { m_use_mmap = allow_mmap; }
         m_mem_calculated = true;
     }
     bool mem_calculated() const { return m_mem_calculated; }
@@ -97,14 +102,14 @@ private:
     {
         unsigned long long remain_mem = misc::remain_memory();
         unsigned long long used_mem = misc::getCurrentRSS();
-        if (used_mem > mem && m_use_mmap)
+        if (used_mem > mem)
         {
-            std::cerr
-                << "Warning: Already used " << used_mem
-                << " byte of data. Will now used more memory than user allowed."
-                << std::endl;
+            std::cerr << "Warning: Already used " << used_mem
+                      << " byte of data. Will now used more memory than "
+                         "user allowed."
+                      << std::endl;
         }
-        if (mem > remain_mem && m_use_mmap)
+        if (mem > remain_mem)
         {
             std::cerr << "Warning: Not enough memory left. Only " << remain_mem
                       << " byte remain, but requested " << mem
@@ -128,7 +133,8 @@ private:
                                                  mio::access_mode::read, error);
             if (mio::detail::query_file_size(file, error) < m_block_size)
             {
-                // when we have enough memory to read the whole file, do that
+                // when we have enough memory to read the whole file, do
+                // that
                 m_offset = 0;
             }
 
