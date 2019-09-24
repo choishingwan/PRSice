@@ -97,14 +97,14 @@ private:
     {
         unsigned long long remain_mem = misc::remain_memory();
         unsigned long long used_mem = misc::getCurrentRSS();
-        if (used_mem > mem)
+        if (used_mem > mem && m_use_mmap)
         {
             std::cerr
                 << "Warning: Already used " << used_mem
                 << " byte of data. Will now used more memory than user allowed."
                 << std::endl;
         }
-        if (mem > remain_mem)
+        if (mem > remain_mem && m_use_mmap)
         {
             std::cerr << "Warning: Not enough memory left. Only " << remain_mem
                       << " byte remain, but requested " << mem
