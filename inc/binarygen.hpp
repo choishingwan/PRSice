@@ -33,13 +33,8 @@
 class BinaryGen : public Genotype
 {
 public:
-    BinaryGen(const std::string& list_file, const std::string& file,
-              const std::string& pheno_file, const std::string& out_prefix,
-              const double hard_threshold, const double dose_threshold,
-              const size_t thread, const bool use_inter,
-              const bool use_hard_coded, const bool no_regress,
-              const bool ignore_fid, const bool keep_nonfounder,
-              const bool keep_ambig, const bool is_ref, Reporter* reporter);
+    BinaryGen(const GenoFile& geno, const Phenotype& pheno,
+              const std::string& delim, Reporter* reporter);
     ~BinaryGen();
 
 private:
@@ -47,9 +42,6 @@ private:
     std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     std::string m_intermediate_file;
-    std::string m_id_delim;
-    unsigned long long m_data_size = 0;
-    bool m_intermediate = false;
     bool m_target_plink = false;
     bool m_ref_plink = false;
 
@@ -57,7 +49,7 @@ private:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
+    std::vector<Sample_ID> gen_sample_vector();
     //
     /*!
      * \brief check if the sample file is of the sample format specified by bgen
@@ -68,12 +60,9 @@ private:
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
-    void calc_freq_gen_inter(const double& maf_threshold,
-                             const double& geno_threshold,
-                             const double& info_threshold,
-                             const bool maf_filter, const bool geno_filter,
-                             const bool info_filter, const bool hard_coded,
-                             Genotype* target = nullptr);
+    void calc_freq_gen_inter(const QCFiltering& filter_info,
+                             Genotype* target = nullptr,
+                             bool force_cal = false);
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map
@@ -88,7 +77,6 @@ private:
      * \return true if the sample is consistent
      */
     bool check_sample_consistent(const std::string& bgen_name,
-                                 const std::string& delim,
                                  const genfile::bgen::Context& context);
 
     /*!
@@ -99,8 +87,7 @@ private:
      * \param byte_pos is the streampos of the bgen file, for quick seek
      * \param file_name is the file name of the bgen file
      */
-    inline void read_genotype(uintptr_t* genotype,
-                              const unsigned long long byte_pos,
+    inline void read_genotype(uintptr_t* genotype, const long long byte_pos,
                               const size_t& file_idx)
     {
         const uintptr_t unfiltered_sample_ct4 =
@@ -145,7 +132,7 @@ private:
      * intermediate file
      * \return 0 if sucessful
      */
-    uint32_t load_and_collapse_incl(const unsigned long long byte_pos,
+    uint32_t load_and_collapse_incl(const long long byte_pos,
                                     const size_t& file_idx,
                                     uintptr_t* __restrict mainbuf)
     {
