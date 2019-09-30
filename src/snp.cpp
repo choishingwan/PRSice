@@ -26,7 +26,6 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
         // plink do it w.r.t the name of the RS ID (ignoring the string part)
         // which is slightly too complicated for us. Will simply use location
         // instead
-
         // chr first such that SNPs within the same chromosome will be
         // processed together
         if (input[i1].m_chr == input[i2].m_chr)
