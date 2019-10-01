@@ -35,11 +35,12 @@ TEST_F(SNP_INIT_TEST, INIT_TEST)
     ASSERT_STREQ(snp.alt().c_str(), alt.c_str());
     ASSERT_EQ(snp.chr(), chr);
     ASSERT_EQ(snp.loc(), loc);
+    bool is_ref = true;
     // The file information should be missing thus far
-    ASSERT_EQ(snp.file_index(), ~size_t(0));
-    ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
-    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    ASSERT_EQ(snp.get_file_idx(is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
     // When initialize without count, has_count (return value of get_counts)
     // should be false
     ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, false));
@@ -65,50 +66,70 @@ TEST_F(SNP_INIT_TEST, INIT_TEST)
 TEST_F(SNP_INIT_TEST, ADD_REF)
 {
     // default, reference are empty
-    ASSERT_EQ(snp.file_index(), ~size_t(0));
+    const bool is_ref = true;
+    ASSERT_EQ(snp.get_file_idx(is_ref), ~size_t(0));
     // and the bytepos is 0
-    ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
-    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
     // we also need to know if we are flipping
-    snp.add_reference(0, 1, true);
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    size_t file_idx = 3;
+    long long byte_pos = 1;
+    size_t chr = 1, loc = 1;
+    bool flipping = true;
+    std::string ref = "";
+    std::string alt = "";
+    snp.add_snp_info(file_idx, byte_pos, chr, loc, ref, alt, flipping, is_ref);
+
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), byte_pos);
+    // should not change target
+    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
     // should not touch target's flip flag
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_TRUE(snp.is_ref_flipped());
-    snp.add_reference(0, 1, false);
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    flipping = false;
+    snp.add_snp_info(file_idx, byte_pos, chr, loc, ref, alt, flipping, is_ref);
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), byte_pos);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
-    snp.add_reference(0, 13789560123, true);
-    ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
+    byte_pos = 13789560123;
+    snp.add_snp_info(file_idx, byte_pos, chr, loc, ref, alt, flipping, is_ref);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), 13789560123);
 }
 
 
 TEST_F(SNP_INIT_TEST, UPDATE_REF)
 {
     // default, reference are empty
-    ASSERT_EQ(snp.file_index(), ~size_t(0));
-    // and the bytepos is 0
-    ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
-    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    const bool is_ref = true;
+    const bool flipped = true;
+    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_file_idx(is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
+    size_t file_idx = 2, chr = 1, loc = 1;
+    long long byte_pos = 3;
+    std::string ref, alt;
     // we also need to know if we are flipping
-    snp.add_reference(0, 1, true);
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), 1);
+    snp.add_snp_info(file_idx, byte_pos, chr, loc, ref, alt, flipped, is_ref);
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), byte_pos);
     // should not touch target's flip flag
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_TRUE(snp.is_ref_flipped());
-    snp.add_reference(0, 13789560123, false);
-    ASSERT_EQ(snp.ref_byte_pos(), 13789560123);
+    byte_pos = 13789560123;
+    snp.add_snp_info(file_idx, byte_pos, chr, loc, ref, alt, !flipped, is_ref);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), byte_pos);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
-    snp.update_reference(1, 18691);
-    ASSERT_EQ(snp.ref_file_index(), 1);
-    ASSERT_EQ(snp.ref_byte_pos(), 18691);
+    file_idx = 1;
+    byte_pos = 18691;
+    snp.update_file(file_idx, byte_pos, is_ref);
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), byte_pos);
     // update won't touch the flip only different really...
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
@@ -117,25 +138,28 @@ TEST_F(SNP_INIT_TEST, UPDATE_REF)
 TEST_F(SNP_INIT_TEST, ADD_TARGET)
 {
     // default, target are empty
-    ASSERT_EQ(snp.file_index(), ~size_t(0));
-    // and the bytepos is 0
-    ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
-    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    const bool is_ref = true;
+    const bool flipped = true;
+    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_file_idx(is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
     // we also need to know if we are flipping
     size_t new_chr = 2;
     size_t new_loc = 3;
+    size_t file_idx = 1;
     std::string new_ref = "C";
     std::string new_alt = "G";
     std::string target_name = "Target";
-    unsigned long long new_pos = 1;
-    snp.add_target(0, new_pos, new_chr, new_loc, new_ref, new_alt, true);
+    long long new_pos = 1;
+    snp.add_snp_info(file_idx, new_pos, new_chr, new_loc, new_ref, new_alt,
+                     flipped, !is_ref);
     // check if the names are updated correctly
-    ASSERT_EQ(snp.file_index(), 0);
-    ASSERT_EQ(snp.byte_pos(), new_pos);
+    ASSERT_EQ(snp.get_file_idx(!is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), new_pos);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), new_pos);
     ASSERT_EQ(snp.chr(), new_chr);
     ASSERT_EQ(snp.loc(), new_loc);
     ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
@@ -143,36 +167,43 @@ TEST_F(SNP_INIT_TEST, ADD_TARGET)
     ASSERT_TRUE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
     // check none-flip
-    snp.add_target(1, new_pos, new_chr, new_loc, new_ref, new_alt, false);
+    file_idx = 0;
+    snp.add_snp_info(file_idx, new_pos, new_chr, new_loc, new_ref, new_alt,
+                     !flipped, !is_ref);
     ASSERT_FALSE(snp.is_flipped());
     ASSERT_FALSE(snp.is_ref_flipped());
-    new_loc = 189560123;
-    snp.add_target(1, new_pos, new_chr, new_loc, new_ref, new_alt, false);
-    ASSERT_EQ(snp.byte_pos(), new_pos);
+    new_pos = 189560123;
+    snp.add_snp_info(file_idx, new_pos, new_chr, new_loc, new_ref, new_alt,
+                     flipped, !is_ref);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), new_pos);
 }
 
 TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
 {
     // default, target are empty
-    ASSERT_EQ(snp.file_index(), ~size_t(0));
-    // and the bytepos is 0
-    ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
-    ASSERT_EQ(snp.ref_byte_pos(), 0);
+    const bool is_ref = true;
+    const bool flipped = true;
+    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_file_idx(is_ref), ~size_t(0));
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
     // we also need to know if we are flipping
     size_t new_chr = 2;
     size_t new_loc = 3;
     std::string new_ref = "C";
     std::string new_alt = "G";
     std::string target_name = "Target";
-    unsigned long long new_pos = 1;
-    snp.add_target(0, new_pos, new_chr, new_loc, new_ref, new_alt, true);
+    long long new_pos = 1;
+
+    size_t file_idx = 1;
+    snp.add_snp_info(file_idx, new_pos, new_chr, new_loc, new_ref, new_alt,
+                     flipped, !is_ref);
     // check if the names are updated correctly
-    ASSERT_EQ(snp.file_index(), 0);
-    ASSERT_EQ(snp.byte_pos(), new_pos);
+    ASSERT_EQ(snp.get_file_idx(!is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), new_pos);
     // Reference should follow target's name (always do target before ref)
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), new_pos);
     ASSERT_EQ(snp.chr(), new_chr);
     ASSERT_EQ(snp.loc(), new_loc);
     ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
@@ -181,55 +212,16 @@ TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
     ASSERT_FALSE(snp.is_ref_flipped());
     // check update
     std::string new_target_name = "Test";
-    unsigned long long updated_pos = 1426;
-    snp.update_target(1, updated_pos);
-    ASSERT_EQ(snp.byte_pos(), updated_pos);
-    ASSERT_EQ(snp.file_index(), 1);
-    // Reference should follow target's name (always do target before ref)
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
+    long long updated_pos = 1426;
+    size_t new_file_idx = 4;
+    snp.update_file(new_file_idx, updated_pos, !is_ref);
+    ASSERT_EQ(snp.get_byte_pos(!is_ref), updated_pos);
+    ASSERT_EQ(snp.get_file_idx(!is_ref), new_file_idx);
+    // update target will no longer update reference
+    ASSERT_EQ(snp.get_file_idx(is_ref), file_idx);
+    ASSERT_EQ(snp.get_byte_pos(is_ref), new_pos);
 }
 
-TEST_F(SNP_INIT_TEST, TARGET_AND_REF)
-{
-    // default, target are empty
-    ASSERT_EQ(snp.file_index(), ~size_t(0));
-    // and the bytepos is 0
-    ASSERT_EQ(snp.byte_pos(), 0);
-    ASSERT_EQ(snp.ref_file_index(), ~size_t(0));
-    ASSERT_EQ(snp.ref_byte_pos(), 0);
-    // we also need to know if we are flipping
-    size_t new_chr = 2;
-    size_t new_loc = 3;
-    std::string new_ref = "C";
-    std::string new_alt = "G";
-    std::string target_name = "Target";
-    unsigned long long new_pos = 1;
-    std::string ref_name = "reference";
-    unsigned long long new_ref_pos = 19;
-    snp.add_target(0, new_pos, new_chr, new_loc, new_ref, new_alt, true);
-    // check if the names are updated correctly
-    ASSERT_EQ(snp.file_index(), 0);
-    ASSERT_EQ(snp.byte_pos(), new_pos);
-    // Reference should follow target's name (always do target before ref)
-    ASSERT_EQ(snp.ref_file_index(), 0);
-    ASSERT_EQ(snp.ref_byte_pos(), new_pos);
-    ASSERT_EQ(snp.chr(), new_chr);
-    ASSERT_EQ(snp.loc(), new_loc);
-    ASSERT_STREQ(snp.ref().c_str(), new_ref.c_str());
-    ASSERT_STREQ(snp.alt().c_str(), new_alt.c_str());
-    ASSERT_TRUE(snp.is_flipped());
-    ASSERT_FALSE(snp.is_ref_flipped());
-    // check none-flip
-    snp.add_reference(1, new_ref_pos, false);
-    ASSERT_TRUE(snp.is_flipped());
-    ASSERT_FALSE(snp.is_ref_flipped());
-    ASSERT_EQ(snp.file_index(), 0);
-    ASSERT_EQ(snp.byte_pos(), new_pos);
-    // Reference should follow target's name (always do target before ref)
-    ASSERT_EQ(snp.ref_file_index(), 1);
-    ASSERT_EQ(snp.ref_byte_pos(), new_ref_pos);
-}
 
 TEST(SNP_MATCHING, FLIPPING_AC)
 {
@@ -625,7 +617,7 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
         required_size = BITCT_TO_WORDCT(num_regions);
         SET_BIT(0, not_found.data());
     }
@@ -902,23 +894,24 @@ TEST(SNP_COUNTS, SET_COUNTS)
 {
     SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
     size_t a, b, c, d;
-    base_snp.get_counts(a, b, c, d, false);
+    bool is_ref = true;
+    base_snp.get_counts(a, b, c, d, !is_ref);
     ASSERT_EQ(a, 0);
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
     ASSERT_EQ(d, 0);
-    base_snp.get_counts(a, b, c, d, true);
+    base_snp.get_counts(a, b, c, d, is_ref);
     ASSERT_EQ(a, 0);
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
     ASSERT_EQ(d, 0);
-    base_snp.set_counts(10, 20, 30, 40);
-    base_snp.get_counts(a, b, c, d, false);
+    base_snp.set_counts(10, 20, 30, 40, !is_ref);
+    base_snp.get_counts(a, b, c, d, !is_ref);
     ASSERT_EQ(a, 10);
     ASSERT_EQ(b, 20);
     ASSERT_EQ(c, 30);
     ASSERT_EQ(d, 40);
-    base_snp.get_counts(a, b, c, d, true);
+    base_snp.get_counts(a, b, c, d, is_ref);
     ASSERT_EQ(a, 0);
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
@@ -928,31 +921,33 @@ TEST(SNP_COUNTS, SET_REF_COUNTS)
 {
     SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
     size_t a, b, c, d;
-    base_snp.get_counts(a, b, c, d, false);
+    bool is_ref = true;
+    bool flipped = true;
+    base_snp.get_counts(a, b, c, d, !is_ref);
     ASSERT_EQ(a, 0);
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
     ASSERT_EQ(d, 0);
-    base_snp.get_counts(a, b, c, d, true);
+    base_snp.get_counts(a, b, c, d, is_ref);
     ASSERT_EQ(a, 0);
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
     ASSERT_EQ(d, 0);
-    base_snp.set_ref_counts(10, 20, 30, 40);
-    base_snp.get_counts(a, b, c, d, true);
+    base_snp.set_counts(10, 20, 30, 40, is_ref);
+    base_snp.get_counts(a, b, c, d, is_ref);
     ASSERT_EQ(a, 10);
     ASSERT_EQ(b, 20);
     ASSERT_EQ(c, 30);
     ASSERT_EQ(d, 40);
-    base_snp.get_counts(a, b, c, d, false);
+    base_snp.get_counts(a, b, c, d, !is_ref);
     ASSERT_EQ(a, 0);
     ASSERT_EQ(b, 0);
     ASSERT_EQ(c, 0);
     ASSERT_EQ(d, 0);
-    base_snp.add_reference(0, 1, true);
-    base_snp.set_ref_counts(10, 20, 30, 40);
+    base_snp.add_snp_info(0, 1, 1, 1, "", "", flipped, is_ref);
+    base_snp.set_counts(10, 20, 30, 40, is_ref);
     // now flipped
-    base_snp.get_counts(a, b, c, d, true);
+    base_snp.get_counts(a, b, c, d, is_ref);
     ASSERT_EQ(a, 30);
     ASSERT_EQ(b, 20);
     ASSERT_EQ(c, 10);

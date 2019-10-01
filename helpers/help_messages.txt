@@ -264,7 +264,7 @@ m_help_message =
        "    --logit-perm            When performing permutation, still use logistic\n"
        "                            regression instead of linear regression. This\n"
        "                            will substantially slow down PRSice\n"
-       "    --memory                Maximum memory usage allowed. PRSice will try\n"
+       "    --memory                Maximum memory usage allowed (in Mb). PRSice will try\n"
        "                            its best to honor this setting\n"
        "    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n"
        "                            to 0 for each new P-value threshold instead of\n"
