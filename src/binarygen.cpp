@@ -917,8 +917,7 @@ void BinaryGen::dosage_score(
 
 void BinaryGen::hard_code_score(
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    const bool use_ref_maf)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
 {
     // we need to calculate the size of possible vectors
     const uintptr_t unfiltered_sample_ctl =
@@ -965,7 +964,7 @@ void BinaryGen::hard_code_score(
         auto&& file_name = m_genotype_file_names[idx];
         if (m_intermediate
             && cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                  use_ref_maf))
+                                  m_prs_calculation.use_ref_maf))
         {
             // Have intermediate file and have the counts
             // read in the genotype information to the genotype vector
@@ -1029,7 +1028,7 @@ void BinaryGen::hard_code_score(
 
 void BinaryGen::read_score(const std::vector<size_t>::const_iterator& start_idx,
                            const std::vector<size_t>::const_iterator& end_idx,
-                           bool reset_zero, const bool use_ref_maf)
+                           bool reset_zero)
 {
     // because I don't want to touch the code in dosage_score, we will reset
     // the sample here reset_sample_prs();
@@ -1037,7 +1036,7 @@ void BinaryGen::read_score(const std::vector<size_t>::const_iterator& start_idx,
     {
         // for hard coded, we need to check if intermediate file is used
         // instead
-        hard_code_score(start_idx, end_idx, reset_zero, use_ref_maf);
+        hard_code_score(start_idx, end_idx, reset_zero);
     }
     else
     {

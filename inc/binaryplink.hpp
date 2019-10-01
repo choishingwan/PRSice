@@ -99,7 +99,7 @@ protected:
     virtual void
     read_score(const std::vector<size_t>::const_iterator& start_idx,
                const std::vector<size_t>::const_iterator& end_idx,
-               bool reset_zero, const bool use_ref_maf);
+               bool reset_zero);
 };
 
 #endif

@@ -20,6 +20,7 @@
 #include "enumerators.h"
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
 // From http://stackoverflow.com/a/12927952/1441789
@@ -77,7 +78,7 @@ struct GenoFile
     std::string file_list;
     std::string keep;
     std::string remove;
-    std::string type;
+    std::string type = "bed";
     int hard_coded = false;
     int is_ref = false;
 };
@@ -90,10 +91,43 @@ struct Phenotype
     std::vector<double> prevalence;
     std::vector<size_t> col_index_of_cov;
     std::vector<size_t> col_index_of_factor_cov;
+    std::vector<size_t> pheno_col_idx;
     std::vector<bool> binary;
+    std::vector<bool> skip_pheno;
     std::string pheno_file;
     std::string cov_file;
     int ignore_fid = false;
+};
+struct FileInfo
+{
+    size_t name_idx = 0;
+    long long byte_pos = 0;
+};
+struct Permutations
+{
+    size_t num_permutation = 0;
+    std::random_device::result_type seed = std::random_device()();
+    bool run_perm = false;
+    bool run_set_perm = false;
+    int logit_perm = false;
+};
+
+struct SNPClump
+{
+    std::vector<uintptr_t> flags;
+    size_t low_bound = ~size_t(0);
+    size_t up_bound = ~size_t(0);
+    size_t max_flag_idx = 0;
+    bool clumped = false;
+};
+
+struct AlleleCounts
+{
+    size_t homcom = 0;
+    size_t het = 0;
+    size_t homrar = 0;
+    size_t missing = 0;
+    bool has_count = false;
 };
 
 struct GeneSets
@@ -104,12 +138,10 @@ struct GeneSets
     std::vector<std::string> feature;
     std::string background;
     std::string gtf;
-    size_t perm;
     unsigned long long wind_3 = 0;
     unsigned long long wind_5 = 0;
     int full_as_background = false;
     bool run = false;
-    bool run_perm = false;
 };
 struct PThresholding
 {
@@ -127,6 +159,7 @@ struct CalculatePRS
     MISSING_SCORE missing_score = MISSING_SCORE::MEAN_IMPUTE;
     SCORING scoring_method = SCORING::AVERAGE;
     MODEL genetic_model = MODEL::ADDITIVE;
+    int thread = 1;
     int no_regress = false;
     int non_cumulate = false;
     int use_ref_maf = false;

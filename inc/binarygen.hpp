@@ -172,10 +172,10 @@ private:
 
     void read_score(const std::vector<size_t>::const_iterator& start_idx,
                     const std::vector<size_t>::const_iterator& end_idx,
-                    bool reset_zero, const bool use_ref_maf);
+                    bool reset_zero);
     void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
-                         bool reset_zero, const bool use_ref_maf);
+                         bool reset_zero);
     void dosage_score(const std::vector<size_t>::const_iterator& start_idx,
                       const std::vector<size_t>::const_iterator& end_idx,
                       bool reset_zero);
@@ -183,9 +183,10 @@ private:
     /*
      * Different structures use for reading in the bgen info
      */
+    // TODO: Use ref MAf for dosage score too
     struct PRS_Interpreter
     {
-        ~PRS_Interpreter() {};
+        ~PRS_Interpreter() {}
         /*!
          * \brief PRS_Interpreter is the structure used by BGEN library to parse
          * the probability data

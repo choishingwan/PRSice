@@ -100,7 +100,6 @@ public:
      */
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
 
-
     /*!
      * \brief Compare the current SNP with another SNP
      * \param chr is the chromosome encoding of the other SNP
@@ -204,11 +203,20 @@ public:
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    void get_file_info(size_t& idx, long long& byte_pos, bool is_ref)
+    void get_file_info(size_t& idx, long long& byte_pos,
+                       bool is_ref = false) const
     {
         auto&& from = is_ref ? m_reference : m_target;
         idx = from.name_idx;
         byte_pos = from.byte_pos;
+    }
+    size_t get_file_idx(bool is_ref = false) const
+    {
+        return is_ref ? m_reference.name_idx : m_target.name_idx;
+    }
+    long long get_byte_pos(bool is_ref = false) const
+    {
+        return is_ref ? m_reference.byte_pos : m_target.byte_pos;
     }
 
     std::string rs() const { return m_rs; }
@@ -348,6 +356,9 @@ public:
                     bool is_ref)
     {
         auto&& target = is_ref ? m_ref_count : m_target_count;
+        if (m_ref_flipped && is_ref) std::swap(homcom, homrar);
+        std::cerr << homcom << "\t" << homrar << "\t" << m_ref_flipped << "\t"
+                  << is_ref << std::endl;
         target.homcom = homcom;
         target.het = het;
         target.homrar = homrar;
@@ -368,9 +379,10 @@ public:
             {
                 uint64_t t = bitset & -bitset;
                 // TODO: Potential bug here. CTZLU seems to only take 32bit on
-                // none-64bit window according to plink
-                size_t r = CTZLU(bitset);
-                out.push_back(k * BITCT + r);
+                // none-64bit window according to plink (NOTE: PLINK also used
+                // this in their score calculation. Maybe ask Chris about it?)
+                int r = CTZLU(bitset);
+                out.push_back(k * BITCT + static_cast<size_t>(r));
                 bitset ^= t;
             }
         }

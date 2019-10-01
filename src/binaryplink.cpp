@@ -35,7 +35,7 @@ BinaryPlink::BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
     if (token.size() > 2)
     { throw std::runtime_error("Error: Undefine user input: " + file_name); }
     if (external_sample) { m_sample_file = token[1]; }
-    if (!use_list)
+    if (use_list)
     {
         m_genotype_file_names = load_genotype_prefix(token[0]);
         message.append("info from file: " + token[0] + " (bed)\n");
@@ -324,7 +324,6 @@ void BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
             continue;
         }
         // if we can reach here, it is not removed
-        if (m_is_ref && snp.is_ref_flipped()) { std::swap(ll_ctf, hh_ctf); }
         snp.set_counts(ll_ctf, lh_ctf, hh_ctf, missing, m_is_ref);
         ++retained;
         // we need to -1 because we put processed_count ++ forward
@@ -409,8 +408,9 @@ void BinaryPlink::gen_snp_vector(
                     + misc::to_string(num_snp_read) + "\n";
                 throw std::runtime_error(error_message);
             }
-            if (genotype->m_existed_snps_index.find(bim_token[+BIM::RS])
-                == genotype->m_existed_snps_index.end())
+            auto&& base_idx =
+                genotype->m_existed_snps_index.find(bim_token[+BIM::RS]);
+            if (base_idx == genotype->m_existed_snps_index.end())
             {
                 ++m_base_missed;
                 continue;
@@ -456,15 +456,14 @@ void BinaryPlink::gen_snp_vector(
             }
             catch (...)
             {
-                std::string error_message =
+                throw std::runtime_error(
                     "Error: Invalid SNP coordinate: " + bim_token[+BIM::RS]
-                    + ":" + bim_token[+BIM::BP] + "\n";
-                error_message.append("Please check you have the correct input");
-                throw std::runtime_error(error_message);
+                    + ":" + bim_token[+BIM::BP]
+                    + "\nPlease check you have the correct input");
             }
             if (Genotype::within_region(exclusion_regions, chr_num, loc))
             {
-                m_num_xrange++;
+                ++m_num_xrange;
                 continue;
             }
 
@@ -493,15 +492,14 @@ void BinaryPlink::gen_snp_vector(
                 // as my current implementation isn't as efficient as PLINK
                 m_num_ambig +=
                     ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
-                auto&& ref_index =
-                    genotype->m_existed_snps_index[bim_token[+BIM::RS]];
-                if (!genotype->m_existed_snps[ref_index].matching(
+
+                if (!genotype->m_existed_snps[base_idx->second].matching(
                         chr_num, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
                         flipping))
                 {
                     genotype->print_mismatch(
                         mismatch_snp_record_name, mismatch_print_type,
-                        genotype->m_existed_snps[ref_index],
+                        genotype->m_existed_snps[base_idx->second],
                         bim_token[+BIM::RS], bim_token[+BIM::A1],
                         bim_token[+BIM::A2], chr_num, loc);
                     ++m_num_ref_target_mismatch;
@@ -511,11 +509,11 @@ void BinaryPlink::gen_snp_vector(
                     byte_pos = static_cast<long long>(
                         bed_offset
                         + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
-                    target->m_existed_snps[ref_index].add_snp_info(
+                    genotype->m_existed_snps[base_idx->second].add_snp_info(
                         idx, byte_pos, chr_num, loc, bim_token[+BIM::A1],
                         bim_token[+BIM::A2], flipping, m_is_ref);
                     processed_snps.insert(bim_token[+BIM::RS]);
-                    retain_snp[ref_index] = true;
+                    retain_snp[base_idx->second] = true;
                     num_retained++;
                 }
             }
@@ -643,8 +641,7 @@ BinaryPlink::~BinaryPlink() {}
 
 void BinaryPlink::read_score(
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    const bool use_ref_maf)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -707,7 +704,7 @@ void BinaryPlink::read_score(
         m_genotype_file.read(file_name, cur_line, unfiltered_sample_ct4,
                              reinterpret_cast<char*>(m_tmp_genotype.data()));
         if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                use_ref_maf))
+                                m_prs_calculation.use_ref_maf))
         {
             // we need to calculate the MA
             // if we want to use reference, we will always have calculated the

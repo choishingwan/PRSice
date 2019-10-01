@@ -278,7 +278,7 @@ public:
      * \param i is the sample index
      * \return the PRS
      */
-    inline double calculate_score(SCORING score_type, size_t i) const
+    inline double calculate_score(size_t i) const
     {
         if (i >= m_prs_info.size())
             throw std::out_of_range("Sample name vector out of range");
@@ -291,10 +291,11 @@ public:
             avg = prs / static_cast<double>(num_snp);
         }
 
-        switch (score_type)
+        switch (m_prs_calculation.scoring_method)
         {
         case SCORING::SUM: return m_prs_info[i].prs;
-        case SCORING::STANDARDIZE: return (avg - m_mean_score) / m_score_sd;
+        case SCORING::STANDARDIZE:
+        case SCORING::CONTROL_STD: return (avg - m_mean_score) / m_score_sd;
         default:
             // default is avg
             return avg;
@@ -313,8 +314,7 @@ public:
      */
     void get_null_score(const size_t& set_size, const size_t& prev_size,
                         std::vector<size_t>& background_list,
-                        const bool first_run, const bool require_standardize,
-                        const bool use_ref_maf);
+                        const bool first_run);
     /*!
      * \brief return the largest chromosome allowed
      * \return  the largest chromosome
@@ -350,8 +350,7 @@ public:
     bool get_score(std::vector<size_t>::const_iterator& start_index,
                    const std::vector<size_t>::const_iterator& end_index,
                    double& cur_threshold, uint32_t& num_snp_included,
-                   const bool non_cumulate, const bool require_statistic,
-                   const bool first_run, const bool use_ref_maf);
+                   const bool first_run);
     static bool within_region(const std::vector<IITree<size_t, size_t>>& cr,
                               const size_t chr, const size_t loc)
     {
@@ -542,7 +541,7 @@ protected:
     Reporter* m_reporter;
     CalculatePRS m_prs_calculation;
 
-
+    void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const std::string& rs,
                         const std::string& a1, const std::string& a2,
@@ -782,16 +781,17 @@ protected:
     virtual void
     read_score(const std::vector<size_t>::const_iterator& /*start*/,
                const std::vector<size_t>::const_iterator& /*end*/,
-               bool /*reset_zero*/, const bool /*use_ref_maf*/)
+               bool /*reset_zero*/)
     {
     }
-
+    void standardize_prs();
     // for loading the sample inclusion / exclusion set
     /*!
      * \brief Function to load in the sample extraction exclusion list
      * \param input the file name
-     * \param ignore_fid whether we should ignore the FID (use 2 column or 1)
-     * \return an unordered_set use for checking if the sample is in the file
+     * \param ignore_fid whether we should ignore the FID (use 2 column or
+     * 1) \return an unordered_set use for checking if the sample is in the
+     * file
      */
     std::unordered_set<std::string> load_ref(const std::string& input,
                                              bool ignore_fid);

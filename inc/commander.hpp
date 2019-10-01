@@ -61,6 +61,7 @@ public:
     const GeneSets& get_set() const { return m_prset; }
     const GenoFile& get_target() const { return m_target; }
     const GenoFile& get_reference() const { return m_reference; }
+    const Permutations& get_perm() const { return m_perm_info; }
     const Phenotype& get_pheno() const { return m_pheno_info; }
     const PThresholding& get_p_threshold() const { return m_p_thresholds; }
     const QCFiltering& get_base_qc() const { return m_base_filter; }
@@ -98,33 +99,13 @@ public:
      * \return True for non-cumulative PRS calculation
      */
 
-    bool logit_perm() const { return m_logit_perm; }
     /*!
      * \brief Return if we should generate the .snp file
      * \return true if we should
      */
     bool print_snp() const { return m_print_snp; }
 
-    /*!
-     * \brief Get the number of permutation to be performed
-     * \param perm stores the number of permutation to be performed
-     * \return true if we want to perform permutation
-     */
-    bool num_perm(size_t& perm) const
-    {
-        perm = m_permutation;
-        return m_perform_permutation;
-    }
-    /*!
-     * \brief Return the seed used for the run
-     * \return the seed
-     */
-    std::random_device::result_type seed() const { return m_seed; }
-    /*!
-     * \brief Return the number of thread to be used
-     * \return the number of thread
-     */
-    size_t thread() const { return static_cast<size_t>(m_thread); }
+
     /*!
      * \brief Return the maximum memory allowed to use
      * \param detected should be the available memory
@@ -175,20 +156,14 @@ private:
     std::string m_help_message;
     // TODO: might consider using 1e-8 instead
     unsigned long long m_memory = 1e10;
-    size_t m_permutation = 0;
-    std::random_device::result_type m_seed = std::random_device()();
-    int m_thread = 1;
     int m_allow_inter = false;
     int m_enable_mmap = false;
     int m_include_nonfounders = false;
     int m_keep_ambig = false;
-    int m_logit_perm = false;
     int m_print_all_scores = false;
     int m_print_snp = false;
     int m_user_no_default = false;
-    bool m_provided_seed = false;
     bool m_provided_memory = false;
-    bool m_perform_permutation = false;
     bool m_set_delim = false;
 
     BaseFile m_base_info;
@@ -197,6 +172,7 @@ private:
     GeneSets m_prset;
     GenoFile m_target;
     GenoFile m_reference;
+    Permutations m_perm_info;
     QCFiltering m_target_filter;
     QCFiltering m_ref_filter;
     QCFiltering m_base_filter;
@@ -404,7 +380,7 @@ private:
         if (input.empty()) return false;
         std::string comma = "";
         if (m_parameter_log.find(c) != m_parameter_log.end()) { comma = ","; }
-        m_parameter_log[c].append(comma, c);
+        m_parameter_log[c].append(comma + c);
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
@@ -592,7 +568,7 @@ private:
                             Type& target)
     {
         bool dumy;
-        set_numeric<Type>(input, c, target, dumy);
+        return set_numeric<Type>(input, c, target, dumy);
     }
 
     inline void load_string_vector(const std::string& input,
@@ -621,6 +597,7 @@ private:
     {
         bool error = false;
         m_memory = set_distance(input, "memory", 1024 * 1024, error, true);
+        return !error;
     }
 
     inline bool set_missing(const std::string& in)
@@ -632,19 +609,19 @@ private:
         {
         case 'C':
             input = "centre";
-            m_missing_score = MISSING_SCORE::CENTER;
+            m_prs_info.missing_score = MISSING_SCORE::CENTER;
             break;
         case 'M':
             input = "mean_impute";
-            m_missing_score = MISSING_SCORE::MEAN_IMPUTE;
+            m_prs_info.missing_score = MISSING_SCORE::MEAN_IMPUTE;
             break;
         case 'S':
             input = "set_zero";
-            m_missing_score = MISSING_SCORE::SET_ZERO;
+            m_prs_info.missing_score = MISSING_SCORE::SET_ZERO;
             break;
         case 'I':
             input = "impute_control";
-            m_missing_score = MISSING_SCORE::IMPUTE_CONTROL;
+            m_prs_info.missing_score = MISSING_SCORE::IMPUTE_CONTROL;
             break;
         default:
             m_error_message.append(
@@ -665,19 +642,19 @@ private:
         {
         case 'A':
             input = "add";
-            m_genetic_model = MODEL::ADDITIVE;
+            m_prs_info.genetic_model = MODEL::ADDITIVE;
             break;
         case 'D':
             input = "dom";
-            m_genetic_model = MODEL::DOMINANT;
+            m_prs_info.genetic_model = MODEL::DOMINANT;
             break;
         case 'R':
             input = "rec";
-            m_genetic_model = MODEL::RECESSIVE;
+            m_prs_info.genetic_model = MODEL::RECESSIVE;
             break;
         case 'H':
             input = "het";
-            m_genetic_model = MODEL::HETEROZYGOUS;
+            m_prs_info.genetic_model = MODEL::HETEROZYGOUS;
             break;
         default:
             m_error_message.append("Error: Unrecognized model: " + input
@@ -709,22 +686,22 @@ private:
         if (input == "AVG")
         {
             input = "avg";
-            m_scoring_method = SCORING::AVERAGE;
+            m_prs_info.scoring_method = SCORING::AVERAGE;
         }
         else if (input == "STD")
         {
             input = "std";
-            m_scoring_method = SCORING::STANDARDIZE;
+            m_prs_info.scoring_method = SCORING::STANDARDIZE;
         }
         else if (input == "SUM")
         {
             input = "sum";
-            m_scoring_method = SCORING::SUM;
+            m_prs_info.scoring_method = SCORING::SUM;
         }
         else if (input == "CON_STD")
         {
             input = "con_std";
-            m_scoring_method = SCORING::CONTROL_STD;
+            m_prs_info.scoring_method = SCORING::CONTROL_STD;
         }
         else
         {

@@ -62,7 +62,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ignore-fid", no_argument, &m_pheno_info.ignore_fid, 1},
         {"index", no_argument, &m_base_info.is_index, 1},
         {"keep-ambig", no_argument, &m_keep_ambig, 1},
-        {"logit-perm", no_argument, &m_logit_perm, 1},
+        {"logit-perm", no_argument, &m_perm_info.logit_perm, 1},
         {"no-clump", no_argument, &m_clump_info.no_clump, 1},
         {"non-cumulate", no_argument, &m_prs_info.non_cumulate, 1},
         {"no-default", no_argument, &m_user_no_default, 1},
@@ -242,8 +242,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             }
             else if (command == "perm")
             {
-                error |= !set_numeric<size_t>(optarg, command, m_permutation);
-                m_perform_permutation = true;
+                error |= !set_numeric<size_t>(optarg, command,
+                                              m_perm_info.num_permutation);
+                m_perm_info.run_perm = true;
             }
             else if (command == "proxy")
                 error |=
@@ -255,8 +256,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 error |= !set_score(optarg);
             else if (command == "set-perm")
             {
-                error |= !set_numeric<size_t>(optarg, command, m_prset.perm);
-                m_prset.run_perm = true;
+                error |= !set_numeric<size_t>(optarg, command,
+                                              m_perm_info.num_permutation);
+                m_perm_info.run_set_perm = true;
             }
             else if (command == "snp")
                 set_string(optarg, command, +BASE_INDEX::RS);
@@ -279,12 +281,12 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, command, m_exclusion_range);
             else
             {
-                std::string er = "Error: Undefined operator: " + command
-                                 + ", please use --help for more information!";
-                throw std::runtime_error(er);
+                throw std::runtime_error(
+                    "Error: Undefined operator: " + command
+                    + ", please use --help for more information!");
             }
             break;
-        case 'b': set_string(optarg, command, m_base_info.file_name); break;
+        case 'b': set_string(optarg, "base", m_base_info.file_name); break;
         case 'B':
             load_string_vector(optarg, "bed", m_prset.bed);
             m_prset.run = true;
@@ -319,21 +321,22 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         case 'n':
             if (strcmp("max", optarg) == 0)
             {
-                m_thread = max_threads;
-                m_parameter_log["thread"] = std::to_string(m_thread);
+                m_prs_info.thread = max_threads;
+                m_parameter_log["thread"] = std::to_string(m_prs_info.thread);
             }
             else
             {
-                error |= !set_numeric<int>(optarg, "thread", m_thread);
-                if (m_thread > max_threads) { m_thread = max_threads; }
-                m_parameter_log["thread"] = std::to_string(m_thread);
+                error |= !set_numeric<int>(optarg, "thread", m_prs_info.thread);
+                if (m_prs_info.thread > max_threads)
+                { m_prs_info.thread = max_threads; }
+                m_parameter_log["thread"] = std::to_string(m_prs_info.thread);
             }
             break;
         case 'o': set_string(optarg, "out", m_out_prefix); break;
         case 'p': set_string(optarg, "pvalue", +BASE_INDEX::P); break;
         case 's':
             error |= !set_numeric<std::random_device::result_type>(
-                optarg, "seed", m_seed, m_provided_seed);
+                optarg, "seed", m_perm_info.seed);
             break;
         case 't': set_string(optarg, "target", m_target.file_name); break;
         case 'u':
@@ -361,7 +364,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     error |= !prset_check();
     error |= !prsice_check();
     error |= !target_check();
-
     // check all flags
     std::string log_name = m_out_prefix + ".log";
     reporter.initiailize(log_name);
@@ -373,7 +375,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
     if (m_base_info.is_index) m_parameter_log["index"] = "";
     if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
-    if (m_logit_perm) m_parameter_log["logit-perm"] = "";
+    if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
     if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
     if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
     if (m_prs_info.no_regress) m_parameter_log["no-regress"] = "";
@@ -1055,7 +1057,7 @@ bool Commander::base_check()
                            m_user_no_default, true, m_user_no_default);
     // if allow default
     if (!m_user_no_default && !has_col)
-    { error |= get_statistic_column(column_names); }
+    { error |= !get_statistic_column(column_names); }
     // Statistic is ok, but beta and or not provided
     if (m_base_info.has_column[+BASE_INDEX::STAT])
     {
@@ -1250,7 +1252,6 @@ Commander::transform_covariate(const std::string& cov_in)
                 range = misc::split(ind, "-");
                 if (range.size() != 2)
                 {
-                    std::cerr << "Invalid range" << std::endl;
                     throw std::runtime_error(
                         "Error: Invalid range format, range "
                         "must be in the form of start-end");
@@ -1336,7 +1337,7 @@ bool Commander::covariate_check()
             "Error: First line of covariate file is empty!\n");
         return false;
     }
-    std::vector<std::string> cov_header = misc::split(line);
+    const std::vector<std::string> cov_header = misc::split(line);
     std::string missing = "";
     std::unordered_map<std::string, size_t> ref_index;
     // now get the index for each column name in the covariate file
@@ -1476,14 +1477,15 @@ bool Commander::filter_check()
 bool Commander::misc_check()
 {
     bool error = false;
-    if (!m_provided_seed) { m_parameter_log["seed"] = misc::to_string(m_seed); }
-    if (m_thread <= 0)
+    m_parameter_log["seed"] = misc::to_string(m_perm_info.seed);
+    if (m_prs_info.thread <= 0)
     {
         error = true;
         m_error_message.append(
             "Error: Number of thread must be larger than 1\n");
     }
-    if (!m_perform_permutation && m_logit_perm)
+    if (!m_perm_info.run_perm && !m_perm_info.run_set_perm
+        && m_perm_info.logit_perm)
     {
         m_error_message.append("Warning: Permutation not required, "
                                "--logit-perm has no effect\n");
@@ -1493,7 +1495,7 @@ bool Commander::misc_check()
     if (m_prs_info.no_regress) m_print_all_scores = true;
     // Just in case thread wasn't provided, we will print the default number
     // of thread used
-    if (m_thread == 1) m_parameter_log["thread"] = "1";
+    if (m_prs_info.thread == 1) m_parameter_log["thread"] = "1";
     m_parameter_log["out"] = m_out_prefix;
     bool use_reference =
         !(m_reference.file_list.empty() && m_reference.file_name.empty());
@@ -1541,7 +1543,7 @@ bool Commander::prset_check()
         m_prset.feature.push_back("CDS");
         m_parameter_log["feature"] = "exon,gene,protein_coding,CDS";
     }
-    if (m_perform_permutation && m_prset.run_perm)
+    if (m_perm_info.run_perm && m_perm_info.run_set_perm)
     {
         error = true;
         m_error_message.append(
@@ -1549,7 +1551,8 @@ bool Commander::prset_check()
             "permutation (for competitive p-value) or PRSice "
             "base permutation (--perm)");
     }
-    if (m_prset.gtf.empty() && m_prset.background.empty() && m_prset.run_perm)
+    if (m_prset.gtf.empty() && m_prset.background.empty()
+        && m_perm_info.run_set_perm)
     {
         // by default, if background is not provided, we will use the gtf as
         // the background, otherwise, we will use the whole genome as the

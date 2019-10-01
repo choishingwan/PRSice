@@ -563,6 +563,8 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {
     // this initialize haploid mask as the maximum possible number
+    m_xymt_codes.resize(XYMT_OFFSET_CT);
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     if (num_auto < 0)
     {
         num_auto = -num_auto;
@@ -1361,48 +1363,48 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
 }
 
 
-bool Genotype::prepare_prsice(const PThresholding& m_p_info)
-{
-    if (m_existed_snps.size() == 0) return false;
-    if (m_very_small_thresholds)
-    {
-        // need to loop through the SNPs to check
-        std::sort(begin(m_existed_snps), end(m_existed_snps),
-                  [](SNP const& t1, SNP const& t2) {
-                      if (misc::logically_equal(t1.p_value(), t2.p_value()))
+void Genotype::recalculate_categories(const PThresholding& p_info)
+{ // need to loop through the SNPs to check
+    std::sort(begin(m_existed_snps), end(m_existed_snps),
+              [](SNP const& t1, SNP const& t2) {
+                  if (misc::logically_equal(t1.p_value(), t2.p_value()))
+                  {
+                      if (t1.chr() == t2.chr())
                       {
-                          if (t1.chr() == t2.chr())
-                          {
-                              if (t1.loc() == t2.loc())
-                              { return t1.rs() < t2.rs(); }
-                              else
-                                  return t1.loc() < t2.loc();
-                          }
+                          if (t1.loc() == t2.loc())
+                          { return t1.rs() < t2.rs(); }
                           else
-                              return t1.chr() < t2.chr();
+                              return t1.loc() < t2.loc();
                       }
                       else
-                          return t1.p_value() < t2.p_value();
-                  });
-        unsigned long long cur_category = 0;
-        double prev_p = m_p_info.lower;
-        bool has_warned = false, cur_warn;
-        for (auto&& snp : m_existed_snps)
+                          return t1.chr() < t2.chr();
+                  }
+                  else
+                      return t1.p_value() < t2.p_value();
+              });
+    unsigned long long cur_category = 0;
+    double prev_p = p_info.lower;
+    bool has_warned = false, cur_warn;
+    for (auto&& snp : m_existed_snps)
+    {
+        snp.set_category(cur_category, prev_p, p_info.upper, p_info.inter,
+                         cur_warn);
+        if (cur_warn && !has_warned)
         {
-            snp.set_category(cur_category, prev_p, m_p_info.upper,
-                             m_p_info.inter, cur_warn);
-            if (cur_warn && !has_warned)
-            {
-                has_warned = true;
-                m_reporter->report(
-                    "Warning: P-value threshold steps are too small. While we "
-                    "can still try and generate appropriate thresholds, it is "
-                    "likely to suffer from numeric instability, i.e. the "
-                    "number representing the p-value threshold of the current "
-                    "SNP will only have precision up to 15 digits");
-            }
+            has_warned = true;
+            m_reporter->report(
+                "Warning: P-value threshold steps are too small. While we "
+                "can still try and generate appropriate thresholds, it is "
+                "likely to suffer from numeric instability, i.e. the "
+                "number representing the p-value threshold of the current "
+                "SNP will only have precision up to 15 digits");
         }
     }
+}
+bool Genotype::prepare_prsice(const PThresholding& p_info)
+{
+    if (m_existed_snps.size() == 0) return false;
+    if (m_very_small_thresholds) { recalculate_categories(p_info); }
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {
                   if (t1.category() == t2.category())
@@ -1417,6 +1419,8 @@ bool Genotype::prepare_prsice(const PThresholding& m_p_info)
               });
     return true;
 }
+
+// TODO: This function is likely to have bug
 void Genotype::build_membership_matrix(
     std::vector<size_t>& region_membership,
     std::vector<size_t>& region_start_idx, const size_t num_sets,
@@ -1553,12 +1557,30 @@ void Genotype::build_membership_matrix(
         { m_set_thresholds.front().insert(thres); }
     }
 }
+void Genotype::standardize_prs()
+{
+    misc::RunningStat rs;
+    size_t num_prs = m_prs_info.size();
+    for (size_t i = 0; i < num_prs; ++i)
+    {
+        if (!IS_SET(m_sample_include, i)
+            || (m_prs_calculation.scoring_method == SCORING::CONTROL_STD
+                && m_sample_id[i].pheno != "0"))
+            continue;
+        if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
+        else
+        {
+            rs.push(m_prs_info[i].prs
+                    / static_cast<double>(m_prs_info[i].num_snp));
+        }
+    }
+    m_mean_score = rs.mean();
+    m_score_sd = rs.sd();
+}
 
 void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
                               std::vector<size_t>& background_list,
-                              const bool first_run,
-                              const bool require_statistic,
-                              const bool use_ref_maf)
+                              const bool first_run)
 {
 
     if (m_existed_snps.empty() || set_size >= m_existed_snps.size()) return;
@@ -1571,38 +1593,23 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
     std::vector<size_t>::iterator select_end = background_list.begin();
     std::advance(select_end, static_cast<long>(set_size));
     std::sort(select_start, select_end);
-    read_score(select_start, select_end, first_run, use_ref_maf);
-    if (require_statistic)
-    {
-        misc::RunningStat rs;
-        size_t num_prs = m_prs_info.size();
-        for (size_t i = 0; i < num_prs; ++i)
-        {
-            if (!IS_SET(m_sample_include, i)) continue;
-            if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
-            else
-            {
-                rs.push(m_prs_info[i].prs
-                        / static_cast<double>(m_prs_info[i].num_snp));
-            }
-        }
-        m_mean_score = rs.mean();
-        m_score_sd = rs.sd();
-    }
+    read_score(select_start, select_end, first_run);
+    if (m_prs_calculation.scoring_method == SCORING::STANDARDIZE
+        || m_prs_calculation.scoring_method == SCORING::CONTROL_STD)
+    { standardize_prs(); }
 }
 
 bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const std::vector<size_t>::const_iterator& end_index,
                          double& cur_threshold, uint32_t& num_snp_included,
-                         const bool non_cumulate, const bool require_statistic,
-                         const bool first_run, const bool use_ref_maf)
+                         const bool first_run)
 {
     // if there are no SNPs or we are at the end
     if (m_existed_snps.size() == 0 || start_index == end_index
         || (*start_index) == m_existed_snps.size())
         return false;
     // reset number of SNPs if we don't need cumulative PRS
-    if (non_cumulate) num_snp_included = 0;
+    if (m_prs_calculation.non_cumulate) num_snp_included = 0;
     unsigned long long cur_category = m_existed_snps[(*start_index)].category();
     cur_threshold = m_existed_snps[(*start_index)].get_threshold();
     std::vector<size_t>::const_iterator region_end = start_index;
@@ -1613,30 +1620,16 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
             cur_category = m_existed_snps[(*region_end)].category();
             break;
         }
-        num_snp_included++;
+        ++num_snp_included;
     }
-    read_score(start_index, region_end, (non_cumulate || first_run),
-               use_ref_maf);
+    read_score(start_index, region_end,
+               (m_prs_calculation.non_cumulate || first_run));
     // update the current index
     start_index = region_end;
     // if ((*start_index) == 0) return -1;
-    if (require_statistic)
-    {
-        misc::RunningStat rs;
-        size_t num_prs = m_prs_info.size();
-        for (size_t i = 0; i < num_prs; ++i)
-        {
-            if (!IS_SET(m_sample_include, i)) continue;
-            if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
-            else
-            {
-                rs.push(m_prs_info[i].prs
-                        / static_cast<double>(m_prs_info[i].num_snp));
-            }
-        }
-        m_mean_score = rs.mean();
-        m_score_sd = rs.sd();
-    }
+    if (m_prs_calculation.scoring_method == SCORING::STANDARDIZE
+        || m_prs_calculation.scoring_method == SCORING::CONTROL_STD)
+    { standardize_prs(); }
     return true;
 }
 

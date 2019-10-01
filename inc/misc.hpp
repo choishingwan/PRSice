@@ -1089,7 +1089,7 @@ inline size_t string_to_size_t(const char* p)
     return x;
 }
 // from https://stackoverflow.com/a/874160
-bool hasEnding(const std::string& fullString, const std::string& ending)
+inline bool hasEnding(const std::string& fullString, const std::string& ending)
 {
     if (fullString.length() >= ending.length())
     {
