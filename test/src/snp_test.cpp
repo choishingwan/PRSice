@@ -613,11 +613,12 @@ protected:
         std::string background = "";
         std::vector<std::string> region_names;
         std::vector<std::string> bed_names = {}, snp_set, msigdb = {gmt_name};
-        std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
         num_regions = region.generate_regions(22);
+        snp_in_sets = region.get_snp_sets();
+        gene_sets = region.get_gene_sets();
         required_size = BITCT_TO_WORDCT(num_regions);
         SET_BIT(0, not_found.data());
     }
