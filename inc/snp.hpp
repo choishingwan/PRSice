@@ -87,6 +87,10 @@ public:
             m_ref = ref;
             m_alt = alt;
         }
+        else
+        {
+            m_ref_flipped = flipping;
+        }
         m_reference.name_idx = idx;
         m_reference.byte_pos = byte_pos;
     }
@@ -357,8 +361,6 @@ public:
     {
         auto&& target = is_ref ? m_ref_count : m_target_count;
         if (m_ref_flipped && is_ref) std::swap(homcom, homrar);
-        std::cerr << homcom << "\t" << homrar << "\t" << m_ref_flipped << "\t"
-                  << is_ref << std::endl;
         target.homcom = homcom;
         target.het = het;
         target.homrar = homrar;
