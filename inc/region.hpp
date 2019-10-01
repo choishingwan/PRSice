@@ -155,7 +155,6 @@ protected:
         const size_t max_chr);
     bool duplicated_set(const std::string& set_name)
     {
-        m_processed_sets.insert(set_name);
         if (m_processed_sets.find(set_name) != m_processed_sets.end())
         {
             m_reporter->report("Warning: Set name of " + set_name
@@ -163,6 +162,7 @@ protected:
             return true;
         }
         m_processed_sets.insert(set_name);
+        m_region_name.push_back(set_name);
         return false;
     }
     bool load_bed_regions(const std::string& bed_file, const size_t set_idx,

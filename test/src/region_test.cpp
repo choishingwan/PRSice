@@ -974,7 +974,7 @@ TEST_F(REGION_MALFORM_BED_MASTER, NOT_ENOUGH_COLUMN_SET)
     try
     {
         std::cerr << "Start generating region" << std::endl;
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         std::cerr << "failed" << std::endl;
         FAIL();
     }
@@ -1030,7 +1030,7 @@ TEST_F(REGION_MALFORM_BED_MASTER, INCONSISTEN_COLUMN_STRAND_SET)
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1076,12 +1076,10 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_FORMAT)
 TEST_F(REGION_MALFORM_BED_MASTER, NOT_FOUND_SET)
 {
     std::remove(bed_name.c_str());
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         // we want to penalize any form of malformed input
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1113,7 +1111,7 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_SET)
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1135,11 +1133,9 @@ TEST_F(REGION_MALFORM_BED_MASTER, UNSUPPORTED_STRAND_SET)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1292,11 +1288,9 @@ TEST_F(REGION_MALFORM_BED_MASTER, NEGATIVE_COORDINATE_SET)
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
 
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1317,12 +1311,9 @@ TEST_F(REGION_MALFORM_BED_MASTER, INVALID_COORDINATE_SET)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1345,11 +1336,9 @@ TEST_F(REGION_MALFORM_BED_MASTER, NEGATIVE_END_COORDINATE_SET)
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
 
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1371,11 +1360,9 @@ TEST_F(REGION_MALFORM_BED_MASTER, INVALID_END_COORDINATE_SET)
              << "3 3209 ABC . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1396,11 +1383,9 @@ TEST_F(REGION_MALFORM_BED_MASTER, SMALLER_END_SET)
              << "3 3209 123141 . . .\n"
              << "21 43440 123141 . . +\n"; // overlap
     bed_file.close();
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1459,11 +1444,9 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::vector<std::string> bed;
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf, window_5,
                        window_3, genome_wide_background, &reporter);
-    size_t num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+    size_t num_regions = region.generate_regions(22);
     region_names = region.get_names();
     ASSERT_STREQ(region_names[0].c_str(), "Base");
     ASSERT_STREQ(region_names[1].c_str(), "Background");
@@ -1479,8 +1462,9 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     // this is a SNP found in the bed file, but as we have not generated the
     // region (we haven't use the bed file), this will always be considered
     // as not found
-    Genotype::construct_flag("", gene_sets, snp_in_sets, index, required_size,
-                             5, 50533 + 1, genome_wide_background);
+    Genotype::construct_flag("", region.get_gene_sets(), region.get_snp_sets(),
+                             index, required_size, 5, 50533 + 1,
+                             genome_wide_background);
     ASSERT_EQ(index, not_found);
 }
 
@@ -1510,14 +1494,12 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_TRACE)
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -1552,15 +1534,12 @@ TEST(REGION_STD_BED_INPUT, DUPLICATED_SET_NAME)
     std::vector<std::string> bed = {std::string(bed_name + ":Base")};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        size_t num_regions =
-            region.generate_regions(gene_sets, snp_in_sets, 22);
+        size_t num_regions = region.generate_regions(22);
         // only base and background, skip the set as it is named as Base
         ASSERT_EQ(num_regions, 2);
     }
@@ -1595,14 +1574,12 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -1626,7 +1603,6 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_BROWSER)
              << "2 19182 32729 . . .\n";
     bed_file.close();
     std::vector<IITree<size_t, size_t>> exclusion_region;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1652,7 +1628,6 @@ TEST(REGION_STD_BED_INPUT, EXCLUSION_WITH_HEADER_TRACK)
              << "2 19182 32729 . . .\n";
     bed_file.close();
     std::vector<IITree<size_t, size_t>> exclusion_region;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         Region::generate_exclusion(exclusion_region, bed_name);
@@ -1713,8 +1688,6 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
     Reporter reporter(std::string(path + "LOG"));
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
         // malformed anything are considered as fatal
@@ -1722,7 +1695,7 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -1794,7 +1767,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
@@ -1918,7 +1893,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
@@ -2041,7 +2018,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
@@ -2139,7 +2118,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background, gtf,
                            window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         SET_BIT(0, not_found.data());
         SET_BIT(0, found.data());
@@ -2211,7 +2192,7 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
                        window_5, window_3, genome_wide_background, &reporter);
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     std::vector<IITree<size_t, size_t>> gene_sets;
-    size_t num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+    size_t num_regions = region.generate_regions(22);
     std::vector<std::string> region_names = region.get_names();
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
@@ -2255,7 +2236,7 @@ TEST(REGION_MULTI_BED, CHECK_NAME2)
                        window_5, window_3, genome_wide_background, &reporter);
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     std::vector<IITree<size_t, size_t>> gene_sets;
-    size_t num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+    size_t num_regions = region.generate_regions(22);
     std::vector<std::string> region_names = region.get_names();
     ASSERT_EQ(num_regions, 4);
     ASSERT_STREQ(region_names[0].c_str(), "Base");
@@ -2302,11 +2283,9 @@ protected:
 TEST_F(REGION_GTF, NOT_EXIST)
 {
     remove(gtf_name.c_str());
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
     }
     catch (...)
     {
@@ -2320,11 +2299,9 @@ TEST_F(REGION_GTF, EMPTY)
     std::ofstream gtf;
     gtf.open(gtf_name.c_str());
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2353,11 +2330,9 @@ TEST_F(REGION_GTF, ALL_REGION_REMOVE)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2379,11 +2354,9 @@ TEST_F(REGION_GTF, MALFORMAT_SPACE)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2412,11 +2385,9 @@ TEST_F(REGION_GTF, NEGATIVE_START_COORDINATE)
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
 
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2445,11 +2416,9 @@ TEST_F(REGION_GTF, NEGATIVE_END_COORDINATE)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2478,11 +2447,9 @@ TEST_F(REGION_GTF, SINGLE_FEATURE_REMOVE)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -2511,11 +2478,9 @@ TEST_F(REGION_GTF, SINGLE_CHR_REMOVE)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -2571,11 +2536,9 @@ TEST_F(REGION_GTF, MULTI_CHR_REMOVE)
 
 
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -2602,11 +2565,9 @@ TEST_F(REGION_GTF, NO_GENE_ID)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2635,11 +2596,9 @@ TEST_F(REGION_GTF, NO_BOTH_ID)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2668,11 +2627,9 @@ TEST_F(REGION_GTF, BIGGER_START)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::vector<IITree<size_t, size_t>> gene_sets;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2700,11 +2657,9 @@ TEST_F(REGION_GTF, UNDEFINED_STRAND)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2732,11 +2687,9 @@ TEST_F(REGION_GTF, TAB_ATTRIBUTE)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2763,11 +2716,9 @@ TEST_F(REGION_GTF, NO_GENE_ID_2)
            "havana_gene "
            "\"OTTHUMG00000000961\"; havana_gene_version \"2\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -2876,7 +2827,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         SET_BIT(0, not_found.data());
         // because we use genome_wide_background, which should have same bit
         // set as base
@@ -2995,7 +2948,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         SET_BIT(0, not_found.data());
         // because we use genome_wide_background, which should have same bit
         // set as base
@@ -3193,7 +3148,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         SET_BIT(0, not_found.data());
         // because we use genome_wide_background, which should have same bit
         // set as base
@@ -3363,7 +3320,9 @@ protected:
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         SET_BIT(0, not_found.data());
         // because we use genome_wide_background, which should have same bit
         // set as base
@@ -3517,11 +3476,9 @@ TEST_F(REGION_MSIGDB, NAME_CROSS_CHR)
            "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
            "\"basic\"; transcript_support_level \"1\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -3579,11 +3536,9 @@ TEST_F(REGION_MSIGDB, ID_CROSS_CHR)
            "protein_id \"ENSP00000261833\"; protein_version \"7\"; tag "
            "\"basic\"; transcript_support_level \"1\";\n";
     gtf.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         SUCCEED();
     }
     catch (...)
@@ -3594,11 +3549,9 @@ TEST_F(REGION_MSIGDB, ID_CROSS_CHR)
 TEST_F(REGION_MSIGDB, NO_GTF)
 {
     std::remove(gtf_name.c_str());
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -3659,13 +3612,10 @@ TEST_F(REGION_MSIGDB, DUP_SET_NAME)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET1 CIT" << std::endl;
     gmt.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
         // it is ok to have duplicate, but the second set will be ignored
-        size_t num_regions =
-            region->generate_regions(gene_sets, snp_in_sets, 22);
+        size_t num_regions = region->generate_regions(22);
         // base, background and one unique set
         ASSERT_EQ(num_regions, 3);
     }
@@ -3730,11 +3680,9 @@ TEST_F(REGION_MSIGDB, INVALID_MSIG_FORMAT)
     gmt << "SET2" << std::endl;
     gmt << "SET3 ENSG00000122966" << std::endl;
     gmt.close();
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     try
     {
-        region->generate_regions(gene_sets, snp_in_sets, 22);
+        region->generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -3783,7 +3731,6 @@ TEST(REGION_MSIGDB_SPECIAL, CHR_OVER)
     std::vector<std::string> snp_set;
     std::string background = "";
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<std::string> bed_names = {};
     try
@@ -3791,7 +3738,8 @@ TEST(REGION_MSIGDB_SPECIAL, CHR_OVER)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
         // now check if we can ge the correct structure
         // should be empty, because we have no valid set region
         // the size will be 2, because chr1 will be translate to 1 and we
@@ -3815,7 +3763,8 @@ TEST(REGION_MSIGDB_SPECIAL, CHR_OVER)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
         // now check if we can ge the correct structure
         // should be empty, because we have no valid set region
         ASSERT_TRUE(gene_sets.empty());
@@ -3891,8 +3840,6 @@ TEST(REGION_MSIGDB_SPECIAL, WRONG_MSIG_NAME)
     std::vector<std::string> snp_set;
     std::string background = "";
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<std::string> bed_names = {};
     std::remove("404.gmt");
     try
@@ -3900,7 +3847,7 @@ TEST(REGION_MSIGDB_SPECIAL, WRONG_MSIG_NAME)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -3924,8 +3871,6 @@ TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
     std::vector<std::string> region_names;
     std::vector<std::string> msigdb;
     std::vector<std::string> bed_names = {};
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     snp_set_name.append(":Name:Wrong");
     std::vector<std::string> snp_sets = {snp_set_name};
     std::string gtf_name = "", background = "";
@@ -3934,7 +3879,7 @@ TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -3955,8 +3900,6 @@ TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
     size_t window_3 = 0;
     bool genome_wide_background = false;
     std::vector<std::string> region_names;
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     std::vector<std::string> msigdb;
     std::vector<std::string> snp_sets = {snp_set_name};
     std::string gtf_name = "", background = "";
@@ -3965,7 +3908,7 @@ TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -3990,8 +3933,6 @@ TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
     std::vector<std::string> region_names;
     std::vector<std::string> msigdb;
     std::vector<std::string> snp_sets = {snp_set_name};
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     std::string gtf_name = "", gmt_name = "", background = "";
     size_t num_regions;
     try
@@ -3999,7 +3940,7 @@ TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
         ASSERT_EQ(num_regions, 2);
     }
     catch (const std::runtime_error&)
@@ -4033,7 +3974,9 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         // we should have the 3 sets, the base, the SNP_SET and the background
         ASSERT_EQ(num_regions, 3);
@@ -4053,7 +3996,9 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         std::cerr << "Test" << std::endl;
         ASSERT_EQ(num_regions, 3);
@@ -4071,19 +4016,24 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
         SET_BIT(2, found.data());
         SET_BIT(0, not_found.data());
         Genotype::construct_flag("SNP_1", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
         Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
         Genotype::construct_flag("SNP_3", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), not_found.front());
         Genotype::construct_flag("SNP_4", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
         Genotype::construct_flag("SNP_5", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
     }
     catch (...)
@@ -4122,7 +4072,7 @@ TEST(REGION_SNP_SET, MULTI_SNP_SET)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -4136,7 +4086,9 @@ TEST(REGION_SNP_SET, MULTI_SNP_SET)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
         region_names = region.get_names();
         // we should have the 7 sets, the base, the SNP_SET and the background
         ASSERT_EQ(num_regions, 7);
@@ -4159,28 +4111,32 @@ TEST(REGION_SNP_SET, MULTI_SNP_SET)
         SET_BIT(0, not_found.data());
         // SNP_2 1,3
         Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
         // SNP_32 3
         found.front() = 0;
         SET_BIT(0, found.data());
         SET_BIT(4, found.data());
         Genotype::construct_flag("SNP_32", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
         // SNP_912 5
         found.front() = 0;
         SET_BIT(0, found.data());
         SET_BIT(6, found.data());
         Genotype::construct_flag("SNP_912", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         ASSERT_EQ(index.front(), found.front());
         // we can simply check if the target SNPs are located in snp_in_sets
         // we have 1245
         // should still work without initializing the index
         index.clear();
         Genotype::construct_flag("SNP_2", gene_sets, snp_in_sets, index,
-                                 required_size, -1, -1, genome_wide_background);
+                                 required_size, ~size_t(0), ~size_t(0),
+                                 genome_wide_background);
         SUCCEED();
     }
     catch (...)
@@ -4208,8 +4164,6 @@ TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
     size_t window_3 = 0;
     bool genome_wide_background = false;
     std::vector<std::string> region_names, msigdb, snp_sets = {snp_set_name};
-    std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-    std::vector<IITree<size_t, size_t>> gene_sets;
     std::string gtf_name = "", background = "";
     size_t num_regions;
     try
@@ -4217,7 +4171,7 @@ TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
         FAKE_REGION region(bed_names, feature, msigdb, snp_sets, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
         region_names = region.get_names();
     }
     catch (...)
@@ -4304,7 +4258,9 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {
@@ -4401,7 +4357,9 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {
@@ -4493,7 +4451,9 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
 
         // we should have the 3 sets, the base, the bed and the background
         ASSERT_EQ(num_regions, 3);
@@ -4639,7 +4599,9 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {
@@ -4783,7 +4745,9 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {
@@ -4951,7 +4915,7 @@ TEST(REGION_BACKGROUND, INVALID_FORMAT)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5024,7 +4988,7 @@ TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5097,7 +5061,7 @@ TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5170,7 +5134,7 @@ TEST(REGION_BACKGROUND, NEGATIVE_END)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5242,7 +5206,7 @@ TEST(REGION_BACKGROUND, NEGATIVE_START)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5315,7 +5279,7 @@ TEST(REGION_BACKGROUND, INVALID_END)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5387,7 +5351,7 @@ TEST(REGION_BACKGROUND, INVALID_START)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5460,7 +5424,7 @@ TEST(REGION_BACKGROUND, SMALLER_END)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5490,7 +5454,7 @@ TEST(REGION_BACKGROUND, NOT_FOUND)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        region.generate_regions(gene_sets, snp_in_sets, 22);
+        region.generate_regions(22);
         FAIL();
     }
     catch (...)
@@ -5565,7 +5529,9 @@ TEST(REGION_BACKGROUND, SKIP_CHR)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {
@@ -5695,7 +5661,9 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {
@@ -5863,7 +5831,9 @@ TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
         FAKE_REGION region(bed_names, feature, msigdb, snp_set, background,
                            gtf_name, window_5, window_3, genome_wide_background,
                            &reporter);
-        num_regions = region.generate_regions(gene_sets, snp_in_sets, 22);
+        num_regions = region.generate_regions(22);
+        gene_sets = region.get_gene_sets();
+        snp_in_sets = region.get_snp_sets();
     }
     catch (...)
     {

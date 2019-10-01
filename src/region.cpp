@@ -60,6 +60,7 @@ void Region::read_bed(const std::string& bed,
         size_t low_bound, upper_bound;
         start_end(boundary[+BED::START], boundary[+BED::END], true, low_bound,
                   upper_bound);
+        ++upper_bound;
         int chr = get_chrom_code_raw(boundary[0].c_str());
         if (chr >= 0 && chr < MAX_POSSIBLE_CHROM)
         {
@@ -96,14 +97,17 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
             boundary = misc::split(range[1], "-");
             if (boundary.size() > 2)
             {
-                std::string message =
+                throw std::runtime_error(
                     "Error: Invalid exclusion range format. "
-                    "Should be chr:start, chr:start-end or a bed file\n";
-                throw std::runtime_error(message);
+                    "Should be chr:start, chr:start-end or a bed file\n");
             }
             size_t low_bound, upper_bound;
             start_end(boundary.front(), boundary.back(), false, low_bound,
                       upper_bound);
+            // the library find overlap, which for SNP at 10
+            // the boundary should be defined as 10-11 when we read in the SNP
+            // here we do nothing but sainity check of the input
+            ++upper_bound;
             if (chr >= 0 && chr < MAX_POSSIBLE_CHROM)
             {
                 // ignore any chromosome that we failed to parse, which
@@ -513,9 +517,8 @@ void Region::load_snp_sets(const std::string& snp_file, size_t& set_idx)
     input.open(file_name.c_str());
     if (!input.is_open())
     {
-        std::string error =
-            "Error: Cannot open SNP set file: " + file_name + "\n";
-        throw std::runtime_error(error);
+        throw std::runtime_error("Error: Cannot open SNP set file: " + file_name
+                                 + "\n");
     }
     bool is_set_file = false;
     std::vector<std::string> token;
@@ -531,14 +534,12 @@ void Region::load_snp_sets(const std::string& snp_file, size_t& set_idx)
         // we want to only use the file name
         if (!user_set_input) set_name = misc::base_name(set_name);
         duplicated_set(set_name);
-        m_region_name.push_back(set_name);
     }
     else if (user_set_input)
     {
-        std::string error_message =
+        throw std::runtime_error(
             "Error: Undefine SNP set file input format: " + snp_file
-            + ". Set name is not allowed for multi-set SNP file";
-        throw std::runtime_error(error_message);
+            + ". Set name is not allowed for multi-set SNP file");
     }
 
     input.clear();
@@ -552,7 +553,6 @@ void Region::load_snp_sets(const std::string& snp_file, size_t& set_idx)
         {
             if (!duplicated_set(token[0]))
             {
-                m_region_name.push_back(token[0]);
                 for (auto&& snp : token)
                 { m_snp_in_sets[snp].push_back(set_idx); }
                 ++set_idx;
@@ -590,7 +590,6 @@ bool Region::load_bed_regions(const std::string& bed_file, const size_t set_idx,
     bool user_set_name = get_set_name(bed_file, file_name, set_name);
     if (!user_set_name) set_name = misc::base_name(set_name);
     if (duplicated_set(set_name)) { return false; }
-    m_region_name.push_back(set_name);
     std::ifstream input;
     input.open(file_name.c_str());
     if (!input.is_open())
@@ -702,15 +701,8 @@ void Region::load_msigdb(
             message.append(line);
             throw std::runtime_error(message);
         }
-        if (m_processed_sets.find(token[0]) != m_processed_sets.end())
+        if (!duplicated_set(token[0]))
         {
-            m_reporter->report("Warning: Set name of " + token[0]
-                               + " is duplicated, it will be ignored");
-        }
-        else
-        {
-            m_processed_sets.insert(token[0]);
-            m_region_name.push_back(token[0]);
             for (size_t i = 1; i < token.size(); ++i)
             { msigdb_list[token[i]].push_back(set_idx); }
             ++set_idx;
