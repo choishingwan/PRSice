@@ -1521,6 +1521,13 @@ bool Commander::misc_check()
                 "generate intermediate file\n");
         }
     }
+    if (m_prs_info.no_regress && m_pheno_info.pheno_col.size() > 1)
+    {
+        m_error_message.append(
+            "Warning: --no-regress requested but multiple "
+            "phenotype provided. As regression isn't performed, we will not "
+            "utilize any of the phenotype information\n");
+    }
     return !error;
 }
 

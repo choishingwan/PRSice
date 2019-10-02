@@ -153,7 +153,8 @@ int main(int argc, char* argv[])
             PRSice prsice(commander.get_prs_instruction(),
                           commander.get_p_threshold(), commander.get_pheno(),
                           commander.get_perm(), commander.out(), &reporter);
-            // Do phenotype check. If no phenotype, don't bother to do clumping
+            // Do phenotype check. If phenotype info is wrong, don't bother to
+            // do clumping
             prsice.pheno_check();
             // Store relevant parameters to the target object
             if (!commander.get_clump_info().no_clump)
@@ -219,7 +220,11 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Processing the %zu th phenotype\n",
                         i_pheno + 1);
                 prsice.new_phenotype(*target_file);
-                prsice.init_matrix(i_pheno, commander.delim(), *target_file);
+                if (!commander.get_prs_instruction().no_regress)
+                {
+                    prsice.init_matrix(i_pheno, commander.delim(),
+                                       *target_file);
+                }
                 fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(*target_file, region_names, i_pheno,
                                    commander.all_scores());
