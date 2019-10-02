@@ -31,10 +31,9 @@ void Region::read_bed(const std::string& bed,
     std::vector<std::string> range, boundary;
     if (!input_file.is_open())
     {
-        std::string message = "Error: " + bed
-                              + " cannot be open. Please check you "
-                                "have the correct input";
-        throw std::runtime_error(message);
+        throw std::runtime_error("Error: " + bed
+                                 + " cannot be open. Please check you "
+                                   "have the correct input");
     }
     // BED starts from 0 and end is exclusive
     std::string line;

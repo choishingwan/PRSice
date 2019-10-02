@@ -73,12 +73,12 @@ public:
     PRSice(const CalculatePRS& prs_info, const PThresholding& p_info,
            const Phenotype& pheno, const Permutations& perm,
            const std::string& output, Reporter* reporter)
-        : m_reporter(reporter)
+        : m_prefix(output)
+        , m_reporter(reporter)
         , m_prs_info(prs_info)
         , m_p_info(p_info)
         , m_perm_info(perm)
         , m_pheno_info(pheno)
-        , m_prefix(output)
     {
     }
 
@@ -107,6 +107,10 @@ public:
      * \return the total number of phenotype to process
      */
     size_t num_phenotype() const { return m_pheno_info.binary.size(); }
+    std::string pheno_name(const size_t i) const
+    {
+        return m_pheno_info.pheno_col.at(i);
+    }
     void new_phenotype(Genotype& target);
     bool run_prsice(const size_t pheno_index, const size_t region_index,
                     const std::vector<size_t>& region_membership,
@@ -217,7 +221,14 @@ public:
                     const std::vector<size_t>::const_iterator& bk_start_idx,
                     const std::vector<size_t>::const_iterator& bk_end_idx,
                     const size_t pheno_index);
-
+    bool valid_pheno(const size_t idx) const
+    {
+        return !m_pheno_info.skip_pheno.at(idx);
+    }
+    std::vector<double> get_prevalence() const
+    {
+        return m_pheno_info.prevalence;
+    }
 
 protected:
 private:
@@ -306,15 +317,16 @@ private:
     long long m_max_iid_length = 3;
     int m_best_index = -1;
     size_t m_num_perm = 0;
-    Reporter* m_reporter;
     bool m_perform_prset = false;
     bool m_quick_best = true;
     bool m_printed_warning = false;
+    const std::string m_prefix;
+    Reporter* m_reporter;
     CalculatePRS m_prs_info;
     PThresholding m_p_info;
     Permutations m_perm_info;
     Phenotype m_pheno_info;
-    const std::string m_prefix;
+
     // Functions
 
     /*!

@@ -28,7 +28,10 @@ void PRSice::pheno_check()
     if (m_pheno_info.binary.empty())
     { throw std::runtime_error("Error: No phenotype provided"); }
     std::string message = "";
+    // want to update the binary and prevalence vector by removing phenotypes
+    // not found / duplicated
     m_pheno_info.skip_pheno.resize(m_pheno_info.binary.size(), false);
+    bool pheno_update = false;
     if (m_pheno_info.pheno_file.empty()) {}
     else
     {
@@ -53,8 +56,7 @@ void PRSice::pheno_check()
         std::vector<std::string> col = misc::split(line);
         // we need at least 2 columns (IID + Phenotype)
         // or 3 if m_ignore_fid != T
-        if (col.size() < static_cast<std::vector<std::string>::size_type>(
-                2 + !m_pheno_info.ignore_fid))
+        if (col.size() < static_cast<size_t>(2 + !m_pheno_info.ignore_fid))
         {
             throw std::runtime_error(
                 "Error: Not enough column in Phenotype file. "
@@ -149,12 +151,21 @@ void PRSice::pheno_check()
                         message.append(
                             "Phenotype: " + m_pheno_info.pheno_col[i_pheno]
                             + " cannot be found in phenotype file\n");
+                        m_pheno_info.skip_pheno[i_pheno] = true;
+                        pheno_update = true;
                     }
                 }
                 else
                 {
                     // duplicated phenotype name
                     m_pheno_info.skip_pheno[i_pheno] = true;
+                    // that is, if they have the same phenotype, but different
+                    // prevalence / binary, we will still ignore subsequent
+                    // inputs
+                    message.append("Duplicate phenotype column name: "
+                                   + m_pheno_info.pheno_col[i_pheno]
+                                   + ". Only the first instance are used\n");
+                    pheno_update = true;
                 }
             }
             if (!has_valid_column)
@@ -165,6 +176,39 @@ void PRSice::pheno_check()
             }
         }
     }
+    // update phenotype
+    if (m_pheno_info.binary.size() > 1)
+    {
+        Phenotype tmp_pheno = m_pheno_info;
+        size_t binary_idx = 0;
+        m_pheno_info.binary.clear();
+        m_pheno_info.pheno_col.clear();
+        m_pheno_info.prevalence.clear();
+        m_pheno_info.pheno_col_idx.clear();
+        for (size_t idx = 0; idx < tmp_pheno.binary.size(); ++idx)
+        {
+            if (!tmp_pheno.skip_pheno[idx])
+            {
+                m_pheno_info.binary.push_back(tmp_pheno.binary[idx]);
+                m_pheno_info.pheno_col.push_back(tmp_pheno.pheno_col[idx]);
+                m_pheno_info.pheno_col_idx.push_back(
+                    tmp_pheno.pheno_col_idx[idx]);
+                if (tmp_pheno.binary[idx] && !tmp_pheno.prevalence.empty())
+                {
+                    m_pheno_info.prevalence.push_back(
+                        tmp_pheno.prevalence[binary_idx]);
+                    ++binary_idx;
+                }
+            }
+            else if (tmp_pheno.binary[idx] && !tmp_pheno.prevalence.empty())
+            {
+                ++binary_idx;
+            }
+        }
+        assert(m_pheno_info.binary.size() == m_pheno_info.pheno_col.size());
+        assert(m_pheno_info.binary.size() == m_pheno_info.pheno_col_idx.size());
+    }
+
     message.append("There are a total of "
                    + std::to_string(m_pheno_info.binary.size())
                    + " phenotype to process\n");
