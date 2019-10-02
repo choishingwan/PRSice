@@ -70,6 +70,7 @@ struct BaseFile
         column_index.resize(+BASE_INDEX::MAX, 0);
         has_column.resize(+BASE_INDEX::MAX, false);
     }
+    ~BaseFile() {}
 };
 
 struct GenoFile
