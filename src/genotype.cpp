@@ -992,10 +992,9 @@ intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2)
     m_reporter->report(message);
     return malloc_size_mb;
 }
-void Genotype::get_window_memory(const intptr_t malloc_size_mb,
-                                 const uintptr_t founder_ctv2,
-                                 uintptr_t** window_data,
-                                 uintptr_t& max_window_size)
+unsigned char* Genotype::get_window_memory(const intptr_t malloc_size_mb,
+                                           const uintptr_t founder_ctv2,
+                                           uintptr_t& max_window_size)
 {
     unsigned char* bigstack_ua = nullptr; // ua = unaligned
     unsigned char* bigstack_initial_base;
@@ -1034,7 +1033,7 @@ void Genotype::get_window_memory(const intptr_t malloc_size_mb,
     // clumping
 
     // now we can point the window pointer to the start of the allocated memory
-    *window_data = reinterpret_cast<uintptr_t*>(bigstack_initial_base);
+    return bigstack_initial_base;
 }
 void Genotype::efficient_clumping(const Clumping& clump_info,
                                   Genotype& reference)
@@ -1093,9 +1092,10 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
 
     // window data is the pointer walking through the allocated memory
     size_t max_window_size, num_core_snps = 0;
-    uintptr_t* window_data = nullptr;
-    get_window_memory(malloc_size_mb, founder_ctv2, &window_data,
-                      max_window_size);
+    unsigned char* bigstack_initial_base =
+        get_window_memory(malloc_size_mb, founder_ctv2, max_window_size);
+    uintptr_t* window_data =
+        reinterpret_cast<uintptr_t*>(bigstack_initial_base);
     if (!max_window_size)
     { throw std::runtime_error("Error: Not enough memory for clumping!"); }
     uintptr_t* window_data_ptr = nullptr;
@@ -1264,9 +1264,10 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // now we release the memory stack
-    free(window_data);
+    free(bigstack_initial_base);
     window_data = nullptr;
     window_data_ptr = nullptr;
+    bigstack_initial_base = nullptr;
     if (num_core_snps != m_existed_snps.size())
     { shrink_snp_vector(remain_core); }
     // we no longer require the index. might as well clear it (and hope it will
