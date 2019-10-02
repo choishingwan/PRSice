@@ -324,6 +324,7 @@ void Genotype::read_base(
         }
         dup_index.insert(rs_id);
         chr_code = -1;
+        chr = ~size_t(0);
         if (base_file.has_column[+BASE_INDEX::CHR])
         {
             chr = get_chr_code(
