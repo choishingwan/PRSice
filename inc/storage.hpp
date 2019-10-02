@@ -57,11 +57,12 @@ struct MAF_Store
 struct BaseFile
 {
 
-    std::vector<size_t> column_index = std::vector<size_t>(+BASE_INDEX::MAX, 0);
+    std::vector<size_t> column_index =
+        std::vector<size_t>(+BASE_INDEX::MAX + 1, 0);
     std::vector<std::string> column_name = {
         "CHR", "A2", "BP", "SE", "INFO,0.9", "", "", "A1", "SNP", "P", ""};
     // use int as vector<bool> is abnormal
-    std::vector<int> has_column = std::vector<int>(+BASE_INDEX::MAX, false);
+    std::vector<int> has_column = std::vector<int>(+BASE_INDEX::MAX + 1, false);
     std::string file_name;
     int is_index = false;
     int is_beta = false;
