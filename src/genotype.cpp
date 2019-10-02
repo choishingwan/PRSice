@@ -864,7 +864,7 @@ void Genotype::print_mismatch(const std::string& out, const std::string& type,
         m_mismatch_snp_record << target.loc() << "\t";
     }
     m_mismatch_snp_record << a1 << "\t" << target.ref() << "\t" << a2 << "\t"
-                          << target.alt() << "\n";
+                          << target.alt() << std::endl;
 }
 void Genotype::load_snps(
     const std::string& out,

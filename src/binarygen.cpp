@@ -615,7 +615,7 @@ void BinaryGen::gen_snp_vector(
             // read in the genotype data block so that we advance the ifstream
             // pointer to the next SNP entry
             read_genotype_data_block(bgen_file, context, &m_buffer1);
-            data_size = bgen_file.tellg() - start;
+            data_size = static_cast<long long>(bgen_file.tellg()) - start;
             if (data_size > static_cast<long long>(m_data_size))
             { m_data_size = static_cast<unsigned long long>(data_size); }
             // if we want to exclude this SNP, we will not perform
