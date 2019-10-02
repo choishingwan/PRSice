@@ -1086,8 +1086,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     // one way to speed things up as in PLINK 2 is to pre-allocate the memory
     // space for what we need to do next. The following code did precisely that
     // (borrow from PLINK2)
-    unsigned char* bigstack_ua = nullptr; // ua = unaligned
-    unsigned char* bigstack_initial_base;
+
     intptr_t malloc_size_mb = cal_avail_memory(founder_ctv2);
     // now allocate the memory into a pointer
 
@@ -1263,11 +1262,9 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // now we release the memory stack
+    free(window_data);
     window_data = nullptr;
     window_data_ptr = nullptr;
-    free(bigstack_ua);
-    bigstack_ua = nullptr;
-    bigstack_initial_base = nullptr;
     if (num_core_snps != m_existed_snps.size())
     { shrink_snp_vector(remain_core); }
     // we no longer require the index. might as well clear it (and hope it will
