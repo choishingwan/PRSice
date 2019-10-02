@@ -12,7 +12,8 @@ add_executable(runUnitTests
     src/misc_test.cpp
     src/region_test.cpp
     src/snp_test.cpp
-    src/commander_test.cpp)
+    src/commander_test.cpp
+    src/prsice_test.cpp)
 target_link_libraries(runUnitTests PRIVATE
     bgen
     gzstream
