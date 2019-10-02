@@ -330,9 +330,6 @@ public:
                    const bool keep_ambig);
     void build_clump_windows(const unsigned long long& clump_distance);
     intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
-    unsigned char* get_window_memory(const intptr_t malloc_size_mb,
-                                     const uintptr_t founder_ctv2,
-                                     uintptr_t& max_window_size);
     void build_membership_matrix(std::vector<size_t>& region_membership,
                                  std::vector<size_t>& region_start_idx,
                                  const size_t num_sets, const std::string& out,

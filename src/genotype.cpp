@@ -992,49 +992,7 @@ intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2)
     m_reporter->report(message);
     return malloc_size_mb;
 }
-unsigned char* Genotype::get_window_memory(const intptr_t malloc_size_mb,
-                                           const uintptr_t founder_ctv2,
-                                           uintptr_t& max_window_size)
-{
-    unsigned char* bigstack_ua = nullptr; // ua = unaligned
-    unsigned char* bigstack_initial_base;
-    bigstack_ua = reinterpret_cast<unsigned char*>(malloc(
-        static_cast<uintptr_t>(malloc_size_mb) * 1048576 * sizeof(char)));
-    // if fail, return nullptr which will then get into the while loop
-    if (!bigstack_ua)
-    { throw std::runtime_error("Failed to allocate required memory"); }
-    else
-    {
-        m_reporter->report("Allocated " + misc::to_string(malloc_size_mb)
-                           + " MB successfully");
-    }
-    // force 64-byte align to make cache line sensitivity work (from PLINK, not
-    // familiar with computer programming to know this...)
-    // will stay with the old style cast to avoid trouble
-    bigstack_initial_base = reinterpret_cast<unsigned char*>(
-        round_up_pow2(reinterpret_cast<uintptr_t>(bigstack_ua), CACHELINE));
 
-    // window data is the pointer walking through the allocated memory
-    unsigned char* g_bigstack_end = &(
-        bigstack_initial_base[(static_cast<uintptr_t>(malloc_size_mb) * 1048576
-                               - static_cast<uintptr_t>(bigstack_initial_base
-                                                        - bigstack_ua))
-                              & (~(CACHELINE - ONELU))]);
-
-    // and max_window_size is the number of windows we can handle in one round
-    // given the memory that we have. 1 window = 1 SNP
-    max_window_size = ((reinterpret_cast<uintptr_t>(g_bigstack_end))
-                       - (reinterpret_cast<uintptr_t>(bigstack_initial_base)))
-                      / (founder_ctv2 * sizeof(intptr_t));
-
-    g_bigstack_end = nullptr;
-    // a counter to count how many windows have we read
-    // if max_window size is 0, it means we don't have enough memory for
-    // clumping
-
-    // now we can point the window pointer to the start of the allocated memory
-    return bigstack_initial_base;
-}
 void Genotype::efficient_clumping(const Clumping& clump_info,
                                   Genotype& reference)
 {
@@ -1092,8 +1050,38 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
 
     // window data is the pointer walking through the allocated memory
     size_t max_window_size, num_core_snps = 0;
-    unsigned char* bigstack_initial_base =
-        get_window_memory(malloc_size_mb, founder_ctv2, max_window_size);
+    unsigned char* bigstack_ua = nullptr; // ua = unaligned
+    unsigned char* bigstack_initial_base;
+    bigstack_ua = reinterpret_cast<unsigned char*>(malloc(
+        static_cast<uintptr_t>(malloc_size_mb) * 1048576 * sizeof(char)));
+    // if fail, return nullptr which will then get into the while loop
+    if (!bigstack_ua)
+    { throw std::runtime_error("Failed to allocate required memory"); }
+    else
+    {
+        m_reporter->report("Allocated " + misc::to_string(malloc_size_mb)
+                           + " MB successfully");
+    }
+    // force 64-byte align to make cache line sensitivity work (from PLINK, not
+    // familiar with computer programming to know this...)
+    // will stay with the old style cast to avoid trouble
+    bigstack_initial_base = reinterpret_cast<unsigned char*>(
+        round_up_pow2(reinterpret_cast<uintptr_t>(bigstack_ua), CACHELINE));
+
+    // window data is the pointer walking through the allocated memory
+    unsigned char* g_bigstack_end = &(
+        bigstack_initial_base[(static_cast<uintptr_t>(malloc_size_mb) * 1048576
+                               - static_cast<uintptr_t>(bigstack_initial_base
+                                                        - bigstack_ua))
+                              & (~(CACHELINE - ONELU))]);
+
+    // and max_window_size is the number of windows we can handle in one round
+    // given the memory that we have. 1 window = 1 SNP
+    max_window_size = ((reinterpret_cast<uintptr_t>(g_bigstack_end))
+                       - (reinterpret_cast<uintptr_t>(bigstack_initial_base)))
+                      / (founder_ctv2 * sizeof(intptr_t));
+
+    g_bigstack_end = nullptr;
     uintptr_t* window_data =
         reinterpret_cast<uintptr_t*>(bigstack_initial_base);
     if (!max_window_size)
@@ -1264,10 +1252,11 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // now we release the memory stack
-    free(bigstack_initial_base);
+    free(bigstack_ua);
     window_data = nullptr;
     window_data_ptr = nullptr;
     bigstack_initial_base = nullptr;
+    bigstack_ua = nullptr;
     if (num_core_snps != m_existed_snps.size())
     { shrink_snp_vector(remain_core); }
     // we no longer require the index. might as well clear it (and hope it will
