@@ -910,8 +910,7 @@ void Genotype::load_snps(
 
 
 Genotype::~Genotype() {}
-intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2,
-                                    std::string& message)
+intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2)
 {
 #ifdef __APPLE__
     int32_t mib[2];
@@ -967,16 +966,16 @@ intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2,
     malloc_size_mb = (static_cast<uintptr_t>(m_max_window_size) + 1)
                          * founder_ctv2 * sizeof(intptr_t) / 1048576
                      + 1;
+    std::string message = "";
     if (llxx)
     {
         // we have detected the memory, but need to check if that's enough
         if (malloc_size_mb > llxx)
         {
-            std::string error_message =
+            throw std::runtime_error(
                 "Error: Insufficient memory for clumping! Require "
                 + misc::to_string(malloc_size_mb) + " MB but detected only "
-                + misc::to_string(llxx) + " MB";
-            throw std::runtime_error(error_message);
+                + misc::to_string(llxx) + " MB");
         }
         else
         {
@@ -989,11 +988,11 @@ intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2,
         message = "Failed to calculate system memory. Attemping to reserve"
                   + misc::to_string(malloc_size_mb) + " MB for clumping\n";
     }
+    m_reporter->report(message);
     return malloc_size_mb;
 }
 uintptr_t* Genotype::get_window_memory(const intptr_t malloc_size_mb,
                                        const uintptr_t founder_ctv2,
-                                       std::string& message,
                                        uintptr_t& max_window_size)
 {
     unsigned char* bigstack_ua = nullptr; // ua = unaligned
@@ -1005,11 +1004,9 @@ uintptr_t* Genotype::get_window_memory(const intptr_t malloc_size_mb,
     { throw std::runtime_error("Failed to allocate required memory"); }
     else
     {
-        message.append("Allocated " + misc::to_string(malloc_size_mb)
-                       + " MB successfully");
+        m_reporter->report("Allocated " + misc::to_string(malloc_size_mb)
+                           + " MB successfully");
     }
-    m_reporter->report(message);
-    message = "";
     // force 64-byte align to make cache line sensitivity work (from PLINK, not
     // familiar with computer programming to know this...)
     // will stay with the old style cast to avoid trouble
@@ -1062,10 +1059,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     const double min_r2 = (clump_info.use_proxy)
                               ? std::min(clump_info.proxy, clump_info.r2)
                               : clump_info.r2;
-    // is_x is used in PLINK to indicate if the genotype is from the X
-    // chromsome, as PRSice ignore any sex chromosome, we can set it as a
-    // constant false
-    const bool is_x = false;
+
     // when we read in the genotype, the genotype is stored in byte represented
     // by uintptr_t. Then we will use the PLINK 2 functions to obtain the R2
     // As this vector can be big, we will only initialize it once (memory
@@ -1076,42 +1070,30 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     std::vector<bool> remain_core(m_existed_snps.size(), false);
     // next few parameters are used to store the intermediate output from PLINK
     // function, corresponding to the count of different genotypes
-    double freq11;
-    double freq11_expected;
-    double freq1x;
-    double freq2x;
-    double freqx1;
-    double freqx2;
-    double dxx;
+
     // and this is the storage to result R2
     double r2 = -1.0;
     // The following two vectors are used for storing the intermediate output.
     // Again, put memory allocation at the beginning
     std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
     std::vector<uintptr_t> index_tots(6);
-    // pre-allocate the memory without bothering the memory pool stuff
-    std::vector<uint32_t> ld_missing_count(m_max_window_size);
     // This is a data mask used by PLINK in the calculation of R2. Preallocate
     // to speed up
     std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
     fill_quatervec_55(static_cast<uint32_t>(reference.m_founder_ct),
                       founder_include2.data());
-
-
     // one way to speed things up as in PLINK 2 is to pre-allocate the memory
     // space for what we need to do next. The following code did precisely that
     // (borrow from PLINK2)
-
     unsigned char* bigstack_ua = nullptr; // ua = unaligned
     unsigned char* bigstack_initial_base;
-    std::string message = "";
-    intptr_t malloc_size_mb = cal_avail_memory(founder_ctv2, message);
+    intptr_t malloc_size_mb = cal_avail_memory(founder_ctv2);
     // now allocate the memory into a pointer
 
     // window data is the pointer walking through the allocated memory
     size_t max_window_size, num_core_snps = 0;
-    uintptr_t* window_data = get_window_memory(malloc_size_mb, founder_ctv2,
-                                               message, max_window_size);
+    uintptr_t* window_data =
+        get_window_memory(malloc_size_mb, founder_ctv2, max_window_size);
     if (!max_window_size)
     { throw std::runtime_error("Error: Not enough memory for clumping!"); }
     uintptr_t* window_data_ptr = nullptr;
@@ -1140,17 +1122,19 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         auto&& cur_target_snp = m_existed_snps[cur_snp_index];
         if (cur_target_snp.clumped()
             || cur_target_snp.p_value() > clump_info.pvalue)
+        {
             // ignore any SNP that are clumped or that has a p-value higher than
             // the clump-p threshold
             continue;
+        }
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
 
         // this is the first SNP we should read from
-        size_t start = cur_target_snp.low_bound();
+        const size_t start = cur_target_snp.low_bound();
         // this is the first SNP we should ignore
-        size_t end = cur_target_snp.up_bound();
+        const size_t end = cur_target_snp.up_bound();
         // reset our pointer to the start of the memory stack as we are working
         // on a new core SNP
         window_data_ptr = window_data;
@@ -1167,9 +1151,11 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
                 || pair_target_snp.p_value() > clump_info.pvalue)
+            {
                 // ignore SNP that are clumped or that has higher p-value than
                 // threshold
                 continue;
+            }
             // Something PLINK does. I suspect this is to reset the content of
             // the pointer to 0
             window_data_ptr[founder_ctv2 - 2] = 0;
@@ -1194,28 +1180,20 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         // reset the content of the pointer again
         window_data_ptr[founder_ctv2 - 2] = 0;
         window_data_ptr[founder_ctv2 - 1] = 0;
-        // reset the index_data information
-        std::fill(index_data.begin(), index_data.end(), 0);
         // then we can read in the genotype from the reference panel
         // note the use of cur_target_snp
         reference.read_genotype(window_data_ptr,
                                 cur_target_snp.get_byte_pos(true),
                                 cur_target_snp.get_file_idx(true));
+        // reset the index_data information
+        std::fill(index_data.begin(), index_data.end(), 0);
         // generate the required data mask
         // Disclaimer: For the next few lines, they are from PLINK and I don't
         // fully understand what they are doing
-        vec_datamask(reference.m_founder_ct, 0, window_data_ptr,
-                     founder_include2.data(), index_data.data());
         // then populate the index_tots
-        index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
-        vec_datamask(reference.m_founder_ct, 2, window_data_ptr,
-                     founder_include2.data(), &(index_data[founder_ctv2]));
-        index_tots[1] =
-            popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
-        vec_datamask(reference.m_founder_ct, 3, window_data_ptr,
-                     founder_include2.data(), &(index_data[2 * founder_ctv2]));
-        index_tots[2] =
-            popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
+        update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
+                         index_data, index_tots, founder_include2,
+                         window_data_ptr);
         // we have finished reading the index and stored the necessary
         // inforamtion, we can now calculate the R2 between the index and
         // previous SNPs
@@ -1229,41 +1207,8 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                 || pair_target_snp.p_value() > clump_info.pvalue)
                 // Again, ignore unwanted SNP
                 continue;
-            r2 = -1;
-            uint32_t counts[18];
-            // calculate the counts
-            // these counts are then used for calculation of R2. However, I
-            // don't fully understand the algorithm here (copy from PLINK2)
-            genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                          &(counts[0]), &(counts[1]), &(counts[2]));
-            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-            genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                          founder_ctl2, &(counts[3]), &(counts[4]),
-                          &(counts[5]));
-            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-            genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                          founder_ctl2, &(counts[6]), &(counts[7]),
-                          &(counts[8]));
-            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
-                                        &freqx1, &freqx2, &freq11))
-            {
-                // if the calculation is sucessful, we can then calculate the R2
-                freq11_expected = freqx1 * freq1x;
-                dxx = freq11 - freq11_expected;
-                // message from PLINK:
-                // if r^2 threshold is 0, let everything else through but
-                // exclude the apparent zeroes.  Zeroes *are* included if
-                // r2_thresh is negative,
-                // though (only nans are rejected then).
-                if (fabs(dxx) < SMALL_EPSILON
-                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-                { r2 = 0.0; }
-                else
-                {
-                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                }
-            }
+            r2 = get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
+                        index_tots);
             if (r2 >= min_r2)
             {
                 // if the R2 between two SNP is higher than the minim threshold,
@@ -1296,38 +1241,8 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.get_byte_pos(true),
                                     pair_target_snp.get_file_idx(true));
-            r2 = -1;
-            // obtain count using PLINK magic
-            uint32_t counts[18];
-            genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                          &(counts[0]), &(counts[1]), &(counts[2]));
-            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-            genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                          founder_ctl2, &(counts[3]), &(counts[4]),
-                          &(counts[5]));
-            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-            genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                          founder_ctl2, &(counts[6]), &(counts[7]),
-                          &(counts[8]));
-            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
-                                        &freqx1, &freqx2, &freq11))
-            {
-                freq11_expected = freqx1 * freq1x;
-                dxx = freq11 - freq11_expected;
-                // Message in PLINK:
-                // if r^2 threshold is 0, let everything else through but
-                // exclude the apparent zeroes.  Zeroes *are* included if
-                // r2_thresh is negative,
-                // though (only nans are rejected then).
-                if (fabs(dxx) < SMALL_EPSILON
-                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-                { r2 = 0.0; }
-                else
-                {
-                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                }
-            }
+            r2 = get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
+                        index_tots);
             // now perform clumping if required
             if (r2 >= min_r2)
             {
@@ -1357,9 +1272,8 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     // we no longer require the index. might as well clear it (and hope it will
     // release the memory)
     m_existed_snps_index.clear();
-    message = "Number of variant(s) after clumping : "
-              + misc::to_string(m_existed_snps.size());
-    m_reporter->report(message);
+    m_reporter->report("Number of variant(s) after clumping : "
+                       + misc::to_string(m_existed_snps.size()));
 }
 
 

@@ -114,3 +114,5 @@ void Reporter::report(const std::string& input, bool wrap)
     std::cerr << '\n' << std::flush;
     m_log_file << '\n' << std::flush;
 }
+
+Reporter::~Reporter() {};

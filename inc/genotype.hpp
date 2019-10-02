@@ -48,8 +48,7 @@
 #include <sys/sysctl.h> // sysctl()
 #endif
 
-// class BinaryPlink;
-// class BinaryGen;
+
 #define MULTIPLEX_LD 1920
 #define MULTIPLEX_2LD (MULTIPLEX_LD * 2)
 class Genotype
@@ -330,11 +329,9 @@ public:
                    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const bool keep_ambig);
     void build_clump_windows(const unsigned long long& clump_distance);
-    intptr_t cal_avail_memory(const uintptr_t founder_ctv2,
-                              std::string& message);
+    intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
     uintptr_t* get_window_memory(const intptr_t malloc_size_mb,
                                  const uintptr_t founder_ctv2,
-                                 std::string& message,
                                  uintptr_t& max_window_size);
     void build_membership_matrix(std::vector<size_t>& region_membership,
                                  std::vector<size_t>& region_start_idx,
@@ -384,7 +381,6 @@ public:
             for (auto&& j : out)
             {
                 idx = gene_sets[chr].data(j);
-                // idx= cr_label(gene_sets, b[j]);
                 SET_BIT(idx, flag.data());
             }
         }
@@ -672,6 +668,79 @@ protected:
     virtual void calc_freq_gen_inter(const QCFiltering& /*QC info*/,
                                      Genotype* /*target=nullptr*/, bool /**/)
     {
+    }
+
+    void update_index_tot(const uintptr_t founder_ctl2,
+                          const uintptr_t founder_ctv2,
+                          const uintptr_t founder_count,
+                          std::vector<uintptr_t>& index_data,
+                          std::vector<uintptr_t>& index_tots,
+                          std::vector<uintptr_t>& founder_include2,
+                          uintptr_t* index_genotype)
+    {
+        vec_datamask(founder_count, 0, index_genotype, founder_include2.data(),
+                     index_data.data());
+        index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
+        vec_datamask(founder_count, 2, index_genotype, founder_include2.data(),
+                     &(index_data[founder_ctv2]));
+        index_tots[1] =
+            popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
+        vec_datamask(founder_count, 3, index_genotype, founder_include2.data(),
+                     &(index_data[2 * founder_ctv2]));
+        index_tots[2] =
+            popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
+    }
+
+    double get_r2(const uintptr_t founder_ctl2, const uintptr_t founder_ctv2,
+                  uintptr_t* window_data_ptr,
+                  std::vector<uintptr_t>& index_data,
+                  std::vector<uintptr_t>& index_tots)
+    {
+        assert(window_data_ptr != nullptr);
+        // is_x is used in PLINK to indicate if the genotype is from the X
+        // chromsome, as PRSice ignore any sex chromosome, we can set it as a
+        // constant false
+        const bool is_x = false;
+        uint32_t counts[18];
+        double freq11;
+        double freq11_expected;
+        double freq1x;
+        double freq2x;
+        double freqx1;
+        double freqx2;
+        double dxx;
+        // calculate the counts
+        // these counts are then used for calculation of R2. However, I
+        // don't fully understand the algorithm here (copy from PLINK2)
+        genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
+                      &(counts[0]), &(counts[1]), &(counts[2]));
+        counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
+        genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
+                      founder_ctl2, &(counts[3]), &(counts[4]), &(counts[5]));
+        counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
+        genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
+                      founder_ctl2, &(counts[6]), &(counts[7]), &(counts[8]));
+        counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
+        if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
+                                    &freqx1, &freqx2, &freq11))
+        {
+            // if the calculation is sucessful, we can then calculate the R2
+            freq11_expected = freqx1 * freq1x;
+            dxx = freq11 - freq11_expected;
+            // message from PLINK:
+            // if r^2 threshold is 0, let everything else through but
+            // exclude the apparent zeroes.  Zeroes *are* included if
+            // r2_thresh is negative,
+            // though (only nans are rejected then).
+            if (fabs(dxx) < SMALL_EPSILON
+                || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
+            { return 0.0; }
+            else
+            {
+                return dxx * dxx / (freq11_expected * freq2x * freqx2);
+            }
+        }
+        return -1;
     }
     void read_prs(std::vector<uintptr_t>& genotype, const size_t ploidy,
                   const double stat, const double adj_score,

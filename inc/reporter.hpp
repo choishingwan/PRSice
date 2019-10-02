@@ -37,8 +37,6 @@ public:
         {
             throw std::runtime_error("Error: " + log_name + " cannot be open");
         }
-        // m_error_prefix_size = m_error_prefix.size();
-        // m_warning_prefix_size = m_warning_prefix.size();
     }
     void initiailize(const std::string& log_name, size_t width = 60)
     {
@@ -50,7 +48,7 @@ public:
             throw std::runtime_error("Error: " + log_name + " cannot be open");
         }
     }
-    virtual ~Reporter() {}
+    virtual ~Reporter();
     void report(const std::string& input, bool wrap = true);
 
 

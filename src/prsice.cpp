@@ -1997,6 +1997,30 @@ void PRSice::summarize()
 
 PRSice::~PRSice() {}
 
+void PRSice::get_se_matrix(
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
+    const Eigen::MatrixXd& Rinv, const Eigen::Index p, const Eigen::Index rank,
+    Eigen::VectorXd& se_base)
+{
+    if (p == rank)
+    {
+        se_base = Pmat
+                  * PQR.matrixQR()
+                        .topRows(p)
+                        .triangularView<Eigen::Upper>()
+                        .solve(lm::I_p(p))
+                        .rowwise()
+                        .norm();
+    }
+    else
+    {
+        se_base = Eigen::VectorXd::Constant(
+            p, std::numeric_limits<double>::quiet_NaN());
+        se_base.head(rank) = Rinv.rowwise().norm();
+        se_base = Pmat * se_base;
+    }
+}
 
 void PRSice::null_set_no_thread(
     Genotype& target, const size_t num_background,
@@ -2021,23 +2045,7 @@ void PRSice::null_set_no_thread(
     bool first_run = true;
     Eigen::VectorXd beta, se, effects, resid, fitted, se_base,
         prs = Eigen::VectorXd::Zero(num_sample);
-    if (p == rank)
-    {
-        se_base = Pmat
-                  * PQR.matrixQR()
-                        .topRows(p)
-                        .triangularView<Eigen::Upper>()
-                        .solve(lm::I_p(p))
-                        .rowwise()
-                        .norm();
-    }
-    else
-    {
-        se_base = Eigen::VectorXd::Constant(
-            p, std::numeric_limits<double>::quiet_NaN());
-        se_base.head(rank) = Rinv.rowwise().norm();
-        se_base = Pmat * se_base;
-    }
+    get_se_matrix(PQR, Pmat, Rinv, p, rank, se_base);
     while (processed < m_num_perm)
     {
         size_t begin = 0;
@@ -2203,23 +2211,7 @@ void PRSice::consume_prs(
     if (m_perm_info.logit_perm && is_binary)
         independent = m_independent_variables;
     Eigen::VectorXd beta, se, effects, prs, fitted, resid, se_base;
-    if (p == rank)
-    {
-        se_base = Pmat
-                  * PQR.matrixQR()
-                        .topRows(p)
-                        .triangularView<Eigen::Upper>()
-                        .solve(lm::I_p(p))
-                        .rowwise()
-                        .norm();
-    }
-    else
-    {
-        se_base = Eigen::VectorXd::Constant(
-            p, std::numeric_limits<double>::quiet_NaN());
-        se_base.head(rank) = Rinv.rowwise().norm();
-        se_base = Pmat * se_base;
-    }
+    get_se_matrix(PQR, Pmat, Rinv, p, rank, se_base);
     Eigen::Index df;
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector

@@ -70,11 +70,6 @@ class PRSice
 {
 public:
     PRSice() {}
-    /*!
-     * \brief PRSice constructor
-     * \param commander contains all user input
-     * \param reporter is the logger
-     */
     PRSice(const CalculatePRS& prs_info, const PThresholding& p_info,
            const Phenotype& pheno, const Permutations& perm,
            const std::string& output, Reporter* reporter)
@@ -384,6 +379,12 @@ private:
     void update_sample_matrix(
         const std::vector<size_t>& missing_count,
         std::vector<std::pair<std::string, size_t>>& valid_sample_index);
+    void get_se_matrix(
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
+        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
+            Pmat,
+        const Eigen::MatrixXd& Rinv, const Eigen::Index p,
+        const Eigen::Index rank, Eigen::VectorXd& se_base);
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
      * p-value thresholds we will run this function to calculate the empirical
