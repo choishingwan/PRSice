@@ -1064,7 +1064,6 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     }
     // force 64-byte align to make cache line sensitivity work (from PLINK, not
     // familiar with computer programming to know this...)
-    // will stay with the old style cast to avoid trouble
     bigstack_initial_base = reinterpret_cast<unsigned char*>(
         round_up_pow2(reinterpret_cast<uintptr_t>(bigstack_ua), CACHELINE));
 

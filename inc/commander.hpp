@@ -380,7 +380,7 @@ private:
         if (input.empty()) return false;
         std::string comma = "";
         if (m_parameter_log.find(c) != m_parameter_log.end()) { comma = ","; }
-        m_parameter_log[c].append(comma + c);
+        m_parameter_log[c].append(comma + input);
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
