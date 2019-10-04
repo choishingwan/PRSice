@@ -804,32 +804,38 @@ void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
     m_num_geno_filter = 0;
     m_num_maf_filter = 0;
     m_num_info_filter = 0;
-    calc_freq_gen_inter(filter_info, target, force_cal);
-    if (m_num_geno_filter != 0)
+    // only print the filtering message if filtering was performed
+    if (calc_freq_gen_inter(filter_info, target, force_cal))
     {
-        message.append(
-            std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold\n");
+        if (m_num_geno_filter != 0)
+        {
+            message.append(std::to_string(m_num_geno_filter)
+                           + " variant(s) excluded based on genotype "
+                             "missingness threshold\n");
+        }
+        if (m_num_maf_filter != 0)
+        {
+            message.append(std::to_string(m_num_maf_filter)
+                           + " variant(s) excluded based on MAF threshold\n");
+        }
+        if (m_num_info_filter != 0)
+        {
+            message.append(
+                std::to_string(m_num_info_filter)
+                + " variant(s) excluded based on INFO score threshold\n");
+        }
+        if (!m_is_ref)
+        {
+            message.append(std::to_string(m_marker_ct)
+                           + " variant(s) included");
+        }
+        else
+        {
+            message.append(std::to_string(target->m_existed_snps.size())
+                           + " variant(s) remained");
+        }
+        if (verbose) m_reporter->report(message);
     }
-    if (m_num_maf_filter != 0)
-    {
-        message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold\n");
-    }
-    if (m_num_info_filter != 0)
-    {
-        message.append(
-            std::to_string(m_num_info_filter)
-            + " variant(s) excluded based on INFO score threshold\n");
-    }
-    if (!m_is_ref)
-    { message.append(std::to_string(m_marker_ct) + " variant(s) included"); }
-    else
-    {
-        message.append(std::to_string(target->m_existed_snps.size())
-                       + " variant(s) remained");
-    }
-    if (verbose) m_reporter->report(message);
 }
 
 void Genotype::print_mismatch(const std::string& out, const std::string& type,

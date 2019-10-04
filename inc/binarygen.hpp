@@ -60,7 +60,7 @@ private:
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
-    void calc_freq_gen_inter(const QCFiltering& filter_info,
+    bool calc_freq_gen_inter(const QCFiltering& filter_info,
                              Genotype* target = nullptr,
                              bool force_cal = false);
     /*!

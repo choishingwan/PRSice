@@ -1511,7 +1511,7 @@ bool Commander::misc_check()
     m_parameter_log["out"] = m_out_prefix;
     bool use_reference =
         !(m_reference.file_list.empty() && m_reference.file_name.empty());
-    if (m_prs_info.use_ref_maf && use_reference)
+    if (m_prs_info.use_ref_maf && !use_reference)
     {
         error = true;
         // for now, force use_ref_maf to be used together with --ld.

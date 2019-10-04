@@ -135,15 +135,21 @@ size_t Region::generate_regions(const size_t max_chr)
     m_gene_sets.clear();
     m_region_name.clear();
     m_snp_in_sets.clear();
-    std::string message = "Start processing gene set information\n";
-    message.append("==================================================");
-    m_reporter->report(message);
+
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest
     m_region_name.push_back("Base");
     m_region_name.push_back("Background");
     m_processed_sets.insert("Base");
     m_processed_sets.insert("Background");
+
+    // don't want to output gene set info if we are not working on gene sets
+    if (m_snp_set.empty() && m_bed.empty() && m_msigdb.empty())
+    { return m_region_name.size(); }
+    std::string message = "Start processing gene set information\n";
+    message.append("==================================================");
+    m_reporter->report(message);
+
     // 0 reserved for base
     // 1 reserved for background
     size_t set_idx = 2;

@@ -1850,9 +1850,8 @@ void PRSice::output(const std::vector<std::string>& region_names,
         {
             if (m_pheno_info.binary[pheno_index]) ++num_prev_binary;
         }
-        int num_case = static_cast<int>(m_phenotype.sum());
-        double case_ratio = static_cast<double>(num_case)
-                            / static_cast<double>(m_phenotype.rows());
+        double num_case = m_phenotype.sum();
+        double case_ratio = num_case / static_cast<double>(m_phenotype.rows());
         prevalence = m_pheno_info.prevalence[num_prev_binary];
         // the following is from Lee et al A better coefficient paper
         double x = misc::qnorm(1 - prevalence);

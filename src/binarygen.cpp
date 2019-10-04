@@ -664,7 +664,7 @@ void BinaryGen::gen_snp_vector(
 }
 
 
-void BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
+bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
                                     Genotype* target, bool force_cal)
 {
     if (!m_intermediate
@@ -675,7 +675,7 @@ void BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
         && (misc::logically_equal(filter_info.info_score, 0.0)
             || filter_info.maf < 0.0)
         && !force_cal)
-    { return; }
+    { return false; }
     const std::string print_target = (m_is_ref) ? "reference" : "target";
     m_reporter->report("Calculate MAF and perform filtering on " + print_target
                        + " SNPs\n"
@@ -864,6 +864,7 @@ void BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     // now update the vector
     if (retained != genotype->m_existed_snps.size())
     { genotype->shrink_snp_vector(retain_snps); }
+    return true;
 }
 
 BinaryGen::~BinaryGen()

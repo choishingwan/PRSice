@@ -662,7 +662,7 @@ protected:
         const std::string& /*out_prefix*/, Genotype* /*target*/)
     {
     }
-    virtual void calc_freq_gen_inter(const QCFiltering& /*QC info*/,
+    virtual bool calc_freq_gen_inter(const QCFiltering& /*QC info*/,
                                      Genotype* /*target=nullptr*/, bool /**/)
     {
     }

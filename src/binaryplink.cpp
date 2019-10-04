@@ -218,7 +218,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     return sample_name;
 }
 
-void BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
+bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
                                       Genotype* target, bool force_cal)
 {
     // we will go through all the SNPs
@@ -226,7 +226,7 @@ void BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
         && (misc::logically_equal(filter_info.maf, 0.0)
             || filter_info.maf < 0.0)
         && !force_cal)
-    { return; }
+    { return false; }
     const std::string print_target = (m_is_ref) ? "reference" : "target";
     m_reporter->report("Calculate MAF and perform filtering on " + print_target
                        + " SNPs\n"
@@ -313,6 +313,7 @@ void BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
             continue;
         }
         // filter by genotype missingness
+
         if (filter_info.geno < cur_geno)
         {
             ++m_num_geno_filter;
@@ -335,6 +336,7 @@ void BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
     // now update the vector
     if (retained != genotype->m_existed_snps.size())
     { genotype->shrink_snp_vector(retain_snps); }
+    return true;
 }
 
 void BinaryPlink::gen_snp_vector(
