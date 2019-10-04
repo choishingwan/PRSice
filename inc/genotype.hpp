@@ -665,6 +665,7 @@ protected:
     virtual bool calc_freq_gen_inter(const QCFiltering& /*QC info*/,
                                      Genotype* /*target=nullptr*/, bool /**/)
     {
+        return false;
     }
 
     void update_index_tot(const uintptr_t founder_ctl2,
