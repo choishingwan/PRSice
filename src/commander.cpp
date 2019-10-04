@@ -1040,11 +1040,23 @@ bool Commander::base_check()
     { m_parameter_log.erase("bp"); }
 
     if (!in_file(column_names, +BASE_INDEX::EFFECT, "Error", m_user_no_default))
-    { error = true; }
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Column for the effective allele must be provided!\n");
+    }
     if (!in_file(column_names, +BASE_INDEX::RS, "Error", m_user_no_default))
-    { error = true; }
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Column for the SNP ID must be provided!\n");
+    }
     if (!in_file(column_names, +BASE_INDEX::P, "Error", m_user_no_default))
-    { error = true; }
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Column for the P-value must be provided!\n");
+    }
     set_base_info_threshold(column_names, error);
     set_base_maf_filter(column_names, error);
     // now process the statistic column
