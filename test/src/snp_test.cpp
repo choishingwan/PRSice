@@ -1038,6 +1038,7 @@ TEST(SNP_CLUMP, EXTENSIVE_CLUMP)
     std::mt19937 mt(rd());
     std::uniform_int_distribution<size_t> bit_generator(
         0, std::numeric_limits<size_t>::max() - 1);
+    const bool proxy_clump = true;
     // repeat test 20 times to ensure this is correct
     for (size_t p = 0; p < 20; ++p)
     {
@@ -1060,7 +1061,7 @@ TEST(SNP_CLUMP, EXTENSIVE_CLUMP)
         base_snp.set_flag(num_regions, flag_a);
         set_snp.set_flag(num_regions, flag_b);
         // not proxy clump
-        base_snp.clump(set_snp, 1, false, 2);
+        base_snp.clump(set_snp, 1, !proxy_clump, 2);
         // normal clumping will not change the index, but will update the target
         for (size_t i = 0; i < num_regions; ++i)
         {
@@ -1072,7 +1073,7 @@ TEST(SNP_CLUMP, EXTENSIVE_CLUMP)
         // now proxy clump
         base_snp.set_flag(num_regions, flag_a);
         set_snp.set_flag(num_regions, flag_b);
-        base_snp.clump(set_snp, 1, false, 0.5);
+        base_snp.clump(set_snp, 1, proxy_clump, 0.5);
         // for proxy clump, we update flag of the index instead of target
         for (size_t i = 0; i < num_regions; ++i)
         {
@@ -1089,7 +1090,7 @@ TEST(SNP_CLUMP, EXTENSIVE_CLUMP)
         clump_completed &= (clumped.back() == 0);
         base_snp.set_flag(num_regions, flag_a);
         set_snp.set_flag(num_regions, flag_b);
-        base_snp.clump(set_snp, 1, false, 2);
+        base_snp.clump(set_snp, 1, !proxy_clump, 2);
         ASSERT_TRUE(base_snp.clumped());
         ASSERT_EQ(set_snp.clumped(), clump_completed);
     }

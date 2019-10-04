@@ -5435,10 +5435,18 @@ TEST(REGION_BACKGROUND, SMALLER_END)
 TEST(REGION_BACKGROUND, NOT_FOUND)
 {
     std::ofstream bed_file;
+    std::string bed_name = path + "Test.bed";
+    bed_file.open(bed_name);
+    bed_file << "1 89557 96038\n"
+                "4  3016 87782\n"
+                "10 14013 68802\n"
+                "97 53964 90572\n"
+                "14 22104 47572\n";
+    bed_file.close();
     std::string background = path + "404.bed";
     std::remove(background.c_str());
     background.append(":bed");
-    std::vector<std::string> bed_names;
+    std::vector<std::string> bed_names = {bed_name};
     Reporter reporter(std::string(path + "LOG"));
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};

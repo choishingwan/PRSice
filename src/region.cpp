@@ -144,7 +144,10 @@ size_t Region::generate_regions(const size_t max_chr)
     m_processed_sets.insert("Background");
 
     // don't want to output gene set info if we are not working on gene sets
-    if (m_snp_set.empty() && m_bed.empty() && m_msigdb.empty())
+    // technically, if only gtf is provided, we should also have an early
+    // return. But I don't bother remodelling the unit test, so we will not do
+    // an early return when only gtf is provided
+    if (m_snp_set.empty() && m_bed.empty() && m_msigdb.empty() && m_gtf.empty())
     { return m_region_name.size(); }
     std::string message = "Start processing gene set information\n";
     message.append("==================================================");
