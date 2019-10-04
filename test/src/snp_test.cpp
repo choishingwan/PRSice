@@ -5,8 +5,9 @@
 #include "region.hpp"
 #include "snp.hpp"
 #include "gtest/gtest.h"
+#include <limits>
+#include <random>
 #include <vector>
-
 class SNP_INIT_TEST : public ::testing::Test
 {
 protected:
@@ -432,7 +433,7 @@ TEST(SNP_MATCHING, NO_BP_MATCHING)
     flipped = false;
 }
 
-// TODO: Need ore extensive clumping test. Need to test the set based clumping
+// TODO: Need more extensive clumping test. Need to test the set based clumping
 // situation
 TEST(SNP_CLUMP, SET_CLUMP)
 {
@@ -451,6 +452,7 @@ TEST(SNP_CLUMP, SET_CLUMP)
     // set clumped should set clump to true
     ASSERT_TRUE(snp.clumped());
 }
+
 
 TEST(SNP_BOUND, SET_LOW_BOUND)
 {
@@ -1025,5 +1027,72 @@ TEST(SNP_CATEGORY, BASIC_CALCULATION)
     ASSERT_EQ(before + 1, cur_category);
 }
 
+
+TEST(SNP_CLUMP, EXTENSIVE_CLUMP)
+{
+    // use proxy clumping and LD is high enough
+    const size_t num_regions = 999;
+    const size_t flag_size = BITCT_TO_WORDCT(num_regions);
+
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<size_t> bit_generator(
+        0, std::numeric_limits<size_t>::max() - 1);
+    // repeat test 20 times to ensure this is correct
+    for (size_t p = 0; p < 20; ++p)
+    {
+        std::vector<uintptr_t> flag_a(flag_size, 0);
+        std::vector<uintptr_t> flag_b(flag_size, 0);
+        std::vector<uintptr_t> clumped(flag_size, 0);
+        size_t bit_a, bit_b;
+        bool clump_completed = true;
+        SNP base_snp("Base_SNP", 1, 1, "A", "C", 1, 0.05, 1, 0.05);
+        SNP set_snp("Set_SNP", 1, 11869, "A", "C", 1, 0.05, 1, 0.05);
+        for (size_t i = 0; i < flag_size; ++i)
+        {
+            bit_a = bit_generator(mt);
+            flag_a[i] = bit_a;
+            bit_b = bit_generator(mt);
+            flag_b[i] = bit_b;
+            clumped[i] = bit_b & ~bit_a;
+            clump_completed &= (clumped[i] == 0);
+        }
+        base_snp.set_flag(num_regions, flag_a);
+        set_snp.set_flag(num_regions, flag_b);
+        // not proxy clump
+        base_snp.clump(set_snp, 1, false, 2);
+        // normal clumping will not change the index, but will update the target
+        for (size_t i = 0; i < num_regions; ++i)
+        {
+            ASSERT_EQ(base_snp.in(i), IS_SET(flag_a.data(), i));
+            ASSERT_EQ(set_snp.in(i), IS_SET(clumped.data(), i));
+        }
+        ASSERT_TRUE(base_snp.clumped());
+        ASSERT_EQ(set_snp.clumped(), clump_completed);
+        // now proxy clump
+        base_snp.set_flag(num_regions, flag_a);
+        set_snp.set_flag(num_regions, flag_b);
+        base_snp.clump(set_snp, 1, false, 0.5);
+        // for proxy clump, we update flag of the index instead of target
+        for (size_t i = 0; i < num_regions; ++i)
+        {
+            ASSERT_EQ(base_snp.in(i),
+                      IS_SET(flag_a.data(), i) || IS_SET(flag_b.data(), i));
+            ASSERT_EQ(set_snp.in(i), IS_SET(flag_b.data(), i));
+        }
+        ASSERT_TRUE(base_snp.clumped());
+        ASSERT_TRUE(set_snp.clumped());
+
+        // try to make the last element identical
+        flag_b.back() = flag_a.back();
+        clumped.back() = flag_b.back() & ~flag_a.back();
+        clump_completed &= (clumped.back() == 0);
+        base_snp.set_flag(num_regions, flag_a);
+        set_snp.set_flag(num_regions, flag_b);
+        base_snp.clump(set_snp, 1, false, 2);
+        ASSERT_TRUE(base_snp.clumped());
+        ASSERT_EQ(set_snp.clumped(), clump_completed);
+    }
+}
 
 #endif // SNP_TEST_HPP

@@ -245,6 +245,7 @@ public:
     {
         m_clump_info.max_flag_idx = BITCT_TO_WORDCT(num_region);
         m_clump_info.flags = flags;
+        m_clump_info.clumped = false;
     }
 
     /*!
@@ -267,7 +268,7 @@ public:
         if (target.clumped()) return;
         // we need to check if the target SNP is completely clumped (e.g. no
         // longer representing any set)
-        unsigned long long remained_flag = 0;
+        bool target_clumped = true;
         // if we want to use proxy, and that our r2 is higher than
         // the proxy threshold, we will do the proxy clumping
         // and the index SNP will get all membership (or) from the clumped
@@ -278,7 +279,7 @@ public:
             {
                 m_clump_info.flags[i_flag] |= target.m_clump_info.flags[i_flag];
             }
-            remained_flag = 0;
+            target_clumped = true;
         }
         else
         {
@@ -290,16 +291,19 @@ public:
                 // i.e. if flag of SNP A (current) is 11011 and SNP B (target)
                 // is 11110, by the end of clumping, it will become SNP A
                 // =11111, SNP B = 00100
+                // bit operation meaning:
+                // ~m_clump_info = not in index
+                // target.m_clump_info & ~m_clump_info = retain bit that are not
+                // found in index
                 target.m_clump_info.flags[i_flag] =
                     target.m_clump_info.flags[i_flag]
-                    ^ (m_clump_info.flags[i_flag]
-                       & target.m_clump_info.flags[i_flag]);
+                    & ~m_clump_info.flags[i_flag];
                 // if all flags of the target SNP == 0, it means that it no
                 // longer represent any gene set and is consided as "clumped"
-                remained_flag += (target.m_clump_info.flags[i_flag] != 0);
+                target_clumped &= (target.m_clump_info.flags[i_flag] == 0);
             }
         }
-        if (remained_flag == 0)
+        if (target_clumped)
         {
             // if the target SNP no longer represent any gene set, it is
             // considered as clumped and can be removed
