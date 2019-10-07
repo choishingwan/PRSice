@@ -468,10 +468,10 @@ void BinaryGen::gen_snp_vector(
     long long byte_pos, start, data_size;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
+    size_t num_snp;
     size_t chr_num = 0;
     uint32_t SNP_position = 0;
     uint32_t offset;
-    uint32_t num_snp;
     int chr_code = 0;
     bool exclude_snp = false;
     bool chr_sex_error = false;
@@ -647,6 +647,16 @@ void BinaryGen::gen_snp_vector(
                     ++ref_target_match;
                 }
             }
+        }
+        if (num_snp % 1000 == 0)
+        {
+            fprintf(stderr, "\r%zuK SNPs processed in %s   \r", num_snp / 1000,
+                    bgen_name.c_str());
+        }
+        else if (num_snp < 1000)
+        {
+            fprintf(stderr, "\r%zu SNPs processed in %s\r", num_snp,
+                    bgen_name.c_str());
         }
         bgen_file.close();
         fprintf(stderr, "\n");
