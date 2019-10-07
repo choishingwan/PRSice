@@ -68,14 +68,13 @@ BinaryGen::BinaryGen(const GenoFile& geno, const Phenotype& pheno,
 std::vector<Sample_ID> BinaryGen::gen_sample_vector()
 {
     // first, check if the sample file is in the sample format specified by BGEN
-    const bool is_sample_format = check_is_sample_format();
+    const bool is_sample_format = check_is_sample_format(m_sample_file);
     std::ifstream sample_file(m_sample_file.c_str());
     if (!sample_file.is_open())
     {
         throw std::runtime_error("Error: Cannot open sample file: "
                                  + m_sample_file);
     }
-
     std::string line;
     size_t sex_col = ~size_t(0);
     // now check if there's a sex information
@@ -242,14 +241,15 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
     return sample_name;
 }
 
-bool BinaryGen::check_is_sample_format()
+bool BinaryGen::check_is_sample_format(const std::string& input)
 {
     // read the sample file
-    std::ifstream sample_file(m_sample_file.c_str());
+    // might want to change it according to the new sample file,
+    // which only mandate the first column
+    std::ifstream sample_file(input.c_str());
     if (!sample_file.is_open())
     {
-        std::string error_message =
-            "Error: Cannot open sample file: " + m_sample_file;
+        std::string error_message = "Error: Cannot open sample file: " + input;
         throw std::runtime_error(error_message);
     }
     // get the first two line of input
@@ -451,7 +451,6 @@ void BinaryGen::gen_snp_vector(
     const std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     const std::string mismatch_source = m_is_ref ? "Reference" : "Base";
     std::unordered_set<std::string> duplicated_snps;
-    // should only apply to SNPs that are not removed due to extract/exclude
     std::unordered_set<std::string> processed_snps;
     auto&& genotype = (m_is_ref) ? target : this;
     std::vector<bool> retain_snp(genotype->m_existed_snps.size(), false);
@@ -486,15 +485,18 @@ void BinaryGen::gen_snp_vector(
         // go through each genotype file and get the context information
         get_context(i);
         // get the total unfiltered snp size so that we can initalize the vector
+        // TODO: Check if there are too many SNPs, therefore cause integer
+        // overflow
         total_unfiltered_snps += m_context_map[i].number_of_variants;
     }
     check_sample_consistent(
         std::string(m_genotype_file_names.front() + ".bgen"), m_context_map[0]);
 
-    for (size_t idx = 0; idx < m_genotype_file_names.size(); ++idx)
+    for (size_t file_idx = 0; file_idx < m_genotype_file_names.size();
+         ++file_idx)
     {
         // now start reading each bgen file
-        prefix = m_genotype_file_names[idx];
+        prefix = m_genotype_file_names[file_idx];
         bgen_name = prefix + ".bgen";
         if (bgen_file.is_open()) bgen_file.close();
         bgen_file.clear();
@@ -506,7 +508,7 @@ void BinaryGen::gen_snp_vector(
             throw std::runtime_error(error_message);
         }
         // read in the offset
-        auto&& context = m_context_map[idx];
+        auto&& context = m_context_map[file_idx];
         offset = context.offset;
         // skip the offest
         bgen_file.seekg(offset + 4);
@@ -639,8 +641,8 @@ void BinaryGen::gen_snp_vector(
                 {
                     processed_snps.insert(cur_id);
                     genotype->m_existed_snps[target_index].add_snp_info(
-                        idx, byte_pos, chr_num, SNP_position, A1, A2, flipping,
-                        flipping);
+                        file_idx, byte_pos, chr_num, SNP_position, A1, A2,
+                        flipping, m_is_ref);
                     retain_snp[target_index] = true;
                     ++ref_target_match;
                 }

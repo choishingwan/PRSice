@@ -37,7 +37,15 @@ public:
               const std::string& delim, Reporter* reporter);
     ~BinaryGen();
 
-private:
+    //
+    /*!
+     * \brief check if the sample file is of the sample format specified by bgen
+     *        or just a simple text file
+     * \return
+     */
+    static bool check_is_sample_format(const std::string& input);
+
+protected:
     typedef std::vector<std::vector<double>> Data;
     std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
@@ -50,13 +58,6 @@ private:
      * \return Vector containing the sample information
      */
     std::vector<Sample_ID> gen_sample_vector();
-    //
-    /*!
-     * \brief check if the sample file is of the sample format specified by bgen
-     *        or just a simple text file
-     * \return
-     */
-    bool check_is_sample_format();
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
