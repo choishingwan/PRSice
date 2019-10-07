@@ -105,7 +105,8 @@ public:
                    bool verbose, Genotype* target = nullptr);
 
     void calc_freqs_and_intermediate(const QCFiltering& filter_info,
-                                     bool verbose, Genotype* target = nullptr,
+                                     const std::string& prefix, bool verbose,
+                                     Genotype* target = nullptr,
                                      bool force_cal = false);
     /*!
      * \brief Return the number of SNPs, use for unit test
@@ -421,6 +422,7 @@ public:
     }
     void snp_extraction(const std::string& extract_snps,
                         const std::string& exclude_snps);
+
     Genotype& set_weight()
     {
         switch (m_prs_calculation.genetic_model)
@@ -669,6 +671,7 @@ protected:
     {
     }
     virtual bool calc_freq_gen_inter(const QCFiltering& /*QC info*/,
+                                     const std::string& prefix,
                                      Genotype* /*target=nullptr*/, bool /**/)
     {
         return false;

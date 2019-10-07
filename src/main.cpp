@@ -110,7 +110,8 @@ int main(int argc, char* argv[])
                 reference_file = factory.createGenotype(
                     commander.get_reference(), commander.get_pheno(),
                     commander.delim(), reporter);
-                reference_file = &reference_file->reference();
+                reference_file = &reference_file->reference().intermediate(
+                    commander.use_inter());
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
                 message.append(
@@ -131,12 +132,12 @@ int main(int argc, char* argv[])
             // We want to only invoke the MAF calculation if we need to
             // i.e after clumping, to speed up the process
             target_file->calc_freqs_and_intermediate(commander.get_target_qc(),
-                                                     true);
+                                                     commander.out(), true);
             if (init_ref)
             {
                 reference_file->set_thresholds(commander.get_ref_qc());
                 reference_file->calc_freqs_and_intermediate(
-                    commander.get_ref_qc(), true, target_file);
+                    commander.get_ref_qc(), commander.out(), true, target_file);
             }
             // now should get the correct MAF and should have filtered the
             // SNPs accordingly Generate Region flag information

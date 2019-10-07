@@ -667,7 +667,8 @@ void BinaryGen::gen_snp_vector(
 
 
 bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
-                                    Genotype* target, bool force_cal)
+                                    const std::string& prefix, Genotype* target,
+                                    bool force_cal)
 {
     if (!m_intermediate
         && (misc::logically_equal(filter_info.geno, 1.0)
@@ -698,6 +699,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     std::vector<bool> retain_snps(genotype->m_existed_snps.size(), false);
 
     std::string bgen_name = "";
+    const std::string intermediate_name = prefix + ".inter";
     std::ifstream bgen_file;
     double cur_maf, cur_geno;
     long long byte_pos, tmp_byte_pos;
@@ -732,13 +734,13 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
         {
             // target already generated some intermediate, now append for
             // reference
-            inter_out.open(m_intermediate_file.c_str(),
+            inter_out.open(intermediate_name.c_str(),
                            std::ios::binary | std::ios::app);
         }
         else
         {
             // a new intermediate file
-            inter_out.open(m_intermediate_file.c_str(), std::ios::binary);
+            inter_out.open(intermediate_name.c_str(), std::ios::binary);
         }
     }
     // now start processing the bgen file
@@ -857,10 +859,10 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
         }
     }
     if (m_intermediate
-        && (m_is_ref || !m_expect_reference || (!m_is_ref && m_hard_coded)))
+        && (m_is_ref || (!m_is_ref && m_hard_coded) || !m_expect_reference))
     { // update our genotype file
         inter_out.close();
-        m_genotype_file_names.push_back(m_intermediate_file);
+        m_genotype_file_names.push_back(intermediate_name);
     }
     fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%\n", 100.0);
     // now update the vector
@@ -876,7 +878,7 @@ BinaryGen::~BinaryGen()
         // if we have constructed the intermediate file, we should remove it
         // to save space (plus that file isn't of any useful format and
         // can't be used by any other problem nor can it be reused)
-        std::remove(m_intermediate_file.c_str());
+        std::remove(m_genotype_file_names.back().c_str());
     }
 }
 

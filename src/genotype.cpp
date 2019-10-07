@@ -797,6 +797,7 @@ void Genotype::load_samples(bool verbose)
 }
 
 void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
+                                           const std::string& prefix,
                                            bool verbose, Genotype* target,
                                            bool force_cal)
 {
@@ -805,7 +806,7 @@ void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
     m_num_maf_filter = 0;
     m_num_info_filter = 0;
     // only print the filtering message if filtering was performed
-    if (calc_freq_gen_inter(filter_info, target, force_cal))
+    if (calc_freq_gen_inter(filter_info, prefix, target, force_cal))
     {
         if (m_num_geno_filter != 0)
         {

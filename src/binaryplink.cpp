@@ -219,7 +219,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 }
 
 bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
-                                      Genotype* target, bool force_cal)
+                                      const std::string&, Genotype* target,
+                                      bool force_cal)
 {
     // we will go through all the SNPs
     if ((misc::logically_equal(filter_info.geno, 1.0) || filter_info.geno > 1.0)

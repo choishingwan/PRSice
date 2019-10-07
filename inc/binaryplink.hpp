@@ -52,7 +52,7 @@ protected:
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
-    bool calc_freq_gen_inter(const QCFiltering& filter_info,
+    bool calc_freq_gen_inter(const QCFiltering& filter_info, const std::string&,
                              Genotype* target = nullptr,
                              bool force_cal = false);
     void check_bed(const std::string& bed_name, size_t num_marker,

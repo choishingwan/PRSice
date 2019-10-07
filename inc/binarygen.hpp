@@ -49,7 +49,6 @@ protected:
     typedef std::vector<std::vector<double>> Data;
     std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
-    std::string m_intermediate_file;
     bool m_target_plink = false;
     bool m_ref_plink = false;
 
@@ -62,6 +61,7 @@ protected:
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
     bool calc_freq_gen_inter(const QCFiltering& filter_info,
+                             const std::string& prefix,
                              Genotype* target = nullptr,
                              bool force_cal = false);
     /*!
@@ -93,8 +93,6 @@ protected:
     {
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        if (!m_genotype_file.mem_calculated())
-        { m_genotype_file.init_memory_map(g_allowed_memory, m_data_size); }
         if (m_ref_plink)
         {
             // when m_ref_plink is set, it suggest we are using the
