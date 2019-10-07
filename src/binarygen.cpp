@@ -61,6 +61,7 @@ BinaryGen::BinaryGen(const GenoFile& geno, const Phenotype& pheno,
     {
         m_sample_file = pheno.pheno_file;
     }
+    m_has_external_sample = true;
     m_reporter->report(message);
 }
 
@@ -68,152 +69,182 @@ BinaryGen::BinaryGen(const GenoFile& geno, const Phenotype& pheno,
 std::vector<Sample_ID> BinaryGen::gen_sample_vector()
 {
     // first, check if the sample file is in the sample format specified by BGEN
-    const bool is_sample_format = check_is_sample_format(m_sample_file);
-    std::ifstream sample_file(m_sample_file.c_str());
-    if (!sample_file.is_open())
-    {
-        throw std::runtime_error("Error: Cannot open sample file: "
-                                 + m_sample_file);
-    }
-    std::string line;
-    size_t sex_col = ~size_t(0);
-    // now check if there's a sex information
-    if (is_sample_format)
-    {
-        // only do this if the file is sample format
-        std::getline(sample_file, line);
-        std::vector<std::string> header_names = misc::split(line);
-        m_reporter->report("Detected bgen sample file format\n");
-        for (size_t i = 3; i < header_names.size(); ++i)
-        {
-            // try to identify column containing SEX
-            std::transform(header_names[i].begin(), header_names[i].end(),
-                           header_names[i].begin(), ::toupper);
-            if (header_names[i].compare("SEX") == 0)
-            {
-                sex_col = i;
-                break;
-            }
-        }
-        // now we read in the second line
-        std::getline(sample_file, line);
-        if (sex_col != ~size_t(0))
-        {
-            // double check if the format is alright
-            std::vector<std::string> header_format = misc::split(line);
-            // no need range check as we know for sure sex_col must be in range
-            if (header_format[sex_col] != "D")
-            {
-                m_reporter->report("Warning: Sex must be coded as "
-                                   "\"D\" in bgen sample file!\n"
-                                   "We will ignore the sex information.");
-                sex_col = ~size_t(0);
-            }
-        }
-    }
-    // now start reading the file
-    size_t line_id = 0;
+    // for reference file, get the number of sample size from the context file
+
     std::vector<Sample_ID> sample_name;
-    std::unordered_set<std::string> sample_in_file;
-    std::vector<std::string> duplicated_sample_id;
-    std::vector<std::string> token;
     std::vector<bool> temp_inclusion_vec;
-    bool inclusion = false;
-    std::string FID, IID;
-    while (std::getline(sample_file, line))
+    if (m_is_ref)
     {
-        misc::trim(line);
-        ++line_id;
-        if (line.empty()) continue;
-        token = misc::split(line);
-        // if it is not the sample file, check if this has a header
-        // not the best way, but will do it
-        if (line_id == 1)
+        if ((!m_keep_file.empty() || !m_remove_file.empty())
+            && (!m_has_external_sample))
         {
-            std::string header_test = token[0];
-            std::transform(header_test.begin(), header_test.end(),
-                           header_test.begin(), ::toupper);
-            if (header_test == "FID" || (header_test == "IID" && m_ignore_fid))
+            throw std::runtime_error("Error: Cannot perform sample "
+                                     "filtering on the LD reference "
+                                     "file wihtout the sample file!");
+        }
+        else
+        {
+            get_context(0);
+            m_unfiltered_sample_ct = m_context_map[0].number_of_samples;
+            temp_inclusion_vec.resize(m_unfiltered_sample_ct, true);
+        }
+    }
+    if (!m_is_ref || (!m_keep_file.empty() || !m_remove_file.empty()))
+    {
+        // this is the target, where the m_sample_file must be correct, or this
+        // is the reference, which we asked for --keep or --remove and an
+        // external sample file was provided (that's why we don't get into the
+        // runtime_error)
+        const bool is_sample_format = check_is_sample_format(m_sample_file);
+        std::ifstream sample_file(m_sample_file.c_str());
+        if (!sample_file.is_open())
+        {
+            throw std::runtime_error("Error: Cannot open sample file: "
+                                     + m_sample_file);
+        }
+        std::string line;
+        size_t sex_col = ~size_t(0);
+        // now check if there's a sex information
+        if (is_sample_format)
+        {
+            // only do this if the file is sample format
+            std::getline(sample_file, line);
+            std::vector<std::string> header_names = misc::split(line);
+            m_reporter->report("Detected bgen sample file format\n");
+            for (size_t i = 3; i < header_names.size(); ++i)
             {
-                // this is the header, skip
-                continue;
+                // try to identify column containing SEX
+                std::transform(header_names[i].begin(), header_names[i].end(),
+                               header_names[i].begin(), ::toupper);
+                if (header_names[i].compare("SEX") == 0)
+                {
+                    sex_col = i;
+                    break;
+                }
+            }
+            // now we read in the second line
+            std::getline(sample_file, line);
+            if (sex_col != ~size_t(0))
+            {
+                // double check if the format is alright
+                std::vector<std::string> header_format = misc::split(line);
+                // no need range check as we know for sure sex_col must be in
+                // range
+                if (header_format[sex_col] != "D")
+                {
+                    m_reporter->report("Warning: Sex must be coded as "
+                                       "\"D\" in bgen sample file!\n"
+                                       "We will ignore the sex information.");
+                    sex_col = ~size_t(0);
+                }
+            }
+        }
+        // now start reading the file
+        size_t line_id = 0;
+        std::unordered_set<std::string> sample_in_file;
+        std::vector<std::string> duplicated_sample_id;
+        std::vector<std::string> token;
+        bool inclusion = false;
+        std::string FID, IID;
+        while (std::getline(sample_file, line))
+        {
+            misc::trim(line);
+            ++line_id;
+            if (line.empty()) continue;
+            token = misc::split(line);
+            // if it is not the sample file, check if this has a header
+            // not the best way, but will do it
+            if (line_id == 1)
+            {
+                std::string header_test = token[0];
+                std::transform(header_test.begin(), header_test.end(),
+                               header_test.begin(), ::toupper);
+                if (header_test == "FID"
+                    || (header_test == "IID" && m_ignore_fid))
+                {
+                    // this is the header, skip
+                    continue;
+                }
+                else
+                {
+                    // emit a warning so people might be aware of it
+                    m_reporter->report(
+                        "We assume the following line is not a header:\n" + line
+                        + "\n(first column isn't FID or IID)\n");
+                }
+            }
+            if (token.size()
+                < ((sex_col != ~size_t(0)) ? (sex_col) : (1 + !m_ignore_fid)))
+            {
+                throw std::runtime_error(
+                    "Error: Line " + std::to_string(line_id)
+                    + " must have at least "
+                    + std::to_string((sex_col != ~size_t(0))
+                                         ? (sex_col)
+                                         : (1 + !m_ignore_fid))
+                    + " columns! Number of column="
+                    + misc::to_string(token.size()));
+            }
+            ++m_unfiltered_sample_ct;
+
+            if (is_sample_format || !m_ignore_fid)
+            {
+                FID = token[0];
+                IID = token[1];
             }
             else
             {
-                // emit a warning so people might be aware of it
-                m_reporter->report(
-                    "We assume the following line is not a header:\n" + line
-                    + "\n(first column isn't FID or IID)\n");
+                // not a sample format or used ignore fid
+                FID = "";
+                IID = token[0];
+            }
+            const std::string id = (m_ignore_fid) ? IID : FID + m_delim + IID;
+            // we assume all bgen samples are founders
+            if (!m_remove_sample)
+            {
+                inclusion = (m_sample_selection_list.find(id)
+                             != m_sample_selection_list.end());
+            }
+            else
+            {
+                inclusion = (m_sample_selection_list.find(id)
+                             == m_sample_selection_list.end());
+            }
+            if (sex_col != ~size_t(0))
+            {
+                // anything that's not 1 or 2 are considered as ambiguous. This
+                // mean that M and F will also be "ambiguous"
+                m_num_male += (token[sex_col] == "1");
+                m_num_female += (token[sex_col] == "2");
+                m_num_ambig_sex +=
+                    (token[sex_col] != "1" && token[sex_col] != "2");
+            }
+            else
+            {
+                ++m_num_ambig_sex;
+            }
+            if (sample_in_file.find(id) != sample_in_file.end())
+            { duplicated_sample_id.push_back(id); }
+            sample_in_file.insert(id);
+            temp_inclusion_vec.push_back(inclusion);
+            if (!m_is_ref && inclusion)
+            {
+                // all sample must be a founder
+                sample_name.emplace_back(Sample_ID(FID, IID, "", true));
             }
         }
-        if (token.size()
-            < ((sex_col != ~size_t(0)) ? (sex_col) : (1 + !m_ignore_fid)))
+        if (!duplicated_sample_id.empty())
         {
-            throw std::runtime_error("Error: Line " + std::to_string(line_id)
-                                     + " must have at least "
-                                     + std::to_string((sex_col != ~size_t(0))
-                                                          ? (sex_col)
-                                                          : (1 + !m_ignore_fid))
-                                     + " columns! Number of column="
-                                     + misc::to_string(token.size()));
+            // TODO: Produce a file containing id of all valid samples
+            throw std::runtime_error(
+                "Error: A total of "
+                + misc::to_string(duplicated_sample_id.size())
+                + " duplicated samples detected! Please ensure all samples "
+                  "have an "
+                  "unique identifier");
         }
-        ++m_unfiltered_sample_ct;
-
-        if (is_sample_format || !m_ignore_fid)
-        {
-            FID = token[0];
-            IID = token[1];
-        }
-        else
-        {
-            // not a sample format or used ignore fid
-            FID = "";
-            IID = token[0];
-        }
-        const std::string id = (m_ignore_fid) ? IID : FID + m_delim + IID;
-        // we assume all bgen samples are founders
-        if (!m_remove_sample)
-        {
-            inclusion = (m_sample_selection_list.find(id)
-                         != m_sample_selection_list.end());
-        }
-        else
-        {
-            inclusion = (m_sample_selection_list.find(id)
-                         == m_sample_selection_list.end());
-        }
-        if (sex_col != ~size_t(0))
-        {
-            // anything that's not 1 or 2 are considered as ambiguous. This mean
-            // that M and F will also be "ambiguous"
-            m_num_male += (token[sex_col] == "1");
-            m_num_female += (token[sex_col] == "2");
-            m_num_ambig_sex += (token[sex_col] != "1" && token[sex_col] != "2");
-        }
-        else
-        {
-            ++m_num_ambig_sex;
-        }
-        if (sample_in_file.find(id) != sample_in_file.end())
-        { duplicated_sample_id.push_back(id); }
-        sample_in_file.insert(id);
-        temp_inclusion_vec.push_back(inclusion);
-        if (!m_is_ref && inclusion)
-        {
-            // all sample must be a founder
-            sample_name.emplace_back(Sample_ID(FID, IID, "", true));
-        }
+        sample_file.close();
     }
-    if (!duplicated_sample_id.empty())
-    {
-        // TODO: Produce a file containing id of all valid samples
-        throw std::runtime_error(
-            "Error: A total of " + misc::to_string(duplicated_sample_id.size())
-            + " duplicated samples detected! Please ensure all samples "
-              "have an "
-              "unique identifier");
-    }
-
 
     uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     m_sample_include.resize(unfiltered_sample_ctl, 0);
@@ -232,7 +263,6 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
         }
     }
     m_founder_ct = m_sample_ct;
-    sample_file.close();
     // initialize the PRS vector (can't reserve, otherwise seg fault(no idea
     // why))
     for (size_t i = 0; i < m_sample_ct; ++i) { m_prs_info.emplace_back(PRS()); }

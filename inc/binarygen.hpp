@@ -51,6 +51,7 @@ protected:
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     bool m_target_plink = false;
     bool m_ref_plink = false;
+    bool m_has_external_sample = false;
 
     /*!
      * \brief Generate the sample vector

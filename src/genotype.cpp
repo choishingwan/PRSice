@@ -808,6 +808,7 @@ void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
     // only print the filtering message if filtering was performed
     if (calc_freq_gen_inter(filter_info, prefix, target, force_cal))
     {
+        m_marker_ct = m_existed_snps.size();
         if (m_num_geno_filter != 0)
         {
             message.append(std::to_string(m_num_geno_filter)
