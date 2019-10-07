@@ -384,7 +384,7 @@ protected:
                 {
                     (*m_sample_prs)[i].prs =
                         (*m_sample_prs)[i].prs * m_not_first + m_miss_score;
-                    cur_idx++;
+                    ++cur_idx;
                 }
                 else if (m_centre)
                 {
@@ -583,10 +583,10 @@ protected:
             m_genotype[m_index] |= m_geno << m_shift;
             switch (m_geno)
             {
-            case 3: m_homrar_ct++; break;
-            case 2: m_het_ct++; break;
-            case 1: m_missing_ct++; break;
-            case 0: m_homcom_ct++; break;
+            case 3: ++m_homrar_ct; break;
+            case 2: ++m_het_ct; break;
+            case 1: ++m_missing_ct; break;
+            case 0: ++m_homcom_ct; break;
             }
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
@@ -594,7 +594,7 @@ protected:
             // the shift
             if (m_shift == BITCT)
             {
-                m_index++;
+                ++m_index;
                 m_shift = 0;
             }
             // we can now push in the expected value for this sample. This

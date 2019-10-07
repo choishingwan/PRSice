@@ -124,7 +124,9 @@ int main(int argc, char* argv[])
             exclusion_regions.clear();
             // with the reference file read, we can start doing filtering and
             // calculate relevent metric
-
+            // set the hard coding threshold and dosage threshold which are
+            // required for handling dosage
+            target_file->set_thresholds(commander.get_target_qc());
             // only calculate the MAF if we need to
             // We want to only invoke the MAF calculation if we need to
             // i.e after clumping, to speed up the process
@@ -132,7 +134,7 @@ int main(int argc, char* argv[])
                                                      true);
             if (init_ref)
             {
-                reporter.report(message);
+                reference_file->set_thresholds(commander.get_ref_qc());
                 reference_file->calc_freqs_and_intermediate(
                     commander.get_ref_qc(), true, target_file);
             }

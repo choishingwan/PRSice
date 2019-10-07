@@ -449,6 +449,12 @@ public:
         return *this;
     }
 
+    void set_thresholds(const QCFiltering& qc)
+    {
+        m_hard_threshold = qc.hard_threshold;
+        m_dose_threshold = qc.dose_threshold;
+    }
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements
