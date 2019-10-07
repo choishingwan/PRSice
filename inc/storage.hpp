@@ -104,9 +104,9 @@ struct Permutations
 {
     size_t num_permutation = 0;
     std::random_device::result_type seed = std::random_device()();
+    int logit_perm = false;
     bool run_perm = false;
     bool run_set_perm = false;
-    int logit_perm = false;
 };
 
 struct SNPClump

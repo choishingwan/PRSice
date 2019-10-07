@@ -362,7 +362,6 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         genfile::bgen::Context tmp_context;
         genfile::bgen::read_offset(bgen_file, &tmp_offset);
         genfile::bgen::read_header_block(bgen_file, &tmp_context);
-        const bool has_fid = !m_sample_id.front().FID.empty();
         uint32_t sample_block_size = 0;
         uint32_t actual_number_of_samples = 0;
         uint16_t identifier_size;
@@ -392,6 +391,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
         // That can be done later on
         if (!m_is_ref)
         {
+            const bool has_fid = !m_sample_id.front().FID.empty();
             size_t sample_vector_idx = 0;
             for (size_t i = 0; i < actual_number_of_samples; ++i)
             {
@@ -489,9 +489,12 @@ void BinaryGen::gen_snp_vector(
         // overflow
         total_unfiltered_snps += m_context_map[i].number_of_variants;
     }
-    check_sample_consistent(
-        std::string(m_genotype_file_names.front() + ".bgen"), m_context_map[0]);
-
+    if (!m_is_ref)
+    {
+        check_sample_consistent(
+            std::string(m_genotype_file_names.front() + ".bgen"),
+            m_context_map[0]);
+    }
     for (size_t file_idx = 0; file_idx < m_genotype_file_names.size();
          ++file_idx)
     {
