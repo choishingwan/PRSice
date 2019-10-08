@@ -523,8 +523,6 @@ protected:
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
-            // checked with PLINK, the expected value should be coded as 0,
-            // 1, 2 instead of 0, 0.5, 1 as in PRS
             m_exp_value += static_cast<double>(geno) * value;
         }
         /*!
