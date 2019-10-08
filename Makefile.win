@@ -4,12 +4,12 @@ build?=x86_64
 dir=/usr/local/Cellar/mingw-w64/${version}/toolchain-${build}/
 CXX=${dir}/bin/${build}-w64-mingw32-g++
 CXXFLAGS=-Wall -O3 -std=gnu++11 -DNDEBUG -static -lpthread -lpsapi
-INCLUDES := -I inc/ -isystem lib/ -isystem window/zlib-1.2.11/ -isystem lib/eigen-git-mirror/
+INCLUDES := -I inc/ -isystem lib/ -isystem window/zlib-1.2.11_${build}/ -isystem lib/eigen-git-mirror/
 CPPSRC := src/*.cpp
 OBJ := bgen_lib.o binaryplink.o genotype.o misc.o regression.o snp.o binarygen.o commander.o main.o plink_common.o prsice.o region.o reporter.o gzstream.o dcdflib.o fastlm.o
-ZLIB := window/zlib-1.2.11/libz.a ${dir}/${build}-w64-mingw32/lib/libpsapi.a 
+ZLIB := window/zlib-1.2.11_${build}/libz.a ${dir}/${build}-w64-mingw32/lib/libpsapi.a 
 %.o: src/%.cpp
 		$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
 
-PRSice_win64.exe: $(OBJ)
+PRSice_win${build}.exe: $(OBJ)
 		$(CXX) $(CXXFLAGS) $(INCLUDES)  $^ $(ZLIB) -o $@
