@@ -397,7 +397,7 @@ namespace bgen
     void read_and_parse_genotype_data_block(
         MemoryRead& aStream, const std::string& file_name,
         Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
-        std::vector<byte_t>* buffer2, unsigned long long idx);
+        std::vector<byte_t>* buffer2, long long idx);
 }
 }
 
@@ -1513,7 +1513,7 @@ namespace bgen
     void read_and_parse_genotype_data_block(
         MemoryRead& aStream, const std::string& file_name,
         Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
-        std::vector<byte_t>* buffer2, const unsigned long long idx)
+        std::vector<byte_t>* buffer2, const long long idx)
     {
         read_genotype_data_block(aStream, file_name, context, buffer1, idx);
         uncompress_probability_data(context, *buffer1, buffer2);

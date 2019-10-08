@@ -1067,7 +1067,7 @@ inline int string_to_int(const char* p)
 }
 inline size_t string_to_size_t(const char* p)
 {
-    int x = 0;
+    size_t x = 0;
     if (*p == '-')
     {
         throw std::runtime_error(
@@ -1083,12 +1083,25 @@ inline size_t string_to_size_t(const char* p)
     }
     while (*p >= '0' && *p <= '9')
     {
-        x = (x * 10) + (*p - '0');
+        x = (x * 10) + static_cast<size_t>(*p - '0');
         ++p;
     }
     return x;
 }
-
+// from https://stackoverflow.com/a/874160
+inline bool hasEnding(const std::string& fullString, const std::string& ending)
+{
+    if (fullString.length() >= ending.length())
+    {
+        return (0
+                == fullString.compare(fullString.length() - ending.length(),
+                                      ending.length(), ending));
+    }
+    else
+    {
+        return false;
+    }
+}
 
 /**
  * Returns the peak (maximum so far) resident set size (physical

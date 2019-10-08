@@ -33,47 +33,38 @@
 class BinaryGen : public Genotype
 {
 public:
-    BinaryGen(const std::string& list_file, const std::string& file,
-              const std::string& pheno_file, const std::string& out_prefix,
-              const double hard_threshold, const double dose_threshold,
-              const size_t thread, const bool use_inter,
-              const bool use_hard_coded, const bool no_regress,
-              const bool ignore_fid, const bool keep_nonfounder,
-              const bool keep_ambig, const bool is_ref, Reporter* reporter);
+    BinaryGen(const GenoFile& geno, const Phenotype& pheno,
+              const std::string& delim, Reporter* reporter);
     ~BinaryGen();
 
-private:
-    typedef std::vector<std::vector<double>> Data;
-    std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
-    std::vector<genfile::byte_t> m_buffer1, m_buffer2;
-    std::string m_intermediate_file;
-    std::string m_id_delim;
-    unsigned long long m_data_size = 0;
-    bool m_intermediate = false;
-    bool m_target_plink = false;
-    bool m_ref_plink = false;
-
-    /*!
-     * \brief Generate the sample vector
-     * \return Vector containing the sample information
-     */
-    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
     //
     /*!
      * \brief check if the sample file is of the sample format specified by bgen
      *        or just a simple text file
      * \return
      */
-    bool check_is_sample_format();
+    static bool check_is_sample_format(const std::string& input);
+
+protected:
+    typedef std::vector<std::vector<double>> Data;
+    std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
+    std::vector<genfile::byte_t> m_buffer1, m_buffer2;
+    bool m_target_plink = false;
+    bool m_ref_plink = false;
+    bool m_has_external_sample = false;
+
+    /*!
+     * \brief Generate the sample vector
+     * \return Vector containing the sample information
+     */
+    std::vector<Sample_ID> gen_sample_vector();
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
-    void calc_freq_gen_inter(const double& maf_threshold,
-                             const double& geno_threshold,
-                             const double& info_threshold,
-                             const bool maf_filter, const bool geno_filter,
-                             const bool info_filter, const bool hard_coded,
-                             Genotype* target = nullptr);
+    bool calc_freq_gen_inter(const QCFiltering& filter_info,
+                             const std::string& prefix,
+                             Genotype* target = nullptr,
+                             bool force_cal = false);
     /*!
      * \brief Read in the context information for the bgen. This will propergate
      * the m_context_map
@@ -88,7 +79,6 @@ private:
      * \return true if the sample is consistent
      */
     bool check_sample_consistent(const std::string& bgen_name,
-                                 const std::string& delim,
                                  const genfile::bgen::Context& context);
 
     /*!
@@ -99,14 +89,11 @@ private:
      * \param byte_pos is the streampos of the bgen file, for quick seek
      * \param file_name is the file name of the bgen file
      */
-    inline void read_genotype(uintptr_t* genotype,
-                              const unsigned long long byte_pos,
+    inline void read_genotype(uintptr_t* genotype, const long long byte_pos,
                               const size_t& file_idx)
     {
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        if (!m_genotype_file.mem_calculated())
-        { m_genotype_file.init_memory_map(g_allowed_memory, m_data_size); }
         if (m_ref_plink)
         {
             // when m_ref_plink is set, it suggest we are using the
@@ -145,7 +132,7 @@ private:
      * intermediate file
      * \return 0 if sucessful
      */
-    uint32_t load_and_collapse_incl(const unsigned long long byte_pos,
+    uint32_t load_and_collapse_incl(const long long byte_pos,
                                     const size_t& file_idx,
                                     uintptr_t* __restrict mainbuf)
     {
@@ -185,10 +172,10 @@ private:
 
     void read_score(const std::vector<size_t>::const_iterator& start_idx,
                     const std::vector<size_t>::const_iterator& end_idx,
-                    bool reset_zero, const bool use_ref_maf);
+                    bool reset_zero);
     void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
-                         bool reset_zero, const bool use_ref_maf);
+                         bool reset_zero);
     void dosage_score(const std::vector<size_t>::const_iterator& start_idx,
                       const std::vector<size_t>::const_iterator& end_idx,
                       bool reset_zero);
@@ -196,9 +183,10 @@ private:
     /*
      * Different structures use for reading in the bgen info
      */
+    // TODO: Use ref MAf for dosage score too
     struct PRS_Interpreter
     {
-        ~PRS_Interpreter() {};
+        ~PRS_Interpreter() {}
         /*!
          * \brief PRS_Interpreter is the structure used by BGEN library to parse
          * the probability data
@@ -395,7 +383,7 @@ private:
                 {
                     (*m_sample_prs)[i].prs =
                         (*m_sample_prs)[i].prs * m_not_first + m_miss_score;
-                    cur_idx++;
+                    ++cur_idx;
                 }
                 else if (m_centre)
                 {
@@ -535,8 +523,6 @@ private:
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
-            // checked with PLINK, the expected value should be coded as 0,
-            // 1, 2 instead of 0, 0.5, 1 as in PRS
             m_exp_value += static_cast<double>(geno) * value;
         }
         /*!
@@ -594,10 +580,10 @@ private:
             m_genotype[m_index] |= m_geno << m_shift;
             switch (m_geno)
             {
-            case 3: m_homrar_ct++; break;
-            case 2: m_het_ct++; break;
-            case 1: m_missing_ct++; break;
-            case 0: m_homcom_ct++; break;
+            case 3: ++m_homrar_ct; break;
+            case 2: ++m_het_ct; break;
+            case 1: ++m_missing_ct; break;
+            case 0: ++m_homcom_ct; break;
             }
             // as the genotype is represented by two bit, we will +=2
             m_shift += 2;
@@ -605,7 +591,7 @@ private:
             // the shift
             if (m_shift == BITCT)
             {
-                m_index++;
+                ++m_index;
                 m_shift = 0;
             }
             // we can now push in the expected value for this sample. This

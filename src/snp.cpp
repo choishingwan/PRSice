@@ -23,10 +23,11 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
     std::vector<size_t> idx(input.size());
     std::iota(idx.begin(), idx.end(), 0);
     std::sort(idx.begin(), idx.end(), [&input](size_t i1, size_t i2) {
-        // plink do it w.r.t the location instead of statistic
-
-        // chr first such that SNPs within the same chromosome will
-        // be processed together
+        // plink do it w.r.t the name of the RS ID (ignoring the string part)
+        // which is slightly too complicated for us. Will simply use location
+        // instead
+        // chr first such that SNPs within the same chromosome will be
+        // processed together
         if (input[i1].m_chr == input[i2].m_chr)
         {
             if (misc::logically_equal(input[i1].m_p_value, input[i2].m_p_value))

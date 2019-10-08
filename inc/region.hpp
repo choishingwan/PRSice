@@ -51,34 +51,39 @@ public:
      * \brief Default constructor that do nothing
      */
     Region() {}
-    Region(const Commander& commander, Reporter* reporter)
-        : m_bed(commander.bed())
-        , m_feature(commander.feature())
-        , m_msigdb(commander.msigdb())
-        , m_snp_set(commander.snp_set())
-        , m_background(commander.background())
-        , m_gtf(commander.gtf())
-        , m_window_5(commander.window_5())
-        , m_window_3(commander.window_3())
-        , m_genome_wide_background(commander.genome_wide_background())
+    Region(const GeneSets& set, Reporter* reporter)
+        : m_bed(set.bed)
+        , m_feature(set.feature)
+        , m_msigdb(set.msigdb)
+        , m_snp_set(set.snp)
+        , m_background(set.background)
+        , m_gtf(set.gtf)
+        , m_window_5(set.wind_5)
+        , m_window_3(set.wind_3)
+        , m_genome_wide_background(set.full_as_background)
         , m_reporter(reporter)
     {
     }
     virtual ~Region();
     static void generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
                                    const std::string& exclusion_range);
-    size_t generate_regions(
-        std::vector<IITree<size_t, size_t>>& gene_sets,
-        std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
-        const size_t max_chr);
+    size_t generate_regions(const size_t max_chr);
     std::vector<std::string> get_names() const { return m_region_name; }
+
+    const std::vector<IITree<size_t, size_t>>& get_gene_sets() const
+    {
+        return m_gene_sets;
+    }
+    const std::unordered_map<std::string, std::vector<size_t>>&
+    get_snp_sets() const
+    {
+        return m_snp_in_sets;
+    }
 
 protected:
     void load_background(
         const size_t max_chr,
-        std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
-        std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
-        std::vector<IITree<size_t, size_t>>& gene_sets);
+        std::unordered_map<std::string, std::vector<size_t>>& msigdb_list);
 
     void extend_region(size_t& start, size_t& end, const std::string& strand)
     {
@@ -108,8 +113,9 @@ protected:
         }
     }
 
-    void start_end(const std::string& start_str, const std::string& end_str,
-                   const size_t pad, size_t& start, size_t& end)
+    static void start_end(const std::string& start_str,
+                          const std::string& end_str, const size_t pad,
+                          size_t& start, size_t& end)
     {
         try
         {
@@ -146,15 +152,52 @@ protected:
         size_t& set_idx);
     void load_gtf(
         const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
-        const size_t max_chr, std::vector<IITree<size_t, size_t>>& gene_sets);
-
+        const size_t max_chr);
+    bool duplicated_set(const std::string& set_name)
+    {
+        if (m_processed_sets.find(set_name) != m_processed_sets.end())
+        {
+            m_reporter->report("Warning: Set name of " + set_name
+                               + " is duplicated, it will be ignored");
+            return true;
+        }
+        m_processed_sets.insert(set_name);
+        m_region_name.push_back(set_name);
+        return false;
+    }
     bool load_bed_regions(const std::string& bed_file, const size_t set_idx,
-                          const size_t max_chr,
-                          std::vector<IITree<size_t, size_t>>& gene_sets);
-    void load_snp_sets(
-        const std::string& snp_file,
-        std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
-        size_t& set_idx);
+                          const size_t max_chr);
+    void load_snp_sets(const std::string& snp_file, size_t& set_idx);
+    bool get_set_name(const std::string& input, std::string& file_name,
+                      std::string& set_name)
+    {
+        std::vector<std::string> token = misc::split(input, ":");
+        if (token.size() > 2)
+        {
+            throw std::runtime_error("Error: Undefine file input format: "
+                                     + input);
+        }
+        file_name = token.front();
+        set_name = token.back();
+        return token.size() == 2;
+    }
+    static void read_bed(const std::string& bed);
+    static void read_bed(const std::string& bed,
+                         std::vector<IITree<size_t, size_t>>& m_gene_sets);
+    static bool valid_chr(const std::string& input)
+    {
+        std::string chr = input;
+        std::transform(chr.begin(), chr.end(), chr.begin(), ::toupper);
+        if (chr.rfind("CHR") != 0)
+        {
+            if (!misc::isNumeric(chr)) { return false; }
+        }
+        return true;
+    }
+    static bool valid_strand(const std::string& input)
+    {
+        return !(input != "." && input != "+" && input != "-");
+    }
     static void is_bed_line(const std::vector<std::string>& bed_line,
                             size_t& column_size, bool& is_header)
     {
@@ -163,43 +206,36 @@ protected:
             is_header = true;
             return;
         }
-
+        if (bed_line.size() < 3)
+        {
+            throw std::runtime_error("Error: Malformed BED file. BED file "
+                                     "should contain at least 3 column "
+                                     "for all rows!\n");
+        }
         if (column_size == 0) { column_size = bed_line.size(); }
         else if (column_size != bed_line.size())
         {
-            std::string message =
-                "Error: Inconsistent number of column in BED file. "
+            throw std::runtime_error(
+                "Error: Inconsistent number of column in file. "
                 "Current line has "
                 + std::to_string(bed_line.size())
                 + " "
                   "column and previous line has "
-                + std::to_string(column_size) + "\n";
-            throw std::runtime_error(message);
+                + std::to_string(column_size) + "\n");
         }
-        // don't bother to check the coordinate as those are kinda check later
-        // on and allow for better error report (though we can also pull in
-        // reporter here)
-        std::string chr = bed_line.front();
-        std::transform(chr.begin(), chr.end(), chr.begin(), ::toupper);
-        if (chr.rfind("CHR") != 0)
+        if (!valid_chr(bed_line.front()))
         {
-            if (!misc::isNumeric(bed_line.front()))
-            {
-                std::string message =
-                    "Error: Invalid BED format. First field "
-                    "of BED file should be chromosomal information\n";
-                throw std::runtime_error(message);
-            }
+            throw std::runtime_error(
+                "Error: Invalid file format. First field "
+                "of file should be chromosomal information\n");
         }
         if (bed_line.size() > 5)
         {
-            if (bed_line[5] != "." && bed_line[5] != "+" && bed_line[5] != "-")
+            if (!valid_strand(bed_line[5]))
             {
-                std::string message = "Error: Undefined strand information: "
-                                      + bed_line[5] + "\n";
-                message.append(
-                    "Valid strand characters are '.', '+' and '-'\n");
-                throw std::runtime_error(message);
+                throw std::runtime_error(
+                    "Error: Undefined strand information: " + bed_line[5]
+                    + "\nValid strand characters are '.', '+' and '-'\n");
             }
         }
     }
@@ -208,6 +244,43 @@ protected:
                     const std::vector<std::string>& feature)
     {
         return std::find(feature.begin(), feature.end(), in) != feature.end();
+    }
+
+    bool find_gene_info(const std::string& substr,
+                        std::vector<std::string>& token, std::string& gene_id,
+                        std::string& gene_name, bool& found_id,
+                        bool& found_name)
+    {
+        if (substr.rfind("gene_id", 0) == 0)
+        {
+            token = misc::split(substr, " ");
+            if (token.size() != 2)
+            {
+                throw std::runtime_error("Error: Malformed attribute value: "
+                                         + substr);
+            }
+            gene_id = token.back();
+            gene_id.erase(std::remove(gene_id.begin(), gene_id.end(), '\"'),
+                          gene_id.end());
+            if (found_name) return true;
+            found_id = true;
+        }
+        else if (substr.rfind("gene_name", 0) == 0)
+        {
+            token = misc::split(substr, " ");
+            if (token.size() != 2)
+            {
+                throw std::runtime_error("Error: Malformed attribute value: "
+                                         + substr);
+            }
+            gene_name = token.back();
+            gene_name.erase(
+                std::remove(gene_name.begin(), gene_name.end(), '\"'),
+                gene_name.end());
+            if (found_id) return true;
+            found_name = true;
+        }
+        return false;
     }
 
     bool parse_attribute(const std::string& attribute_str, std::string& gene_id,
@@ -228,36 +301,9 @@ protected:
             {
                 substr = attribute_str.substr(prev, pos - prev);
                 misc::trim(substr);
-                if (substr.rfind("gene_id", 0) == 0)
-                {
-                    token = misc::split(substr, " ");
-                    if (token.size() != 2)
-                    {
-                        throw std::runtime_error(
-                            "Error: Malformed attribute value: " + substr);
-                    }
-                    gene_id = token.back();
-                    gene_id.erase(
-                        std::remove(gene_id.begin(), gene_id.end(), '\"'),
-                        gene_id.end());
-                    if (found_name) return true;
-                    found_id = true;
-                }
-                else if (substr.rfind("gene_name", 0) == 0)
-                {
-                    token = misc::split(substr, " ");
-                    if (token.size() != 2)
-                    {
-                        throw std::runtime_error(
-                            "Error: Malformed attribute value: " + substr);
-                    }
-                    gene_name = token.back();
-                    gene_name.erase(
-                        std::remove(gene_name.begin(), gene_name.end(), '\"'),
-                        gene_name.end());
-                    if (found_id) return true;
-                    found_name = true;
-                }
+                if (find_gene_info(substr, token, gene_id, gene_name, found_id,
+                                   found_name))
+                { return true; }
             }
             prev = pos + 1;
         }
@@ -265,39 +311,15 @@ protected:
         {
             substr = attribute_str.substr(prev, std::string::npos);
             misc::trim(substr);
-            if (substr.rfind("gene_id", 0) == 0)
-            {
-                token = misc::split(substr, " ");
-                if (token.size() != 2)
-                {
-                    throw std::runtime_error(
-                        "Error: Malformed attribute value: " + substr);
-                }
-                gene_id = token.back();
-                gene_id.erase(std::remove(gene_id.begin(), gene_id.end(), '\"'),
-                              gene_id.end());
-                if (found_name) return true;
-                found_id = true;
-            }
-            else if (substr.rfind("gene_name", 0) == 0)
-            {
-                token = misc::split(substr, " ");
-                if (token.size() != 2)
-                {
-                    throw std::runtime_error(
-                        "Error: Malformed attribute value: " + substr);
-                }
-                gene_name = token.back();
-                gene_name.erase(
-                    std::remove(gene_name.begin(), gene_name.end(), '\"'),
-                    gene_name.end());
-                if (found_id) return true;
-                found_name = true;
-            }
+            if (find_gene_info(substr, token, gene_id, gene_name, found_id,
+                               found_name))
+            { return true; }
         }
         return false;
     }
 
+    std::vector<IITree<size_t, size_t>> m_gene_sets;
+    std::unordered_map<std::string, std::vector<size_t>> m_snp_in_sets;
     std::vector<std::string> m_bed;
     std::vector<std::string> m_feature;
     std::vector<std::string> m_msigdb;

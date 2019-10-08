@@ -41,30 +41,24 @@ public:
      * (F)
      * \param reporter is the logger
      */
-    BinaryPlink(const std::string& file_list, const std::string& file,
-                const size_t thread, const bool ignore_fid,
-                const bool keep_nonfounder, const bool keep_ambig,
-                const bool is_ref, Reporter* reporter);
-    BinaryPlink() {}
+    BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
+                const std::string& delim, Reporter* reporter);
     ~BinaryPlink();
 
 protected:
     std::vector<uintptr_t> m_sample_mask;
     std::streampos m_prev_loc = 0;
-    std::vector<Sample_ID> gen_sample_vector(const std::string& delim);
+    std::vector<Sample_ID> gen_sample_vector();
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);
-    void calc_freq_gen_inter(const double& maf_threshold,
-                             const double& geno_threshold, const double&,
-                             const bool maf_filter, const bool geno_filter,
-                             const bool, const bool,
-                             Genotype* target = nullptr);
+    bool calc_freq_gen_inter(const QCFiltering& filter_info, const std::string&,
+                             Genotype* target = nullptr,
+                             bool force_cal = false);
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
     inline void read_genotype(uintptr_t* __restrict genotype,
-                              const unsigned long long byte_pos,
-                              const size_t& file_idx)
+                              const long long byte_pos, const size_t& file_idx)
     {
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
@@ -76,16 +70,6 @@ protected:
 
         // now we start reading / parsing the binary from the file
         assert(unfiltered_sample_ct);
-        // if we don't perform selection, we can directly perform the read on
-        // the mainbuf
-
-        // auto&& cur_map = m_genotype_files[file_idx];
-        if (!m_genotype_file.mem_calculated())
-        {
-            m_genotype_file.init_memory_map(g_allowed_memory,
-                                            unfiltered_sample_ct4);
-        }
-        // m_genotype_file.no_mmap();
         if (m_unfiltered_sample_ct == m_founder_ct)
         {
             m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed",
@@ -115,7 +99,7 @@ protected:
     virtual void
     read_score(const std::vector<size_t>::const_iterator& start_idx,
                const std::vector<size_t>::const_iterator& end_idx,
-               bool reset_zero, const bool use_ref_maf);
+               bool reset_zero);
 };
 
 #endif

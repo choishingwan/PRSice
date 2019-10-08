@@ -18,7 +18,38 @@
 
 unsigned long long Genotype::g_allowed_memory = 1e10;
 bool Genotype::g_allow_mmap = false;
-void Genotype::build_clump_windows()
+
+std::string Genotype::print_duplicated_snps(
+    const std::unordered_set<std::string>& duplicated_snp,
+    const std::string& out_prefix)
+{
+    // there are duplicated SNPs, we will need to terminate with the
+    // information
+    std::ofstream log_file_stream;
+    std::string dup_name = out_prefix + ".valid";
+    log_file_stream.open(dup_name.c_str());
+    if (!log_file_stream.is_open())
+    { throw std::runtime_error("Error: Cannot open file: " + dup_name); }
+    // we should not use m_existed_snps unless it is for reference
+    for (auto&& snp : m_existed_snps)
+    {
+        // we only output the valid SNPs.
+        if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
+            log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
+                            << snp.loc() << "\t" << snp.ref() << "\t"
+                            << snp.alt() << "\n";
+    }
+    log_file_stream.close();
+    return std::string(
+        "Error: A total of " + std::to_string(duplicated_snp.size())
+        + " duplicated SNP ID detected out of "
+        + misc::to_string(m_existed_snps.size())
+        + " input SNPs! Valid SNP ID (post --extract / "
+          "--exclude, non-duplicated SNPs) stored at "
+        + dup_name + ". You can avoid this error by using --extract "
+        + dup_name);
+}
+void Genotype::build_clump_windows(const unsigned long long& clump_distance)
 {
     // should sort w.r.t reference
     std::sort(begin(m_existed_snps), end(m_existed_snps),
@@ -27,9 +58,12 @@ void Genotype::build_clump_windows()
                   {
                       if (t1.loc() == t2.loc())
                       {
-                          if (t1.ref_file_index() == t2.ref_file_index())
-                          { return t1.ref_byte_pos() < t2.ref_byte_pos(); }
-                          return t1.ref_file_index() < t2.ref_file_index();
+                          if (t1.get_file_idx(true) == t2.get_file_idx(true))
+                          {
+                              return t1.get_byte_pos(true)
+                                     < t2.get_byte_pos(true);
+                          }
+                          return t1.get_file_idx(true) < t2.get_file_idx(true);
                       }
                       else
                           return (t1.loc() < t2.loc());
@@ -57,12 +91,12 @@ void Genotype::build_clump_windows()
         }
         // we can safely assume current location always bigger than prev_loc
         // as we have sorted the vector
-        else if (cur_snp.loc() - prev_loc > m_clump_distance)
+        else if (cur_snp.loc() - prev_loc > clump_distance)
         {
             // now the chromosome didn't change, and the distance of our current
             // SNP is further away from the previous SNP than our required
             // threshold
-            while (cur_snp.loc() - prev_loc > m_clump_distance
+            while (cur_snp.loc() - prev_loc > clump_distance
                    && low_bound < vector_index)
             {
                 ++low_bound;
@@ -78,7 +112,7 @@ void Genotype::build_clump_windows()
         // update all previous SNPs that are out bounud
         while ((m_existed_snps[last_snp].chr() != cur_snp.chr())
                || (cur_snp.loc() - m_existed_snps[last_snp].loc()
-                   > m_clump_distance))
+                   > clump_distance))
         {
             // if the last SNP is on a differenet chromosome or it is to far
             // from the current SNP
@@ -138,10 +172,6 @@ void Genotype::add_flags(
         auto&& snp = m_existed_snps[i];
         chr = snp.chr();
         bp = snp.loc();
-        // if we want more speed, we can move b and max_b from the construct
-        // flag function to avoid re-allocation of memory. Also for the flag
-        // structure as that can almost always be reused (we copy when we set
-        // flag)
         construct_flag(snp.rs(), gene_sets, snp_in_sets, flag, required_size,
                        chr, bp, genome_wide_background);
         m_existed_snps[i].set_flag(num_sets, flag);
@@ -161,42 +191,33 @@ void Genotype::snp_extraction(const std::string& extract_snps,
         m_snp_selection_list = load_snp_list(exclude_snps);
     }
 }
+
 void Genotype::read_base(
-    const std::string& base_file, const std::vector<size_t>& col_index,
-    const std::vector<bool>& has_col, const std::vector<double>& barlevels,
-    const double& bound_start, const double& bound_inter,
-    const double& bound_end,
+    const BaseFile& base_file, const QCFiltering& base_qc,
+    const PThresholding& threshold_info,
     const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    const double& maf_control, const double& maf_case,
-    const double& info_threshold, const bool fastscore, const bool no_full,
-    const bool is_beta, const bool is_index, const bool keep_ambig)
+    const bool keep_ambig)
 {
-    // can assume region is of the same order as m_existed_snp
-    // because they use the same chr encoding and similar sorting algorithm
-    // (chr, bp)
-    // doesn't matter if two SNPs have the same coordinates
-    assert(col_index.size() == +BASE_INDEX::MAX + 1);
-    assert(!barlevels.empty());
-    const size_t max_index = col_index[+BASE_INDEX::MAX];
-    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
-    std::ifstream snp_file;
-    std::ofstream mismatch_snp_record;
+    const unsigned long long max_index =
+        base_file.column_index[+BASE_INDEX::MAX];
     const double max_threshold =
-        no_full ? (fastscore ? barlevels.back() : bound_end) : 1.0;
+        threshold_info.no_full
+            ? (threshold_info.fastscore ? threshold_info.bar_levels.back()
+                                        : threshold_info.upper)
+            : 1.0;
     std::vector<std::string> token;
     std::string line;
-    std::string message = "Base file: " + base_file + "\n";
+    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
+    std::ifstream snp_file;
+    std::string message = "Base file: " + base_file.file_name + "\n";
     // Some QC counts
     std::string rs_id;
     std::string ref_allele;
     std::string alt_allele;
-    double maf = 1;
-    double maf_case_temp = 1;
-    double info_score = 1;
     double pvalue = 2.0;
     double stat = 0.0;
     double pthres = 0.0;
-    size_t chr;
+    size_t chr = 0;
     size_t loc = 0;
     size_t num_duplicated = 0;
     size_t num_excluded = 0;
@@ -217,7 +238,7 @@ void Genotype::read_base(
     bool gz_input = false;
     try
     {
-        gz_input = misc::is_gz_file(base_file);
+        gz_input = misc::is_gz_file(base_file.file_name);
     }
     catch (const std::runtime_error& e)
     {
@@ -226,20 +247,18 @@ void Genotype::read_base(
 
     if (gz_input)
     {
-        gz_snp_file.open(base_file.c_str());
+        gz_snp_file.open(base_file.file_name.c_str());
         if (!gz_snp_file.good())
         {
-            std::string error_message = "Error: Cannot open base file: "
-                                        + base_file + " (gz) to read!\n";
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Cannot open base file: "
+                                     + base_file.file_name
+                                     + " (gz) to read!\n");
         }
-        if (!is_index)
+        if (!base_file.is_index)
         {
-            // if the input is index, we will keep the header, otherwise, we
-            // will remove the header
             std::getline(gz_snp_file, line);
-            message.append("GZ file detected. Header of file is:\n");
-            message.append(line + "\n\n");
+            message.append("GZ file detected. Header of file is:\n" + line
+                           + "\n\n");
         }
         else
         {
@@ -250,12 +269,11 @@ void Genotype::read_base(
     }
     else
     {
-        snp_file.open(base_file.c_str());
+        snp_file.open(base_file.file_name.c_str());
         if (!snp_file.is_open())
         {
-            std::string error_message =
-                "Error: Cannot open base file: " + base_file;
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Cannot open base file: "
+                                     + base_file.file_name);
         }
         snp_file.seekg(0, snp_file.end);
         file_length = snp_file.tellg();
@@ -263,7 +281,7 @@ void Genotype::read_base(
         snp_file.seekg(0, snp_file.beg);
         // if the input is index, we will keep the header, otherwise, we
         // will remove the header
-        if (!is_index) std::getline(snp_file, line);
+        if (!base_file.is_index) std::getline(snp_file, line);
     }
     double prev_progress = 0.0;
     std::unordered_set<std::string> dup_index;
@@ -290,7 +308,7 @@ void Genotype::read_base(
             error_message.append("\nMore index than column in data\n");
             throw std::runtime_error(error_message);
         }
-        rs_id = token[col_index[+BASE_INDEX::RS]];
+        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
         if (dup_index.find(rs_id) != dup_index.end())
         {
             ++num_duplicated;
@@ -306,145 +324,78 @@ void Genotype::read_base(
         }
         dup_index.insert(rs_id);
         chr_code = -1;
-        if (has_col[+BASE_INDEX::CHR])
+        chr = ~size_t(0);
+        if (base_file.has_column[+BASE_INDEX::CHR])
         {
-            chr_code =
-                get_chrom_code_raw(token[col_index[+BASE_INDEX::CHR]].c_str());
-            if (chr_code < 0)
-            {
-                // invalid chromosome
-                ++num_chr_filter;
-                continue;
-            }
-            if (chr_code >= MAX_POSSIBLE_CHROM)
-            {
-                // sex chromosome
-                ++num_haploid;
-                continue;
-            }
-            if (is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
-            {
-                // this is a haploid chromosome
-                ++num_haploid;
-                continue;
-            }
+            chr = get_chr_code(
+                token[base_file.column_index[+BASE_INDEX::CHR]].c_str(),
+                num_chr_filter, num_haploid);
+            if (chr == ~size_t(0)) continue;
         }
-        if (chr_code == -1) { chr = ~size_t(0); }
-        else
-        {
-            chr = static_cast<size_t>(chr_code);
-        }
-        ref_allele = (has_col[+BASE_INDEX::REF])
-                         ? token[col_index[+BASE_INDEX::REF]]
+        ref_allele = (base_file.has_column[+BASE_INDEX::EFFECT])
+                         ? token[base_file.column_index[+BASE_INDEX::EFFECT]]
                          : "";
-        alt_allele = (has_col[+BASE_INDEX::ALT])
-                         ? token[col_index[+BASE_INDEX::ALT]]
+        alt_allele = (base_file.has_column[+BASE_INDEX::NONEFFECT])
+                         ? token[base_file.column_index[+BASE_INDEX::NONEFFECT]]
                          : "";
         std::transform(ref_allele.begin(), ref_allele.end(), ref_allele.begin(),
                        ::toupper);
         std::transform(alt_allele.begin(), alt_allele.end(), alt_allele.begin(),
                        ::toupper);
         loc = ~size_t(0);
-        if (has_col[+BASE_INDEX::BP])
+        if (base_file.has_column[+BASE_INDEX::BP])
         {
             // obtain the SNP coordinate
             try
             {
                 loc = misc::string_to_size_t(
-                    token[col_index[+BASE_INDEX::BP]].c_str());
+                    token[base_file.column_index[+BASE_INDEX::BP]].c_str());
             }
             catch (...)
             {
-                std::string error_message =
+                throw std::runtime_error(
                     "Error: Invalid loci for " + rs_id + ": "
-                    + token[col_index[+BASE_INDEX::BP]] + "\n";
-                throw std::runtime_error(error_message);
+                    + token[base_file.column_index[+BASE_INDEX::BP]] + "\n");
             }
         }
         to_remove = false;
-        if (has_col[+BASE_INDEX::BP] && has_col[+BASE_INDEX::CHR])
+        if (base_file.has_column[+BASE_INDEX::BP]
+            && base_file.has_column[+BASE_INDEX::CHR])
             to_remove = Genotype::within_region(exclusion_regions, chr, loc);
         if (to_remove)
         {
             ++num_region_exclude;
             continue;
         }
-        if (has_col[+BASE_INDEX::MAF])
+
+        if (base_file.has_column[+BASE_INDEX::MAF])
         {
-            maf = 1;
-            // only read in if we want to perform MAF filtering
-            try
-            {
-                maf = misc::convert<double>(
-                    token[col_index[+BASE_INDEX::MAF]].c_str());
-            }
-            catch (...)
-            {
-                // exclude because we can't read the MAF, therefore assume
-                // this is problematic
-                ++num_maf_filter;
-                continue;
-            }
-            if (maf < maf_control)
-            {
-                ++num_maf_filter;
-                continue;
-            }
+            base_filter_by_value(
+                token[base_file.column_index[+BASE_INDEX::MAF]], base_qc.maf,
+                num_maf_filter);
         }
-        if (has_col[+BASE_INDEX::MAF_CASE])
+        if (base_file.has_column[+BASE_INDEX::MAF_CASE])
         {
-            maf_case_temp = 1;
-            try
-            {
-                maf_case_temp = misc::convert<double>(
-                    token[col_index[+BASE_INDEX::MAF_CASE]].c_str());
-            }
-            catch (...)
-            {
-                // again, any problem in parsing the MAF will lead to SNP
-                // being deleted
-                // we don't want to double count the MAF filtering, thus we
-                // only add one to the maf filter count if we haven't
-                // already filtered this SNP based on the control MAf
-                ++num_maf_filter;
-                continue;
-            }
-            if (maf_case_temp < maf_case)
-            {
-                ++num_maf_filter;
-                continue;
-            }
+            base_filter_by_value(
+                token[base_file.column_index[+BASE_INDEX::MAF_CASE]],
+                base_qc.maf, num_maf_filter);
         }
-        info_score = 1;
-        if (has_col[+BASE_INDEX::INFO])
+        if (base_file.has_column[+BASE_INDEX::INFO])
         {
-            // obtain the INFO score
-            try
-            {
-                info_score = misc::convert<double>(
-                    token[col_index[+BASE_INDEX::INFO]].c_str());
-            }
-            catch (...)
-            {
-                // if no info score, just assume it doesn't pass the QC
-                ++num_info_filter;
-                continue;
-            }
-            if (info_score < info_threshold)
-            {
-                ++num_info_filter;
-                continue;
-            }
+            base_filter_by_value(
+                token[base_file.column_index[+BASE_INDEX::INFO]], base_qc.maf,
+                num_info_filter);
         }
         pvalue = 2.0;
         try
         {
-            pvalue = misc::convert<double>(token[col_index[+BASE_INDEX::P]]);
+            pvalue = misc::convert<double>(
+                token[base_file.column_index[+BASE_INDEX::P]]);
             if (pvalue < 0.0 || pvalue > 1.0)
             {
                 std::string error_message =
                     "Error: Invalid p-value for " + rs_id + ": "
-                    + token[col_index[+BASE_INDEX::P]] + "!\n";
+                    + token[base_file.column_index[+BASE_INDEX::P]] + "!\n";
                 throw std::runtime_error(error_message);
             }
             else if (pvalue > max_threshold)
@@ -461,18 +412,19 @@ void Genotype::read_base(
         stat = 0.0;
         try
         {
-            stat = misc::convert<double>(token[col_index[+BASE_INDEX::STAT]]);
-            if (stat < 0 && !is_beta)
+            stat = misc::convert<double>(
+                token[base_file.column_index[+BASE_INDEX::STAT]]);
+            if (stat < 0 && base_file.is_or)
             {
                 ++num_negative_stat;
                 continue;
             }
-            else if (misc::logically_equal(stat, 0.0) && !is_beta)
+            else if (misc::logically_equal(stat, 0.0) && base_file.is_or)
             {
                 ++num_not_converted;
                 continue;
             }
-            else if (!is_beta)
+            else if (base_file.is_or)
                 stat = log(stat);
         }
         catch (...)
@@ -487,14 +439,16 @@ void Genotype::read_base(
         }
         category = 0;
         pthres = 0.0;
-        if (fastscore)
-        { category = calculate_category(pvalue, barlevels, pthres); }
+        if (threshold_info.fastscore)
+        {
+            category =
+                calculate_category(pvalue, threshold_info.bar_levels, pthres);
+        }
         else
         {
             try
             {
-                category = calculate_category(pvalue, bound_start, bound_inter,
-                                              bound_end, pthres, no_full);
+                category = calculate_category(pvalue, pthres, threshold_info);
             }
             catch (const std::runtime_error&)
             {
@@ -552,7 +506,7 @@ void Genotype::read_base(
     {
         message.append(std::to_string(num_info_filter)
                        + " variant(s) with INFO score less than "
-                       + std::to_string(info_threshold) + "\n");
+                       + std::to_string(base_qc.info_score) + "\n");
     }
     if (num_excluded)
     {
@@ -610,7 +564,8 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
                         bool no_mt)
 {
     // this initialize haploid mask as the maximum possible number
-
+    m_xymt_codes.resize(XYMT_OFFSET_CT);
+    m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     if (num_auto < 0)
     {
         num_auto = -num_auto;
@@ -675,6 +630,53 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
     */
 }
 
+size_t Genotype::get_rs_column(const std::string& input)
+{
+    std::vector<std::string> token = misc::split(input);
+    // rs_index store the location of the RS ID
+    if (token.size() != 1)
+    {
+        bool has_snp_colname = false;
+        size_t rs_index = 0;
+        for (auto&& name : token)
+        {
+            std::transform(name.begin(), name.end(), name.begin(), ::toupper);
+            if (name == "SNP" || name == "RS" || name == "RS_ID"
+                || name == "RS.ID" || name == "RSID" || name == "VARIANT.ID"
+                || name == "VARIANT_ID")
+            {
+                has_snp_colname = true;
+                m_reporter->report(name
+                                   + " assume to be column containing SNP ID");
+                return rs_index;
+            }
+            ++rs_index;
+        }
+        if (token.size() == 6)
+        {
+            m_reporter->report(
+                "SNP extraction/exclusion list contains 6 columns, "
+                "will assume this is a bim file, with the "
+                "second column contains the SNP ID");
+            return 1;
+        }
+        else
+        {
+            m_reporter->report(
+                "SNP extraction/exclusion list contains "
+                + misc::to_string(token.size())
+                + " columns, "
+                  "will assume first column contains the SNP ID");
+            return 0;
+        }
+    }
+    else
+    {
+        m_reporter->report(
+            "Only one column detected, will assume only SNP ID is provided");
+        return 0;
+    }
+}
 std::unordered_set<std::string>
 Genotype::load_snp_list(const std::string& input)
 {
@@ -690,93 +692,23 @@ Genotype::load_snp_list(const std::string& input)
     std::string line;
     // we will return the "result" variable
     std::unordered_set<std::string> result;
-    std::string message;
-    // allow the input to be slightly more flexible. This flexibility relies on
-    // the header or the column name of the file
     std::getline(in, line);
-    misc::trim(line);
-    std::vector<std::string> token = misc::split(line);
-    // rs_index store the location of the RS ID
-    size_t rs_index = 0;
-    if (token.size() != 1)
-    {
-        // if we have more than one column, we will try and see if it is some
-        // format we can recognized
-        bool has_snp_colname = false;
-        for (auto&& name : token)
-        {
-            // we will go through the header and identify any of the followings
-            // (case insensitive): 1) SNP 2) RS 3) RS_ID 4) RS.ID 5) RSID
-
-            std::transform(name.begin(), name.end(), name.begin(), ::toupper);
-            if (name == "SNP" || name == "RS" || name == "RS_ID"
-                || name == "RS.ID" || name == "RSID" || name == "VARIANT.ID"
-                || name == "VARIANT_ID")
-            {
-                /// we will assume this column to contain the SNP ID
-                has_snp_colname = true;
-                message = name + " assume to be column containing SNP ID";
-                m_reporter->report(message);
-                break;
-            }
-            // we will continue to iterate until we reaches the end or found a
-            // column with the specific names
-            ++rs_index;
-        }
-        if (!has_snp_colname)
-        {
-            // if we reaches to the end of the column name list and didn't find
-            // the required header, we will resort to familiar file formats
-            if (token.size() == 6)
-            {
-                // with 6 column, we will assume this to be a bim file, where
-                // the SNP ID is at the second column
-                message = "SNP extraction/exclusion list contains 6 columns, "
-                          "will assume this is a bim file, with the "
-                          "second column contains the SNP ID";
-                m_reporter->report(message);
-                // we set the rs index to 1 (use the second column as the RS ID)
-                rs_index = 1;
-            }
-            else
-            {
-                // otherwise, we will assume the first column contain the SNP ID
-                message = "SNP extraction/exclusion list contains "
-                          + misc::to_string(token.size())
-                          + " columns, "
-                            "will assume first column contains the SNP ID";
-                m_reporter->report(message);
-                // we set the rs index to 0 (use the first column as the RS ID)
-                rs_index = 0;
-            }
-        }
-    }
-    else
-    {
-        // with only one column, it is easy, just use that column as the SNP ID
-        // rs_index will be 0
-        message =
-            "Only one column detected, will assume only SNP ID is provided";
-        m_reporter->report(message);
-    }
     in.clear();
     in.seekg(0, std::ios::beg);
-    // now that we have identify the format of the file we can read in the file
+    misc::trim(line);
+    size_t rs_index = get_rs_column(line);
+    std::vector<std::string> token;
     while (std::getline(in, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
         token = misc::split(line);
-        // don't think the parsing . into chr:bp will be helpful in the context
-        // of an extraction / exclusion list
-        // as this is a set, we don't need to worry about duplicates
         result.insert(token[rs_index]);
     }
     return result;
 }
 
 std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
-                                                   const std::string& delim,
                                                    bool ignore_fid)
 {
     std::ifstream in;
@@ -804,7 +736,7 @@ std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
                 throw std::runtime_error(
                     "Error: Require FID and IID for extraction. "
                     "You can ignore the FID by using the --ignore-fid flag");
-            result.insert(token[0] + delim + token[1]);
+            result.insert(token[0] + m_delim + token[1]);
         }
     }
     in.close();
@@ -835,27 +767,25 @@ bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
     return false;
 }
 
-void Genotype::load_samples(const std::string& keep_file,
-                            const std::string& remove_file,
-                            const std::string& delim, bool verbose)
+void Genotype::load_samples(bool verbose)
 {
-    if (!remove_file.empty())
-    { m_sample_selection_list = load_ref(remove_file, delim, m_ignore_fid); }
-    else if (!keep_file.empty())
+    if (!m_remove_file.empty())
+    { m_sample_selection_list = load_ref(m_remove_file, m_ignore_fid); }
+    else if (!m_keep_file.empty())
     {
         m_remove_sample = false;
-        m_sample_selection_list = load_ref(keep_file, delim, m_ignore_fid);
+        m_sample_selection_list = load_ref(m_keep_file, m_ignore_fid);
     }
     if (!m_is_ref)
     {
         // m_sample_names = gen_sample_vector();
-        m_sample_id = gen_sample_vector(delim);
+        m_sample_id = gen_sample_vector();
     }
     else
     {
         // don't bother loading up the sample vector as it should
         // never be used for reference panel (except for the founder_info)
-        gen_sample_vector(delim);
+        gen_sample_vector();
     }
     std::string message = misc::to_string(m_unfiltered_sample_ct) + " people ("
                           + misc::to_string(m_num_male) + " male(s), "
@@ -866,47 +796,85 @@ void Genotype::load_samples(const std::string& keep_file,
     m_sample_selection_list.clear();
 }
 
-void Genotype::calc_freqs_and_intermediate(
-    const double& maf_threshold, const double& geno_threshold,
-    const double& info_threshold, const bool maf_filter, const bool geno_filter,
-    const bool info_filter, const bool hard_coded, bool verbose,
-    Genotype* target)
+void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
+                                           const std::string& prefix,
+                                           bool verbose, Genotype* target,
+                                           bool force_cal)
 {
     std::string message = "";
     m_num_geno_filter = 0;
     m_num_maf_filter = 0;
     m_num_info_filter = 0;
-    calc_freq_gen_inter(maf_threshold, geno_threshold, info_threshold,
-                        maf_filter, geno_filter, info_filter, hard_coded,
-                        target);
-    if (m_num_geno_filter != 0)
+    // only print the filtering message if filtering was performed
+    if (calc_freq_gen_inter(filter_info, prefix, target, force_cal))
     {
-        message.append(
-            std::to_string(m_num_geno_filter)
-            + " variant(s) excluded based on genotype missingness threshold\n");
+        m_marker_ct = m_existed_snps.size();
+        if (m_num_geno_filter != 0)
+        {
+            message.append(std::to_string(m_num_geno_filter)
+                           + " variant(s) excluded based on genotype "
+                             "missingness threshold\n");
+        }
+        if (m_num_maf_filter != 0)
+        {
+            message.append(std::to_string(m_num_maf_filter)
+                           + " variant(s) excluded based on MAF threshold\n");
+        }
+        if (m_num_info_filter != 0)
+        {
+            message.append(
+                std::to_string(m_num_info_filter)
+                + " variant(s) excluded based on INFO score threshold\n");
+        }
+        if (!m_is_ref)
+        {
+            message.append(std::to_string(m_marker_ct)
+                           + " variant(s) included");
+        }
+        else
+        {
+            message.append(std::to_string(target->m_existed_snps.size())
+                           + " variant(s) remained");
+        }
+        if (verbose) m_reporter->report(message);
     }
-    if (m_num_maf_filter != 0)
-    {
-        message.append(std::to_string(m_num_maf_filter)
-                       + " variant(s) excluded based on MAF threshold\n");
-    }
-    if (m_num_info_filter != 0)
-    {
-        message.append(
-            std::to_string(m_num_info_filter)
-            + " variant(s) excluded based on INFO score threshold\n");
-    }
-    if (!m_is_ref)
-    { message.append(std::to_string(m_marker_ct) + " variant(s) included"); }
-    else
-    {
-        message.append(std::to_string(target->m_existed_snps.size())
-                       + " variant(s) remained");
-    }
-
-    if (verbose) m_reporter->report(message);
 }
 
+void Genotype::print_mismatch(const std::string& out, const std::string& type,
+                              const SNP& target, const std::string& rs,
+                              const std::string& a1, const std::string& a2,
+                              const size_t chr_num, const size_t loc)
+{
+    // mismatch found between base target and reference
+    if (!m_mismatch_snp_record.is_open())
+    {
+        m_mismatch_snp_record.open(out.c_str());
+        if (!m_mismatch_snp_record.is_open())
+        {
+            throw std::runtime_error(std::string("Cannot open mismatch file to "
+                                                 "write: "
+                                                 + out));
+        }
+        m_mismatch_snp_record << "File_Type\tRS_ID\tCHR_Target\tCHR_"
+                                 "File\tBP_Target\tBP_File\tA1_"
+                                 "Target\tA1_File\tA2_Target\tA2_"
+                                 "File\n";
+    }
+    m_mismatch_snp_record << type << "\t" << rs << "\t" << chr_num << "\t";
+    if (target.chr() == ~size_t(0)) { m_mismatch_snp_record << "-\t"; }
+    else
+    {
+        m_mismatch_snp_record << target.chr() << "\t";
+    }
+    m_mismatch_snp_record << loc << "\t";
+    if (target.loc() == ~size_t(0)) { m_mismatch_snp_record << "-\t"; }
+    else
+    {
+        m_mismatch_snp_record << target.loc() << "\t";
+    }
+    m_mismatch_snp_record << a1 << "\t" << target.ref() << "\t" << a2 << "\t"
+                          << target.alt() << std::endl;
+}
 void Genotype::load_snps(
     const std::string& out,
     const std::vector<IITree<size_t, size_t>>& exclusion_regions, bool verbose,
@@ -917,21 +885,19 @@ void Genotype::load_snps(
     m_num_xrange = 0;
     gen_snp_vector(exclusion_regions, out, target);
     m_marker_ct = m_existed_snps.size();
+    auto&& snp_store_location = m_is_ref ? target : this;
     std::string message = "";
     if (m_base_missed != 0)
     {
         message.append(std::to_string(m_base_missed)
                        + " variant(s) not found in previous data\n");
     }
-    if (m_num_ambig != 0 && !m_keep_ambig)
+    std::string action = "excluded";
+    if (m_keep_ambig) action = "kept";
+    if (m_num_ambig != 0)
     {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) excluded\n");
-    }
-    else if (m_num_ambig != 0)
-    {
-        message.append(std::to_string(m_num_ambig)
-                       + " ambiguous variant(s) kept\n");
+        message.append(std::to_string(m_num_ambig) + " ambiguous variant(s) "
+                       + action + "\n");
     }
     if (m_num_xrange != 0)
     {
@@ -939,110 +905,26 @@ void Genotype::load_snps(
                        + " variant(s) removed as they fall within the "
                          "--x-range region(s)\n");
     }
-    if (!m_is_ref)
-    {
-        message.append(std::to_string(m_marker_ct) + " variant(s) included\n");
-    }
-    else
-    {
-        message.append(std::to_string(target->m_existed_snps.size())
-                       + " variant(s) remained\n");
-    }
+    message.append(std::to_string(snp_store_location->m_existed_snps.size())
+                   + " variant(s) included\n");
 
     if (verbose) m_reporter->report(message);
     m_snp_selection_list.clear();
-    if (!m_is_ref)
+    if (snp_store_location->m_marker_ct == 0)
     {
-        if (m_marker_ct == 0)
-        {
-            message = "Error: No vairant remained!\n";
-            throw std::runtime_error(message);
-        }
-    }
-    else
-    {
-        if (target->m_existed_snps.size() == 0)
-        {
-            message =
-                "Error: No vairant remained after matching with reference!\n";
-            throw std::runtime_error(message);
-        }
+        message = "Error: No vairant remained!\n";
+        throw std::runtime_error(message);
     }
 }
 
 
 Genotype::~Genotype() {}
-
-
-void Genotype::efficient_clumping(Genotype& reference)
+intptr_t Genotype::cal_avail_memory(const uintptr_t founder_ctv2)
 {
-    // the m_existed_snp must be sorted before coming into this equation
-    m_reporter->report("Start performing clumping");
-    // we want to initialize the vectors with size correspond to the sample in
-    // the reference panel. Need to use the unfiltered sample size
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(reference.m_unfiltered_sample_ct);
-    // again, we want to initialize the vector containing the founder
-    // membership, which require us to know the number of founders in the
-    // reference panel
-    const uint32_t founder_ctv3 =
-        BITCT_TO_ALIGNED_WORDCT(static_cast<uint32_t>(reference.m_founder_ct));
-    const uint32_t founder_ctsplit = 3 * founder_ctv3;
-    const uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.m_founder_ct);
-    const uintptr_t founder_ctv2 =
-        QUATERCT_TO_ALIGNED_WORDCT(reference.m_founder_ct);
-
-    // We only want to perform clumping if our R2 is higher than a minimum
-    // threshold. Depending on whethre we do proxy clumping or not, the minimum
-    // threshold can be the clump_p or clump_proxy parameter
-    const double min_r2 =
-        (m_use_proxy) ? std::min(m_clump_proxy, m_clump_r2) : m_clump_r2;
-    // is_x is used in PLINK to indicate if the genotype is from the X
-    // chromsome, as PRSice ignore any sex chromosome, we can set it as a
-    // constant false
-    const bool is_x = false;
-    // when we read in the genotype, the genotype is stored in byte represented
-    // by uintptr_t. Then we will use the PLINK 2 functions to obtain the R2
-    // As this vector can be big, we will only initialize it once (memory
-    // allocation can be expensive)
-    std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
-    // We need a vector to indicate which SNPs are remaining after clumping so
-    // that we can remove any clumped SNPs away. This is achieved by using this
-    // boolean vector
-    std::vector<bool> remain_core(m_existed_snps.size(), false);
-    // next few parameters are used to store the intermediate output from PLINK
-    // function, corresponding to the count of different genotypes
-    double freq11;
-    double freq11_expected;
-    double freq1x;
-    double freq2x;
-    double freqx1;
-    double freqx2;
-    double dxx;
-    // and this is the storage to result R2
-    double r2 = -1.0;
-    // The following two vectors are used for storing the intermediate output.
-    // Again, put memory allocation at the beginning
-    std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uintptr_t> index_tots(6);
-    // pre-allocate the memory without bothering the memory pool stuff
-    std::vector<uint32_t> ld_missing_count(m_max_window_size);
-    // This is a data mask used by PLINK in the calculation of R2. Preallocate
-    // to speed up
-    std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
-    fill_quatervec_55(static_cast<uint32_t>(reference.m_founder_ct),
-                      founder_include2.data());
-
-
-// one way to speed things up as in PLINK 2 is to pre-allocate the memory space
-// for what we need to do next. The following code did precisely that (borrow
-// from PLINK2)
 #ifdef __APPLE__
     int32_t mib[2];
     size_t sztmp;
 #endif
-    unsigned char* bigstack_ua = nullptr; // ua = unaligned
-    unsigned char* bigstack_initial_base;
     int64_t llxx;
     intptr_t default_alloc_mb;
     intptr_t malloc_size_mb = 0;
@@ -1079,7 +961,6 @@ void Genotype::efficient_clumping(Genotype& reference)
     {
         malloc_size_mb = BIGSTACK_MIN_MB;
     }
-    std::string message = "";
 #ifndef __LP64__
     if (malloc_size_mb > 2047) { malloc_size_mb = 2047; }
 #endif
@@ -1094,16 +975,16 @@ void Genotype::efficient_clumping(Genotype& reference)
     malloc_size_mb = (static_cast<uintptr_t>(m_max_window_size) + 1)
                          * founder_ctv2 * sizeof(intptr_t) / 1048576
                      + 1;
+    std::string message = "";
     if (llxx)
     {
         // we have detected the memory, but need to check if that's enough
         if (malloc_size_mb > llxx)
         {
-            std::string error_message =
+            throw std::runtime_error(
                 "Error: Insufficient memory for clumping! Require "
                 + misc::to_string(malloc_size_mb) + " MB but detected only "
-                + misc::to_string(llxx) + " MB";
-            throw std::runtime_error(error_message);
+                + misc::to_string(llxx) + " MB");
         }
         else
         {
@@ -1116,7 +997,69 @@ void Genotype::efficient_clumping(Genotype& reference)
         message = "Failed to calculate system memory. Attemping to reserve"
                   + misc::to_string(malloc_size_mb) + " MB for clumping\n";
     }
+    m_reporter->report(message);
+    return malloc_size_mb;
+}
+
+void Genotype::efficient_clumping(const Clumping& clump_info,
+                                  Genotype& reference)
+{
+    // the m_existed_snp must be sorted before coming into this equation
+    m_reporter->report("Start performing clumping");
+    // we want to initialize the vectors with size correspond to the sample in
+    // the reference panel. Need to use the unfiltered sample size
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(reference.m_unfiltered_sample_ct);
+    // again, we want to initialize the vector containing the founder
+    // membership, which require us to know the number of founders in the
+    // reference panel
+    const uint32_t founder_ctv3 =
+        BITCT_TO_ALIGNED_WORDCT(static_cast<uint32_t>(reference.m_founder_ct));
+    const uint32_t founder_ctsplit = 3 * founder_ctv3;
+    const uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.m_founder_ct);
+    const uintptr_t founder_ctv2 =
+        QUATERCT_TO_ALIGNED_WORDCT(reference.m_founder_ct);
+
+    // We only want to perform clumping if our R2 is higher than a minimum
+    // threshold. Depending on whethre we do proxy clumping or not, the minimum
+    // threshold can be the clump_p or clump_proxy parameter
+    const double min_r2 = (clump_info.use_proxy)
+                              ? std::min(clump_info.proxy, clump_info.r2)
+                              : clump_info.r2;
+
+    // when we read in the genotype, the genotype is stored in byte represented
+    // by uintptr_t. Then we will use the PLINK 2 functions to obtain the R2
+    // As this vector can be big, we will only initialize it once (memory
+    // allocation can be expensive)
+    std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
+    // We need a vector to indicate which SNPs are remaining after clumping to
+    // remove any clumped SNPs. This is achieved by using this boolean vector
+    std::vector<bool> remain_core(m_existed_snps.size(), false);
+    // next few parameters are used to store the intermediate output from PLINK
+    // function, corresponding to the count of different genotypes
+
+    // and this is the storage to result R2
+    double r2 = -1.0;
+    // The following two vectors are used for storing the intermediate output.
+    // Again, put memory allocation at the beginning
+    std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
+    std::vector<uintptr_t> index_tots(6);
+    // This is a data mask used by PLINK in the calculation of R2. Preallocate
+    // to speed up
+    std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
+    fill_quatervec_55(static_cast<uint32_t>(reference.m_founder_ct),
+                      founder_include2.data());
+    // one way to speed things up as in PLINK 2 is to pre-allocate the memory
+    // space for what we need to do next. The following code did precisely that
+    // (borrow from PLINK2)
+
+    intptr_t malloc_size_mb = cal_avail_memory(founder_ctv2);
     // now allocate the memory into a pointer
+
+    // window data is the pointer walking through the allocated memory
+    size_t max_window_size, num_core_snps = 0;
+    unsigned char* bigstack_ua = nullptr; // ua = unaligned
+    unsigned char* bigstack_initial_base;
     bigstack_ua = reinterpret_cast<unsigned char*>(malloc(
         static_cast<uintptr_t>(malloc_size_mb) * 1048576 * sizeof(char)));
     // if fail, return nullptr which will then get into the while loop
@@ -1124,42 +1067,38 @@ void Genotype::efficient_clumping(Genotype& reference)
     { throw std::runtime_error("Failed to allocate required memory"); }
     else
     {
-        message.append("Allocated " + misc::to_string(malloc_size_mb)
-                       + " MB successfully");
+        m_reporter->report("Allocated " + misc::to_string(malloc_size_mb)
+                           + " MB successfully");
     }
-    m_reporter->report(message);
     // force 64-byte align to make cache line sensitivity work (from PLINK, not
     // familiar with computer programming to know this...)
-    // will stay with the old style cast to avoid trouble
     bigstack_initial_base = reinterpret_cast<unsigned char*>(
         round_up_pow2(reinterpret_cast<uintptr_t>(bigstack_ua), CACHELINE));
 
     // window data is the pointer walking through the allocated memory
-    uintptr_t* window_data = nullptr;
-    // now we can point the window pointer to the start of the allocated memory
-    window_data = reinterpret_cast<uintptr_t*>(bigstack_initial_base);
-    uintptr_t* window_data_ptr = nullptr;
     unsigned char* g_bigstack_end = &(
         bigstack_initial_base[(static_cast<uintptr_t>(malloc_size_mb) * 1048576
                                - static_cast<uintptr_t>(bigstack_initial_base
                                                         - bigstack_ua))
                               & (~(CACHELINE - ONELU))]);
 
-    uintptr_t num_core_snps = 0;
     // and max_window_size is the number of windows we can handle in one round
     // given the memory that we have. 1 window = 1 SNP
-    uintptr_t max_window_size =
-        ((reinterpret_cast<uintptr_t>(g_bigstack_end))
-         - (reinterpret_cast<uintptr_t>(bigstack_initial_base)))
-        / (founder_ctv2 * sizeof(intptr_t));
+    max_window_size = ((reinterpret_cast<uintptr_t>(g_bigstack_end))
+                       - (reinterpret_cast<uintptr_t>(bigstack_initial_base)))
+                      / (founder_ctv2 * sizeof(intptr_t));
 
     g_bigstack_end = nullptr;
+    uintptr_t* window_data =
+        reinterpret_cast<uintptr_t*>(bigstack_initial_base);
+    if (!max_window_size)
+    { throw std::runtime_error("Error: Not enough memory for clumping!"); }
+    uintptr_t* window_data_ptr = nullptr;
+
     // a counter to count how many windows have we read
     uintptr_t cur_window_size = 0;
     // if max_window size is 0, it means we don't have enough memory for
     // clumping
-    if (!max_window_size)
-    { throw std::runtime_error("Error: Not enough memory for clumping!"); }
 
     double prev_progress = -1.0;
     const auto num_snp = m_existed_snps.size();
@@ -1178,22 +1117,21 @@ void Genotype::efficient_clumping(Genotype& reference)
         auto&& cur_snp_index = m_sort_by_p_index[i_snp];
         // read in the current SNP
         auto&& cur_target_snp = m_existed_snps[cur_snp_index];
-        if (cur_target_snp.clumped() || cur_target_snp.p_value() > m_clump_p)
+        if (cur_target_snp.clumped()
+            || cur_target_snp.p_value() > clump_info.pvalue)
+        {
             // ignore any SNP that are clumped or that has a p-value higher than
             // the clump-p threshold
             continue;
-        // with the new change, all SNPs are stored in target
-        // so we can safely ignore finding it in the reference
-        // though we still need to get the sample size information
-        // from the reference panel
+        }
         // Any SNP with p-value less than clump-p will be ignored
         // because they can never be an index SNP and thus are not of our
         // interested
 
         // this is the first SNP we should read from
-        size_t start = cur_target_snp.low_bound();
+        const size_t start = cur_target_snp.low_bound();
         // this is the first SNP we should ignore
-        size_t end = cur_target_snp.up_bound();
+        const size_t end = cur_target_snp.up_bound();
         // reset our pointer to the start of the memory stack as we are working
         // on a new core SNP
         window_data_ptr = window_data;
@@ -1209,10 +1147,12 @@ void Genotype::efficient_clumping(Genotype& reference)
             // the current SNP
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > m_clump_p)
+                || pair_target_snp.p_value() > clump_info.pvalue)
+            {
                 // ignore SNP that are clumped or that has higher p-value than
                 // threshold
                 continue;
+            }
             // Something PLINK does. I suspect this is to reset the content of
             // the pointer to 0
             window_data_ptr[founder_ctv2 - 2] = 0;
@@ -1225,8 +1165,8 @@ void Genotype::efficient_clumping(Genotype& reference)
             // position for reading) and ref_file_name (which reference file
             // should we read from)
             reference.read_genotype(window_data_ptr,
-                                    pair_target_snp.ref_byte_pos(),
-                                    pair_target_snp.ref_file_index());
+                                    pair_target_snp.get_byte_pos(true),
+                                    pair_target_snp.get_file_idx(true));
             // we then move the pointer forward to the next space in the memory
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
         }
@@ -1237,27 +1177,20 @@ void Genotype::efficient_clumping(Genotype& reference)
         // reset the content of the pointer again
         window_data_ptr[founder_ctv2 - 2] = 0;
         window_data_ptr[founder_ctv2 - 1] = 0;
-        // reset the index_data information
-        std::fill(index_data.begin(), index_data.end(), 0);
         // then we can read in the genotype from the reference panel
         // note the use of cur_target_snp
-        reference.read_genotype(window_data_ptr, cur_target_snp.ref_byte_pos(),
-                                cur_target_snp.ref_file_index());
+        reference.read_genotype(window_data_ptr,
+                                cur_target_snp.get_byte_pos(true),
+                                cur_target_snp.get_file_idx(true));
+        // reset the index_data information
+        std::fill(index_data.begin(), index_data.end(), 0);
         // generate the required data mask
         // Disclaimer: For the next few lines, they are from PLINK and I don't
         // fully understand what they are doing
-        vec_datamask(reference.m_founder_ct, 0, window_data_ptr,
-                     founder_include2.data(), index_data.data());
         // then populate the index_tots
-        index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
-        vec_datamask(reference.m_founder_ct, 2, window_data_ptr,
-                     founder_include2.data(), &(index_data[founder_ctv2]));
-        index_tots[1] =
-            popcount2_longs(&(index_data[founder_ctv2]), founder_ctl2);
-        vec_datamask(reference.m_founder_ct, 3, window_data_ptr,
-                     founder_include2.data(), &(index_data[2 * founder_ctv2]));
-        index_tots[2] =
-            popcount2_longs(&(index_data[2 * founder_ctv2]), founder_ctl2);
+        update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
+                         index_data, index_tots, founder_include2,
+                         window_data_ptr);
         // we have finished reading the index and stored the necessary
         // inforamtion, we can now calculate the R2 between the index and
         // previous SNPs
@@ -1268,51 +1201,18 @@ void Genotype::efficient_clumping(Genotype& reference)
         {
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > m_clump_p)
+                || pair_target_snp.p_value() > clump_info.pvalue)
                 // Again, ignore unwanted SNP
                 continue;
-            r2 = -1;
-            uint32_t counts[18];
-            // calculate the counts
-            // these counts are then used for calculation of R2. However, I
-            // don't fully understand the algorithm here (copy from PLINK2)
-            genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                          &(counts[0]), &(counts[1]), &(counts[2]));
-            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-            genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                          founder_ctl2, &(counts[3]), &(counts[4]),
-                          &(counts[5]));
-            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-            genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                          founder_ctl2, &(counts[6]), &(counts[7]),
-                          &(counts[8]));
-            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
-                                        &freqx1, &freqx2, &freq11))
-            {
-                // if the calculation is sucessful, we can then calculate the R2
-                freq11_expected = freqx1 * freq1x;
-                dxx = freq11 - freq11_expected;
-                // message from PLINK:
-                // if r^2 threshold is 0, let everything else through but
-                // exclude the apparent zeroes.  Zeroes *are* included if
-                // r2_thresh is negative,
-                // though (only nans are rejected then).
-                if (fabs(dxx) < SMALL_EPSILON
-                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-                { r2 = 0.0; }
-                else
-                {
-                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                }
-            }
+            r2 = get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
+                        index_tots);
             if (r2 >= min_r2)
             {
                 // if the R2 between two SNP is higher than the minim threshold,
                 // we will perform clumping
                 // use the core SNP to clump the pair_target_snp
-                cur_target_snp.clump(pair_target_snp, r2, m_use_proxy,
-                                     m_clump_proxy);
+                cur_target_snp.clump(pair_target_snp, r2, clump_info.use_proxy,
+                                     clump_info.proxy);
             }
             // travel to the next snp
             window_data_ptr = &(window_data_ptr[founder_ctv2]);
@@ -1328,7 +1228,7 @@ void Genotype::efficient_clumping(Genotype& reference)
             // read in the SNP information from teh target
             auto&& pair_target_snp = m_existed_snps[i_pair];
             if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > m_clump_p)
+                || pair_target_snp.p_value() > clump_info.pvalue)
                 // skip if not required
                 continue;
             // reset data
@@ -1336,45 +1236,15 @@ void Genotype::efficient_clumping(Genotype& reference)
             window_data_ptr[founder_ctv2 - 1] = 0;
             // read in the genotype information
             reference.read_genotype(window_data_ptr,
-                                    pair_target_snp.ref_byte_pos(),
-                                    pair_target_snp.ref_file_index());
-            r2 = -1;
-            // obtain count using PLINK magic
-            uint32_t counts[18];
-            genovec_3freq(window_data_ptr, index_data.data(), founder_ctl2,
-                          &(counts[0]), &(counts[1]), &(counts[2]));
-            counts[0] = index_tots[0] - counts[0] - counts[1] - counts[2];
-            genovec_3freq(window_data_ptr, &(index_data[founder_ctv2]),
-                          founder_ctl2, &(counts[3]), &(counts[4]),
-                          &(counts[5]));
-            counts[3] = index_tots[1] - counts[3] - counts[4] - counts[5];
-            genovec_3freq(window_data_ptr, &(index_data[2 * founder_ctv2]),
-                          founder_ctl2, &(counts[6]), &(counts[7]),
-                          &(counts[8]));
-            counts[6] = index_tots[2] - counts[6] - counts[7] - counts[8];
-            if (!em_phase_hethet_nobase(counts, is_x, is_x, &freq1x, &freq2x,
-                                        &freqx1, &freqx2, &freq11))
-            {
-                freq11_expected = freqx1 * freq1x;
-                dxx = freq11 - freq11_expected;
-                // Message in PLINK:
-                // if r^2 threshold is 0, let everything else through but
-                // exclude the apparent zeroes.  Zeroes *are* included if
-                // r2_thresh is negative,
-                // though (only nans are rejected then).
-                if (fabs(dxx) < SMALL_EPSILON
-                    || fabs(freq11_expected * freq2x * freqx2) < SMALL_EPSILON)
-                { r2 = 0.0; }
-                else
-                {
-                    r2 = dxx * dxx / (freq11_expected * freq2x * freqx2);
-                }
-            }
+                                    pair_target_snp.get_byte_pos(true),
+                                    pair_target_snp.get_file_idx(true));
+            r2 = get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
+                        index_tots);
             // now perform clumping if required
             if (r2 >= min_r2)
             {
-                cur_target_snp.clump(pair_target_snp, r2, m_use_proxy,
-                                     m_clump_proxy);
+                cur_target_snp.clump(pair_target_snp, r2, clump_info.use_proxy,
+                                     clump_info.proxy);
             }
         }
         // we set the core SNP to be "clumped" so that it will no longer be
@@ -1382,86 +1252,86 @@ void Genotype::efficient_clumping(Genotype& reference)
         cur_target_snp.set_clumped();
         // we set the remain_core to true so that we will keep it at the end
         remain_core[cur_snp_index] = true;
-        num_core_snps++;
+        ++num_core_snps;
         // we also get the p-value threshold of the SNP so that we know what
         // thresholds are included in our analysis. This information is vital
         // for the generation of all score file
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     // now we release the memory stack
+    free(bigstack_ua);
     window_data = nullptr;
     window_data_ptr = nullptr;
-    free(bigstack_ua);
-    bigstack_ua = nullptr;
     bigstack_initial_base = nullptr;
+    bigstack_ua = nullptr;
     if (num_core_snps != m_existed_snps.size())
     { shrink_snp_vector(remain_core); }
     // we no longer require the index. might as well clear it (and hope it will
     // release the memory)
     m_existed_snps_index.clear();
-    message = "Number of variant(s) after clumping : "
-              + misc::to_string(m_existed_snps.size());
-    m_reporter->report(message);
+    m_reporter->report("Number of variant(s) after clumping : "
+                       + misc::to_string(m_existed_snps.size()));
 }
 
 
-bool Genotype::prepare_prsice(const double& lower, const double& inter,
-                              const double& upper)
-{
-    if (m_existed_snps.size() == 0) return false;
-    if (m_very_small_thresholds)
-    {
-        // need to loop through the SNPs to check
-        std::sort(begin(m_existed_snps), end(m_existed_snps),
-                  [](SNP const& t1, SNP const& t2) {
-                      if (misc::logically_equal(t1.p_value(), t2.p_value()))
+void Genotype::recalculate_categories(const PThresholding& p_info)
+{ // need to loop through the SNPs to check
+    std::sort(begin(m_existed_snps), end(m_existed_snps),
+              [](SNP const& t1, SNP const& t2) {
+                  if (misc::logically_equal(t1.p_value(), t2.p_value()))
+                  {
+                      if (t1.chr() == t2.chr())
                       {
-                          if (t1.chr() == t2.chr())
-                          {
-                              if (t1.loc() == t2.loc())
-                              { return t1.rs() < t2.rs(); }
-                              else
-                                  return t1.loc() < t2.loc();
-                          }
+                          if (t1.loc() == t2.loc())
+                          { return t1.rs() < t2.rs(); }
                           else
-                              return t1.chr() < t2.chr();
+                              return t1.loc() < t2.loc();
                       }
                       else
-                          return t1.p_value() < t2.p_value();
-                  });
-        unsigned long long cur_category = 0;
-        double prev_p = lower;
-        bool has_warned = false, cur_warn;
-        for (auto&& snp : m_existed_snps)
+                          return t1.chr() < t2.chr();
+                  }
+                  else
+                      return t1.p_value() < t2.p_value();
+              });
+    unsigned long long cur_category = 0;
+    double prev_p = p_info.lower;
+    bool has_warned = false, cur_warn;
+    for (auto&& snp : m_existed_snps)
+    {
+        snp.set_category(cur_category, prev_p, p_info.upper, p_info.inter,
+                         cur_warn);
+        if (cur_warn && !has_warned)
         {
-            snp.set_category(cur_category, prev_p, upper, inter, cur_warn);
-            if (cur_warn && !has_warned)
-            {
-                has_warned = true;
-                std::string message =
-                    "Warning: P-value threshold steps are too small. While we "
-                    "can still try and generate appropriate thresholds, it is "
-                    "likely to suffer from numeric instability, i.e. the "
-                    "number representing the p-value threshold of the current "
-                    "SNP will only have precision up to 15 digits";
-                m_reporter->report(message);
-            }
+            has_warned = true;
+            m_reporter->report(
+                "Warning: P-value threshold steps are too small. While we "
+                "can still try and generate appropriate thresholds, it is "
+                "likely to suffer from numeric instability, i.e. the "
+                "number representing the p-value threshold of the current "
+                "SNP will only have precision up to 15 digits");
         }
     }
+}
+bool Genotype::prepare_prsice(const PThresholding& p_info)
+{
+    if (m_existed_snps.size() == 0) return false;
+    if (m_very_small_thresholds) { recalculate_categories(p_info); }
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {
                   if (t1.category() == t2.category())
                   {
-                      if (t1.file_index() == t2.file_index())
-                      { return t1.byte_pos() < t2.byte_pos(); }
+                      if (t1.get_file_idx() == t2.get_file_idx())
+                      { return t1.get_byte_pos() < t2.get_byte_pos(); }
                       else
-                          return t1.file_index() < t2.file_index();
+                          return t1.get_file_idx() < t2.get_file_idx();
                   }
                   else
                       return t1.category() < t2.category();
               });
     return true;
 }
+
+// TODO: This function is likely to have bug
 void Genotype::build_membership_matrix(
     std::vector<size_t>& region_membership,
     std::vector<size_t>& region_start_idx, const size_t num_sets,
@@ -1549,13 +1419,12 @@ void Genotype::build_membership_matrix(
         }
         if (!has_snp)
         {
-            std::string error_message =
+            throw std::runtime_error(
                 "Error: None of the gene sets contain any SNP(s) after "
                 "clumping. Have you provided the correct input? E.g. GMT "
                 "file "
                 "containing Entrez ID with GTF files that uses the Ensembl "
-                "gene ID?\n";
-            throw std::runtime_error(error_message);
+                "gene ID?\n");
         }
     }
     else
@@ -1599,12 +1468,30 @@ void Genotype::build_membership_matrix(
         { m_set_thresholds.front().insert(thres); }
     }
 }
+void Genotype::standardize_prs()
+{
+    misc::RunningStat rs;
+    size_t num_prs = m_prs_info.size();
+    for (size_t i = 0; i < num_prs; ++i)
+    {
+        if (!IS_SET(m_sample_include, i)
+            || (m_prs_calculation.scoring_method == SCORING::CONTROL_STD
+                && m_sample_id[i].pheno != "0"))
+            continue;
+        if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
+        else
+        {
+            rs.push(m_prs_info[i].prs
+                    / static_cast<double>(m_prs_info[i].num_snp));
+        }
+    }
+    m_mean_score = rs.mean();
+    m_score_sd = rs.sd();
+}
 
 void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
                               std::vector<size_t>& background_list,
-                              const bool first_run,
-                              const bool require_statistic,
-                              const bool use_ref_maf)
+                              const bool first_run)
 {
 
     if (m_existed_snps.empty() || set_size >= m_existed_snps.size()) return;
@@ -1617,38 +1504,23 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
     std::vector<size_t>::iterator select_end = background_list.begin();
     std::advance(select_end, static_cast<long>(set_size));
     std::sort(select_start, select_end);
-    read_score(select_start, select_end, first_run, use_ref_maf);
-    if (require_statistic)
-    {
-        misc::RunningStat rs;
-        size_t num_prs = m_prs_info.size();
-        for (size_t i = 0; i < num_prs; ++i)
-        {
-            if (!IS_SET(m_sample_include, i)) continue;
-            if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
-            else
-            {
-                rs.push(m_prs_info[i].prs
-                        / static_cast<double>(m_prs_info[i].num_snp));
-            }
-        }
-        m_mean_score = rs.mean();
-        m_score_sd = rs.sd();
-    }
+    read_score(select_start, select_end, first_run);
+    if (m_prs_calculation.scoring_method == SCORING::STANDARDIZE
+        || m_prs_calculation.scoring_method == SCORING::CONTROL_STD)
+    { standardize_prs(); }
 }
 
 bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const std::vector<size_t>::const_iterator& end_index,
                          double& cur_threshold, uint32_t& num_snp_included,
-                         const bool non_cumulate, const bool require_statistic,
-                         const bool first_run, const bool use_ref_maf)
+                         const bool first_run)
 {
     // if there are no SNPs or we are at the end
     if (m_existed_snps.size() == 0 || start_index == end_index
         || (*start_index) == m_existed_snps.size())
         return false;
     // reset number of SNPs if we don't need cumulative PRS
-    if (non_cumulate) num_snp_included = 0;
+    if (m_prs_calculation.non_cumulate) num_snp_included = 0;
     unsigned long long cur_category = m_existed_snps[(*start_index)].category();
     cur_threshold = m_existed_snps[(*start_index)].get_threshold();
     std::vector<size_t>::const_iterator region_end = start_index;
@@ -1659,30 +1531,16 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
             cur_category = m_existed_snps[(*region_end)].category();
             break;
         }
-        num_snp_included++;
+        ++num_snp_included;
     }
-    read_score(start_index, region_end, (non_cumulate || first_run),
-               use_ref_maf);
+    read_score(start_index, region_end,
+               (m_prs_calculation.non_cumulate || first_run));
     // update the current index
     start_index = region_end;
     // if ((*start_index) == 0) return -1;
-    if (require_statistic)
-    {
-        misc::RunningStat rs;
-        size_t num_prs = m_prs_info.size();
-        for (size_t i = 0; i < num_prs; ++i)
-        {
-            if (!IS_SET(m_sample_include, i)) continue;
-            if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
-            else
-            {
-                rs.push(m_prs_info[i].prs
-                        / static_cast<double>(m_prs_info[i].num_snp));
-            }
-        }
-        m_mean_score = rs.mean();
-        m_score_sd = rs.sd();
-    }
+    if (m_prs_calculation.scoring_method == SCORING::STANDARDIZE
+        || m_prs_calculation.scoring_method == SCORING::CONTROL_STD)
+    { standardize_prs(); }
     return true;
 }
 

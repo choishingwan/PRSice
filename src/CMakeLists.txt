@@ -9,6 +9,7 @@ SET(prsice_header
     binarygen.hpp
     binaryplink.hpp
     commander.hpp
+    enumerators.h
     dcdflib.h
     family.hpp
     fastlm.hpp

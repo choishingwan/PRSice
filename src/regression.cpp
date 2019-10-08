@@ -21,10 +21,10 @@ namespace Regression
 // This is an unsafe version of R's glm.fit
 // unsafe as in I have skipped some of the checking
 void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
-         double& r2, double& coeff, double& standard_error, size_t thread)
+         double& r2, double& coeff, double& standard_error, int thread)
 {
     Binomial family = Binomial();
-    Eigen::setNbThreads(static_cast<int>(thread));
+    Eigen::setNbThreads(thread);
     GLM<Binomial> run_glm(x, y, family);
     run_glm.init_parms();
     run_glm.solve();
@@ -34,9 +34,9 @@ void glm(const Eigen::VectorXd& y, const Eigen::MatrixXd& x, double& p_value,
 
 void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
             double& r2, double& r2_adjust, double& coeff,
-            double& standard_error, size_t thread, bool intercept, int type)
+            double& standard_error, int thread, bool intercept, int type)
 {
-    Eigen::setNbThreads(static_cast<int>(thread));
+    Eigen::setNbThreads(thread);
     Eigen::Index n = X.rows();
     if (n != y.rows()) { throw std::runtime_error("Error: Size mismatch"); }
     lm ans;

@@ -23,6 +23,7 @@
 #include "misc.hpp"
 #include "reporter.hpp"
 #include <fstream>
+#include <storage.hpp>
 #include <string>
 #include <vector>
 
@@ -34,67 +35,25 @@ private:
                                                           {"bgen", 2}};
 
 public:
-    Genotype* createGenotype(const Commander& commander, Reporter& reporter,
-                             const bool is_ref = false)
+    Genotype* createGenotype(const GenoFile& geno, const Phenotype& pheno,
+                             const std::string& delim, Reporter& reporter)
     {
-        const std::string type =
-            (is_ref) ? commander.ref_type() : commander.target_type();
         int code = 0;
-        if (file_type.find(type) != file_type.end())
-        { code = file_type.at(type); }
+        if (file_type.find(geno.type) != file_type.end())
+        { code = file_type.at(geno.type); }
         else
         {
-            throw std::invalid_argument("ERROR: Only support bgen and bed");
+            throw std::invalid_argument("Error: Only support bgen and bed");
         }
         switch (code)
         {
         case 0:
         {
-            if (is_ref)
-            {
-                return new BinaryPlink(
-                    commander.ref_list(), commander.ref_name(),
-                    commander.thread(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    &reporter);
-            }
-            else
-            {
-                return new BinaryPlink(
-                    commander.target_list(), commander.target_name(),
-                    commander.thread(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    &reporter);
-            }
+            return new BinaryPlink(geno, pheno, delim, &reporter);
         }
         case 2:
         {
-            if (is_ref)
-            {
-                // for reference bgen, we ALWAYS hard code it. so we don't
-                // really use the hard_coded flag
-                return new BinaryGen(
-                    commander.ref_list(), commander.ref_name(),
-                    commander.pheno_file(), commander.out(),
-                    commander.get_ref_hard_threshold(),
-                    commander.ref_dose_thres(), commander.thread(),
-                    commander.use_inter(), commander.hard_coded(),
-                    commander.no_regress(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    &reporter);
-            }
-            else
-            {
-                return new BinaryGen(
-                    commander.target_list(), commander.target_name(),
-                    commander.pheno_file(), commander.out(),
-                    commander.get_target_hard_threshold(),
-                    commander.target_hard_threshold(), commander.thread(),
-                    commander.use_inter(), commander.hard_coded(),
-                    commander.no_regress(), commander.ignore_fid(),
-                    commander.nonfounders(), commander.keep_ambig(), is_ref,
-                    &reporter);
-            }
+            return new BinaryGen(geno, pheno, delim, &reporter);
         }
         default:
             throw std::invalid_argument("ERROR: Only support bgen and bed");

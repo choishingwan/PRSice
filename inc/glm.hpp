@@ -3,6 +3,7 @@
 #include "dcdflib.h"
 #include "family.hpp"
 #include <Eigen/Dense>
+#include <iostream>
 #include <math.h>
 #include <stdexcept>
 template <typename family>
@@ -72,15 +73,23 @@ public:
     }
     void init_parms()
     {
-        size_t qr_time = 2 * m_nobs * m_nvars * m_nvars
-                         - (2.0 / 3.0) * m_nvars * m_nvars * m_nvars;
-        size_t fastqr_time = m_nobs * m_nvars * m_nvars
-                             + (4.0 / 3.0) * m_nvars * m_nvars * m_nvars;
-        if (qr_time <= fastqr_time) { m_type = 1; }
-        else
-        {
-            m_type = 2;
-        }
+        // while type=2 should in theory be faster in most situation, it seems
+        // to struggle when there is rank deficient cases and I haven't figure
+        // out how to solve that
+        // The problem is that it will both give a wrong beta and se when
+        // there's rank deficiency. Now force back to the traditional QR
+        // decomoposition
+        //        size_t qr_time = 2 * m_nobs * m_nvars * m_nvars
+        //                         - (2.0 / 3.0) * m_nvars * m_nvars * m_nvars;
+        //        size_t fastqr_time = m_nobs * m_nvars * m_nvars
+        //                             + (4.0 / 3.0) * m_nvars * m_nvars *
+        //                             m_nvars;
+        //        if (qr_time <= fastqr_time) { m_type = 1; }
+        //        else
+        //        {
+        //            m_type = 2;
+        //        }
+        m_type = 2;
         m_beta = Eigen::VectorXd::Zero(m_X.cols());
         m_eta = m_family.link(m_family.initialize(m_Y, m_w));
         m_mu = m_family.linkinv(m_eta);
@@ -257,8 +266,8 @@ private:
         if (m_type == 0)
         {
             // use LLT
-            m_Ch.compute(
-                Eigen::MatrixXd(XtWX()).selfadjointView<Eigen::Lower>());
+            m_Ch.compute(static_cast<Eigen::MatrixXd>(XtWX())
+                             .selfadjointView<Eigen::Lower>());
             m_beta = m_Ch.solve((m_w.asDiagonal() * m_X).adjoint()
                                 * (m_z.array() * m_w.array()).matrix());
         }
@@ -274,11 +283,10 @@ private:
             }
             else
             {
-                m_Rinv =
-                    (Eigen::MatrixXd(
-                         m_PQR.matrixQR().topLeftCorner(m_rank, m_rank))
-                         .triangularView<Eigen::Upper>()
-                         .solve(Eigen::MatrixXd::Identity(m_rank, m_rank)));
+                m_Rinv = static_cast<Eigen::MatrixXd>(
+                             m_PQR.matrixQR().topLeftCorner(m_rank, m_rank))
+                             .triangularView<Eigen::Upper>()
+                             .solve(Eigen::MatrixXd::Identity(m_rank, m_rank));
                 m_effects = m_PQR.householderQ().adjoint()
                             * (m_z.array() * m_w.array()).matrix();
                 m_beta.head(m_rank) = m_Rinv * m_effects.head(m_rank);
@@ -290,9 +298,9 @@ private:
         }
         else if (m_type == 2)
         {
-            m_PQR.compute(
-                Eigen::MatrixXd(XtWX()).selfadjointView<Eigen::Lower>());
-            m_Pmat = (m_PQR.colsPermutation());
+            m_PQR.compute(static_cast<Eigen::MatrixXd>(XtWX())
+                              .selfadjointView<Eigen::Lower>());
+            m_Pmat = m_PQR.colsPermutation();
             m_rank = m_PQR.rank();
             if (m_rank == m_nvars)
             { // full rank case
@@ -331,12 +339,12 @@ private:
             if (m_rank == m_nvars)
             { // full rank case
                 m_se = m_Pmat
-                       * Eigen::MatrixXd(m_PQR.matrixQR().topRows(m_nvars))
+                       * static_cast<Eigen::MatrixXd>(
+                             m_PQR.matrixQR().topRows(m_nvars))
                              .triangularView<Eigen::Upper>()
                              .solve(Eigen::MatrixXd::Identity(m_nvars, m_nvars))
                              .rowwise()
                              .norm();
-                // return;
             }
             else
             {
@@ -344,6 +352,7 @@ private:
                 m_se = m_Pmat * m_se;
             }
         }
+
         if (m_type == 2) { m_se = m_se.array().sqrt(); }
     }
 };

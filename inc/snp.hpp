@@ -49,56 +49,52 @@ public:
         , m_loc(loc)
         , m_category(category)
     {
-        m_has_count = false;
     }
 
     virtual ~SNP();
-    void add_reference(const size_t& ref_idx,
-                       const unsigned long long ref_byte_pos, const bool flip)
+
+    void update_file(const size_t& idx, const long long byte_pos,
+                     const bool is_ref)
     {
-        m_ref_index = ref_idx;
-        m_ref_byte_pos = ref_byte_pos;
-        m_ref_flipped = flip;
+        auto&& target = is_ref ? m_reference : m_target;
+        target.name_idx = idx;
+        target.byte_pos = byte_pos;
     }
-    void update_reference(const size_t& ref_idx,
-                          const unsigned long long ref_byte_pos)
+    void update_file(const size_t& idx, const long long byte_pos,
+                     const bool is_ref, const bool flip)
     {
-        m_ref_index = ref_idx;
-        m_ref_byte_pos = ref_byte_pos;
+        auto&& target = is_ref ? m_reference : m_target;
+        target.name_idx = idx;
+        target.byte_pos = byte_pos;
+        if (is_ref) { m_ref_flipped = flip; }
+        else
+        {
+            m_flipped = flip;
+        }
     }
-    void update_target(const size_t& target_idx,
-                       const unsigned long long byte_pos)
+    void add_snp_info(const size_t& idx, const long long byte_pos,
+                      const size_t chr, const size_t loc,
+                      const std::string& ref, const std::string& alt,
+                      const bool flipping, const bool is_ref)
     {
-        m_target_index = target_idx;
-        m_target_byte_pos = byte_pos;
+        if (!is_ref)
+        {
+            m_target.name_idx = idx;
+            m_target.byte_pos = byte_pos;
+            m_chr = chr;
+            m_loc = loc;
+            m_flipped = flipping;
+            m_ref = ref;
+            m_alt = alt;
+        }
+        else
+        {
+            m_ref_flipped = flipping;
+        }
+        m_reference.name_idx = idx;
+        m_reference.byte_pos = byte_pos;
     }
-    void add_target(const size_t& target_idx,
-                    const unsigned long long target_byte_pos, const size_t chr,
-                    const size_t loc, const std::string& ref,
-                    const std::string& alt, const bool flipping)
-    {
-        m_target_index = target_idx;
-        m_target_byte_pos = target_byte_pos;
-        m_ref_index = target_idx;
-        m_ref_byte_pos = target_byte_pos;
-        m_chr = chr;
-        m_loc = loc;
-        m_flipped = flipping;
-        m_ref = ref;
-        m_alt = alt;
-    }
-    void add_reference(const size_t& ref_idx,
-                       const unsigned long long ref_byte_pos,
-                       const size_t homcom, const size_t het,
-                       const size_t homrar, const size_t missing)
-    {
-        m_ref_index = ref_idx;
-        m_ref_byte_pos = ref_byte_pos;
-        m_homcom = homcom;
-        m_ref_het = het;
-        m_ref_homrar = homrar;
-        m_ref_missing = missing;
-    }
+
 
     /*!
      * \brief Function to sort a vector of SNP by their chr then by their
@@ -107,7 +103,6 @@ public:
      * \return return a vector containing index to the sort order of the input
      */
     static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
-
 
     /*!
      * \brief Compare the current SNP with another SNP
@@ -212,12 +207,22 @@ public:
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    unsigned long long byte_pos() const { return m_target_byte_pos; }
-    unsigned long long ref_byte_pos() const { return m_ref_byte_pos; }
-    // std::string file_name() const { return m_target_file; }
-    // std::string ref_file_name() const { return m_ref_file; }
-    size_t file_index() const { return m_target_index; }
-    size_t ref_file_index() const { return m_ref_index; }
+    void get_file_info(size_t& idx, long long& byte_pos,
+                       bool is_ref = false) const
+    {
+        auto&& from = is_ref ? m_reference : m_target;
+        idx = from.name_idx;
+        byte_pos = from.byte_pos;
+    }
+    size_t get_file_idx(bool is_ref = false) const
+    {
+        return is_ref ? m_reference.name_idx : m_target.name_idx;
+    }
+    long long get_byte_pos(bool is_ref = false) const
+    {
+        return is_ref ? m_reference.byte_pos : m_target.byte_pos;
+    }
+
     std::string rs() const { return m_rs; }
     std::string ref() const { return m_ref; }
     std::string alt() const { return m_alt; }
@@ -231,22 +236,23 @@ public:
      */
     inline bool in(size_t i) const
     {
-        if (i / BITCT >= m_max_flag_index)
+        if (i / BITCT >= m_clump_info.max_flag_idx)
             throw std::out_of_range("Out of range for flag");
-        return (IS_SET(m_flags.data(), i));
+        return (IS_SET(m_clump_info.flags.data(), i));
     }
 
     void set_flag(const size_t num_region, const std::vector<uintptr_t>& flags)
     {
-        m_max_flag_index = BITCT_TO_WORDCT(num_region);
-        m_flags = flags;
+        m_clump_info.max_flag_idx = BITCT_TO_WORDCT(num_region);
+        m_clump_info.flags = flags;
+        m_clump_info.clumped = false;
     }
 
     /*!
      * \brief Set the SNP to be clumped such that it will no longer be
      * considered in clumping
      */
-    void set_clumped() { m_clumped = true; }
+    void set_clumped() { m_clump_info.clumped = true; }
 
     /*!
      * \brief This is the clumping algorithm. The current SNP will remove
@@ -262,48 +268,48 @@ public:
         if (target.clumped()) return;
         // we need to check if the target SNP is completely clumped (e.g. no
         // longer representing any set)
-        unsigned long long remained_flag = 0;
+        bool target_clumped = true;
         // if we want to use proxy, and that our r2 is higher than
         // the proxy threshold, we will do the proxy clumping
+        // and the index SNP will get all membership (or) from the clumped
         if (use_proxy && r2 > proxy)
         {
-            // If the observed R2 is higher than the proxy clumping threshold,
-            // we will capture the flag of the target SNP (using |= )
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            for (size_t i_flag = 0; i_flag < m_clump_info.max_flag_idx;
+                 ++i_flag)
             {
-                // two become one
-                m_flags[i_flag] |= target.m_flags[i_flag];
+                m_clump_info.flags[i_flag] |= target.m_clump_info.flags[i_flag];
             }
-            // for proxy clumping, the target SNP will always be removed after
-            // the clump as the current SNP will represent all sets the target
-            // SNP is a member of
-            remained_flag = 0;
+            target_clumped = true;
         }
         else
         {
-            // otherwise, we will just do noraml clumping
-            for (size_t i_flag = 0; i_flag < m_max_flag_index; ++i_flag)
+            for (size_t i_flag = 0; i_flag < m_clump_info.max_flag_idx;
+                 ++i_flag)
             {
                 // For normal clumping, we will remove set identity from the
                 // target SNP whenever both SNPs are within the same set.
                 // i.e. if flag of SNP A (current) is 11011 and SNP B (target)
                 // is 11110, by the end of clumping, it will become SNP A
                 // =11111, SNP B = 00100
-                target.m_flags[i_flag] =
-                    target.m_flags[i_flag]
-                    ^ (m_flags[i_flag] & target.m_flags[i_flag]);
+                // bit operation meaning:
+                // ~m_clump_info = not in index
+                // target.m_clump_info & ~m_clump_info = retain bit that are not
+                // found in index
+                target.m_clump_info.flags[i_flag] =
+                    target.m_clump_info.flags[i_flag]
+                    & ~m_clump_info.flags[i_flag];
                 // if all flags of the target SNP == 0, it means that it no
                 // longer represent any gene set and is consided as "clumped"
-                remained_flag += (target.m_flags[i_flag] != 0);
+                target_clumped &= (target.m_clump_info.flags[i_flag] == 0);
             }
         }
-        if (remained_flag == 0)
+        if (target_clumped)
         {
             // if the target SNP no longer represent any gene set, it is
             // considered as clumped and can be removed
             target.set_clumped();
         }
-        m_clumped = true;
+        m_clump_info.clumped = true;
         // protect from other SNPs tempering its flags
     }
 
@@ -311,19 +317,19 @@ public:
      * \brief Indicate if this snp is clumped
      * \return  Return true if this is clumped
      */
-    bool clumped() const { return m_clumped; }
+    bool clumped() const { return m_clump_info.clumped; }
     /*!
      * \brief Set the lower boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
      * \param low the designated bound index
      */
-    void set_low_bound(size_t low) { m_low_bound = low; }
+    void set_low_bound(size_t low) { m_clump_info.low_bound = low; }
     /*!
      * \brief Set the upper boundary (index of m_existed_snp) of this SNP if it
      * is used as the index
      * \param up the designated bound index
      */
-    void set_up_bound(size_t up) { m_up_bound = up; }
+    void set_up_bound(size_t up) { m_clump_info.up_bound = up; }
     /*!
      * \brief get_counts will return the current genotype count for this SNP.
      * Return true if this was previously calculated (and indicate the need of
@@ -335,27 +341,15 @@ public:
      * \param missing is the number of missing genotypes
      * \return true if calculation is already done
      */
-
-    // TODO: Potential slow down here
     bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
                     size_t& missing, const bool use_ref_maf) const
     {
-        if (use_ref_maf)
-        {
-            homcom = m_ref_homcom;
-            het = m_ref_het;
-            homrar = m_ref_homrar;
-            missing = m_ref_missing;
-            return m_has_ref_count;
-        }
-        else
-        {
-            homcom = m_homcom;
-            het = m_het;
-            homrar = m_homrar;
-            missing = m_missing;
-            return m_has_count;
-        }
+        auto&& from = use_ref_maf ? m_ref_count : m_target_count;
+        homcom = from.homcom;
+        het = from.het;
+        homrar = from.homrar;
+        missing = from.missing;
+        return from.has_count;
     }
     /*!
      * \brief This function will set the genotype count for the current SNP, and
@@ -366,29 +360,35 @@ public:
      * \param homrar is the count of homozygous rare allele
      * \param missing is the number of missing genotypes
      */
-    void set_counts(size_t homcom, size_t het, size_t homrar, size_t missing)
+    void set_counts(size_t homcom, size_t het, size_t homrar, size_t missing,
+                    bool is_ref)
     {
-        m_homcom = homcom;
-        m_het = het;
-        m_homrar = homrar;
-        m_missing = missing;
-        m_has_count = true;
+        auto&& target = is_ref ? m_ref_count : m_target_count;
+        if (m_ref_flipped && is_ref) std::swap(homcom, homrar);
+        target.homcom = homcom;
+        target.het = het;
+        target.homrar = homrar;
+        target.missing = missing;
+        target.has_count = true;
     }
 
     std::vector<size_t> get_set_idx(const size_t num_sets) const
     {
-        std::vector<uintptr_t> flags = m_flags;
+        std::vector<uintptr_t> flags = m_clump_info.flags;
         uintptr_t bitset;
         std::vector<size_t> out;
         out.reserve(num_sets);
-        for (size_t k = 0; k < m_max_flag_index; ++k)
+        for (size_t k = 0; k < m_clump_info.max_flag_idx; ++k)
         {
-            bitset = m_flags[k];
+            bitset = m_clump_info.flags[k];
             while (bitset != 0)
             {
                 uint64_t t = bitset & -bitset;
-                size_t r = CTZLU(bitset);
-                out.push_back(k * BITCT + r);
+                // TODO: Potential bug here. CTZLU seems to only take 32bit on
+                // none-64bit window according to plink (NOTE: PLINK also used
+                // this in their score calculation. Maybe ask Chris about it?)
+                int r = CTZLU(bitset);
+                out.push_back(k * BITCT + static_cast<size_t>(r));
                 bitset ^= t;
             }
         }
@@ -396,39 +396,16 @@ public:
     }
 
 
-    void set_ref_counts(size_t homcom, size_t het, size_t homrar,
-                        size_t missing)
-    {
-        if (m_ref_flipped)
-        {
-            // we flip the count here so that the count will be
-            // identical to the allele identity in target
-            // we process the score, we only need to consider
-            // flipping w.r.t target and base
-            m_ref_homcom = homrar;
-            m_ref_het = het;
-            m_ref_homrar = homcom;
-            m_ref_missing = missing;
-        }
-        else
-        {
-            m_ref_homcom = homcom;
-            m_ref_het = het;
-            m_ref_homrar = homrar;
-            m_ref_missing = missing;
-        }
-        m_has_ref_count = true;
-    }
     /*!
      * \brief Obtain the upper bound of the clump region correspond to this SNP
      * \return the upper bound of the region
      */
-    size_t up_bound() const { return m_up_bound; }
+    size_t up_bound() const { return m_clump_info.up_bound; }
     /*!
      * \brief Obtain the lower bound of the clump region correspond to this SNP
      * \return the lower bound of the region
      */
-    size_t low_bound() const { return m_low_bound; }
+    size_t low_bound() const { return m_clump_info.low_bound; }
     void set_expected(double expected) { m_expected_value = expected; }
     void set_ref_expected(double expected) { m_ref_expected_value = expected; }
     bool has_expected() const { return m_has_expected; }
@@ -441,38 +418,24 @@ public:
     void invalid() { m_is_valid = false; }
 
 private:
-    std::vector<uintptr_t> m_flags;
+    AlleleCounts m_ref_count;
+    AlleleCounts m_target_count;
+    FileInfo m_target;
+    FileInfo m_reference;
+    SNPClump m_clump_info;
     std::string m_alt;
     std::string m_ref;
     std::string m_rs;
-    unsigned long long m_target_byte_pos = 0;
-    unsigned long long m_ref_byte_pos = 0;
     double m_stat = 0.0;
     double m_p_value = 2.0;
     double m_p_threshold = 0;
     double m_expected_value = 0.0;
     double m_ref_expected_value = 0.0;
     size_t m_chr = ~size_t(0);
-    size_t m_low_bound = ~size_t(0);
-    size_t m_up_bound = ~size_t(0);
-    size_t m_target_index = ~size_t(0);
-    size_t m_ref_index = ~size_t(0);
     size_t m_loc = ~size_t(0);
-    size_t m_homcom = 0;
-    size_t m_het = 0;
-    size_t m_homrar = 0;
-    size_t m_max_flag_index = 0;
-    size_t m_missing = 0;
-    size_t m_ref_homcom = 0;
-    size_t m_ref_het = 0;
-    size_t m_ref_homrar = 0;
-    size_t m_ref_missing = 0;
     unsigned long long m_category = 0;
-    bool m_has_count = false;
-    bool m_has_ref_count = false;
     bool m_has_expected = false;
     bool m_has_ref_expected = false;
-    bool m_clumped = false;
     bool m_flipped = false;
     bool m_ref_flipped = false;
     bool m_is_valid = true;

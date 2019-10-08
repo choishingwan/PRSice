@@ -82,10 +82,14 @@ TEST_F(GENOTYPE_BASIC, CATEGORY)
 {
     unsigned long long category;
     double pthres;
-    bool not_include_pt1 = true;
     // anything less than lowest threshold is consider 0
-    category =
-        calculate_category(0.0, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+    PThresholding mock;
+    mock.lower = 0.05;
+    mock.inter = 0.01;
+    mock.upper = 0.5;
+    mock.no_full = true;
+    double p_value = 0;
+    category = calculate_category(p_value, pthres, mock);
     ASSERT_EQ(category, 0);
     ASSERT_DOUBLE_EQ(pthres, 0.05);
     // anything above the upper threshold is considered as 1.0 and with category
@@ -93,23 +97,22 @@ TEST_F(GENOTYPE_BASIC, CATEGORY)
     // though in theory, this should never happen as we will always filter SNPs
     // that are bigger than the last required threshold
     // the pthres is meaningless in this situation
-    category =
-        calculate_category(0.6, 0.05, 0.01, 0.5, pthres, not_include_pt1);
-    ASSERT_GT(category, 0.5 / 0.01 - 0.05 / 0.01);
+    p_value = 0.6;
+    category = calculate_category(p_value, pthres, mock);
+    ASSERT_GT(category, mock.upper / mock.inter - mock.lower / mock.inter);
     // if we want full model, we will still do the same
-    category =
-        calculate_category(0.6, 0.05, 0.01, 0.5, pthres, !not_include_pt1);
-    ASSERT_GT(category, 0.5 / 0.01 - 0.05 / 0.01);
+    mock.no_full = false;
+    category = calculate_category(p_value, pthres, mock);
+    ASSERT_GT(category, mock.upper / mock.inter - mock.lower / mock.inter);
     ASSERT_DOUBLE_EQ(pthres, 1);
-
-    category =
-        calculate_category(0.05, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+    mock.no_full = true;
+    p_value = 0.05;
+    category = calculate_category(p_value, pthres, mock);
     // this should be the first threshold
     ASSERT_EQ(category, 0);
     ASSERT_DOUBLE_EQ(pthres, 0.05);
-
-    category =
-        calculate_category(0.055, 0.05, 0.01, 0.5, pthres, not_include_pt1);
+    p_value = 0.055;
+    category = calculate_category(p_value, pthres, mock);
     // this should be the first threshold
     ASSERT_EQ(category, 1);
     ASSERT_DOUBLE_EQ(pthres, 0.06);

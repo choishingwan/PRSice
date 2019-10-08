@@ -13,7 +13,7 @@ class MemoryRead
 {
 public:
     MemoryRead() {}
-    void read(const std::string& file, const unsigned long long& byte_pos,
+    void read(const std::string& file, const long long& byte_pos,
               const unsigned long long read_size, char* result)
     {
         if (file != m_file_name) { new_file(file, byte_pos); }
@@ -23,12 +23,15 @@ public:
             // last condition is for bgen, which require read of different size
             // will still be suboptimal for bgen unless we know exactly how many
             // byte each data span as a whole
-            if (byte_pos >= (m_offset + m_block_size) || byte_pos < m_offset
-                || byte_pos - m_offset + read_size
+            if (static_cast<unsigned long long>(byte_pos)
+                    >= (m_offset + m_block_size)
+                || static_cast<unsigned long long>(byte_pos) < m_offset
+                || static_cast<unsigned long long>(byte_pos) - m_offset
+                           + read_size
                        > m_memory_map.mapped_length())
             {
                 // + byte_pos to account for possible useless bytes
-                m_offset = byte_pos;
+                m_offset = static_cast<unsigned long long>(byte_pos);
                 std::error_code error;
                 m_memory_map.map(m_file_name, m_offset, m_block_size, error);
                 if (error)
@@ -37,19 +40,23 @@ public:
                                              + m_file_name);
                 }
             }
-            if (byte_pos - m_offset + read_size > m_memory_map.mapped_length())
+            if (static_cast<unsigned long long>(byte_pos) - m_offset + read_size
+                > m_memory_map.mapped_length())
             {
                 // As we have re-mapped by this point, the only possible reason
                 // for over-run is read_size > file size
                 throw std::runtime_error("Error: File read out of bound");
             }
-            std::copy(&m_memory_map[byte_pos - m_offset],
-                      &m_memory_map[byte_pos - m_offset + read_size], result);
+            std::copy(&m_memory_map[static_cast<unsigned long long>(byte_pos)
+                                    - m_offset],
+                      &m_memory_map[static_cast<unsigned long long>(byte_pos)
+                                    - m_offset + read_size],
+                      result);
         }
         else
         {
             assert(m_input.is_open());
-            if (byte_pos != m_offset)
+            if (static_cast<unsigned long long>(byte_pos) != m_offset)
             {
                 if (!m_input.seekg(byte_pos, std::ios_base::beg))
                 {
@@ -62,21 +69,26 @@ public:
                 throw std::runtime_error("Error: Cannot read file: "
                                          + m_file_name);
             }
-            m_offset = read_size + byte_pos;
+            m_offset = read_size + static_cast<unsigned long long>(byte_pos);
         }
     }
     void init_memory_map(const unsigned long long mem,
                          const unsigned long long& data_size)
     {
-        bool allow_mmap = calculate_block_size(mem, data_size);
-        if (!allow_mmap && m_use_mmap)
+        if (m_use_mmap)
         {
-            std::cerr << "Warning: Not enough memory for file mapping to be "
-                         "worth it, will "
-                         "fall back to traditional file read"
-                      << std::endl;
+
+            bool allow_mmap = calculate_block_size(mem, data_size);
+            if (!allow_mmap)
+            {
+                std::cerr
+                    << "Warning: Not enough memory for file mapping to be "
+                       "worth it, will "
+                       "fall back to traditional file read"
+                    << std::endl;
+            }
+            m_use_mmap = allow_mmap;
         }
-        if (m_use_mmap) { m_use_mmap = allow_mmap; }
         m_mem_calculated = true;
     }
     bool mem_calculated() const { return m_mem_calculated; }
@@ -99,10 +111,10 @@ private:
         unsigned long long used_mem = misc::getCurrentRSS();
         if (used_mem > mem)
         {
-            std::cerr
-                << "Warning: Already used " << used_mem
-                << " byte of data. Will now used more memory than user allowed."
-                << std::endl;
+            std::cerr << "Warning: Already used " << used_mem
+                      << " byte of data. Will now used more memory than "
+                         "user allowed."
+                      << std::endl;
         }
         if (mem > remain_mem)
         {
@@ -116,19 +128,19 @@ private:
         m_block_size = num_block * data_size;
         return (num_block > 1);
     }
-    void new_file(const std::string& file, const unsigned long long byte_pos)
+    void new_file(const std::string& file, const long long byte_pos)
     {
         m_file_name = file;
-        m_offset = byte_pos;
+        m_offset = static_cast<unsigned long long>(byte_pos);
         if (m_use_mmap)
         {
-            m_offset = byte_pos;
             std::error_code error;
             auto&& file = mio::detail::open_file(m_file_name,
                                                  mio::access_mode::read, error);
             if (mio::detail::query_file_size(file, error) < m_block_size)
             {
-                // when we have enough memory to read the whole file, do that
+                // when we have enough memory to read the whole file, do
+                // that
                 m_offset = 0;
             }
 

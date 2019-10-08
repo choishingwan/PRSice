@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.7"
+r.version <- "2.2.10"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -2072,7 +2072,7 @@ extract_matrix <- function(x, y) {
 # With this update, we only allow a single base file therefore we don't even need the
 # information of base here
 
-if (!provided("target", argv)) {
+if (!provided("target", argv) & !provided("target-list", argv)) {
     stop("Target file name not found. You'll need to provide the target name for plotting! (even with --plot)")
 }
 
@@ -2424,13 +2424,31 @@ if (provided("pheno_file", argv)) {
     }
 }else if(provided("target_list", argv)){
     # Assume no header
+    target.info <- strsplit(argv$target_list, split = ",")[[1]]
     target.list <- read.table(argv$target_list)
     target.prefix <- target.list[1]
-    pheno.file <- paste0(target.prefix, ".fam")    
-    if(provided("type", argv)){
-        if(argv$type=="bgen"){
-            stop("Error: You must provide a phenotype file for bgen list input")
-        }   
+    if (length(target.info) == 2) {
+        pheno.file <- target.info[2]
+        if (provided("type", argv)) {
+            if (argv$type == "bgen") {
+                # sample file should contain FID and IID by format requirement
+                pheno.index <- 3
+                if (ignore_fid &
+                    !is_sample_format(pheno.file))
+                    pheno.index <- 2
+            }
+        }
+    } else{
+        if (provided("type", argv)) {
+            if (argv$type == "bgen") {
+                stop("Error: You must provide either a phenotype or sample file for bgen input")
+            } else if (argv$type == "bed") {
+                pheno.file <- paste0(target.prefix, ".fam")
+            }
+        } else{
+            # Because default is always plink
+            pheno.file <- paste0(target.prefix, ".fam")
+        }
     }
 }
 

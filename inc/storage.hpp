@@ -17,9 +17,12 @@
 
 #ifndef PRSICE_INC_STORAGE_HPP_
 #define PRSICE_INC_STORAGE_HPP_
+#include "enumerators.h"
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <string>
+#include <vector>
 // From http://stackoverflow.com/a/12927952/1441789
 
 struct PRS
@@ -49,6 +52,138 @@ struct MAF_Store
     size_t index;
     int category;
 };
+
+
+struct BaseFile
+{
+
+    std::vector<size_t> column_index =
+        std::vector<size_t>(+BASE_INDEX::MAX + 1, 0);
+    std::vector<std::string> column_name = {
+        "CHR", "A2", "BP", "SE", "INFO,0.9", "", "", "A1", "SNP", "P", ""};
+    // use int as vector<bool> is abnormal
+    std::vector<int> has_column = std::vector<int>(+BASE_INDEX::MAX + 1, false);
+    std::string file_name;
+    int is_index = false;
+    int is_beta = false;
+    int is_or = false;
+};
+
+struct GenoFile
+{
+    std::string file_name;
+    std::string file_list;
+    std::string keep;
+    std::string remove;
+    std::string type = "bed";
+    int hard_coded = false;
+    int is_ref = false;
+};
+
+struct Phenotype
+{
+    std::vector<std::string> pheno_col;
+    std::vector<std::string> cov_colname;
+    std::vector<std::string> factor_cov;
+    std::vector<double> prevalence;
+    std::vector<size_t> col_index_of_cov;
+    std::vector<size_t> col_index_of_factor_cov;
+    std::vector<size_t> pheno_col_idx;
+    std::vector<bool> binary;
+    std::vector<bool> skip_pheno;
+    std::string pheno_file;
+    std::string cov_file;
+    int ignore_fid = false;
+};
+struct FileInfo
+{
+    size_t name_idx = ~size_t(0);
+    long long byte_pos = 0;
+};
+struct Permutations
+{
+    size_t num_permutation = 0;
+    std::random_device::result_type seed = std::random_device()();
+    int logit_perm = false;
+    bool run_perm = false;
+    bool run_set_perm = false;
+};
+
+struct SNPClump
+{
+    std::vector<uintptr_t> flags;
+    size_t low_bound = ~size_t(0);
+    size_t up_bound = ~size_t(0);
+    size_t max_flag_idx = 0;
+    bool clumped = false;
+};
+
+struct AlleleCounts
+{
+    size_t homcom = 0;
+    size_t het = 0;
+    size_t homrar = 0;
+    size_t missing = 0;
+    bool has_count = false;
+};
+
+struct GeneSets
+{
+    std::vector<std::string> msigdb;
+    std::vector<std::string> bed;
+    std::vector<std::string> snp;
+    std::vector<std::string> feature;
+    std::string background;
+    std::string gtf;
+    unsigned long long wind_3 = 0;
+    unsigned long long wind_5 = 0;
+    int full_as_background = false;
+    bool run = false;
+};
+struct PThresholding
+{
+    std::vector<double> bar_levels;
+    double lower = 5e-8;
+    double inter = 0.00005;
+    double upper = 0.5;
+    int fastscore = false;
+    int no_full = false;
+    bool set_threshold = false;
+};
+
+struct CalculatePRS
+{
+    MISSING_SCORE missing_score = MISSING_SCORE::MEAN_IMPUTE;
+    SCORING scoring_method = SCORING::AVERAGE;
+    MODEL genetic_model = MODEL::ADDITIVE;
+    int thread = 1;
+    int no_regress = false;
+    int non_cumulate = false;
+    int use_ref_maf = false;
+};
+
+struct QCFiltering
+{
+    double dose_threshold = 0.0;
+    double geno = 1.0;
+    double hard_threshold = 0.1;
+    double maf = 0.0;
+    double maf_case = 0.0;
+    double info_score = 0.0;
+    bool provided_hard_thres = false;
+    bool provided_dose_thres = false;
+};
+
+struct Clumping
+{
+    double r2 = 0.1;
+    double proxy = -1;
+    double pvalue = 1;
+    unsigned long long distance = 250000;
+    int no_clump = false;
+    bool use_proxy = false;
+    bool provided_distance = false;
+};
 // Passkey idiom, allow safer access to
 // the raw pointer info in SNP
 template <typename T>
@@ -61,128 +196,4 @@ private:
     Passkey& operator=(const Passkey&) = delete;
 };
 
-template <typename e>
-struct enumeration_traits;
-
-struct enumeration_trait_indexing
-{
-    static constexpr bool does_index = true;
-};
-
-template <typename e>
-constexpr typename std::enable_if<enumeration_traits<e>::does_index,
-                                  typename std::underlying_type<e>::type>::type
-operator+(e val)
-{
-    return static_cast<typename std::underlying_type<e>::type>(val);
-}
-
-template <typename e>
-typename std::enable_if<enumeration_traits<e>::does_index, e&>::type
-operator++(e& val)
-{
-    return val = static_cast<e>(+val + 1);
-}
-// END
-
-enum class BIM
-{
-    CHR,
-    RS,
-    CM,
-    BP,
-    A1,
-    A2
-};
-enum class BASE_INDEX
-{
-    CHR,
-    REF,
-    ALT,
-    STAT,
-    RS,
-    BP,
-    SE,
-    P,
-    INFO,
-    MAF,
-    MAF_CASE,
-    MAX
-};
-enum class FAM
-{
-    FID,
-    IID,
-    FATHER,
-    MOTHER,
-    SEX,
-    PHENOTYPE
-};
-enum class GTF
-{
-    CHR,
-    SOURCE,
-    FEATURE,
-    START,
-    END,
-    SCORE,
-    STRAND,
-    FRAME,
-    ATTRIBUTE
-};
-
-enum class BED
-{
-    CHR,
-    START,
-    END,
-    NAME,
-    SCORE,
-    STRAND
-};
-enum class MODEL
-{
-    ADDITIVE,
-    DOMINANT,
-    RECESSIVE,
-    HETEROZYGOUS
-};
-
-enum class MISSING_SCORE
-{
-    MEAN_IMPUTE,
-    SET_ZERO,
-    CENTER
-};
-
-enum class SCORING
-{
-    AVERAGE,
-    STANDARDIZE,
-    SUM
-};
-template <>
-struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
-{
-};
-template <>
-struct enumeration_traits<GTF> : enumeration_trait_indexing
-{
-};
-template <>
-struct enumeration_traits<MODEL> : enumeration_trait_indexing
-{
-};
-template <>
-struct enumeration_traits<FAM> : enumeration_trait_indexing
-{
-};
-template <>
-struct enumeration_traits<BIM> : enumeration_trait_indexing
-{
-};
-template <>
-struct enumeration_traits<BED> : enumeration_trait_indexing
-{
-};
 #endif /* PRSICE_INC_STORAGE_HPP_ */

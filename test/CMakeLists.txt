@@ -8,11 +8,13 @@ include_directories(${CMAKE_SOURCE_DIR}/inc)
 add_executable(runUnitTests
     main.cpp
     src/binplink_test.cpp
+    src/binarygen_test.cpp
     src/genotype_test.cpp
     src/misc_test.cpp
     src/region_test.cpp
     src/snp_test.cpp
-    src/commander_test.cpp)
+    src/commander_test.cpp
+    src/prsice_test.cpp)
 target_link_libraries(runUnitTests PRIVATE
     bgen
     gzstream
