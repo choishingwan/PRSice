@@ -99,7 +99,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     famfile.seekg(0);
     // the unfiltered_sampel_ct is used to define the size of all vector
     // used within the program
-    uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
 
     // Currently ignore sex information
     // m_founder_info is a subset of m_sample_include
