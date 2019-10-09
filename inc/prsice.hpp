@@ -316,8 +316,6 @@ private:
     long long m_max_fid_length = 3;
     long long m_max_iid_length = 3;
     int m_best_index = -1;
-    size_t m_num_perm = 0;
-    bool m_perform_prset = false;
     bool m_quick_best = true;
     bool m_printed_warning = false;
     const std::string m_prefix;
@@ -342,7 +340,8 @@ private:
      * regression flag for each sample
      * \param target is the target genotype object
      */
-    void update_sample_included(const std::string& delim, Genotype& target);
+    void update_sample_included(const std::string& delim, const bool binary,
+                                Genotype& target);
     /*!
      * \brief gen_pheno_vec is the function responsible for generating the
      * phenotype vector
@@ -450,7 +449,7 @@ private:
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
             Pmat,
-        const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
+        const Eigen::MatrixXd& Rinv,
         std::map<size_t, std::vector<size_t>>& set_index,
         std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
@@ -463,8 +462,7 @@ private:
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
             Pmat,
-        const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
-        std::vector<double>& obs_t_value,
+        const Eigen::MatrixXd& Rinv, std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
@@ -487,7 +485,7 @@ private:
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
             Pmat,
-        const Eigen::MatrixXd& R, const Eigen::Index& rank, bool run_glm);
+        const Eigen::MatrixXd& R, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation
      * \param decomposed is the pre-decomposed independent matrix. If run glm is
@@ -502,7 +500,7 @@ private:
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
             Pmat,
-        const Eigen::MatrixXd& R, const Eigen::Index& rank, const bool run_glm);
+        const Eigen::MatrixXd& R, const bool run_glm);
 
     void parse_pheno(const bool binary, const std::string& pheno,
                      std::vector<double>& pheno_store, double& first_pheno,

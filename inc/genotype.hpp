@@ -200,6 +200,14 @@ public:
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
     }
+    void reset_std_flag()
+    {
+        std::fill(m_exclude_from_std.begin(), m_exclude_from_std.end(), 0);
+    }
+    void exclude_from_std(const size_t idx)
+    {
+        SET_BIT(idx, m_exclude_from_std.data());
+    }
     /*!
      * \brief Function to prepare the object for PRSice. Will sort the
      * m_existed_snp vector according to their p-value.
@@ -481,6 +489,7 @@ protected:
     std::vector<uintptr_t> m_founder_include2;
     std::vector<uintptr_t> m_sample_include;
     std::vector<uintptr_t> m_sample_include2;
+    std::vector<uintptr_t> m_exclude_from_std;
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;

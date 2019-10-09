@@ -792,6 +792,10 @@ void Genotype::load_samples(bool verbose)
                           + misc::to_string(m_num_female)
                           + " female(s)) observed\n";
     message.append(misc::to_string(m_founder_ct) + " founder(s) included");
+
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    m_exclude_from_std.resize(unfiltered_sample_ctl, 0);
     if (verbose) m_reporter->report(message);
     m_sample_selection_list.clear();
 }
@@ -1474,9 +1478,7 @@ void Genotype::standardize_prs()
     size_t num_prs = m_prs_info.size();
     for (size_t i = 0; i < num_prs; ++i)
     {
-        if (!IS_SET(m_sample_include, i)
-            || (m_prs_calculation.scoring_method == SCORING::CONTROL_STD
-                && m_sample_id[i].pheno != "0"))
+        if (!IS_SET(m_sample_include, i) || IS_SET(m_exclude_from_std, i))
             continue;
         if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
         else

@@ -232,9 +232,12 @@ void PRSice::new_phenotype(Genotype& target)
     m_independent_variables.resize(0, 0);
     m_sample_with_phenotypes.clear();
     target.reset_in_regression_flag();
-    // don't need to provide the delim for update_sample_included as we will
-    // not use it
-    if (m_prs_info.no_regress) { update_sample_included("", target); }
+    target.reset_std_flag();
+    // As m_sample_with_phenotypes is empty, we won't go into the for loop with
+    // update to the regression flag or the exclude_std flag, and we will not
+    // need the delimitor (as none will be found anyway), so we only need to
+    // give the target file to calculate the FID and IID length
+    if (m_prs_info.no_regress) { update_sample_included("", false, target); }
 }
 void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
                          Genotype& target)
@@ -248,7 +251,7 @@ void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
     // complicated covariate
     gen_cov_matrix(delim);
     // Update has pheno flag, as some sample might have missing covariates
-    update_sample_included(delim, target);
+    update_sample_included(delim, m_pheno_info.binary[pheno_index], target);
 
     // now we want to calculate the null R2 (if covariates are included)
     double null_r2_adjust = 0.0;
@@ -284,7 +287,8 @@ void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
     }
 }
 
-void PRSice::update_sample_included(const std::string& delim, Genotype& target)
+void PRSice::update_sample_included(const std::string& delim, const bool binary,
+                                    Genotype& target)
 {
     // this is a bit tricky. The reason we need to calculate the max fid and
     // iid length is so that we can generate the best file and all score
@@ -302,6 +306,9 @@ void PRSice::update_sample_included(const std::string& delim, Genotype& target)
     // correctly
     m_matrix_index.clear();
     long long fid_length, iid_length;
+    const bool ctrl_std =
+        binary && m_prs_info.scoring_method == SCORING::CONTROL_STD;
+    const bool standardize = m_prs_info.scoring_method == SCORING::STANDARDIZE;
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
     {
         // got through each sample
@@ -319,13 +326,26 @@ void PRSice::update_sample_included(const std::string& delim, Genotype& target)
         if (m_max_fid_length < fid_length) m_max_fid_length = fid_length;
         if (m_max_iid_length < iid_length) m_max_iid_length = iid_length;
         // update the in regression flag according to covariate
-        if (!m_sample_with_phenotypes.empty()
-            && m_sample_with_phenotypes.find(target.sample_id(i_sample, delim))
-                   != m_sample_with_phenotypes.end())
+        if (!m_sample_with_phenotypes.empty())
         {
-            m_matrix_index.push_back(i_sample);
-            // the in regression flag is only use for output
-            target.set_in_regression(i_sample);
+            auto&& pheno_idx = m_sample_with_phenotypes.find(
+                target.sample_id(i_sample, delim));
+            if (pheno_idx != m_sample_with_phenotypes.end())
+            {
+                m_matrix_index.push_back(i_sample);
+                // the in regression flag is only use for output
+                target.set_in_regression(i_sample);
+            }
+            else if ((ctrl_std
+                      && !misc::logically_equal(
+                          m_phenotype[static_cast<Eigen::Index>(
+                              pheno_idx->second)],
+                          0))
+                     || standardize)
+            {
+                // this will not be used for standardization
+                target.exclude_from_std(i_sample);
+            }
         }
     }
 }
@@ -1020,7 +1040,7 @@ void PRSice::reset_result_containers(const Genotype& target,
     m_num_snp_included = 0;
     // m_perm_result stores the result (T-value) from each permutation and
     // is then used for calculation of empirical p value
-    m_perm_result.resize(m_num_perm, 0);
+    m_perm_result.resize(m_perm_info.num_permutation, 0);
     m_best_sample_score.clear();
     m_prs_results.resize(target.num_threshold());
     // set to -1 to indicate not done
@@ -1328,7 +1348,8 @@ void PRSice::process_permutations()
     const auto num_better =
         std::count_if(m_perm_result.begin(), m_perm_result.end(),
                       [&best_t](double t) { return t > best_t; });
-    m_prs_results[best_index].emp_p = (num_better + 1.0) / (m_num_perm + 1.0);
+    m_prs_results[best_index].emp_p =
+        (num_better + 1.0) / (m_perm_info.num_permutation + 1.0);
 }
 
 void PRSice::permutation(const int n_thread, const bool is_binary)
@@ -1366,7 +1387,7 @@ void PRSice::permutation(const int n_thread, const bool is_binary)
     if (n_thread == 1)
     {
         // we will run the single thread function to reduce overhead
-        run_null_perm_no_thread(PQR, Pmat, R, rank, run_glm);
+        run_null_perm_no_thread(PQR, Pmat, R, run_glm);
     }
     else
     {
@@ -1388,7 +1409,7 @@ void PRSice::permutation(const int n_thread, const bool is_binary)
         {
             consume_store.push_back(std::thread(
                 &PRSice::consume_null_pheno, this, std::ref(set_perm_queue),
-                std::ref(PQR), std::ref(Pmat), std::ref(R), rank, run_glm));
+                std::ref(PQR), std::ref(Pmat), std::ref(R), run_glm));
         }
         // wait for all the threads to complete their job
         producer.join();
@@ -1399,7 +1420,7 @@ void PRSice::permutation(const int n_thread, const bool is_binary)
 void PRSice::run_null_perm_no_thread(
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
-    const Eigen::MatrixXd& R, const Eigen::Index& rank, const bool run_glm)
+    const Eigen::MatrixXd& R, const bool run_glm)
 {
     // reset the seed for each new threshold such that we will always
     // generate the same phenotpe for each threhsold without us needing to
@@ -1408,6 +1429,7 @@ void PRSice::run_null_perm_no_thread(
     // we want to count the number of samples included in the analysis
     const Eigen::Index num_regress_sample = m_phenotype.rows();
     const Eigen::Index p = m_independent_variables.cols();
+    const Eigen::Index rank = PQR.rank();
     // we will copy the phenotype into a new vector (Maybe not necessary,
     // but better safe than sorry)
     Eigen::VectorXd perm_pheno = m_phenotype;
@@ -1419,7 +1441,7 @@ void PRSice::run_null_perm_no_thread(
 
     Eigen::VectorXd beta, se, effects, fitted, resid;
     Eigen::Index df;
-    while (processed < m_num_perm)
+    while (processed < m_perm_info.num_permutation)
     {
         // for quantitative trait, we can directly compute the results
         // without re-computing the decomposition
@@ -1497,7 +1519,7 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
 
-    while (processed < m_num_perm)
+    while (processed < m_perm_info.num_permutation)
     {
         // I am not completely sure whether we pass by reference or pass by
         // value to the queue (or if we move this out and cause undefined
@@ -1522,10 +1544,11 @@ void PRSice::consume_null_pheno(
     Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
-    const Eigen::MatrixXd& R, const Eigen::Index& rank, bool run_glm)
+    const Eigen::MatrixXd& R, bool run_glm)
 {
     const Eigen::Index n = m_phenotype.rows();
     const Eigen::Index p = m_independent_variables.cols();
+    const Eigen::Index rank = PQR.rank();
     // to avoid false sharing, all consumer will first store their
     // permutation result in their own vector and only update the master
     // vector at the end of permutation temp_store stores all the T-value
@@ -1658,7 +1681,7 @@ void PRSice::prep_output(const Genotype& target,
         std::string header_line = "FID IID In_Regression";
         // The default name of the output should be PRS, but if we are
         // running PRSet, it should be call Base
-        if (!m_perform_prset)
+        if (!(num_region > 2))
             header_line.append(" PRS");
         else
         {
@@ -1738,7 +1761,7 @@ void PRSice::prep_output(const Genotype& target,
         const long long begin_byte = m_all_out.tellp();
         m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
-        if (!m_perform_prset)
+        if (!(region_name.size() > 2))
         {
             for (auto& thres : avail_thresholds) { m_all_out << " " << thres; }
         }
@@ -2083,8 +2106,7 @@ void PRSice::null_set_no_thread(
     const Eigen::MatrixXd& X,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
-    const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
-    std::vector<double>& obs_t_value,
+    const Eigen::MatrixXd& Rinv, std::vector<double>& obs_t_value,
     std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary)
 {
     // last key = largest set size
@@ -2092,6 +2114,7 @@ void PRSice::null_set_no_thread(
     const Eigen::Index num_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     const Eigen::Index p = m_independent_variables.cols();
+    const Eigen::Index rank = PQR.rank();
     Eigen::Index df;
     double coefficient, standard_error, r2, obs_p, t_value;
     size_t processed = 0;
@@ -2100,7 +2123,7 @@ void PRSice::null_set_no_thread(
     Eigen::VectorXd beta, se, effects, resid, fitted, se_base,
         prs = Eigen::VectorXd::Zero(num_sample);
     get_se_matrix(PQR, Pmat, Rinv, p, rank, se_base);
-    while (processed < m_num_perm)
+    while (processed < m_perm_info.num_permutation)
     {
         size_t begin = 0;
         // we will shuffle n where n is the set with the largest size
@@ -2199,7 +2222,7 @@ void PRSice::produce_null_prs(
     std::mt19937 g(m_seed);
     bool first_run = true;
     std::vector<size_t>::size_type advance_index, begin;
-    while (processed < m_num_perm)
+    while (processed < m_perm_info.num_permutation)
     {
         // here we perform random sampling without replacement using the
         // Fisher-Yates shuffle algorithm
@@ -2253,7 +2276,7 @@ void PRSice::consume_prs(
     const Eigen::MatrixXd& X,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
-    const Eigen::MatrixXd& Rinv, const Eigen::Index& rank,
+    const Eigen::MatrixXd& Rinv,
     std::map<size_t, std::vector<size_t>>& set_index,
     std::vector<double>& obs_t_value,
     std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary)
@@ -2261,6 +2284,7 @@ void PRSice::consume_prs(
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     const Eigen::Index p = m_independent_variables.cols();
+    const Eigen::Index rank = PQR.rank();
     Eigen::MatrixXd independent;
     if (m_perm_info.logit_perm && is_binary)
         independent = m_independent_variables;
@@ -2334,7 +2358,9 @@ void PRSice::run_competitive(
     const size_t pheno_index)
 {
     if (!m_perm_info.run_set_perm) { return; }
-    m_reporter->report("\nStart competitive permutation\n");
+
+    fprintf(stderr, "\n");
+    m_reporter->report("\n\nStart competitive permutation\n");
     const bool is_binary = m_pheno_info.binary[pheno_index];
     const size_t num_prs_res = m_prs_summary.size();
     const size_t num_bk_snps =
@@ -2423,11 +2449,6 @@ void PRSice::run_competitive(
     for (auto& set : set_perm_res) { set = 0; }
     if (max_set_size > num_bk_snps)
     {
-        std::string error_messgae =
-            "Error: Insufficient background SNPs for "
-            "competitive analysis. Please ensure you have "
-            "use the correct background. Will now generate skip "
-            "the competitive analysis\n";
         for (size_t i = pheno_start_idx; i < num_prs_res; ++i)
         {
             // set them to true so that we will skip them for the next
@@ -2435,7 +2456,10 @@ void PRSice::run_competitive(
             // same error. Need a better structure here)
             m_prs_summary[i].has_competitive = true;
         }
-        m_reporter->report(error_messgae);
+        m_reporter->report("Error: Insufficient background SNPs for "
+                           "competitive analysis. Please ensure you have "
+                           "use the correct background. Will now generate skip "
+                           "the competitive analysis\n");
         return;
     }
     // now we can run the competitive testing
@@ -2496,8 +2520,8 @@ void PRSice::run_competitive(
             consumer_store.push_back(std::thread(
                 &PRSice::consume_prs, this, std::ref(set_perm_queue),
                 std::cref(YCov), std::cref(PQR), std::cref(Pmat),
-                std::cref(Rinv), std::cref(rank), std::ref(set_index),
-                std::ref(obs_t_value), std::ref(set_perm_res), is_binary));
+                std::cref(Rinv), std::ref(set_index), std::ref(obs_t_value),
+                std::ref(set_perm_res), is_binary));
         }
 
         producer.join();
@@ -2509,7 +2533,7 @@ void PRSice::run_competitive(
         // thread function to reduce threading overhead
         null_set_no_thread(target, num_bk_snps,
                            std::vector<size_t>(bk_start_idx, bk_end_idx),
-                           set_index, YCov, PQR, Pmat, Rinv, rank, obs_t_value,
+                           set_index, YCov, PQR, Pmat, Rinv, obs_t_value,
                            set_perm_res, is_binary);
     }
     // start_index is the index of m_prs_summary[i], not the actual index
