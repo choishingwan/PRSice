@@ -15,14 +15,17 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.10](https://github.com/choishingwan/PRSice/releases/download/2.2.10/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.10](https://github.com/choishingwan/PRSice/releases/download/2.2.10/PRSice_mac.zip) |
-| Windows 32-bit | [v2.2.10](https://github.com/choishingwan/PRSice/releases/download/2.2.10/PRSice_win32.zip) |
-| Windows 64-bit | [v2.2.10](https://github.com/choishingwan/PRSice/releases/download/2.2.10/PRSice_win64.zip) |
+| Linux 64-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_mac.zip) |
+| Windows 32-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_win32.zip) |
+| Windows 64-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_win64.zip) |
 
 !!! Caution 
 
     PRSet are currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
+
+!!! Caution
+	If you are performing PRSet analysis, or are planning to use the `--perm` or `--set-perm` function, please use the latest version as bugs related to these features hasve recently been fixed.
 
 # R Packages Requirements
 
