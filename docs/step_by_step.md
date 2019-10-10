@@ -13,7 +13,7 @@ PRSice has no problem reading in a gzipped base file (need to have a **.gz** suf
 
 If PLINK output is used, then please make sure there is a column for the effective allele (A1) and specify it with `--A1` option. 
 
-If your base data follows other formats, then the column headers can be provided using the `--chr`, `--A1`, `--A2`, `--stat`, `--snp`, `--bp`, `--se`, `--pvalue` options
+If your base data follows other formats, then the column headers can be provided using the `--chr`, `--A1`, `--A2`, `--stat`, `--snp`, `--bp`, `--pvalue` options
 
 !!! important
 
@@ -32,13 +32,13 @@ For example, with the following input format:
 the parameters can either be
 
 ``
---snp SNP --chr CHR --bp BP --A1 A1 --A2 A2 --stat OR --se SE --pvalue P
+--snp SNP --chr CHR --bp BP --A1 A1 --A2 A2 --stat OR --pvalue P
 ``
 
 or
 
 ``
---snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --se 6 --pvalue 7 --index
+--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --pvalue 7 --index
 ``
 
 Strand flips are automatically detected and accounted for.
