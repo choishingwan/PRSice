@@ -246,7 +246,7 @@ If you are unfamiliar with GWAS, you can consider reading <a href="https://www.n
 <p>Base (i.e. GWAS) data must be provided as a whitespace delimited file containing association analysis results for SNPs on the base phenotype.
 PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz</strong> suffix).</p>
 <p>If PLINK output is used, then please make sure there is a column for the effective allele (A1) and specify it with <code>--A1</code> option. </p>
-<p>If your base data follows other formats, then the column headers can be provided using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--se</code>, <code>--pvalue</code> options</p>
+<p>If your base data follows other formats, then the column headers can be provided using the <code>--chr</code>, <code>--A1</code>, <code>--A2</code>, <code>--stat</code>, <code>--snp</code>, <code>--bp</code>, <code>--pvalue</code> options</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>PRSice requires the base file to contain information of the effective allele (<code>--A1</code>), effect size estimates (<code>--stat</code>), p-value for association (<code>--pvalue</code>), and the SNP ID (<code>--snp</code>).</p>
@@ -300,9 +300,9 @@ PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz
 </tbody>
 </table>
 <p>the parameters can either be</p>
-<p><code>--snp SNP --chr CHR --bp BP --A1 A1 --A2 A2 --stat OR --se SE --pvalue P</code></p>
+<p><code>--snp SNP --chr CHR --bp BP --A1 A1 --A2 A2 --stat OR --pvalue P</code></p>
 <p>or</p>
-<p><code>--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --se 6 --pvalue 7 --index</code></p>
+<p><code>--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --pvalue 7 --index</code></p>
 <p>Strand flips are automatically detected and accounted for.</p>
 <p>If an imputation info score or the minor allele frequencies (MAF) are also included in the file, 
 <code>--base-info &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--base-maf &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> can be used to filter
