@@ -888,8 +888,8 @@ void Genotype::load_snps(
     m_num_ambig = 0;
     m_num_xrange = 0;
     gen_snp_vector(exclusion_regions, out, target);
-    m_marker_ct = m_existed_snps.size();
     auto&& snp_store_location = m_is_ref ? target : this;
+    snp_store_location->m_marker_ct = snp_store_location->m_existed_snps.size();
     std::string message = "";
     if (m_base_missed != 0)
     {
@@ -909,7 +909,7 @@ void Genotype::load_snps(
                        + " variant(s) removed as they fall within the "
                          "--x-range region(s)\n");
     }
-    message.append(std::to_string(snp_store_location->m_existed_snps.size())
+    message.append(std::to_string(snp_store_location->m_marker_ct)
                    + " variant(s) included\n");
 
     if (verbose) m_reporter->report(message);
