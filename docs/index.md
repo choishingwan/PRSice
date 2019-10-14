@@ -27,6 +27,10 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 !!! Caution
 	If you are performing PRSet analysis, or are planning to use the `--perm` or `--set-perm` function, please use the latest version as bugs related to these features hasve recently been fixed.
 
+	If you are expereiencing problem with "Unable to convert the input" error, that's likely due to NA in your covariate file. This problem is now fixed. 
+
+	If you are using either `--score`, `--model` or `--missing` parameter, please use version 2.2.11+ as 2.2.10 has a bug which cause PRsice to ignore these parameters
+
 # R Packages Requirements
 
 To plot graphs, PRSice requires [R](https://www.r-project.org/) (**version 3.2.3+**) installed.
