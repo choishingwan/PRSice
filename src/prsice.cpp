@@ -335,16 +335,17 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
                 m_matrix_index.push_back(i_sample);
                 // the in regression flag is only use for output
                 target.set_in_regression(i_sample);
-            }
-            else if ((ctrl_std
-                      && !misc::logically_equal(
-                          m_phenotype[static_cast<Eigen::Index>(
-                              pheno_idx->second)],
-                          0))
-                     || standardize)
-            {
-                // this will not be used for standardization
-                target.exclude_from_std(i_sample);
+                // so only standardize samples if they are with valid phenotype
+                if ((ctrl_std
+                     && !misc::logically_equal(
+                         m_phenotype[static_cast<Eigen::Index>(
+                             pheno_idx->second)],
+                         0))
+                    || standardize)
+                {
+                    // this will not be used for standardization
+                    target.exclude_from_std(i_sample);
+                }
             }
         }
     }
