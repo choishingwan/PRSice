@@ -625,8 +625,7 @@ private:
             break;
         default:
             m_error_message.append(
-                "Error: Unrecognized Missing handling method: " + input
-                + "!\n");
+                "Error: Unrecognized Missing handling method: " + in + "!\n");
             return false;
         }
         m_parameter_log["missing"] = input;
@@ -657,8 +656,7 @@ private:
             m_prs_info.genetic_model = MODEL::HETEROZYGOUS;
             break;
         default:
-            m_error_message.append("Error: Unrecognized model: " + input
-                                   + "!\n");
+            m_error_message.append("Error: Unrecognized model: " + in + "!\n");
             return false;
         }
         m_parameter_log["model"] = input;
@@ -705,8 +703,8 @@ private:
         }
         else
         {
-            m_error_message.append(
-                "Error: Unrecognized scoring method: " + input + "!\n");
+            m_error_message.append("Error: Unrecognized scoring method: " + in
+                                   + "!\n");
             return false;
         }
         m_parameter_log["score"] = input;

@@ -424,6 +424,11 @@ public:
         m_intermediate = use;
         return *this;
     }
+    Genotype& set_prs_instruction(const CalculatePRS& prs)
+    {
+        m_prs_calculation = prs;
+        return *this;
+    }
     void init_memory()
     {
         m_genotype_file.init_memory_map(g_allowed_memory, m_data_size);
