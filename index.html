@@ -230,19 +230,19 @@
 <tbody>
 <tr>
 <td>Linux 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_linux.zip">v2.2.10.b</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_linux.zip">v2.2.11</a></td>
 </tr>
 <tr>
 <td>OS X 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_mac.zip">v2.2.10.b</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_mac.zip">v2.2.11</a></td>
 </tr>
 <tr>
 <td>Windows 32-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_win32.zip">v2.2.10.b</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_win32.zip">v2.2.11</a></td>
 </tr>
 <tr>
 <td>Windows 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_win64.zip">v2.2.10.b</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_win64.zip">v2.2.11</a></td>
 </tr>
 </tbody>
 </table>
@@ -253,6 +253,8 @@
 <div class="admonition caution">
 <p class="admonition-title">Caution</p>
 <p>If you are performing PRSet analysis, or are planning to use the <code>--perm</code> or <code>--set-perm</code> function, please use the latest version as bugs related to these features hasve recently been fixed.</p>
+<p>If you are expereiencing problem with "Unable to convert the input" error, that's likely due to NA in your covariate file. This problem is now fixed. </p>
+<p>If you are using either <code>--score</code>, <code>--model</code> or <code>--missing</code> parameter, please use version 2.2.11+ as 2.2.10 has a bug which cause PRsice to ignore these parameters</p>
 </div>
 <h1 id="r-packages-requirements">R Packages Requirements<a class="headerlink" href="#r-packages-requirements" title="Permanent link">&para;</a></h1>
 <p>To plot graphs, PRSice requires <a href="https://www.r-project.org/">R</a> (<strong>version 3.2.3+</strong>) installed.</p>
@@ -364,5 +366,5 @@ We also utilize the <a href="https://eigen.tuxfamily.org">Eigen C++</a> library,
 
 <!--
 MkDocs version : 1.0.4
-Build Date UTC : 2019-10-10 20:55:36
+Build Date UTC : 2019-10-14 16:28:43
 -->
