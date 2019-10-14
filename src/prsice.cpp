@@ -803,8 +803,8 @@ void PRSice::process_cov_file(
             {
                 std::transform(token[header].begin(), token[header].end(),
                                token[header].begin(), ::toupper);
-                valid = validate_covariate(token[header], num_factors, header,
-                                           factor_level_index, missing_count);
+                valid &= validate_covariate(token[header], num_factors, header,
+                                            factor_level_index, missing_count);
             }
             if (valid)
             {
