@@ -25,7 +25,7 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
     PRSet are currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
 
 !!! Caution
-	If you are performing PRSet analysis, or are planning to use the `--perm` or `--set-perm` function, please use the latest version as bugs related to these features hasve recently been fixed.
+	If you are performing PRSet analysis, or are planning to use the `--perm` or `--set-perm` function, please use the latest version as bugs related to these features have recently been fixed.
 
 # R Packages Requirements
 
