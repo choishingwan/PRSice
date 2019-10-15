@@ -15,10 +15,10 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_mac.zip) |
-| Windows 32-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_win32.zip) |
-| Windows 64-bit | [v2.2.10.b](https://github.com/choishingwan/PRSice/releases/download/2.2.10.b/PRSice_win64.zip) |
+| Linux 64-bit | [v2.2.11](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.11](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_mac.zip) |
+| Windows 32-bit | [v2.2.11](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_win32.zip) |
+| Windows 64-bit | [v2.2.11](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_win64.zip) |
 
 !!! Caution 
 
@@ -26,6 +26,10 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 
 !!! Caution
 	If you are performing PRSet analysis, or are planning to use the `--perm` or `--set-perm` function, please use the latest version as bugs related to these features have recently been fixed.
+
+	If you are expereiencing problem with "Unable to convert the input" error, that's likely due to NA in your covariate file. This problem is now fixed. 
+
+	If you are using either `--score`, `--model` or `--missing` parameter, please use version 2.2.11+ as 2.2.10 has a bug which cause PRsice to ignore these parameters
 
 # R Packages Requirements
 
