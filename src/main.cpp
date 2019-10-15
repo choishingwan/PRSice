@@ -73,10 +73,12 @@ int main(int argc, char* argv[])
             target_file = factory.createGenotype(commander.get_target(),
                                                  commander.get_pheno(),
                                                  commander.delim(), reporter);
-            target_file = &target_file->keep_nonfounder(commander.nonfounders())
-                               .keep_ambig(commander.keep_ambig())
-                               .intermediate(commander.use_inter())
-                               .set_weight();
+            target_file =
+                &target_file->keep_nonfounder(commander.nonfounders())
+                     .keep_ambig(commander.keep_ambig())
+                     .intermediate(commander.use_inter())
+                     .set_weight()
+                     .set_prs_instruction(commander.get_prs_instruction());
             const std::string base_name = commander.get_base_name();
             std::string message = "Start processing " + base_name + "\n";
             message.append(
