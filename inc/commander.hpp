@@ -42,8 +42,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.2.11";
-const std::string date = "2019-10-14";
+const std::string version = "2.2.11.b";
+const std::string date = "2019-10-16";
 class Commander
 {
 public:
@@ -435,7 +435,16 @@ private:
     inline unsigned long long integer_value(const std::string& str,
                                             const size_t& unit)
     {
-        double cur_dist = misc::convert<double>(str) * unit;
+        double cur_dist;
+        try
+        {
+            cur_dist = misc::convert<double>(str) * unit;
+        }
+        catch (const std::runtime_error&)
+        {
+            throw std::runtime_error("Error: Invalid unit: " + str + "\t"
+                                     + std::to_string(unit));
+        }
         unsigned long long res = static_cast<unsigned long long>(cur_dist);
         if (trunc(cur_dist) != cur_dist)
         {
@@ -450,12 +459,26 @@ private:
     {
         unsigned long long multiplication = 1;
         const unsigned long long thousand = bit_thousand ? 1024 : 1000;
-        if (misc::hasEnding(in, "bp") || misc::hasEnding(in, "b"))
-        { multiplication = 1; }
-        else if (misc::hasEnding(in, "kb") || misc::hasEnding(in, "k"))
+        size_t unit_length = 2;
+        try
         {
-            multiplication = thousand;
+            misc::convert<double>(in.substr(0, in.length() - unit_length));
         }
+        catch (const std::runtime_error&)
+        {
+            // try one unit
+            unit_length = 1;
+            try
+            {
+                misc::convert<double>(in.substr(0, in.length() - unit_length));
+            }
+            catch (const std::runtime_error&)
+            {
+                throw std::runtime_error("Error: Invalid input: " + in + "\n");
+            }
+        }
+        if (misc::hasEnding(in, "kb") || misc::hasEnding(in, "k"))
+        { multiplication = thousand; }
         else if (misc::hasEnding(in, "mb") || misc::hasEnding(in, "m"))
         {
             multiplication = thousand * thousand;
@@ -468,9 +491,17 @@ private:
         {
             multiplication = thousand * thousand * thousand * thousand;
         }
+        else if (misc::hasEnding(in, "bp")
+                 || (misc::hasEnding(in, "b") && unit_length == 1))
+        {
+            // so that when we come here, all units ended with B is
+            // exhausted
+            multiplication = 1;
+        }
         else
         {
-            throw std::runtime_error("Error: Undefined input unit: " + in);
+            throw std::runtime_error("Error: Undefined input unit: " + in
+                                     + "\n");
         }
         return multiplication;
     }
@@ -489,16 +520,7 @@ private:
         const size_t thousand = for_memory ? 1024 : 1000;
         try
         {
-            try
-            {
-                dist = integer_value(input, default_unit);
-            }
-            catch (const std::runtime_error& er)
-            {
-                m_error_message.append(er.what());
-                error = true;
-                return ~size_t(0);
-            }
+            dist = integer_value(input, default_unit);
             std::string unit = "bp";
             if (default_unit == thousand)
                 unit = "kb";
@@ -521,8 +543,10 @@ private:
         try
         {
             size_t length = 2;
-            if (misc::hasEnding(in, "b")) { length = 1; }
-            return integer_value(in.substr(in.length() - length),
+            if (!misc::hasEnding(in, "b")
+                || (multiplication == 1 && misc::hasEnding(in, "b")))
+            { length = 1; }
+            return integer_value(in.substr(0, in.length() - length),
                                  multiplication);
         }
         catch (const std::runtime_error& er)
