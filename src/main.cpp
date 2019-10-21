@@ -258,6 +258,8 @@ int main(int argc, char* argv[])
                         prsice.no_regress_out(region_names, i_pheno, i_region);
                     }
                 }
+                if (!commander.get_prs_instruction().no_regress)
+                { prsice.print_best(*target_file, region_names, i_pheno); }
                 if (!commander.get_prs_instruction().no_regress
                     && commander.get_perm().run_set_perm
                     && region_names.size() > 2)

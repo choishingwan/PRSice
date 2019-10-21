@@ -42,8 +42,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.2.11.b";
-const std::string date = "2019-10-16";
+const std::string version = "2.2.12";
+const std::string date = "2019-10-21";
 class Commander
 {
 public:
@@ -850,7 +850,6 @@ private:
                     m_error_message.append(
                         "Warning: MAF field not found in base file. "
                         "Will not perform MAF filtering on the base file\n");
-                    error = true;
                 }
                 return;
             }
