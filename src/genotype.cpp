@@ -636,7 +636,6 @@ size_t Genotype::get_rs_column(const std::string& input)
     // rs_index store the location of the RS ID
     if (token.size() != 1)
     {
-        bool has_snp_colname = false;
         size_t rs_index = 0;
         for (auto&& name : token)
         {
@@ -645,7 +644,6 @@ size_t Genotype::get_rs_column(const std::string& input)
                 || name == "RS.ID" || name == "RSID" || name == "VARIANT.ID"
                 || name == "VARIANT_ID")
             {
-                has_snp_colname = true;
                 m_reporter->report(name
                                    + " assume to be column containing SNP ID");
                 return rs_index;
