@@ -1260,7 +1260,7 @@ void PRSice::print_best(Genotype& target,
         {
             for (size_t i = 0; i < region_name.size(); ++i)
             {
-                if (i == 1) continue;
+                if (i == 1 || region_name[i].empty()) continue;
                 m_best_out << " " << region_name[i];
             }
         }
@@ -1685,8 +1685,11 @@ void PRSice::prep_output(const Genotype& target,
     const std::string out_all = m_prefix + ".all.score";
     const std::string out_best = output_prefix + ".best";
     const size_t num_samples_included = target.num_sample();
-    const long long num_region = static_cast<long long>(region_name.size());
-    if (region_name.size() > std::numeric_limits<long long>::max())
+    const long long empty_sets =
+        std::count_if(region_name.begin(), region_name.end(), empty_name);
+    const long long num_region =
+        static_cast<long long>(region_name.size()) - empty_sets;
+    if (num_region > std::numeric_limits<long long>::max())
     {
         throw std::runtime_error("Error: Too many regions, will cause integer "
                                  "overflow when generating the best file");
@@ -1736,9 +1739,11 @@ void PRSice::prep_output(const Genotype& target,
                 header_line.append(" PRS");
             else
             {
-                for (long long i = 0; i < num_region; ++i)
+                for (long long i = 0;
+                     i < static_cast<long long>(region_name.size()); ++i)
                 {
-                    if (i == 1) continue;
+                    if (i == 1 || region_name[static_cast<size_t>(i)].empty())
+                        continue;
                     header_line.append(" "
                                        + region_name[static_cast<size_t>(i)]);
                 }
@@ -1762,7 +1767,7 @@ void PRSice::prep_output(const Genotype& target,
                 m_max_fid_length /* FID */ + 1LL           /* space */
                 + m_max_iid_length                         /* IID */
                 + 1LL /* space */ + 3LL /* Yes/No */ + 1LL /* space */
-                + num_region                               /* each region */
+                + (num_region - 1) /* each region -1 to remove background*/
                       * (m_numeric_width + 1LL /* space */)
                 + 1LL /* new line */;
             m_best_file.skip_column_length =

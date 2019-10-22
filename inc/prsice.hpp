@@ -339,7 +339,7 @@ private:
     Phenotype m_pheno_info;
 
     // Functions
-
+    static bool empty_name(const std::string& in) { return in.empty(); }
     /*!
      * \brief permutation is the master function to call the subfunctions
      * responsible for calculating the permuted t-value
