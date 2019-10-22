@@ -1272,7 +1272,7 @@ void PRSice::print_best(Genotype& target,
                        << std::setprecision(static_cast<int>(m_precision));
             for (Eigen::Index i = 0; i < m_fast_best_output.cols(); ++i)
             {
-                if (i == 1) continue;
+                if (i == 1 || region_name[i].empty()) continue;
                 m_best_out << " " << m_fast_best_output(sample, i);
             }
             m_best_out << "\n";
@@ -1716,7 +1716,7 @@ void PRSice::prep_output(const Genotype& target,
         try
         {
             m_fast_best_output =
-                Eigen::MatrixXd::Zero(num_samples_included, num_region);
+                Eigen::MatrixXd::Zero(num_samples_included, region_name.size());
             m_quick_best = true;
         }
         catch (...)
