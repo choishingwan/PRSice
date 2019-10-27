@@ -1280,6 +1280,7 @@ void PRSice::print_best(Genotype& target,
         // can just close it as we assume we only need to do it once.
         m_best_out.close();
     }
+    m_fast_best_output.resize(0, 0);
 }
 
 void PRSice::regress_score(Genotype& target, const double threshold,
