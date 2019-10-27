@@ -25,7 +25,7 @@ BinaryGen::BinaryGen(const GenoFile& geno, const Phenotype& pheno,
     m_delim = delim;
     m_hard_coded = geno.hard_coded;
     m_reporter = reporter;
-    init_chr();
+    init_chr(geno.num_autosome);
     std::string message = "Initializing Genotype";
     std::string file_name = geno.file_name;
     const bool is_list = !(geno.file_list.empty());

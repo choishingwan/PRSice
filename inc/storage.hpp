@@ -76,6 +76,7 @@ struct GenoFile
     std::string keep;
     std::string remove;
     std::string type = "bed";
+    int num_autosome = 22;
     int hard_coded = false;
     int is_ref = false;
 };

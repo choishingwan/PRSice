@@ -25,7 +25,7 @@ BinaryPlink::BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
     m_remove_file = geno.remove;
     m_delim = delim;
     m_reporter = reporter;
-    init_chr();
+    init_chr(geno.num_autosome);
     std::string message = "Initializing Genotype ";
     const bool use_list = !geno.file_list.empty();
     std::string file_name = use_list ? geno.file_list : geno.file_name;

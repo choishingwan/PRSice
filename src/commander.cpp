@@ -109,6 +109,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"memory", required_argument, nullptr, 0},
         {"missing", required_argument, nullptr, 0},
         {"model", required_argument, nullptr, 0},
+        {"num-auto", required_argument, nullptr, 0},
         {"perm", required_argument, nullptr, 0},
         {"proxy", required_argument, nullptr, 0},
         {"remove", required_argument, nullptr, 0},
@@ -234,6 +235,13 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 error |= !set_missing(optarg);
             else if (command == "model")
                 error |= !set_model(optarg);
+            else if (command == "num-auto")
+            {
+                error |= !set_numeric<int>(optarg, "num-auto",
+                                           m_target.num_autosome);
+                error |= !set_numeric<int>(optarg, "num-auto",
+                                           m_reference.num_autosome);
+            }
             else if (command == "pearson")
             {
                 error = true;
@@ -1704,6 +1712,16 @@ bool Commander::target_check()
             std::to_string(m_target_filter.hard_threshold);
         m_parameter_log["dose-thres"] =
             std::to_string(m_target_filter.dose_threshold);
+    }
+    if (m_target.num_autosome < 0)
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Currently do not support negative number of autosome");
+    }
+    else
+    {
+        m_parameter_log["num-auto"] = std::to_string(m_target.num_autosome);
     }
     return !error;
 }
