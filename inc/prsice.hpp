@@ -230,6 +230,17 @@ public:
         return m_pheno_info.prevalence;
     }
 
+    /*!
+     * \brief Function responsible to generate the best score file
+     * \param target is the target genotype, mainly for ID and in_regression
+     * flag
+     * \param pheno_index  the index of the current phenotype
+     * \param  commander is the container of all user inputs
+     */
+    void print_best(Genotype& target,
+                    const std::vector<std::string>& region_name,
+                    const size_t pheno_index);
+
 protected:
 private:
     struct prsice_result
@@ -282,6 +293,8 @@ private:
     static std::mutex lock_guard;
 
     Eigen::MatrixXd m_independent_variables;
+    // TODO: Use other method for faster best output
+    Eigen::MatrixXd m_fast_best_output;
     Eigen::VectorXd m_phenotype;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
     std::vector<prsice_result> m_prs_results;
@@ -326,7 +339,7 @@ private:
     Phenotype m_pheno_info;
 
     // Functions
-
+    static bool empty_name(const std::string& in) { return in.empty(); }
     /*!
      * \brief permutation is the master function to call the subfunctions
      * responsible for calculating the permuted t-value
@@ -342,6 +355,7 @@ private:
      */
     void update_sample_included(const std::string& delim, const bool binary,
                                 Genotype& target);
+    void slow_print_best(Genotype& target, const size_t pheno_index);
     /*!
      * \brief gen_pheno_vec is the function responsible for generating the
      * phenotype vector
@@ -403,14 +417,6 @@ private:
      */
     void process_permutations();
 
-    /*!
-     * \brief Function responsible to generate the best score file
-     * \param target is the target genotype, mainly for ID and in_regression
-     * flag
-     * \param pheno_index  the index of the current phenotype
-     * \param  commander is the container of all user inputs
-     */
-    void print_best(Genotype& target, const size_t pheno_index);
 
     /*!
      * \brief Function to generate PRS for null set when multiple threading is

@@ -1,4 +1,4 @@
-﻿// This file is part of PRSice-2, copyright (C) 2016-2019
+// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -1153,22 +1153,70 @@ bool PRSice::run_prsice(const size_t pheno_index, const size_t region_index,
         ++prs_result_idx;
         first_run = false;
     }
+    if (m_quick_best)
+    {
+        m_fast_best_output.col(region_index) = Eigen::Map<Eigen::VectorXd>(
+            m_best_sample_score.data(), m_best_sample_score.size());
+    }
 
     // we need to process the permutation result if permutation is required
     if (m_perm_info.run_perm) process_permutations();
-    if (!m_prs_info.no_regress)
-    {
-        // if regression was performed, we will also generate the best score
-        // output
-        print_best(target, pheno_index);
-    }
+    if (!m_prs_info.no_regress & !m_quick_best)
+    { slow_print_best(target, pheno_index); }
     return true;
 }
 
-void PRSice::print_best(Genotype& target, const size_t pheno_index)
+void PRSice::slow_print_best(Genotype& target, const size_t pheno_index)
+{
+    if (m_quick_best) return;
+    std::string pheno_name = "";
+    if (m_pheno_info.pheno_col.size() > 1)
+        pheno_name = m_pheno_info.pheno_col[pheno_index];
+    std::string output_prefix = m_prefix;
+    if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
+    output_prefix.append(".best");
+    if (m_best_index < 0)
+    {
+        // no best threshold
+        m_reporter->report("Error: No best score obtained\nCannot output the "
+                           "best PRS score\n");
+        return;
+    }
+    auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
+    size_t best_snp_size = best_info.num_snp;
+    if (best_snp_size == 0)
+    {
+        m_reporter->report("Error: Best R2 obtained when no SNPs were "
+                           "included\nCannot output the best PRS score\n");
+    }
+    else
+    {
+        for (size_t sample = 0; sample < target.num_sample(); ++sample)
+        {
+            long long loc = m_best_file.header_length
+                            + static_cast<long long>(sample)
+                                  * (m_best_file.line_width + NEXT_LENGTH)
+                            + NEXT_LENGTH + m_best_file.skip_column_length
+                            + m_best_file.processed_threshold
+                            + m_best_file.processed_threshold * m_numeric_width;
+            m_best_out.seekp(loc);
+            m_best_out << std::setprecision(static_cast<int>(m_precision))
+                       << m_best_sample_score[sample];
+        }
+    }
+    // once we finish outputing the result, we need to increment the
+    // processed_threshold index such that when we process the next region,
+    // we will be writing to the next column instead of overwriting the
+    // current column
+    ++m_best_file.processed_threshold;
+};
+void PRSice::print_best(Genotype& target,
+                        const std::vector<std::string>& region_name,
+                        const size_t pheno_index)
 {
     // read in the name of the phenotype. If there's only one phenotype
     // name, we'll do assign an empty string to phenotyp name
+    if (!m_quick_best) return;
     std::string pheno_name = "";
     if (m_pheno_info.pheno_col.size() > 1)
         pheno_name = m_pheno_info.pheno_col[pheno_index];
@@ -1197,53 +1245,42 @@ void PRSice::print_best(Genotype& target, const size_t pheno_index)
     }
     else
     {
-        if (!m_quick_best)
+
+        m_best_out.close();
+        m_best_out.clear();
+        m_best_out.open(output_prefix.c_str());
+        if (!m_best_out.is_open())
         {
-            for (size_t sample = 0; sample < target.num_sample(); ++sample)
-            {
-                long long loc =
-                    m_best_file.header_length
-                    + static_cast<long long>(sample)
-                          * (m_best_file.line_width + NEXT_LENGTH)
-                    + NEXT_LENGTH + m_best_file.skip_column_length
-                    + m_best_file.processed_threshold
-                    + m_best_file.processed_threshold * m_numeric_width;
-                m_best_out.seekp(loc);
-                m_best_out << std::setprecision(static_cast<int>(m_precision))
-                           << m_best_sample_score[sample];
-            }
+            throw std::runtime_error("Error: Cannot open best file for output: "
+                                     + output_prefix);
         }
+        m_best_out << "FID IID In_Regression";
+        if (region_name.size() <= 2) { m_best_out << " PRS"; }
         else
         {
-            m_best_out.close();
-            m_best_out.clear();
-            m_best_out.open(output_prefix.c_str());
-            if (!m_best_out.is_open())
+            for (size_t i = 0; i < region_name.size(); ++i)
             {
-                throw std::runtime_error(
-                    "Error: Cannot open best file for output: "
-                    + output_prefix);
+                if (i == 1 || region_name[i].empty()) continue;
+                m_best_out << " " << region_name[i];
             }
-            m_best_out << "FID IID In_Regression PRS" << std::endl;
-            for (size_t sample = 0; sample < target.num_sample(); ++sample)
-            {
-                m_best_out << target.fid(sample) << " " << target.iid(sample)
-                           << " "
-                           << ((target.sample_in_regression(sample)) ? "Yes"
-                                                                     : "No")
-                           << " "
-                           << std::setprecision(static_cast<int>(m_precision))
-                           << m_best_sample_score[sample] << "\n";
-            }
-            // can just close it as we assume we only need to do it once.
-            m_best_out.close();
         }
+        m_best_out << std::endl;
+        for (size_t sample = 0; sample < target.num_sample(); ++sample)
+        {
+            m_best_out << target.fid(sample) << " " << target.iid(sample) << " "
+                       << ((target.sample_in_regression(sample)) ? "Yes" : "No")
+                       << std::setprecision(static_cast<int>(m_precision));
+            for (Eigen::Index i = 0; i < m_fast_best_output.cols(); ++i)
+            {
+                if (i == 1 || region_name[i].empty()) continue;
+                m_best_out << " " << m_fast_best_output(sample, i);
+            }
+            m_best_out << "\n";
+        }
+        // can just close it as we assume we only need to do it once.
+        m_best_out.close();
     }
-    // once we finish outputing the result, we need to increment the
-    // processed_threshold index such that when we process the next region,
-    // we will be writing to the next column instead of overwriting the
-    // current column
-    ++m_best_file.processed_threshold;
+    m_fast_best_output.resize(0, 0);
 }
 
 void PRSice::regress_score(Genotype& target, const double threshold,
@@ -1648,8 +1685,12 @@ void PRSice::prep_output(const Genotype& target,
     // generate it once
     const std::string out_all = m_prefix + ".all.score";
     const std::string out_best = output_prefix + ".best";
-    const long long num_region = static_cast<long long>(region_name.size());
-    if (region_name.size() > std::numeric_limits<long long>::max())
+    const size_t num_samples_included = target.num_sample();
+    const long long empty_sets =
+        std::count_if(region_name.begin(), region_name.end(), empty_name);
+    const long long num_region =
+        static_cast<long long>(region_name.size()) - empty_sets;
+    if (num_region > std::numeric_limits<long long>::max())
     {
         throw std::runtime_error("Error: Too many regions, will cause integer "
                                  "overflow when generating the best file");
@@ -1673,49 +1714,66 @@ void PRSice::prep_output(const Genotype& target,
         if (!m_pheno_info.prevalence.empty()) m_prsice_out << "R2.adj\t";
         m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
         // .best output
-        m_best_out.open(out_best.c_str());
-        if (!m_best_out.is_open())
+        try
         {
-            throw std::runtime_error("Error: Cannot open file: " + out_best
-                                     + " to write");
+            m_fast_best_output =
+                Eigen::MatrixXd::Zero(num_samples_included, region_name.size());
+            m_quick_best = true;
         }
-        std::string header_line = "FID IID In_Regression";
-        // The default name of the output should be PRS, but if we are
-        // running PRSet, it should be call Base
-        if (!(num_region > 2))
-            header_line.append(" PRS");
-        else
+        catch (...)
         {
-            for (long long i = 0; i < num_region; ++i)
+            m_reporter->report(
+                "Warning: Not enough memory to store all best scores "
+                "into the memory, will use a slower method to output "
+                "the best score file");
+            // not enough memory for fast best use the seekg method
+            m_best_out.open(out_best.c_str());
+            if (!m_best_out.is_open())
             {
-                if (i == 1) continue;
-                header_line.append(" " + region_name[static_cast<size_t>(i)]);
+                throw std::runtime_error("Error: Cannot open file: " + out_best
+                                         + " to write");
             }
-            m_quick_best = num_region <= 2;
-        }
-        // the safetest way to calculate the length we need to skip is to
-        // directly count the number of byte involved
-        const long long begin_byte = m_best_out.tellp();
-        m_best_out << header_line << "\n";
-        const long long end_byte = m_best_out.tellp();
-        // we now know the exact number of byte the header contain and can
-        // correctly skip it acordingly
-        assert(end_byte >= begin_byte);
-        m_best_file.header_length = end_byte - begin_byte;
-        // we will set the processed_threshold information to 0
-        m_best_file.processed_threshold = 0;
+            std::string header_line = "FID IID In_Regression";
+            // The default name of the output should be PRS, but if we are
+            // running PRSet, it should be call Base
+            if (!(num_region > 2))
+                header_line.append(" PRS");
+            else
+            {
+                for (long long i = 0;
+                     i < static_cast<long long>(region_name.size()); ++i)
+                {
+                    if (i == 1 || region_name[static_cast<size_t>(i)].empty())
+                        continue;
+                    header_line.append(" "
+                                       + region_name[static_cast<size_t>(i)]);
+                }
+                m_quick_best = num_region <= 2;
+            }
+            // the safetest way to calculate the length we need to skip is to
+            // directly count the number of byte involved
+            const long long begin_byte = m_best_out.tellp();
+            m_best_out << header_line << "\n";
+            const long long end_byte = m_best_out.tellp();
+            // we now know the exact number of byte the header contain and can
+            // correctly skip it acordingly
+            assert(end_byte >= begin_byte);
+            m_best_file.header_length = end_byte - begin_byte;
+            // we will set the processed_threshold information to 0
+            m_best_file.processed_threshold = 0;
 
-        // each numeric output took 12 spaces, then for each output, there
-        // is one space next to each
-        m_best_file.line_width =
-            m_max_fid_length /* FID */ + 1LL           /* space */
-            + m_max_iid_length                         /* IID */
-            + 1LL /* space */ + 3LL /* Yes/No */ + 1LL /* space */
-            + num_region                               /* each region */
-                  * (m_numeric_width + 1LL /* space */)
-            + 1LL /* new line */;
-        m_best_file.skip_column_length =
-            m_max_fid_length + 1LL + m_max_iid_length + 1LL + 3LL + 1LL;
+            // each numeric output took 12 spaces, then for each output, there
+            // is one space next to each
+            m_best_file.line_width =
+                m_max_fid_length /* FID */ + 1LL           /* space */
+                + m_max_iid_length                         /* IID */
+                + 1LL /* space */ + 3LL /* Yes/No */ + 1LL /* space */
+                + (num_region - 1) /* each region -1 to remove background*/
+                      * (m_numeric_width + 1LL /* space */)
+                + 1LL /* new line */;
+            m_best_file.skip_column_length =
+                m_max_fid_length + 1LL + m_max_iid_length + 1LL + 3LL + 1LL;
+        }
     }
 
     // also handle all score here
@@ -1791,7 +1849,6 @@ void PRSice::prep_output(const Genotype& target,
     }
 
     // output sample IDs
-    const size_t num_samples_included = target.num_sample();
     std::string best_line;
     std::string name;
     if (all_scores || (!m_prs_info.no_regress && !m_quick_best))

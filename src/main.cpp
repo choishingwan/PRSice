@@ -35,7 +35,7 @@
 void print_empty_region(const std::string& out,
                         const std::vector<size_t>& region_membership,
                         const std::vector<size_t>& region_start_idx,
-                        const std::vector<std::string>& region_names);
+                        std::vector<std::string>& region_names);
 int main(int argc, char* argv[])
 {
     // initialize reporter, use to generate log
@@ -258,6 +258,8 @@ int main(int argc, char* argv[])
                         prsice.no_regress_out(region_names, i_pheno, i_region);
                     }
                 }
+                if (!commander.get_prs_instruction().no_regress)
+                { prsice.print_best(*target_file, region_names, i_pheno); }
                 if (!commander.get_prs_instruction().no_regress
                     && commander.get_perm().run_set_perm
                     && region_names.size() > 2)
@@ -322,7 +324,7 @@ int main(int argc, char* argv[])
 void print_empty_region(const std::string& out,
                         const std::vector<size_t>& region_membership,
                         const std::vector<size_t>& region_start_idx,
-                        const std::vector<std::string>& region_names)
+                        std::vector<std::string>& region_names)
 {
     bool has_empty_region = false;
     std::ofstream empty_region;
@@ -333,26 +335,9 @@ void print_empty_region(const std::string& out,
     for (size_t i = 2; i < region_start_idx.size(); ++i)
     {
         size_t cur_idx = region_start_idx[i];
-        if (i + 1 >= region_start_idx.size())
-        {
-            // this is the last set
-            if (cur_idx == region_membership.size())
-            {
-                if (!has_empty_region)
-                {
-                    empty_region.open(empty_region_name.c_str());
-                    if (!empty_region.is_open())
-                    {
-                        throw std::runtime_error("Error: Cannot open file: "
-                                                 + empty_region_name
-                                                 + " to write!");
-                    }
-                    has_empty_region = true;
-                }
-                empty_region << region_names[i] << std::endl;
-            }
-        }
-        else if (cur_idx == region_start_idx[i + 1])
+        if ((i + 1 >= region_start_idx.size()
+             && cur_idx == region_membership.size())
+            || cur_idx == region_start_idx[i + 1])
         {
             if (!has_empty_region)
             {
@@ -366,6 +351,7 @@ void print_empty_region(const std::string& out,
                 has_empty_region = true;
             }
             empty_region << region_names[i] << std::endl;
+            region_names[i] = "";
         }
     }
     if (has_empty_region) empty_region.close();
