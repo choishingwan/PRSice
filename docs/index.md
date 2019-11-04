@@ -1,12 +1,20 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
- 
-!!! announcement "NOW HIRING!"
 
-    <h2>We are hiring!!</h2>
-
-    - We are recruting Statistical Genetics postdocs in polygenic prediction and causal inference [@IcahnMountSinai](https://twitter.com/IcahnMountSinai) in New York.
-    More details can be found [here](http://pauloreilly.info). Looking forward to hear from you!
-<br/>
+<div class="admonition announcement">
+<p class="admonition-title">NOW HIRING!</p>
+<p></p><h2>We are hiring!!</h2><p></p>
+<ul>
+<li>We are recruiting Statistical Genetics postdocs in polygenic prediction and causal inference <a href="https://twitter.com/IcahnMountSinai">@IcahnMountSinai</a> in New York.
+More details can be found <a href="http://pauloreilly.info">here</a>. If interested, please email 
+<a href="#" class="cryptedmail"
+   data-name="paul.oreilly"
+   data-domain="mssm"
+   data-tld="edu"
+   onclick="window.location.href = 'mailto:' + this.dataset.name + '@' + this.dataset.domain + '.' + this.dataset.tld; return false;"></a>
+</li>
+</ul>
+</div>
+</br>
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
