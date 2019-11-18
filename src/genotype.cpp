@@ -1510,6 +1510,22 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
     { standardize_prs(); }
 }
 
+void Genotype::load_genotype_to_memory()
+{
+    // first, sort the SNPs for easy reading
+    std::sort(begin(m_existed_snps), end(m_existed_snps),
+              [](SNP const& t1, SNP const& t2) {
+                  if (t1.get_file_idx() == t2.get_file_idx())
+                  { return t1.get_byte_pos() < t2.get_byte_pos(); }
+                  else
+                      return t1.get_file_idx() < t2.get_file_idx();
+              });
+    // now iterate and read each SNP one by one, get the counts too
+    std::vector<size_t> idx(m_existed_snps.size());
+    std::iota(std::begin(idx), std::end(idx), 0);
+    read_score(idx.begin(), idx.end(), true, true);
+}
+
 bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const std::vector<size_t>::const_iterator& end_index,
                          double& cur_threshold, uint32_t& num_snp_included,

@@ -72,6 +72,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"or", no_argument, &m_base_info.is_or, 1},
         {"pearson", no_argument, nullptr, 0},
         {"print-snp", no_argument, &m_print_snp, 1},
+        {"ultra", no_argument, &m_ultra_aggressive, 1},
         {"use-ref-maf", no_argument, &m_prs_info.use_ref_maf, 1},
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
@@ -393,6 +394,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_base_info.is_beta) m_parameter_log["beta"] = "";
     if (m_base_info.is_or) m_parameter_log["or"] = "";
     if (m_target.hard_coded) m_parameter_log["hard"] = "";
+    if (m_ultra_aggressive) m_parameter_log["ultra"] = "";
     if (m_prs_info.use_ref_maf) m_parameter_log["use-ref-maf"] = "";
     if (m_user_no_default) m_parameter_log["no-default"] = "";
     std::chrono::time_point<std::chrono::system_clock> start;
@@ -1547,6 +1549,12 @@ bool Commander::misc_check()
             "Warning: --no-regress requested but multiple "
             "phenotype provided. As regression isn't performed, we will not "
             "utilize any of the phenotype information\n");
+    }
+    if (m_target.type == "bgen" && !m_target.hard_coded && m_ultra_aggressive)
+    {
+        m_error_message.append("Warning: --ultra does not work with none "
+                               "hard-coded bgen file. Will disable it\n");
+        m_ultra_aggressive = false;
     }
     return !error;
 }

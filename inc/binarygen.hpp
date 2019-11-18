@@ -172,10 +172,10 @@ protected:
 
     void read_score(const std::vector<size_t>::const_iterator& start_idx,
                     const std::vector<size_t>::const_iterator& end_idx,
-                    bool reset_zero);
+                    bool reset_zero, bool ultra = false);
     void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
-                         bool reset_zero);
+                         bool reset_zero, bool ultra = false);
     void dosage_score(const std::vector<size_t>::const_iterator& start_idx,
                       const std::vector<size_t>::const_iterator& end_idx,
                       bool reset_zero);

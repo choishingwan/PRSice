@@ -143,7 +143,7 @@ public:
      */
     bool nonfounders() const { return m_include_nonfounders; }
     bool enable_mmap() const { return m_enable_mmap; }
-
+    bool ultra_aggressive() const { return m_ultra_aggressive; }
 
 protected:
 private:
@@ -162,6 +162,7 @@ private:
     int m_keep_ambig = false;
     int m_print_all_scores = false;
     int m_print_snp = false;
+    int m_ultra_aggressive = false;
     int m_user_no_default = false;
     bool m_provided_memory = false;
     bool m_set_delim = false;

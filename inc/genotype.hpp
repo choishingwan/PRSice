@@ -470,6 +470,8 @@ public:
         m_dose_threshold = qc.dose_threshold;
     }
 
+    void load_genotype_to_memory();
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -871,7 +873,7 @@ protected:
     virtual void
     read_score(const std::vector<size_t>::const_iterator& /*start*/,
                const std::vector<size_t>::const_iterator& /*end*/,
-               bool /*reset_zero*/)
+               bool /*reset_zero*/, bool ultra = false)
     {
     }
     void standardize_prs();

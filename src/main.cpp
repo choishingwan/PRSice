@@ -184,6 +184,14 @@ int main(int argc, char* argv[])
                 // immediately free the memory
             }
             if (init_ref) { delete reference_file; }
+            if (commander.ultra_aggressive())
+            {
+                // we will do something ultra aggressive here: To load all SNP
+                // information into memory (does not work for bgen if hard
+                // coding isn't used)
+                target_file->load_genotype_to_memory();
+            }
+
             // can do the update structure here
             // Use sparse matrix for space and speed
             // Column = set, row = SNPs (because EIGEN is column major)

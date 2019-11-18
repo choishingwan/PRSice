@@ -416,6 +416,12 @@ public:
         return m_expected_value;
     }
     void invalid() { m_is_valid = false; }
+    bool stored_genotype() const { return !m_genotype.empty(); }
+    void assign_genotype(const std::vector<uintptr_t>& genotype)
+    {
+        m_genotype = genotype;
+    }
+    std::vector<uintptr_t> get_genotype() const { return m_genotype; }
 
 private:
     AlleleCounts m_ref_count;
@@ -423,6 +429,7 @@ private:
     FileInfo m_target;
     FileInfo m_reference;
     SNPClump m_clump_info;
+    std::vector<uintptr_t> m_genotype;
     std::string m_alt;
     std::string m_ref;
     std::string m_rs;

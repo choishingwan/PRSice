@@ -645,7 +645,8 @@ BinaryPlink::~BinaryPlink() {}
 
 void BinaryPlink::read_score(
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
+    bool ultra)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -697,46 +698,56 @@ void BinaryPlink::read_score(
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        cur_snp.get_file_info(file_idx, cur_line, false);
-        file_name = m_genotype_file_names[file_idx] + ".bed";
-        // we now read the genotype from the file by calling
-        // load_and_collapse_incl
-        // important point to note here is the use of m_sample_include and
-        // m_sample_ct instead of using the m_founder m_founder_info as the
-        // founder vector is for LD calculation whereas the sample_include is
-        // for PRS
-        m_genotype_file.read(file_name, cur_line, unfiltered_sample_ct4,
-                             reinterpret_cast<char*>(m_tmp_genotype.data()));
-        if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                m_prs_calculation.use_ref_maf))
+        if (!cur_snp.stored_genotype())
         {
-            // we need to calculate the MA
-            // if we want to use reference, we will always have calculated the
-            // MAF
-            single_marker_freqs_and_hwe(
-                unfiltered_sample_ctv2, m_tmp_genotype.data(),
-                m_sample_include2.data(), m_founder_include2.data(),
-                m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf,
-                &lh_ctf, &hh_ctf);
-            homcom_ct = ll_ctf;
-            het_ct = lh_ctf;
-            homrar_ct = hh_ctf;
-            tmp_total = (homcom_ct + het_ct + homrar_ct);
-            assert(m_founder_ct >= tmp_total);
-            missing_ct = m_founder_ct - tmp_total;
-            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct, false);
-        }
-        if (m_unfiltered_sample_ct != m_sample_ct)
-        {
-            copy_quaterarr_nonempty_subset(
-                m_tmp_genotype.data(), m_sample_include.data(),
-                static_cast<uint32_t>(m_unfiltered_sample_ct),
-                static_cast<uint32_t>(m_sample_ct), genotype.data());
+            cur_snp.get_file_info(file_idx, cur_line, false);
+            file_name = m_genotype_file_names[file_idx] + ".bed";
+            // we now read the genotype from the file by calling
+            // load_and_collapse_incl
+            // important point to note here is the use of m_sample_include and
+            // m_sample_ct instead of using the m_founder m_founder_info as the
+            // founder vector is for LD calculation whereas the sample_include
+            // is for PRS
+            m_genotype_file.read(
+                file_name, cur_line, unfiltered_sample_ct4,
+                reinterpret_cast<char*>(m_tmp_genotype.data()));
+            if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                    m_prs_calculation.use_ref_maf))
+            {
+                // we need to calculate the MA
+                // if we want to use reference, we will always have calculated
+                // the MAF
+                single_marker_freqs_and_hwe(
+                    unfiltered_sample_ctv2, m_tmp_genotype.data(),
+                    m_sample_include2.data(), m_founder_include2.data(),
+                    m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf,
+                    &lh_ctf, &hh_ctf);
+                homcom_ct = ll_ctf;
+                het_ct = lh_ctf;
+                homrar_ct = hh_ctf;
+                tmp_total = (homcom_ct + het_ct + homrar_ct);
+                assert(m_founder_ct >= tmp_total);
+                missing_ct = m_founder_ct - tmp_total;
+                cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                   false);
+            }
+            if (m_unfiltered_sample_ct != m_sample_ct)
+            {
+                copy_quaterarr_nonempty_subset(
+                    m_tmp_genotype.data(), m_sample_include.data(),
+                    static_cast<uint32_t>(m_unfiltered_sample_ct),
+                    static_cast<uint32_t>(m_sample_ct), genotype.data());
+            }
+            else
+            {
+                genotype = m_tmp_genotype;
+                genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+            }
+            if (ultra) { cur_snp.assign_genotype(genotype); }
         }
         else
         {
-            genotype = m_tmp_genotype;
-            genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+            genotype = cur_snp.get_genotype();
         }
         // directly read in the current location
         if (m_founder_ct == missing_ct)
@@ -765,8 +776,11 @@ void BinaryPlink::read_score(
         miss_score = 0;
         if (mean_impute) { miss_score = ploidy * stat * maf; }
         // now we go through the SNP vector
-        read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
-                 homcom_weight, het_weight, homrar_weight, not_first);
+        if (!ultra)
+        {
+            read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
+                     homcom_weight, het_weight, homrar_weight, not_first);
+        }
         // indicate that we've already read in the first SNP and no longer need
         // to reset the PRS
         not_first = true;
