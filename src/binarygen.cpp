@@ -1043,6 +1043,8 @@ void BinaryGen::hard_code_score(
         else
         {
             genotype = cur_snp.get_genotype();
+             cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                      m_prs_calculation.use_ref_maf);
         }
         // TODO: if we haven't got the count from the genotype matrix, we will
         // need to calculate that, we might not need to do the
