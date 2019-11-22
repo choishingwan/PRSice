@@ -749,7 +749,7 @@ void BinaryPlink::read_score(
         {
             genotype = cur_snp.get_genotype();
             cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                    m_prs_calculation.use_ref_maf);
+                               m_prs_calculation.use_ref_maf);
         }
         // directly read in the current location
         if (m_founder_ct == missing_ct)
