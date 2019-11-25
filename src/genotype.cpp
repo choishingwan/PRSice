@@ -1524,6 +1524,7 @@ void Genotype::load_genotype_to_memory()
     std::vector<size_t> idx(m_existed_snps.size());
     std::iota(std::begin(idx), std::end(idx), 0);
     read_score(idx.begin(), idx.end(), true, true);
+    m_genotype_stored = true;
 }
 
 bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,

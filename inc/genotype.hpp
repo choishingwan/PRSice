@@ -471,6 +471,7 @@ public:
     }
 
     void load_genotype_to_memory();
+    bool genotyped_stored() const { return m_genotype_stored; }
 
 protected:
     // friend with all child class so that they can also access the
@@ -543,6 +544,7 @@ protected:
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
     static bool g_allow_mmap;
+    bool m_genotype_stored = false;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
     bool m_intermediate = false;
