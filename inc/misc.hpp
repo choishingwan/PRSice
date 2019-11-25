@@ -341,18 +341,18 @@ inline std::string to_string(T value)
     out << value;
     return out.str();
 }
+// trim functions from https://stackoverflow.com/a/217605
 // trim from start (in place)
 inline void ltrim(std::string& s)
 {
-    s.erase(s.begin(),
-            std::find_if(s.begin(), s.end(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+                                    [](int ch) { return !std::isgraph(ch); }));
 };
 // trim from end (in place)
 inline void rtrim(std::string& s)
 {
     s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace)))
+                         [](int ch) { return !std::isgraph(ch); })
                 .base(),
             s.end());
 };
