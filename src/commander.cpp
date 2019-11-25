@@ -1035,6 +1035,7 @@ bool Commander::base_check()
     bool error = false;
     std::vector<std::string> column_names =
         get_base_header(m_base_info.file_name);
+    for (auto&& c : column_names) { misc::trim(c); }
     if (m_base_info.is_index)
     {
         // can't do much but to check the boundary
