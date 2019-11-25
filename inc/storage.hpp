@@ -18,12 +18,29 @@
 #ifndef PRSICE_INC_STORAGE_HPP_
 #define PRSICE_INC_STORAGE_HPP_
 #include "enumerators.h"
+#include <Eigen/Dense>
 #include <cstdint>
 #include <memory>
 #include <random>
 #include <string>
 #include <vector>
 // From http://stackoverflow.com/a/12927952/1441789
+
+struct Regress
+{
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PQR;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType Pmat;
+    Eigen::Index rank;
+    Eigen::MatrixXd Rinv;
+    Eigen::MatrixXd YCov;
+    Eigen::VectorXd beta;
+    Eigen::VectorXd se;
+    Eigen::VectorXd effects;
+    Eigen::VectorXd prs;
+    Eigen::VectorXd fitted;
+    Eigen::VectorXd resid;
+    Eigen::VectorXd se_base;
+};
 
 struct PRS
 {
