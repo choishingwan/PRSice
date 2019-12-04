@@ -436,7 +436,6 @@ void PRSice::run_competitive(
                     std::ref(set_index), std::ref(set_perm_res),
                     std::cref(obs_t_value), seed, std::cref(decomposed),
                     num_bk_snps, job_per_thread + (remain > 0), is_binary));
-                std::cerr << remain << std::endl;
                 ran_perm += job_per_thread + (remain > 0);
                 remain--;
             }
