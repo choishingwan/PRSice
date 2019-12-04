@@ -1,3 +1,19 @@
+// This file is part of PRSice-2, copyright (C) 2016-2019
+// Shing Wan Choi, Paul F. O’Reilly
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "prsice.hpp"
 
 void PRSice::produce_null_prs(
@@ -62,6 +78,7 @@ void PRSice::produce_null_prs(
         ++processed;
     }
     // send termination signal to the consumers
+
     q.completed();
 }
 
@@ -255,7 +272,7 @@ void PRSice::run_competitive(
                 "addition, the regression equation changed from "
                 "Phenotype~PRS+Covariates to PRS~Phenotype+Covariate. This "
                 "two "
-                "equations should generate simliar z-score for the "
+                "equations should generate similar z-score for the "
                 "independent "
                 "variable and will allow us to perform some optimizations "
                 "to "
@@ -363,6 +380,7 @@ void PRSice::run_competitive(
     }
     m_reporter->report("Running permutation with " + misc::to_string(num_thread)
                        + " threads");
+    size_t ran_perm = 0;
     if (num_thread > 1)
     {
         //  similar to permutation for empirical p-value calculation, we
@@ -372,6 +390,7 @@ void PRSice::run_competitive(
         //  calculation
         if (!target.genotyped_stored())
         {
+            ran_perm = m_perm_info.num_permutation;
             Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
             std::thread producer(&PRSice::produce_null_prs, this,
                                  std::ref(set_perm_queue), std::ref(target),
@@ -406,7 +425,7 @@ void PRSice::run_competitive(
                 m_perm_info.num_permutation / static_cast<size_t>(num_thread);
             int remain = static_cast<int>(
                 static_cast<size_t>(m_perm_info.num_permutation)
-                / static_cast<size_t>(num_thread));
+                % static_cast<size_t>(num_thread));
             for (int i_thread = 0; i_thread < num_thread; ++i_thread)
             {
                 std::random_device::result_type seed = dis(rand_gen);
@@ -417,6 +436,8 @@ void PRSice::run_competitive(
                     std::ref(set_index), std::ref(set_perm_res),
                     std::cref(obs_t_value), seed, std::cref(decomposed),
                     num_bk_snps, job_per_thread + (remain > 0), is_binary));
+                std::cerr << remain << std::endl;
+                ran_perm += job_per_thread + (remain > 0);
                 remain--;
             }
             observer.join();
@@ -432,6 +453,7 @@ void PRSice::run_competitive(
             dummy, target, std::vector<size_t>(bk_start_idx, bk_end_idx),
             set_index, set_perm_res, obs_t_value, m_seed, decomposed,
             num_bk_snps, m_perm_info.num_permutation, is_binary);
+        ran_perm = m_perm_info.num_permutation;
     }
     // start_index is the index of m_prs_summary[i], not the actual index
     // on set_perm_res.
@@ -448,7 +470,7 @@ void PRSice::run_competitive(
         // start at 0, which is the assumption of set_perm_res
         res.competitive_p =
             (static_cast<double>(set_perm_res[(i - pheno_start_idx)]) + 1.0)
-            / (static_cast<double>(m_perm_info.num_permutation) + 1.0);
+            / (static_cast<double>(ran_perm) + 1.0);
         m_prs_summary[i].has_competitive = true;
     }
 }
