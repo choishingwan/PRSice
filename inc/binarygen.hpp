@@ -170,13 +170,16 @@ protected:
         return 0;
     }
 
-    void read_score(const std::vector<size_t>::const_iterator& start_idx,
+    void read_score(std::vector<PRS>& prs_list,
+                    const std::vector<size_t>::const_iterator& start_idx,
                     const std::vector<size_t>::const_iterator& end_idx,
                     bool reset_zero, bool ultra = false);
-    void hard_code_score(const std::vector<size_t>::const_iterator& start_idx,
+    void hard_code_score(std::vector<PRS>& prs_list,
+                         const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
                          bool reset_zero, bool ultra = false);
-    void dosage_score(const std::vector<size_t>::const_iterator& start_idx,
+    void dosage_score(std::vector<PRS>& prs_list,
+                      const std::vector<size_t>::const_iterator& start_idx,
                       const std::vector<size_t>::const_iterator& end_idx,
                       bool reset_zero);
 

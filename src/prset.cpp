@@ -31,6 +31,7 @@ void PRSice::produce_null_prs(
     // we seed the random number generator
     std::mt19937 g(m_seed);
     bool first_run = true;
+    std::vector<PRS> cur_prs(target.num_sample());
     while (processed < m_perm_info.num_permutation)
     {
         // sample without replacement
@@ -40,8 +41,8 @@ void PRSice::produce_null_prs(
         for (auto&& set_size : set_index)
         {
             // for each gene sets size, we calculate the PRS
-            target.get_null_score(set_size.first, prev_size, background,
-                                  first_run);
+            target.get_null_score(cur_prs, set_size.first, prev_size,
+                                  background, first_run);
             first_run = false;
             // we need to know how many SNPs we have already read, such that
             // we can skip reading this number of SNPs for the next set
@@ -170,6 +171,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
     Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample), se_base;
     get_se_matrix(decomposed.PQR, decomposed.Pmat, decomposed.Rinv, p,
                   decomposed.rank, se_base);
+    std::vector<PRS> cur_prs(target.num_sample());
+    std::ofstream debug("RES-" + misc::to_string(std::this_thread::get_id()));
     while (processed < num_perm)
     {
         fisher_yates(background, g, max_size);
@@ -179,8 +182,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
         size_t prev_size = 0;
         for (auto&& set_size : set_index)
         {
-            target.get_null_score(set_size.first, prev_size, background,
-                                  first_run);
+            target.get_null_score(cur_prs, set_size.first, prev_size,
+                                  background, first_run);
             first_run = false;
             prev_size = set_size.first;
             for (Eigen::Index sample_id = 0; sample_id < num_sample;
@@ -190,11 +193,13 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                 {
                     m_independent_variables(sample_id, 1) =
                         target.calculate_score(
+                            cur_prs,
                             m_matrix_index[static_cast<size_t>(sample_id)]);
                 }
                 else
                 {
                     prs(sample_id) = target.calculate_score(
+                        cur_prs,
                         m_matrix_index[static_cast<size_t>(sample_id)]);
                 }
             }
@@ -214,9 +219,12 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
             { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
+            debug << set_size.first << "\t" << cur_prs.front().num_snp << "\t"
+                  << t_value << std::endl;
         }
         ++processed;
     }
+    debug.close();
     progress_observer.completed();
 }
 

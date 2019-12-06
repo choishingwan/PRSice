@@ -89,7 +89,8 @@ protected:
     }
 
     virtual void
-    read_score(const std::vector<size_t>::const_iterator& start_idx,
+    read_score(std::vector<PRS>& prs_list,
+               const std::vector<size_t>::const_iterator& start_idx,
                const std::vector<size_t>::const_iterator& end_idx,
                bool reset_zero, bool ultra = false);
 };

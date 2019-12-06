@@ -286,28 +286,32 @@ public:
      * \param i is the sample index
      * \return the PRS
      */
-    inline double calculate_score(size_t i) const
+    inline double calculate_score(const std::vector<PRS>& prs_list,
+                                  size_t i) const
     {
-        if (i >= m_prs_info.size())
+        if (i >= prs_list.size())
             throw std::out_of_range("Sample name vector out of range");
-        double prs = m_prs_info[i].prs;
-        size_t num_snp = m_prs_info[i].num_snp;
+        const size_t num_snp = prs_list[i].num_snp;
+        double prs = prs_list[i].prs;
         double avg = prs;
         if (num_snp == 0) { avg = 0.0; }
         else
         {
             avg = prs / static_cast<double>(num_snp);
         }
-
         switch (m_prs_calculation.scoring_method)
         {
-        case SCORING::SUM: return m_prs_info[i].prs;
+        case SCORING::SUM: return prs_list[i].prs;
         case SCORING::STANDARDIZE:
         case SCORING::CONTROL_STD: return (avg - m_mean_score) / m_score_sd;
         default:
             // default is avg
             return avg;
         }
+    }
+    inline double calculate_score(size_t i) const
+    {
+        return calculate_score(m_prs_info, i);
     }
     /*!
      * \brief Function for calculating the PRS from the null set
@@ -320,7 +324,8 @@ public:
      * \param require_standardize is a boolean representing if we need to
      * calculate the mean and SD
      */
-    void get_null_score(const size_t& set_size, const size_t& prev_size,
+    void get_null_score(std::vector<PRS>& prs_list, const size_t& set_size,
+                        const size_t& prev_size,
                         std::vector<size_t>& background_list,
                         const bool first_run);
     /*!
@@ -767,11 +772,12 @@ protected:
         }
         return -1;
     }
-    void read_prs(std::vector<uintptr_t>& genotype, const size_t ploidy,
-                  const double stat, const double adj_score,
-                  const double miss_score, const size_t miss_count,
-                  const double homcom_weight, const double het_weight,
-                  const double homrar_weight, const bool not_first)
+    void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,
+                  const size_t ploidy, const double stat,
+                  const double adj_score, const double miss_score,
+                  const size_t miss_count, const double homcom_weight,
+                  const double het_weight, const double homrar_weight,
+                  const bool not_first)
     {
         uintptr_t* lbptr = genotype.data();
         uintptr_t ulii;
@@ -799,7 +805,7 @@ protected:
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
                 if (uii + (ujj / 2) >= m_sample_ct) { break; }
-                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
+                auto&& sample_prs = prs_list[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 if (not_first)
                 {
@@ -873,10 +879,17 @@ protected:
     {
     }
     virtual void
-    read_score(const std::vector<size_t>::const_iterator& /*start*/,
+    read_score(std::vector<PRS>& /*prs_list*/,
+               const std::vector<size_t>::const_iterator& /*start*/,
                const std::vector<size_t>::const_iterator& /*end*/,
                bool /*reset_zero*/, bool ultra = false)
     {
+    }
+    void read_score(const std::vector<size_t>::const_iterator& start,
+                    const std::vector<size_t>::const_iterator& end,
+                    bool reset_zero, bool ultra = false)
+    {
+        read_score(m_prs_info, start, end, reset_zero, ultra);
     }
     void standardize_prs();
     // for loading the sample inclusion / exclusion set

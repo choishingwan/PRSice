@@ -926,6 +926,7 @@ BinaryGen::~BinaryGen()
 }
 
 void BinaryGen::dosage_score(
+    std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
 {
@@ -937,7 +938,7 @@ void BinaryGen::dosage_score(
     // m_prs_info is where we store the PRS information
     // and m_sample_include let us know if the sample is required.
     // m_missing_score will inform us as to how to handle the missingness
-    PRS_Interpreter setter(&m_prs_info, &m_sample_include,
+    PRS_Interpreter setter(&prs_list, &m_sample_include,
                            m_prs_calculation.missing_score);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     size_t file_idx;
@@ -964,6 +965,7 @@ void BinaryGen::dosage_score(
 
 
 void BinaryGen::hard_code_score(
+    std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
     bool ultra)
@@ -1079,8 +1081,9 @@ void BinaryGen::hard_code_score(
         // start reading the genotype
         if (!ultra)
         {
-            read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
-                     homcom_weight, het_weight, homrar_weight, not_first);
+            read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
+                     miss_count, homcom_weight, het_weight, homrar_weight,
+                     not_first);
         }
         // we've finish processing the first SNP no longer need to reset the
         // PRS
@@ -1089,7 +1092,8 @@ void BinaryGen::hard_code_score(
 }
 
 
-void BinaryGen::read_score(const std::vector<size_t>::const_iterator& start_idx,
+void BinaryGen::read_score(std::vector<PRS>& prs_list,
+                           const std::vector<size_t>::const_iterator& start_idx,
                            const std::vector<size_t>::const_iterator& end_idx,
                            bool reset_zero, bool ultra)
 {
@@ -1099,10 +1103,10 @@ void BinaryGen::read_score(const std::vector<size_t>::const_iterator& start_idx,
     {
         // for hard coded, we need to check if intermediate file is used
         // instead
-        hard_code_score(start_idx, end_idx, reset_zero, ultra);
+        hard_code_score(prs_list, start_idx, end_idx, reset_zero, ultra);
     }
     else
     {
-        dosage_score(start_idx, end_idx, reset_zero);
+        dosage_score(prs_list, start_idx, end_idx, reset_zero);
     }
 }

@@ -644,6 +644,7 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
 BinaryPlink::~BinaryPlink() {}
 
 void BinaryPlink::read_score(
+    std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
     bool ultra)
@@ -780,8 +781,9 @@ void BinaryPlink::read_score(
         // now we go through the SNP vector
         if (!ultra)
         {
-            read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
-                     homcom_weight, het_weight, homrar_weight, not_first);
+            read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
+                     miss_count, homcom_weight, het_weight, homrar_weight,
+                     not_first);
         }
         // indicate that we've already read in the first SNP and no longer need
         // to reset the PRS

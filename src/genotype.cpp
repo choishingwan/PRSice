@@ -1489,7 +1489,8 @@ void Genotype::standardize_prs()
     m_score_sd = rs.sd();
 }
 
-void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
+void Genotype::get_null_score(std::vector<PRS>& prs_list,
+                              const size_t& set_size, const size_t& prev_size,
                               std::vector<size_t>& background_list,
                               const bool first_run)
 {
@@ -1504,7 +1505,7 @@ void Genotype::get_null_score(const size_t& set_size, const size_t& prev_size,
     std::vector<size_t>::iterator select_end = background_list.begin();
     std::advance(select_end, static_cast<long>(set_size));
     std::sort(select_start, select_end);
-    read_score(select_start, select_end, first_run);
+    read_score(prs_list, select_start, select_end, first_run);
     if (m_prs_calculation.scoring_method == SCORING::STANDARDIZE
         || m_prs_calculation.scoring_method == SCORING::CONTROL_STD)
     { standardize_prs(); }
