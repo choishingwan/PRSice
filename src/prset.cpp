@@ -18,8 +18,8 @@
 
 void PRSice::produce_null_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q, Genotype& target,
-    const size_t& num_background, std::vector<size_t> background,
-    size_t num_consumer, std::map<size_t, std::vector<size_t>>& set_index)
+    std::vector<size_t> background, size_t num_consumer,
+    std::map<size_t, std::vector<size_t>>& set_index)
 {
     // we need to know the size of the biggest set
     const size_t max_size = set_index.rbegin()->first;
@@ -28,27 +28,13 @@ void PRSice::produce_null_prs(
         static_cast<size_t>(m_independent_variables.rows());
     size_t processed = 0;
     size_t prev_size = 0;
-    size_t r;
     // we seed the random number generator
     std::mt19937 g(m_seed);
     bool first_run = true;
-    std::vector<size_t>::size_type advance_index, begin;
     while (processed < m_perm_info.num_permutation)
     {
-        // here we perform random sampling without replacement using the
-        // Fisher-Yates shuffle algorithm
-        begin = 0;
-        size_t num_snp = max_size;
-        while (num_snp--)
-        {
-            std::uniform_int_distribution<int> dist(
-                static_cast<int>(begin), static_cast<int>(num_background) - 1);
-            r = background[begin];
-            advance_index = static_cast<size_t>(dist(g));
-            background[begin] = background[advance_index];
-            background[advance_index] = r;
-            ++begin;
-        }
+        // sample without replacement
+        fisher_yates(background, g, max_size);
         first_run = true;
         prev_size = 0;
         for (auto&& set_size : set_index)
@@ -78,7 +64,6 @@ void PRSice::produce_null_prs(
         ++processed;
     }
     // send termination signal to the consumers
-
     q.completed();
 }
 
@@ -112,16 +97,14 @@ void PRSice::consume_prs(
         if (is_binary && m_perm_info.logit_perm)
         {
             independent.col(1) = Eigen::Map<Eigen::VectorXd>(
-                std::get<0>(prs_info).data(),
-                static_cast<Eigen::Index>(num_regress_sample));
+                std::get<0>(prs_info).data(), num_regress_sample);
             Regression::glm(m_phenotype, independent, obs_p, r2, coefficient,
                             standard_error, 1);
         }
         else
         {
-            prs = Eigen::Map<Eigen::VectorXd>(
-                std::get<0>(prs_info).data(),
-                static_cast<Eigen::Index>(num_regress_sample));
+            prs = Eigen::Map<Eigen::VectorXd>(std::get<0>(prs_info).data(),
+                                              num_regress_sample);
             get_t_value(decomposed, prs, se_base, coefficient, standard_error);
         }
         double t_value = std::fabs(coefficient / standard_error);
@@ -148,7 +131,24 @@ void PRSice::observe_set_perm(Thread_Queue<size_t>& progress_observer,
     }
 }
 
-
+// Shuffle the idx vector
+// By selecting the first n element from idx, we've got the random selection
+// without replacement
+void PRSice::fisher_yates(std::vector<size_t>& idx, std::mt19937& g, size_t n)
+{
+    size_t begin = 0;
+    // we will shuffle n where n is the set with the largest size
+    // this is the Fisher-Yates shuffle algorithm for random selection
+    // without replacement
+    size_t num_idx = idx.size();
+    while (n--)
+    {
+        std::uniform_int_distribution<size_t> dist(begin, num_idx - 1);
+        size_t advance_index = dist(g);
+        std::swap(idx[begin], idx[advance_index]);
+        ++begin;
+    }
+}
 template <typename T>
 void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                               std::vector<size_t> background,
@@ -156,9 +156,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                               std::vector<std::atomic<size_t>>& set_perm_res,
                               const std::vector<double>& obs_t_value,
                               const std::random_device::result_type seed,
-                              const Regress& decomposed,
-                              const size_t num_background,
-                              const size_t num_perm, const bool is_binary)
+                              const Regress& decomposed, const size_t num_perm,
+                              const bool is_binary)
 {
     const size_t max_size = set_index.rbegin()->first;
     const Eigen::Index num_sample =
@@ -173,19 +172,7 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                   decomposed.rank, se_base);
     while (processed < num_perm)
     {
-        size_t begin = 0;
-        // we will shuffle n where n is the set with the largest size
-        // this is the Fisher-Yates shuffle algorithm for random selection
-        // without replacement
-        size_t num_snp = max_size;
-        while (num_snp--)
-        {
-            std::uniform_int_distribution<size_t> dist(begin,
-                                                       num_background - 1);
-            size_t advance_index = dist(g);
-            std::swap(background[begin], background[advance_index]);
-            ++begin;
-        }
+        fisher_yates(background, g, max_size);
         //  we have now selected N SNPs from the background. We can then
         //  construct the PRS based on these index
         first_run = true;
@@ -394,7 +381,6 @@ void PRSice::run_competitive(
             Thread_Queue<std::pair<std::vector<double>, size_t>> set_perm_queue;
             std::thread producer(&PRSice::produce_null_prs, this,
                                  std::ref(set_perm_queue), std::ref(target),
-                                 std::cref(num_bk_snps),
                                  std::vector<size_t>(bk_start_idx, bk_end_idx),
                                  num_thread - 1, std::ref(set_index));
             std::vector<std::thread> consumer_store;
@@ -435,7 +421,7 @@ void PRSice::run_competitive(
                     std::vector<size_t>(bk_start_idx, bk_end_idx),
                     std::ref(set_index), std::ref(set_perm_res),
                     std::cref(obs_t_value), seed, std::cref(decomposed),
-                    num_bk_snps, job_per_thread + (remain > 0), is_binary));
+                    job_per_thread + (remain > 0), is_binary));
                 ran_perm += job_per_thread + (remain > 0);
                 remain--;
             }
@@ -448,10 +434,10 @@ void PRSice::run_competitive(
         // alternatively, if we only got one thread, we will use the no
         // thread function to reduce threading overhead
         dummy_reporter<size_t> dummy(*this);
-        subject_set_perm(
-            dummy, target, std::vector<size_t>(bk_start_idx, bk_end_idx),
-            set_index, set_perm_res, obs_t_value, m_seed, decomposed,
-            num_bk_snps, m_perm_info.num_permutation, is_binary);
+        subject_set_perm(dummy, target,
+                         std::vector<size_t>(bk_start_idx, bk_end_idx),
+                         set_index, set_perm_res, obs_t_value, m_seed,
+                         decomposed, m_perm_info.num_permutation, is_binary);
         ran_perm = m_perm_info.num_permutation;
     }
     // start_index is the index of m_prs_summary[i], not the actual index

@@ -421,8 +421,7 @@ private:
                           std::vector<std::atomic<size_t>>& set_perm_res,
                           const std::vector<double>& obs_t_value,
                           const std::random_device::result_type seed,
-                          const Regress& decomposed,
-                          const size_t num_background, const size_t num_perm,
+                          const Regress& decomposed, const size_t num_perm,
                           const bool is_binary);
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
@@ -447,8 +446,8 @@ private:
      */
     void
     produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     Genotype& target, const size_t& num_background,
-                     std::vector<size_t> background, size_t num_consumer,
+                     Genotype& target, std::vector<size_t> background,
+                     size_t num_consumer,
                      std::map<size_t, std::vector<size_t>>& set_index);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
@@ -476,9 +475,9 @@ private:
         const std::map<size_t, std::vector<size_t>>& set_index,
         const Regress& decomposed, std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
-    void get_t_value(const Regress& decomposed, const Eigen::VectorXd& prs,
-                     const Eigen::VectorXd& se_base, double& coefficient,
-                     double& standard_error);
+    double get_t_value(const Regress& decomposed, const Eigen::VectorXd& prs,
+                       const Eigen::VectorXd& se_base, double& coefficient,
+                       double& standard_error);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
      * \param q is the queue for contacting the consumers
@@ -526,6 +525,8 @@ private:
     load_pheno_map(const size_t idx, const std::string& delim);
     void reset_result_containers(const Genotype& target,
                                  const size_t region_idx);
+
+    void fisher_yates(std::vector<size_t>& idx, std::mt19937& g, size_t n);
     template <typename T>
     class dummy_reporter
     {

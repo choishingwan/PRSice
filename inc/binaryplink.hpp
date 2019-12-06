@@ -70,19 +70,10 @@ protected:
 
         // now we start reading / parsing the binary from the file
         assert(unfiltered_sample_ct);
-        if (m_unfiltered_sample_ct == m_founder_ct)
-        {
-            m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed",
-                                 byte_pos, unfiltered_sample_ct4,
-                                 reinterpret_cast<char*>(genotype));
-        }
-        else
-        {
-            m_genotype_file.read(
-                m_genotype_file_names[file_idx] + ".bed", byte_pos,
-                unfiltered_sample_ct4,
-                reinterpret_cast<char*>(m_tmp_genotype.data()));
-        }
+
+        m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
+                             unfiltered_sample_ct4,
+                             reinterpret_cast<char*>(m_tmp_genotype.data()));
         if (m_unfiltered_sample_ct != m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
@@ -92,6 +83,7 @@ protected:
         }
         else
         {
+            genotype = m_tmp_genotype.data();
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
     }
