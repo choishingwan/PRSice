@@ -170,6 +170,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
     Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample), se_base;
     get_se_matrix(decomposed.PQR, decomposed.Pmat, decomposed.Rinv, p,
                   decomposed.rank, se_base);
+    std::ofstream debug2;
+    debug2.open("RES-" + misc::to_string(std::this_thread::get_id()));
     while (processed < num_perm)
     {
         fisher_yates(background, g, max_size);
@@ -211,12 +213,16 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                             standard_error);
             }
             t_value = std::fabs(coefficient / standard_error);
+
+            debug2 << set_size.first << "\t" << t_value << std::endl;
+
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
             { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
         }
         ++processed;
     }
+    debug2.close();
     progress_observer.completed();
 }
 
