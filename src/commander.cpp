@@ -240,8 +240,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             {
                 error |= !set_numeric<int>(optarg, "num-auto",
                                            m_target.num_autosome);
-                error |= !set_numeric<int>(optarg, "num-auto",
-                                           m_reference.num_autosome);
+                m_reference.num_autosome = m_target.num_autosome;
             }
             else if (command == "pearson")
             {
