@@ -2158,8 +2158,7 @@ void PRSice::get_se_matrix(
 }
 
 double PRSice::get_t_value(const Regress& decomposed,
-                           const Eigen::VectorXd& prs,
-                           const Eigen::VectorXd& se_base, double& coefficient,
+                           const Eigen::VectorXd& prs, double& coefficient,
                            double& standard_error)
 {
     Eigen::VectorXd beta, se, effects, fitted, resid;
@@ -2190,7 +2189,7 @@ double PRSice::get_t_value(const Regress& decomposed,
     df = (decomposed.rank >= 0) ? num_regress_sample - p
                                 : num_regress_sample - decomposed.rank;
     double s = resid.norm() / std::sqrt(double(df));
-    se = s * se_base;
+    se = s * decomposed.se;
     standard_error = se(1);
     coefficient = beta(1);
     return coefficient / standard_error;

@@ -31,7 +31,6 @@ void PRSice::produce_null_prs(
     // we seed the random number generator
     std::mt19937 g(m_seed);
     bool first_run = true;
-    std::vector<PRS> cur_prs(target.num_sample());
     while (processed < m_perm_info.num_permutation)
     {
         // sample without replacement
@@ -41,8 +40,8 @@ void PRSice::produce_null_prs(
         for (auto&& set_size : set_index)
         {
             // for each gene sets size, we calculate the PRS
-            target.get_null_score(cur_prs, set_size.first, prev_size,
-                                  background, first_run);
+            target.get_null_score(set_size.first, prev_size, background,
+                                  first_run);
             first_run = false;
             // we need to know how many SNPs we have already read, such that
             // we can skip reading this number of SNPs for the next set
@@ -75,15 +74,12 @@ void PRSice::consume_prs(
     const std::vector<double>& obs_t_value,
     std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary)
 {
-    Eigen::MatrixXd independent;
-    const Eigen::Index p = m_independent_variables.cols();
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
+    Eigen::MatrixXd independent;
+    Eigen::VectorXd prs;
     if (m_perm_info.logit_perm && is_binary)
         independent = m_independent_variables;
-    Eigen::VectorXd prs, se_base;
-    get_se_matrix(decomposed.PQR, decomposed.Pmat, decomposed.Rinv, p,
-                  decomposed.rank, se_base);
     // to avoid false sharing and frequent lock, we wil first store all
     // permutation results within a temporary vector
     double coefficient, standard_error, r2;
@@ -106,7 +102,7 @@ void PRSice::consume_prs(
         {
             prs = Eigen::Map<Eigen::VectorXd>(std::get<0>(prs_info).data(),
                                               num_regress_sample);
-            get_t_value(decomposed, prs, se_base, coefficient, standard_error);
+            get_t_value(decomposed, prs, coefficient, standard_error);
         }
         double t_value = std::fabs(coefficient / standard_error);
         auto&& index = set_index[std::get<1>(prs_info)];
@@ -115,7 +111,7 @@ void PRSice::consume_prs(
         for (auto&& ref : index)
         {
             // in theory because set_perm_res is now atomic, it should be ok
-            if (obs_t_value[ref] < t_value) set_perm_res[ref]++;
+            if (obs_t_value[ref] < t_value) ++set_perm_res[ref];
         }
     }
 }
@@ -123,7 +119,7 @@ void PRSice::consume_prs(
 void PRSice::observe_set_perm(Thread_Queue<size_t>& progress_observer,
                               size_t num_thread)
 {
-    size_t progress, total_run = 0;
+    size_t progress = 0, total_run = 0;
     while (!progress_observer.pop(progress, num_thread))
     {
         m_analysis_done += progress;
@@ -141,15 +137,17 @@ void PRSice::fisher_yates(std::vector<size_t>& idx, std::mt19937& g, size_t n)
     // we will shuffle n where n is the set with the largest size
     // this is the Fisher-Yates shuffle algorithm for random selection
     // without replacement
-    size_t num_idx = idx.size();
+    size_t num_idx = idx.size() - 1;
+    size_t advance_index;
     while (n--)
     {
-        std::uniform_int_distribution<size_t> dist(begin, num_idx - 1);
-        size_t advance_index = dist(g);
-        std::swap(idx[begin], idx[advance_index]);
+        std::uniform_int_distribution<size_t> dist(begin, num_idx);
+        advance_index = dist(g);
+        std::swap<size_t>(idx[begin], idx[advance_index]);
         ++begin;
     }
 }
+
 template <typename T>
 void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                               std::vector<size_t> background,
@@ -163,16 +161,17 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
     const size_t max_size = set_index.rbegin()->first;
     const Eigen::Index num_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
-    const Eigen::Index p = m_independent_variables.cols();
     double coefficient, standard_error, r2, obs_p, t_value;
-    size_t processed = 0;
-    std::mt19937 g(seed);
-    bool first_run = true;
-    Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample), se_base;
-    get_se_matrix(decomposed.PQR, decomposed.Pmat, decomposed.Rinv, p,
-                  decomposed.rank, se_base);
+    Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample);
+    Eigen::MatrixXd independent;
+    if (m_perm_info.logit_perm && is_binary)
+    { independent = m_independent_variables; }
+    // each thread should have their own cur_prs to avoid overhead
     std::vector<PRS> cur_prs(target.num_sample());
     std::ofstream debug("RES-" + misc::to_string(std::this_thread::get_id()));
+    bool first_run = true;
+    std::mt19937 g(seed);
+    size_t processed = 0;
     while (processed < num_perm)
     {
         fisher_yates(background, g, max_size);
@@ -189,18 +188,15 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             for (Eigen::Index sample_id = 0; sample_id < num_sample;
                  ++sample_id)
             {
+                size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
                 if (m_perm_info.logit_perm && is_binary)
                 {
-                    m_independent_variables(sample_id, 1) =
-                        target.calculate_score(
-                            cur_prs,
-                            m_matrix_index[static_cast<size_t>(sample_id)]);
+                    independent(sample_id, 1) =
+                        target.calculate_score(cur_prs, idx);
                 }
                 else
                 {
-                    prs(sample_id) = target.calculate_score(
-                        cur_prs,
-                        m_matrix_index[static_cast<size_t>(sample_id)]);
+                    prs(sample_id) = target.calculate_score(cur_prs, idx);
                 }
             }
             progress_observer.emplace(1);
@@ -212,13 +208,13 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             }
             else
             {
-                get_t_value(decomposed, prs, se_base, coefficient,
-                            standard_error);
+                get_t_value(decomposed, prs, coefficient, standard_error);
             }
             t_value = std::fabs(coefficient / standard_error);
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
             { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
+
             debug << set_size.first << "\t" << cur_prs.front().num_snp << "\t"
                   << t_value << std::endl;
         }
@@ -297,6 +293,8 @@ void PRSice::run_competitive(
                     .solve(Eigen::MatrixXd::Identity(decomposed.rank,
                                                      decomposed.rank));
         }
+        get_se_matrix(decomposed.PQR, decomposed.Pmat, decomposed.Rinv, p,
+                      decomposed.rank, decomposed.se);
     }
     m_printed_warning = true;
     for (size_t i = 0; i < num_prs_res; ++i)

@@ -476,8 +476,7 @@ private:
         const Regress& decomposed, std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
     double get_t_value(const Regress& decomposed, const Eigen::VectorXd& prs,
-                       const Eigen::VectorXd& se_base, double& coefficient,
-                       double& standard_error);
+                       double& coefficient, double& standard_error);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
      * \param q is the queue for contacting the consumers

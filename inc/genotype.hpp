@@ -328,6 +328,13 @@ public:
                         const size_t& prev_size,
                         std::vector<size_t>& background_list,
                         const bool first_run);
+    void get_null_score(const size_t& set_size, const size_t& prev_size,
+                        std::vector<size_t>& background_list,
+                        const bool first_run)
+    {
+        get_null_score(m_prs_info, set_size, prev_size, background_list,
+                       first_run);
+    }
     /*!
      * \brief return the largest chromosome allowed
      * \return  the largest chromosome
