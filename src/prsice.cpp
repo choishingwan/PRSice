@@ -2157,40 +2157,43 @@ void PRSice::get_se_matrix(
     }
 }
 
+void PRSice::get_coeff_fit(const Regress& decomposed,
+                           const Eigen::VectorXd& prs, Eigen::VectorXd& beta,
+                           Eigen::VectorXd& fitted)
+{
+    const Eigen::Index p = m_independent_variables.cols();
+    if (decomposed.rank == p)
+    { // full rank case
+        beta = decomposed.PQR.solve(prs);
+        fitted = decomposed.YCov * beta;
+        return;
+    }
+    Eigen::VectorXd effects = decomposed.PQR.householderQ().adjoint() * prs;
+    beta =
+        Eigen::VectorXd::Constant(p, std::numeric_limits<double>::quiet_NaN());
+    beta.head(decomposed.rank) =
+        decomposed.Rinv * effects.head(decomposed.rank);
+    beta = decomposed.Pmat * beta;
+    const Eigen::Index num_regress_sample =
+        static_cast<Eigen::Index>(m_matrix_index.size());
+    effects.tail(num_regress_sample - decomposed.rank).setZero();
+    fitted = decomposed.PQR.householderQ() * effects;
+}
 double PRSice::get_t_value(const Regress& decomposed,
                            const Eigen::VectorXd& prs, double& coefficient,
                            double& standard_error)
 {
-    Eigen::VectorXd beta, se, effects, fitted, resid;
-    const Eigen::Index num_regress_sample =
-        static_cast<Eigen::Index>(m_matrix_index.size());
-    const Eigen::Index p = m_independent_variables.cols();
-    Eigen::Index df;
-    // to avoid false sharing and frequent lock, we wil first store all
-    // permutation results within a temporary vector
-
-    if (p == decomposed.rank)
-    {
-        beta = decomposed.PQR.solve(prs);
-        fitted = decomposed.YCov * beta;
-    }
-    else
-    {
-        effects = decomposed.PQR.householderQ().adjoint() * prs;
-        beta = Eigen::VectorXd::Constant(
-            p, std::numeric_limits<double>::quiet_NaN());
-        beta.head(decomposed.rank) =
-            decomposed.Rinv * effects.head(decomposed.rank);
-        beta = decomposed.Pmat * beta;
-        effects.tail(num_regress_sample - decomposed.rank).setZero();
-        fitted = decomposed.PQR.householderQ() * effects;
-    }
-    resid = prs - fitted;
-    df = (decomposed.rank >= 0) ? num_regress_sample - p
-                                : num_regress_sample - decomposed.rank;
-    double s = resid.norm() / std::sqrt(double(df));
-    se = s * decomposed.se;
-    standard_error = se(1);
+    Eigen::VectorXd beta, fitted;
+    get_coeff_fit(decomposed, prs, beta, fitted);
     coefficient = beta(1);
+    const Eigen::Index rank = decomposed.rank;
+    const Eigen::Index num_regress_sample = decomposed.YCov.rows();
+    const Eigen::Index p = m_independent_variables.cols();
+    Eigen::VectorXd resid = prs - fitted;
+    Eigen::Index df = (rank >= 0) ? num_regress_sample - p
+                                  : num_regress_sample - decomposed.rank;
+    double s = resid.norm() / std::sqrt(double(df));
+    Eigen::VectorXd se = s * decomposed.se;
+    standard_error = se(1);
     return coefficient / standard_error;
 }

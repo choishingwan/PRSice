@@ -414,6 +414,8 @@ private:
         const Eigen::Index rank, Eigen::VectorXd& se_base);
     void observe_set_perm(Thread_Queue<size_t>& progress_observer,
                           size_t total_perm);
+    void get_coeff_fit(const Regress& decomposed, const Eigen::VectorXd& prs,
+                       Eigen::VectorXd& beta, Eigen::VectorXd& fitted);
     template <typename T>
     void subject_set_perm(T& progress_observer, Genotype& target,
                           std::vector<size_t> background,
