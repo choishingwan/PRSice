@@ -1163,6 +1163,13 @@ bool PRSice::run_prsice(const size_t pheno_index, const size_t region_index,
     if (m_perm_info.run_perm) process_permutations();
     if (!m_prs_info.no_regress & !m_quick_best)
     { slow_print_best(target, pheno_index); }
+    std::ofstream debug;
+    debug.open("Check");
+    debug << m_phenotype << std::endl;
+    debug.close();
+    debug.open("PRS");
+    debug << m_independent_variables << std::endl;
+    debug.close();
     return true;
 }
 

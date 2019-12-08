@@ -236,7 +236,10 @@ void PRSice::run_competitive(
     const size_t pheno_index)
 {
     if (!m_perm_info.run_set_perm) { return; }
-
+    std::ofstream original;
+    original.open("ORI");
+    original << m_phenotype << std::endl;
+    original.close();
     fprintf(stderr, "\n");
     m_reporter->report("\n\nStart competitive permutation\n");
     const bool is_binary = m_pheno_info.binary[pheno_index];
@@ -287,6 +290,8 @@ void PRSice::run_competitive(
     {
         decomposed.YCov = m_independent_variables;
         decomposed.YCov.col(1) = m_phenotype;
+        // TODO The phenotype vector here doesn't seems to represent the
+        // phenotype in the reference file?
         decomposed.PQR.compute(decomposed.YCov);
         decomposed.Pmat = decomposed.PQR.colsPermutation();
         decomposed.rank = decomposed.PQR.rank();

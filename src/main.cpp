@@ -267,15 +267,17 @@ int main(int argc, char* argv[])
                     }
                 }
                 if (!commander.get_prs_instruction().no_regress)
-                { prsice.print_best(*target_file, region_names, i_pheno); }
-                if (!commander.get_prs_instruction().no_regress
-                    && commander.get_perm().run_set_perm
-                    && region_names.size() > 2)
                 {
-                    // only perform permutation if regression is performed
-                    // and user request it
-                    prsice.run_competitive(*target_file, background_start_idx,
-                                           background_end_idx, i_pheno);
+                    prsice.print_best(*target_file, region_names, i_pheno);
+                    if (commander.get_perm().run_set_perm
+                        && region_names.size() > 2)
+                    {
+                        // only perform permutation if regression is performed
+                        // and user request it
+                        prsice.run_competitive(*target_file,
+                                               background_start_idx,
+                                               background_end_idx, i_pheno);
+                    }
                 }
             }
             prsice.print_progress(true);
