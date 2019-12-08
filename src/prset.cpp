@@ -216,7 +216,13 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
 
             debug << set_size.first << "\t" << cur_prs.front().num_snp << "\t"
-                  << t_value << std::endl;
+                  << coefficient << "\t" << standard_error << "\t" << t_value
+                  << std::endl;
+            std::ofstream test;
+            test.open("DEBUG");
+            test << prs << std::endl;
+            test.close();
+            exit(0);
         }
         ++processed;
     }
