@@ -1,4 +1,4 @@
-﻿// This file is part of PRSice-2, copyright (C) 2016-2019
+// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -577,7 +577,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         num_control = 0;
         for (auto&& pheno : pheno_store)
         {
-            pheno--;
+            --pheno;
             if (pheno < 0) { error = true; }
             else
                 (misc::logically_equal(pheno, 1)) ? ++num_case : ++num_control;
@@ -1163,13 +1163,6 @@ bool PRSice::run_prsice(const size_t pheno_index, const size_t region_index,
     if (m_perm_info.run_perm) process_permutations();
     if (!m_prs_info.no_regress & !m_quick_best)
     { slow_print_best(target, pheno_index); }
-    std::ofstream debug;
-    debug.open("Check");
-    debug << m_phenotype << std::endl;
-    debug.close();
-    debug.open("PRS");
-    debug << m_independent_variables << std::endl;
-    debug.close();
     return true;
 }
 
@@ -1894,33 +1887,65 @@ void PRSice::prep_output(const Genotype& target,
     // when we move out of the function
 }
 
-void PRSice::no_regress_out(const std::vector<std::string>& region_names,
-                            const size_t pheno_index, const size_t region_index)
+void PRSice::adjustment_factor(const double prevalence, double& top,
+                               double& bottom)
 {
-    std::string pheno_name = "";
-    if (m_pheno_info.pheno_col.size() > 1)
-        pheno_name = m_pheno_info.pheno_col[pheno_index];
-    std::string output_prefix = m_prefix;
-    if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
-    const std::string out_prsice = output_prefix + ".prsice";
+    double num_case = m_phenotype.sum();
+    double case_ratio = num_case / static_cast<double>(m_phenotype.rows());
+    // the following is from Lee et al A better coefficient paper
+    double x = misc::qnorm(1 - prevalence);
+    double z = misc::dnorm(x);
+    double i2 = z / prevalence;
+    double cc = prevalence * (1 - prevalence) * prevalence * (1 - prevalence)
+                / (z * z * case_ratio * (1 - case_ratio));
+    double theta = i2 * ((case_ratio - prevalence) / (1 - prevalence))
+                   * (i2 * ((case_ratio - prevalence) / (1 - prevalence)) - x);
+    double e = 1
+               - pow(case_ratio, (2 * case_ratio))
+                     * pow((1 - case_ratio), (2 * (1 - case_ratio)));
+    top = cc * e;
+    bottom = cc * e * theta;
+}
 
-    m_prsice_out.open(out_prsice.c_str());
-    if (!m_prsice_out.is_open())
-    {
-        throw std::runtime_error("Error: Cannot open file: " + out_prsice
-                                 + " to write");
-    }
-    // we won't store the empirical p and competitive p output in the prsice
-    // file now as that seems like a waste (only one threshold will contain
-    // that information, storing that in the summary file should be enough)
-    m_prsice_out
-        << "Set\tThreshold\tR2\tP\tCoefficient\tStandard.Error\tNum_SNP\n";
-    for (size_t i = 0; i < m_prs_results.size(); ++i)
-    {
-        m_prsice_out << region_names[region_index] << "\t"
-                     << m_prs_results[i].threshold << "\t-\t-\t-\t-\t"
-                     << m_prs_results[i].num_snp << "\n";
-    }
+void PRSice::print_na(const std::string& region_name, const double threshold,
+                      const size_t num_snp, const bool has_prevalence)
+{
+    m_prsice_out << region_name << "\t" << threshold << "\tNA\tNA\tNA\tNA\t";
+    if (has_prevalence) m_prsice_out << "NA\t";
+    m_prsice_out << num_snp << "\n";
+}
+
+void PRSice::store_best(const std::string& pheno_name,
+                        const std::string& region_name, const double top,
+                        const double bottom, const double prevalence,
+                        const bool is_base)
+{
+    if (m_best_index < 0) { return; }
+    auto&& best_info =
+        m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
+            m_best_index)];
+    // we will extract the information of the best threshold, store it and
+    // use it to generate the summary file in theory though, I should be
+    // able to start generating the summary file
+    prsice_summary prs_sum;
+    prs_sum.pheno = pheno_name;
+    prs_sum.set = region_name;
+    prs_sum.result = best_info;
+    prs_sum.r2_null = m_null_r2;
+    prs_sum.top = top;
+    prs_sum.bottom = bottom;
+    prs_sum.prevalence = prevalence;
+    // we don't run competitive testing on the base region
+    // therefore we skip region_index == 0 (base is always
+    // the first region)
+    prs_sum.has_competitive = !is_base;
+    m_prs_summary.push_back(prs_sum);
+    if (best_info.p > 0.1)
+        ++m_significant_store[0];
+    else if (best_info.p > 1e-5)
+        ++m_significant_store[1];
+    else
+        ++m_significant_store[2];
 }
 void PRSice::output(const std::vector<std::string>& region_names,
                     const size_t pheno_index, const size_t region_index)
@@ -1928,7 +1953,7 @@ void PRSice::output(const std::vector<std::string>& region_names,
     // if prevalence is provided, we'd like to generate calculate the
     // adjusted R2
 
-    bool has_prevalence = !m_pheno_info.prevalence.empty();
+    const bool has_prevalence = !m_pheno_info.prevalence.empty();
     const bool is_binary = m_pheno_info.binary[pheno_index];
     double top = 1.0, bottom = 1.0, prevalence = -1;
     if (has_prevalence && is_binary)
@@ -1938,46 +1963,30 @@ void PRSice::output(const std::vector<std::string>& region_names,
         {
             if (m_pheno_info.binary[pheno_index]) ++num_prev_binary;
         }
-        double num_case = m_phenotype.sum();
-        double case_ratio = num_case / static_cast<double>(m_phenotype.rows());
-        prevalence = m_pheno_info.prevalence[num_prev_binary];
-        // the following is from Lee et al A better coefficient paper
-        double x = misc::qnorm(1 - prevalence);
-        double z = misc::dnorm(x);
-        double i2 = z / prevalence;
-        double cc = prevalence * (1 - prevalence) * prevalence
-                    * (1 - prevalence)
-                    / (z * z * case_ratio * (1 - case_ratio));
-        double theta =
-            i2 * ((case_ratio - prevalence) / (1 - prevalence))
-            * (i2 * ((case_ratio - prevalence) / (1 - prevalence)) - x);
-        double e = 1
-                   - pow(case_ratio, (2 * case_ratio))
-                         * pow((1 - case_ratio), (2 * (1 - case_ratio)));
-        top = cc * e;
-        bottom = cc * e * theta;
+        adjustment_factor(m_pheno_info.prevalence[num_prev_binary], top,
+                          bottom);
     }
-
     const std::string pheno_name = (m_pheno_info.pheno_col.size() > 1)
                                        ? m_pheno_info.pheno_col[pheno_index]
                                        : "";
     std::string output_prefix = m_prefix;
     if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
-
-    // check if this is a valid phenotyep
-    if (m_best_index == -1)
+    if (m_best_index < 0 && !m_prs_info.no_regress)
     {
-        // when m_best_index == -1, we don't have any valid PRS output
-        // Note: this error will likely be repeated because of print_best
         m_reporter->report("Error: No valid PRS for "
                            + region_names[region_index] + "!");
         return;
     }
-    // now we know can generate the prsice file
+    // now we know we can generate the prsice file
     // go through every result and output
     for (size_t i = 0; i < m_prs_results.size(); ++i)
     {
-        if (m_prs_results[i].threshold < 0 || m_prs_results[i].p < 0) continue;
+        if (m_prs_results[i].threshold < 0 || m_prs_results[i].p < 0)
+        {
+            print_na(region_names[region_index], m_prs_results[i].threshold,
+                     m_prs_results[i].num_snp, has_prevalence);
+            continue;
+        }
         double full = m_prs_results[i].r2;
         double null = m_null_r2;
         double full_adj = full;
@@ -1987,7 +1996,6 @@ void PRSice::output(const std::vector<std::string>& region_names,
             full_adj = top * full / (1 + bottom * full);
             null_adj = top * null / (1 + bottom * null);
         }
-
         double r2 = full - null;
         m_prsice_out << region_names[region_index] << "\t"
                      << m_prs_results[i].threshold << "\t" << r2 << "\t";
@@ -2005,40 +2013,14 @@ void PRSice::output(const std::vector<std::string>& region_names,
         // the empirical p-value will now be excluded from the .prsice
         // output (the "-" isn't that helpful anyway)
     }
-    auto&& best_info =
-        m_prs_results[static_cast<std::vector<prsice_result>::size_type>(
-            m_best_index)];
-
-
-    // we will extract the information of the best threshold, store it and
-    // use it to generate the summary file in theory though, I should be
-    // able to start generating the summary file
-    prsice_summary prs_sum;
-    prs_sum.pheno = pheno_name;
-    prs_sum.set = region_names[region_index];
-    prs_sum.result = best_info;
-    prs_sum.r2_null = m_null_r2;
-    prs_sum.top = top;
-    prs_sum.bottom = bottom;
-    prs_sum.prevalence = prevalence;
-    // we don't run competitive testing on the base region
-    // therefore we skip region_index == 0 (base is always
-    // the first region)
-    prs_sum.has_competitive = (region_index == 0);
-    m_prs_summary.push_back(prs_sum);
-    if (best_info.p > 0.1)
-        m_significant_store[0]++;
-    else if (best_info.p > 1e-5)
-        m_significant_store[1]++;
-    else
-        m_significant_store[2]++;
+    store_best(pheno_name, region_names[region_index], top, bottom, prevalence,
+               region_index == 0);
 }
 
 void PRSice::summarize()
 {
     // we need to know if we are going to write "and" in the output, thus
     // need a flag to indicate if there are any previous outputs
-
     bool has_previous_output = false;
     // we will output a short summary file
     std::string message = "There are ";
@@ -2143,36 +2125,36 @@ void PRSice::get_se_matrix(
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
     const Eigen::MatrixXd& Rinv, const Eigen::Index p, const Eigen::Index rank,
-    Eigen::VectorXd& se_base)
+    Eigen::VectorXd& se)
 {
     if (p == rank)
     {
-        se_base = Pmat
-                  * PQR.matrixQR()
-                        .topRows(p)
-                        .triangularView<Eigen::Upper>()
-                        .solve(lm::I_p(p))
-                        .rowwise()
-                        .norm();
+        se = Pmat
+             * PQR.matrixQR()
+                   .topRows(p)
+                   .triangularView<Eigen::Upper>()
+                   .solve(lm::I_p(p))
+                   .rowwise()
+                   .norm();
     }
     else
     {
-        se_base = Eigen::VectorXd::Constant(
+        se = Eigen::VectorXd::Constant(
             p, std::numeric_limits<double>::quiet_NaN());
-        se_base.head(rank) = Rinv.rowwise().norm();
-        se_base = Pmat * se_base;
+        se.head(rank) = Rinv.rowwise().norm();
+        se = Pmat * se;
     }
 }
 
-void PRSice::get_coeff_fit(const Regress& decomposed,
-                           const Eigen::VectorXd& prs, Eigen::VectorXd& beta,
-                           Eigen::VectorXd& fitted)
+void PRSice::get_coeff_resid_norm(const Regress& decomposed,
+                                  const Eigen::VectorXd& prs,
+                                  Eigen::VectorXd& beta, double& resid_norm)
 {
     const Eigen::Index p = m_independent_variables.cols();
     if (decomposed.rank == p)
     { // full rank case
         beta = decomposed.PQR.solve(prs);
-        fitted = decomposed.YCov * beta;
+        resid_norm = (prs - decomposed.YCov * beta).norm();
         return;
     }
     Eigen::VectorXd effects = decomposed.PQR.householderQ().adjoint() * prs;
@@ -2184,23 +2166,24 @@ void PRSice::get_coeff_fit(const Regress& decomposed,
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     effects.tail(num_regress_sample - decomposed.rank).setZero();
-    fitted = decomposed.PQR.householderQ() * effects;
+    resid_norm = (prs - decomposed.PQR.householderQ() * effects).norm();
 }
+
 double PRSice::get_t_value(const Regress& decomposed,
                            const Eigen::VectorXd& prs, double& coefficient,
                            double& standard_error)
 {
-    Eigen::VectorXd beta, fitted;
-    get_coeff_fit(decomposed, prs, beta, fitted);
+    Eigen::VectorXd beta;
+    double resid_norm;
+    get_coeff_resid_norm(decomposed, prs, beta, resid_norm);
     coefficient = beta(1);
     const Eigen::Index rank = decomposed.rank;
     const Eigen::Index num_regress_sample = decomposed.YCov.rows();
     const Eigen::Index p = m_independent_variables.cols();
-    Eigen::VectorXd resid = prs - fitted;
-    Eigen::Index df = (rank >= 0) ? num_regress_sample - p
-                                  : num_regress_sample - decomposed.rank;
-    double s = resid.norm() / std::sqrt(double(df));
-    Eigen::VectorXd se = s * decomposed.se;
+    const Eigen::Index df = (rank >= 0) ? num_regress_sample - p
+                                        : num_regress_sample - decomposed.rank;
+    const double s = resid_norm / std::sqrt(double(df));
+    const Eigen::VectorXd se = s * decomposed.se;
     standard_error = se(1);
     return coefficient / standard_error;
 }

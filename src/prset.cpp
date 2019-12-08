@@ -168,10 +168,12 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
     { independent = m_independent_variables; }
     // each thread should have their own cur_prs to avoid overhead
     std::vector<PRS> cur_prs(target.num_sample());
-    std::ofstream debug("RES-" + misc::to_string(std::this_thread::get_id()));
     bool first_run = true;
     std::mt19937 g(seed);
     size_t processed = 0;
+    std::ofstream debug;
+    debug.open(
+        std::string("RES-" + misc::to_string(std::this_thread::get_id())));
     while (processed < num_perm)
     {
         fisher_yates(background, g, max_size);
@@ -214,15 +216,15 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
             { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
-
-            debug << set_size.first << "\t" << cur_prs.front().num_snp << "\t"
-                  << coefficient << "\t" << standard_error << "\t" << t_value
-                  << std::endl;
-            std::ofstream test;
-            test.open("DEBUG");
-            test << prs << std::endl;
-            test.close();
-            exit(0);
+            debug << set_size.first << "\t" << t_value << "\t" << coefficient
+                  << "\t" << standard_error << std::endl;
+            std::ofstream check;
+            check.open("Set_Pheno");
+            check << decomposed.YCov << std::endl;
+            check.close();
+            check.open("Set_PRS");
+            check << prs << std::endl;
+            check.close();
         }
         ++processed;
     }
@@ -235,11 +237,14 @@ void PRSice::run_competitive(
     const std::vector<size_t>::const_iterator& bk_end_idx,
     const size_t pheno_index)
 {
+    std::ofstream debug;
+    debug.open("ORI");
+    debug << m_phenotype << std::endl;
+    debug.close();
+    debug.open("PRS");
+    debug << m_independent_variables << std::endl;
+    debug.close();
     if (!m_perm_info.run_set_perm) { return; }
-    std::ofstream original;
-    original.open("ORI");
-    original << m_phenotype << std::endl;
-    original.close();
     fprintf(stderr, "\n");
     m_reporter->report("\n\nStart competitive permutation\n");
     const bool is_binary = m_pheno_info.binary[pheno_index];

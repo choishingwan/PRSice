@@ -141,8 +141,6 @@ public:
      */
     void output(const std::vector<std::string>& region_names,
                 const size_t pheno_index, const size_t region_index);
-    void no_regress_out(const std::vector<std::string>& region_names,
-                        const size_t pheno_index, const size_t region_index);
     /*!
      * \brief Function that prepare the output files by writing out white
      * spaces, this allow us to generate a nice vertical file
@@ -381,6 +379,14 @@ private:
      * \param reporter is the logger
      */
     void gen_cov_matrix(const std::string& delim);
+    void adjustment_factor(const double prevalence, double& top,
+                           double& bottom);
+    void print_na(const std::string& region_name, const double threshold,
+                  const size_t num_snp, const bool has_prevalence);
+    void store_best(const std::string& pheno_name,
+                    const std::string& region_name, const double top,
+                    const double bottom, const double prevalence,
+                    const bool is_base);
     /*!
      * \brief Function use to process the covariate file, should be able to
      * determine the level of factors
@@ -414,8 +420,9 @@ private:
         const Eigen::Index rank, Eigen::VectorXd& se_base);
     void observe_set_perm(Thread_Queue<size_t>& progress_observer,
                           size_t total_perm);
-    void get_coeff_fit(const Regress& decomposed, const Eigen::VectorXd& prs,
-                       Eigen::VectorXd& beta, Eigen::VectorXd& fitted);
+    void get_coeff_resid_norm(const Regress& decomposed,
+                              const Eigen::VectorXd& prs, Eigen::VectorXd& beta,
+                              double& resid_norm);
     template <typename T>
     void subject_set_perm(T& progress_observer, Genotype& target,
                           std::vector<size_t> background,
@@ -536,7 +543,7 @@ private:
 
     public:
         dummy_reporter(PRSice& p) : m_parent(p) {}
-        void emplace(T&& item)
+        void emplace(T&& /*item*/)
         {
             ++m_parent.m_analysis_done;
             m_parent.print_progress();

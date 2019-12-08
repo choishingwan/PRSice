@@ -255,16 +255,7 @@ int main(int argc, char* argv[])
                         // did not run
                         continue;
                     }
-                    if (!commander.get_prs_instruction().no_regress)
-                    {
-                        // if we performed regression, we'd like to generate
-                        // the output file (.prsice)
-                        prsice.output(region_names, i_pheno, i_region);
-                    }
-                    else
-                    {
-                        prsice.no_regress_out(region_names, i_pheno, i_region);
-                    }
+                    prsice.output(region_names, i_pheno, i_region);
                 }
                 if (!commander.get_prs_instruction().no_regress)
                 {
