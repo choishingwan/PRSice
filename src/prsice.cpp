@@ -1938,7 +1938,7 @@ void PRSice::store_best(const std::string& pheno_name,
     // we don't run competitive testing on the base region
     // therefore we skip region_index == 0 (base is always
     // the first region)
-    prs_sum.has_competitive = !is_base;
+    prs_sum.has_competitive = is_base;
     m_prs_summary.push_back(prs_sum);
     if (best_info.p > 0.1)
         ++m_significant_store[0];
