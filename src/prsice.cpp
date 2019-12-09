@@ -2152,7 +2152,8 @@ void PRSice::get_coeff_resid_norm(const Regress& decomposed,
 {
     const Eigen::Index p = m_independent_variables.cols();
     if (decomposed.rank == p)
-    { // full rank case
+    {
+        // full rank case
         beta = decomposed.PQR.solve(prs);
         resid_norm = (prs - decomposed.YCov * beta).norm();
         return;
