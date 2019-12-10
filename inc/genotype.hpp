@@ -351,13 +351,12 @@ public:
                    const bool keep_ambig);
     void build_clump_windows(const unsigned long long& clump_distance);
     intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
-    void build_membership_matrix(std::vector<size_t>& region_membership,
-                                 std::vector<size_t>& region_start_idx,
-                                 const size_t num_sets, const std::string& out,
-                                 const std::vector<std::string>& region_name,
-                                 const bool print_snps);
+    void
+    build_membership_matrix(std::vector<std::vector<size_t>>& region_membership,
+                            const size_t num_sets, const std::string& out,
+                            const std::vector<std::string>& region_name,
+                            const bool print_snps);
     size_t num_threshold() const { return m_num_thresholds; }
-    std::vector<double> get_thresholds() const { return m_thresholds; }
     std::vector<std::set<double>> get_set_thresholds() const
     {
         return m_set_thresholds;
@@ -502,7 +501,6 @@ protected:
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_file_names;
     std::vector<mio::mmap_source> m_genotype_files;
-    std::vector<double> m_thresholds;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;

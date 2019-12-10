@@ -32,10 +32,10 @@
 #include <utility>
 
 
-void print_empty_region(const std::string& out,
-                        const std::vector<size_t>& region_membership,
-                        const std::vector<size_t>& region_start_idx,
-                        std::vector<std::string>& region_names);
+void print_empty_region(
+    const std::string& out,
+    const std::vector<std::vector<size_t>>& region_membership,
+    std::vector<std::string>& region_names);
 int main(int argc, char* argv[])
 {
     // initialize reporter, use to generate log
@@ -196,28 +196,19 @@ int main(int argc, char* argv[])
             // Use sparse matrix for space and speed
             // Column = set, row = SNPs (because EIGEN is column major)
             // need to also know the number of threshold included
-            std::vector<size_t> region_membership;
-            std::vector<size_t> region_start_idx;
+            std::vector<std::vector<size_t>> region_membership;
             std::vector<size_t>::const_iterator background_start_idx,
                 background_end_idx;
             target_file->prepare_prsice(commander.get_p_threshold());
-            target_file->build_membership_matrix(
-                region_membership, region_start_idx, num_regions,
-                commander.out(), region_names, commander.print_snp());
-            background_start_idx = region_membership.cbegin();
-            std::advance(background_start_idx,
-                         static_cast<long>(region_start_idx[1]));
-            background_end_idx = region_membership.cbegin();
-            if (num_regions > 2)
-            {
-                std::advance(background_end_idx,
-                             static_cast<long>(region_start_idx[2]));
-            }
+            // from now on, we are not allow to sort the m_existed_snps
+            target_file->build_membership_matrix(region_membership, num_regions,
+                                                 commander.out(), region_names,
+                                                 commander.print_snp());
             // we can now quickly check if any of the region are empty
             try
             {
                 print_empty_region(commander.out(), region_membership,
-                                   region_start_idx, region_names);
+                                   region_names);
             }
             catch (const std::runtime_error& er)
             {
@@ -322,23 +313,20 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void print_empty_region(const std::string& out,
-                        const std::vector<size_t>& region_membership,
-                        const std::vector<size_t>& region_start_idx,
-                        std::vector<std::string>& region_names)
+void print_empty_region(
+    const std::string& out,
+    const std::vector<std::vector<size_t>>& region_membership,
+    std::vector<std::string>& region_names)
 {
     bool has_empty_region = false;
     std::ofstream empty_region;
     std::string empty_region_name = out + ".xregion";
     // region_start_idx size always = num_regions
     // check regions to see if there are any empty regions
-
-    for (size_t i = 2; i < region_start_idx.size(); ++i)
+    for (size_t region_idx = 2; region_idx < region_membership.size();
+         ++region_idx)
     {
-        size_t cur_idx = region_start_idx[i];
-        if ((i + 1 >= region_start_idx.size()
-             && cur_idx == region_membership.size())
-            || cur_idx == region_start_idx[i + 1])
+        if (region_membership[region_idx].empty())
         {
             if (!has_empty_region)
             {

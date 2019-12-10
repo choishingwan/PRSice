@@ -1333,17 +1333,16 @@ bool Genotype::prepare_prsice(const PThresholding& p_info)
     return true;
 }
 
-// TODO: This function is likely to have bug
+// TODO: This function is likely to have bug (2019-12-09 It does)
 void Genotype::build_membership_matrix(
-    std::vector<size_t>& region_membership,
-    std::vector<size_t>& region_start_idx, const size_t num_sets,
+    std::vector<std::vector<size_t>>& region_membership, const size_t num_sets,
     const std::string& out, const std::vector<std::string>& region_name,
     const bool print_snps)
 {
-    std::vector<std::vector<size_t>> temporary_storage(num_sets);
+    // set_thresholds contain the thresholds in each set.
+    // Structure = std::vector<std::set<double>>
     m_set_thresholds.resize(num_sets);
     std::vector<size_t> idx;
-    std::unordered_set<double> threshold;
     std::ofstream snp_out;
     const std::string snp_name = out + ".snp";
     const bool is_prset = (num_sets != 2);
@@ -1352,122 +1351,49 @@ void Genotype::build_membership_matrix(
         snp_out.open(snp_name.c_str());
         if (!snp_out.is_open())
         {
-            std::string error_message =
-                "Error: Cannot open file: " + snp_name + " to write!\n";
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Cannot open file: " + snp_name
+                                     + " to write!\n");
         }
         snp_out << "CHR\tSNP\tBP\tP";
         for (size_t i = 0; i < region_name.size() - !is_prset; ++i)
         { snp_out << "\t" << region_name[i]; }
         snp_out << "\n";
     }
-    size_t prev_idx;
     bool has_snp = false;
-    if (is_prset)
+    std::vector<bool> membership(num_sets);
+    // temporary storage is a 2D vector. For each Set, what are the SNP idx in
+    // this set
+    region_membership.resize(num_sets);
+    for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
     {
-        for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
+        auto&& snp = m_existed_snps[i_snp];
+        std::fill(membership.begin(), membership.end(), false);
+        for (size_t s = 0; s < num_sets; ++s)
         {
-            auto&& snp = m_existed_snps[i_snp];
-            for (size_t s = 0; s < num_sets; ++s)
+            if (snp.in(s))
             {
-                if (snp.in(s))
-                { m_set_thresholds[s].insert(snp.get_threshold()); }
-            }
-            prev_idx = 0;
-            if (threshold.find(snp.get_threshold()) == threshold.end())
-            {
-                ++m_num_thresholds;
-                threshold.insert(snp.get_threshold());
-                m_thresholds.push_back(snp.get_threshold());
-            }
-            if (print_snps)
-            {
-                snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                        << "\t" << snp.p_value();
-                idx = snp.get_set_idx(num_sets);
-                for (auto&& index : idx)
-                {
-                    assert(index >= prev_idx);
-                    for (; prev_idx < index; ++prev_idx) { snp_out << "\t0"; }
-                    snp_out << "\t1";
-                    if (index > 1) has_snp = true;
-                    temporary_storage[index].push_back(i_snp);
-                    prev_idx = index + 1;
-                }
-                for (; prev_idx < num_sets; ++prev_idx) { snp_out << "\t0"; }
-                snp_out << "\n";
-            }
-            else
-            {
-                idx = snp.get_set_idx(num_sets);
-                for (auto&& index : idx)
-                {
-                    temporary_storage[index].push_back(i_snp);
-                    if (index > 1) has_snp = true;
-                }
+                m_set_thresholds[s].insert(snp.get_threshold());
+                membership[s] = true;
+                has_snp = true;
+                region_membership[s].push_back(i_snp);
             }
         }
-        size_t cur_idx = 0;
-        for (size_t i = 0; i < num_sets; ++i)
-        {
-            region_start_idx.push_back(cur_idx);
-            if (!temporary_storage[i].empty())
-            {
-                region_membership.insert(region_membership.end(),
-                                         temporary_storage[i].begin(),
-                                         temporary_storage[i].end());
-                cur_idx = region_membership.size();
-            }
-        }
-        if (!has_snp)
-        {
-            throw std::runtime_error(
-                "Error: None of the gene sets contain any SNP(s) after "
-                "clumping. Have you provided the correct input? E.g. GMT "
-                "file "
-                "containing Entrez ID with GTF files that uses the Ensembl "
-                "gene ID?\n");
-        }
-    }
-    else
-    {
-        // not PRSet. We know the membership is 1:num_snp
-        region_start_idx.push_back(0);
-        region_start_idx.push_back(m_existed_snps.size());
         if (print_snps)
         {
-            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
-            {
-                auto&& snp = m_existed_snps[i_snp];
-                if (threshold.find(snp.get_threshold()) == threshold.end())
-                {
-                    threshold.insert(snp.get_threshold());
-                    m_num_thresholds++;
-                    m_thresholds.push_back(snp.get_threshold());
-                }
-                snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                        << "\t" << snp.p_value() << "\t1\n";
-                region_membership.push_back(i_snp);
-            }
+            snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
+                    << "\t" << snp.p_value();
+            for (auto m : membership) { snp_out << "\t" << m; }
+            snp_out << "\n";
         }
-        else
-        {
-            // directly initialize the vector
-            region_membership.resize(m_existed_snps.size());
-            for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
-            {
-                auto&& snp = m_existed_snps[i_snp];
-                if (threshold.find(snp.get_threshold()) == threshold.end())
-                {
-                    threshold.insert(snp.get_threshold());
-                    m_num_thresholds++;
-                    m_thresholds.push_back(snp.get_threshold());
-                }
-                region_membership[i_snp] = i_snp;
-            }
-        }
-        for (auto&& thres : m_thresholds)
-        { m_set_thresholds.front().insert(thres); }
+    }
+    if (!has_snp)
+    {
+        throw std::runtime_error(
+            "Error: None of the gene sets contain any SNP(s) after "
+            "clumping. Have you provided the correct input? E.g. GMT "
+            "file "
+            "containing Entrez ID with GTF files that uses the Ensembl "
+            "gene ID?\n");
     }
 }
 void Genotype::standardize_prs()
