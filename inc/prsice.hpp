@@ -420,9 +420,9 @@ private:
         const Eigen::Index rank, Eigen::VectorXd& se_base);
     void observe_set_perm(Thread_Queue<size_t>& progress_observer,
                           size_t total_perm);
-    void get_coeff_resid_norm(const Regress& decomposed,
-                              const Eigen::VectorXd& prs, Eigen::VectorXd& beta,
-                              double& resid_norm);
+    double get_coeff_resid_norm(const Regress& decomposed,
+                                const Eigen::VectorXd& prs,
+                                Eigen::VectorXd& beta, Eigen::VectorXd effects);
     template <typename T>
     void subject_set_perm(T& progress_observer, Genotype& target,
                           std::vector<size_t> background,
@@ -485,6 +485,7 @@ private:
         const Regress& decomposed, std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
     double get_t_value(const Regress& decomposed, const Eigen::VectorXd& prs,
+                       Eigen::VectorXd& beta, Eigen::VectorXd& effects,
                        double& coefficient, double& standard_error);
     /*!
      * \brief The "producer" for generating the permuted phenotypes

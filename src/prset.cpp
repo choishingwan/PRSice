@@ -77,7 +77,7 @@ void PRSice::consume_prs(
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     Eigen::MatrixXd independent;
-    Eigen::VectorXd prs;
+    Eigen::VectorXd prs, beta, effects;
     if (m_perm_info.logit_perm && is_binary)
         independent = m_independent_variables;
     // to avoid false sharing and frequent lock, we wil first store all
@@ -102,7 +102,8 @@ void PRSice::consume_prs(
         {
             prs = Eigen::Map<Eigen::VectorXd>(std::get<0>(prs_info).data(),
                                               num_regress_sample);
-            get_t_value(decomposed, prs, coefficient, standard_error);
+            get_t_value(decomposed, prs, beta, effects, coefficient,
+                        standard_error);
         }
         double t_value = std::fabs(coefficient / standard_error);
         auto&& index = set_index[std::get<1>(prs_info)];
@@ -164,6 +165,7 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
         static_cast<Eigen::Index>(m_matrix_index.size());
     double coefficient, standard_error, r2, obs_p, t_value;
     Eigen::VectorXd prs = Eigen::VectorXd::Zero(num_sample);
+    Eigen::VectorXd beta, effects;
     Eigen::MatrixXd independent;
     if (m_perm_info.logit_perm && is_binary)
     { independent = m_independent_variables; }
@@ -208,7 +210,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             }
             else
             {
-                get_t_value(decomposed, prs, coefficient, standard_error);
+                get_t_value(decomposed, prs, beta, effects, coefficient,
+                            standard_error);
             }
             t_value = std::fabs(coefficient / standard_error);
             // set_size second contain the indexs to each set with this size

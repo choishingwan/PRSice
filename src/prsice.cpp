@@ -2146,19 +2146,19 @@ void PRSice::get_se_matrix(
     }
 }
 
-void PRSice::get_coeff_resid_norm(const Regress& decomposed,
-                                  const Eigen::VectorXd& prs,
-                                  Eigen::VectorXd& beta, double& resid_norm)
+double PRSice::get_coeff_resid_norm(const Regress& decomposed,
+                                    const Eigen::VectorXd& prs,
+                                    Eigen::VectorXd& beta,
+                                    Eigen::VectorXd effects)
 {
     const Eigen::Index p = m_independent_variables.cols();
     if (decomposed.rank == p)
     {
         // full rank case
         beta = decomposed.PQR.solve(prs);
-        resid_norm = (prs - decomposed.YCov * beta).norm();
-        return;
+        return (prs - decomposed.YCov * beta).norm();
     }
-    Eigen::VectorXd effects = decomposed.PQR.householderQ().adjoint() * prs;
+    effects = decomposed.PQR.householderQ().adjoint() * prs;
     beta =
         Eigen::VectorXd::Constant(p, std::numeric_limits<double>::quiet_NaN());
     beta.head(decomposed.rank) =
@@ -2167,24 +2167,22 @@ void PRSice::get_coeff_resid_norm(const Regress& decomposed,
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
     effects.tail(num_regress_sample - decomposed.rank).setZero();
-    resid_norm = (prs - decomposed.PQR.householderQ() * effects).norm();
+    return (prs - decomposed.PQR.householderQ() * effects).norm();
 }
 
 double PRSice::get_t_value(const Regress& decomposed,
-                           const Eigen::VectorXd& prs, double& coefficient,
+                           const Eigen::VectorXd& prs, Eigen::VectorXd& beta,
+                           Eigen::VectorXd& effects, double& coefficient,
                            double& standard_error)
 {
-    Eigen::VectorXd beta;
-    double resid_norm;
-    get_coeff_resid_norm(decomposed, prs, beta, resid_norm);
-    coefficient = beta(1);
     const Eigen::Index rank = decomposed.rank;
     const Eigen::Index num_regress_sample = decomposed.YCov.rows();
     const Eigen::Index p = m_independent_variables.cols();
     const Eigen::Index df = (rank >= 0) ? num_regress_sample - p
                                         : num_regress_sample - decomposed.rank;
-    const double s = resid_norm / std::sqrt(double(df));
-    const Eigen::VectorXd se = s * decomposed.se;
-    standard_error = se(1);
+    const double s = get_coeff_resid_norm(decomposed, prs, beta, effects)
+                     / std::sqrt(double(df));
+    coefficient = beta(1);
+    standard_error = (s * decomposed.se)(1);
     return coefficient / standard_error;
 }
