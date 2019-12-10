@@ -1042,7 +1042,7 @@ void PRSice::reset_result_containers(const Genotype& target,
     // m_perm_result stores the result (T-value) from each permutation and
     // is then used for calculation of empirical p value
     m_perm_result.resize(m_perm_info.num_permutation, 0);
-    m_prs_results.resize(target.num_threshold());
+    m_prs_results.resize(target.num_threshold(region_idx));
     // set to -1 to indicate not done
     for (auto&& p : m_prs_results)
     {
@@ -1074,7 +1074,6 @@ bool PRSice::run_prsice(
     Eigen::setNbThreads(m_prs_info.thread);
     reset_result_containers(target, region_index);
     // now prepare all score
-
     // current threshold iteration
     // must iterate after each threshold even if no-regress is called
     size_t prs_result_idx = 0;
@@ -1275,15 +1274,11 @@ void PRSice::regress_score(Genotype& target, const double threshold,
            se = 0.0;
     const Eigen::Index num_regress_samples =
         static_cast<Eigen::Index>(m_matrix_index.size());
-    if (m_num_snp_included == 0
-        || (m_num_snp_included == m_prs_results[prs_result_idx].num_snp))
-    {
-        // if we haven't read in any SNP, or that we have the same number of
-        // SNP as the previous threshold, we will skip (normally this should
-        // not happen, as we have removed any threshold that doesn't contain
-        // any SNPs)
-        return;
-    }
+    // should never have m_num_snp_included == 0
+    assert(!m_prs_results.empty());
+    if (m_num_snp_included == m_prs_results[prs_result_idx].num_snp
+        && !m_prs_info.non_cumulate)
+    { return; }
 
     for (Eigen::Index sample_id = 0; sample_id < num_regress_samples;
          ++sample_id)

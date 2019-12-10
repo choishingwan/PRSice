@@ -169,19 +169,26 @@ public:
      * \param num_thresholds the number of thresholds to process
      */
     void init_progress_count(const size_t num_region,
-                             const size_t num_thresholds)
+                             const std::vector<std::set<double>>& thresholds)
     {
         const size_t num_perm = m_perm_info.num_permutation;
         const bool perm = m_perm_info.run_perm;
         const bool set_perm = m_perm_info.run_set_perm;
-        // the number of raw PRSice run
-        m_total_process = num_thresholds * num_phenotype()
-                          * ((num_region > 2) ? num_region - 1 : 1);
+        // total number of non-permutation processes
+        m_total_process = 0;
+        for (size_t i = 0; i < thresholds.size(); ++i)
+        {
+            if (i == 1) continue;
+            m_total_process += thresholds[i].size();
+        }
+        // then repeat for each phenotype
+        m_total_process *= num_phenotype();
+        // for empirical p, we just repeat the whole process num_perm time
         if (perm) { m_total_process *= (num_perm + 1); }
         else if (set_perm)
         {
-            // the additional permutation we've got to run, num_region -2 as we
-            // don't perform permutation on the background set nor the base set
+            // for set p, we just repeat the best threshold for each set
+            // num_perm time and we skip the base and background
             m_total_process += num_phenotype() * (num_region - 2) * num_perm;
         }
     }

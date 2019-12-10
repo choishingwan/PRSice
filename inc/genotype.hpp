@@ -356,7 +356,10 @@ public:
                             const size_t num_sets, const std::string& out,
                             const std::vector<std::string>& region_name,
                             const bool print_snps);
-    size_t num_threshold() const { return m_num_thresholds; }
+    size_t num_threshold(size_t idx) const
+    {
+        return m_set_thresholds[idx].size();
+    }
     std::vector<std::set<double>> get_set_thresholds() const
     {
         return m_set_thresholds;

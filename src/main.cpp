@@ -215,7 +215,7 @@ int main(int argc, char* argv[])
             }
             // Initialize the progress bar
             prsice.init_progress_count(num_regions,
-                                       target_file->num_threshold());
+                                       target_file->get_set_thresholds());
             const size_t num_pheno = prsice.num_phenotype();
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
