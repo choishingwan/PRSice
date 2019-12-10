@@ -1058,34 +1058,21 @@ void PRSice::reset_result_containers(const Genotype& target,
     if (region_idx == 0) m_best_sample_score.resize(target.num_sample());
     std::fill(m_best_sample_score.begin(), m_best_sample_score.end(), 0);
 }
-bool PRSice::run_prsice(const size_t pheno_index, const size_t region_index,
-                        const std::vector<size_t>& region_membership,
-                        const std::vector<size_t>& region_start_idx,
-                        const bool all_scores, Genotype& target)
+bool PRSice::run_prsice(
+    const size_t pheno_index, const size_t region_index,
+    const std::vector<std::vector<size_t>>& region_membership,
+    const bool all_scores, Genotype& target)
 {
 
     // only print out all scores if this is the first phenotype
     const bool print_all_scores = all_scores && pheno_index == 0;
     const size_t num_samples_included = target.num_sample();
-
-    std::vector<size_t>::const_iterator cur_start_idx =
-        region_membership.cbegin();
-    std::advance(cur_start_idx,
-                 static_cast<long>(region_start_idx[region_index]));
-    std::vector<size_t>::const_iterator cur_end_idx =
-        region_membership.cbegin();
-    if (region_index + 1 >= region_start_idx.size())
-    { cur_end_idx = region_membership.cend(); }
-    else
-    {
-        std::advance(cur_end_idx,
-                     static_cast<long>(region_start_idx[region_index + 1]));
-    }
+    auto set_snp_idx = region_membership[region_index];
+    if (set_snp_idx.empty()) { return false; }
 
     Eigen::initParallel();
     Eigen::setNbThreads(m_prs_info.thread);
     reset_result_containers(target, region_index);
-    if (cur_start_idx == cur_end_idx) { return false; }
     // now prepare all score
 
     // current threshold iteration
@@ -1098,13 +1085,8 @@ bool PRSice::run_prsice(const size_t pheno_index, const size_t region_index,
     // indicate if this is the first run. If this is the first run,
     // get_score will perform assignment instead of addition
     bool first_run = true;
-    // we will call the read score function from the target genotype, which
-    // will then proceed to read in and calculate the PRS for the given
-    // category (defined by the cur_index, which points to the first SNP of
-    // the p-value threshold)
-
-
-    while (target.get_score(cur_start_idx, cur_end_idx, cur_threshold,
+    std::vector<size_t>::const_iterator start = set_snp_idx.begin();
+    while (target.get_score(start, set_snp_idx.cend(), cur_threshold,
                             m_num_snp_included, first_run))
     {
         ++m_analysis_done;
@@ -1155,8 +1137,10 @@ bool PRSice::run_prsice(const size_t pheno_index, const size_t region_index,
     }
     if (m_quick_best)
     {
-        m_fast_best_output.col(region_index) = Eigen::Map<Eigen::VectorXd>(
-            m_best_sample_score.data(), m_best_sample_score.size());
+        m_fast_best_output.col(static_cast<Eigen::Index>(region_index)) =
+            Eigen::Map<Eigen::VectorXd>(
+                m_best_sample_score.data(),
+                static_cast<Eigen::Index>(m_best_sample_score.size()));
     }
 
     // we need to process the permutation result if permutation is required
@@ -1810,19 +1794,14 @@ void PRSice::prep_output(const Genotype& target,
         // we want the threshold to be in sorted order as we will process
         // the SNPs from the smaller threshold to the highest (therefore,
         // the processed_threshold index should be correct)
-        std::vector<double> avail_thresholds = target.get_thresholds();
-        std::sort(avail_thresholds.begin(), avail_thresholds.end());
-        if (avail_thresholds.size() > std::numeric_limits<long long>::max())
-        {
-            throw std::runtime_error("Error: Number of thresholds is too high, "
-                                     "will cause integer overflow");
-        }
+
         const long long begin_byte = m_all_out.tellp();
         m_all_out << "FID IID";
         // size_t header_length = 3+1+3;
         if (!(region_name.size() > 2))
         {
-            for (auto& thres : avail_thresholds) { m_all_out << " " << thres; }
+            for (auto& thres : set_thresholds.front())
+            { m_all_out << " " << thres; }
         }
         else
         {

@@ -114,8 +114,7 @@ public:
     }
     void new_phenotype(Genotype& target);
     bool run_prsice(const size_t pheno_index, const size_t region_index,
-                    const std::vector<size_t>& region_membership,
-                    const std::vector<size_t>& region_start_idx,
+                    const std::vector<std::vector<size_t>>& region_membership,
                     const bool all_scores, Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the

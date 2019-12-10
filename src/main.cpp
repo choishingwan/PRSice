@@ -197,8 +197,6 @@ int main(int argc, char* argv[])
             // Column = set, row = SNPs (because EIGEN is column major)
             // need to also know the number of threshold included
             std::vector<std::vector<size_t>> region_membership;
-            std::vector<size_t>::const_iterator background_start_idx,
-                background_end_idx;
             target_file->prepare_prsice(commander.get_p_threshold());
             // from now on, we are not allow to sort the m_existed_snps
             target_file->build_membership_matrix(region_membership, num_regions,
@@ -239,7 +237,6 @@ int main(int argc, char* argv[])
                     // always skip background region
                     if (i_region == 1) continue;
                     if (!prsice.run_prsice(i_pheno, i_region, region_membership,
-                                           region_start_idx,
                                            commander.all_scores(),
                                            *target_file))
                     {
@@ -256,9 +253,10 @@ int main(int argc, char* argv[])
                     {
                         // only perform permutation if regression is performed
                         // and user request it
-                        prsice.run_competitive(*target_file,
-                                               background_start_idx,
-                                               background_end_idx, i_pheno);
+                        assert(region_membership.size() >= 2);
+                        prsice.run_competitive(
+                            *target_file, region_membership[1].begin(),
+                            region_membership[1].end(), i_pheno);
                     }
                 }
             }
@@ -339,8 +337,8 @@ void print_empty_region(
                 }
                 has_empty_region = true;
             }
-            empty_region << region_names[i] << std::endl;
-            region_names[i] = "";
+            empty_region << region_names[region_idx] << std::endl;
+            region_names[region_idx] = "";
         }
     }
     if (has_empty_region) empty_region.close();
