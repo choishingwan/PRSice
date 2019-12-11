@@ -290,7 +290,7 @@ public:
                 // target SNP whenever both SNPs are within the same set.
                 // i.e. if flag of SNP A (current) is 11011 and SNP B (target)
                 // is 11110, by the end of clumping, it will become SNP A
-                // =11111, SNP B = 00100
+                // =11011, SNP B = 00100
                 // bit operation meaning:
                 // ~m_clump_info = not in index
                 // target.m_clump_info & ~m_clump_info = retain bit that are not
