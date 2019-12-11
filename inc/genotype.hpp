@@ -190,7 +190,7 @@ public:
     }
 
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
-
+    void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression flag
      * to false and propagate it later on to indicate if the sample is used in
