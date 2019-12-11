@@ -716,6 +716,8 @@ protected:
                           std::vector<uintptr_t>& founder_include2,
                           uintptr_t* index_genotype)
     {
+        // reset the index_data information
+        std::fill(index_data.begin(), index_data.end(), 0);
         vec_datamask(founder_count, 0, index_genotype, founder_include2.data(),
                      index_data.data());
         index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
