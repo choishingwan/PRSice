@@ -1266,8 +1266,10 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     window_data_ptr = nullptr;
     bigstack_initial_base = nullptr;
     bigstack_ua = nullptr;
+    /*
     if (num_core_snps != m_existed_snps.size())
     { shrink_snp_vector(remain_core); }
+    */
     // we no longer require the index. might as well clear it (and hope it will
     // release the memory)
     m_existed_snps_index.clear();
