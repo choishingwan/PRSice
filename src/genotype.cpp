@@ -1077,6 +1077,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         // now read in core snp
         reference.read_genotype(clump_geno_idx, core_snp.get_byte_pos(true),
                                 core_snp.get_file_idx(true));
+         
         update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
                          index_data, index_tots, founder_include2,
                          clump_geno_idx);
@@ -1130,10 +1131,9 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         ++num_core_snps;
     }
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
-    /*
     if (num_core_snps != m_existed_snps.size())
-    { shrink_snp_vector(remain_core); }
-    */
+    { shrink_snp_vector(remain_snps); }
+    
     // we no longer require the index. might as well clear it (and hope it will
     // release the memory)
     m_existed_snps_index.clear();
@@ -1304,6 +1304,7 @@ void Genotype::plink_clumping(const Clumping& clump_info, Genotype& reference)
             // Most important information is the ref_byte_pos (reference byte
             // position for reading) and ref_file_name (which reference file
             // should we read from)
+            
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.get_byte_pos(true),
                                     pair_target_snp.get_file_idx(true));

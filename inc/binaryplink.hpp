@@ -74,7 +74,7 @@ protected:
         m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
                              unfiltered_sample_ct4,
                              reinterpret_cast<char*>(m_tmp_genotype.data()));
-        if (m_unfiltered_sample_ct != m_founder_ct)
+        if (m_unfiltered_sample_ct == m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
                 m_tmp_genotype.data(), m_founder_info.data(),
@@ -83,7 +83,11 @@ protected:
         }
         else
         {
-            genotype = m_tmp_genotype.data();
+            // not sure why the genotype = m_tmp_genotype.data() worked before but not now.
+            for(size_t i = 0; i < m_tmp_genotype.size(); ++i){
+                *genotype++ = m_tmp_genotype[i];
+            }
+            //genotype = m_tmp_genotype.data();
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
     }
