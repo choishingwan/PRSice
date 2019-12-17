@@ -213,6 +213,7 @@ int main(int argc, char* argv[])
                 reporter.report(er.what());
                 return -1;
             }
+            if (commander.annot_only) { return 0; }
             // Initialize the progress bar
             prsice.init_progress_count(num_regions,
                                        target_file->get_set_thresholds());
