@@ -144,6 +144,7 @@ public:
     bool nonfounders() const { return m_include_nonfounders; }
     bool enable_mmap() const { return m_enable_mmap; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
+    bool annot_only() const { return m_annot_only; }
 
 protected:
 private:
@@ -157,6 +158,7 @@ private:
     // TODO: might consider using 1e-8 instead
     unsigned long long m_memory = 1e10;
     int m_allow_inter = false;
+    int m_annot_only = false;
     int m_enable_mmap = false;
     int m_include_nonfounders = false;
     int m_keep_ambig = false;
