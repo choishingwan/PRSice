@@ -518,7 +518,7 @@ void BinaryPlink::gen_snp_vector(
                         bim_token[+BIM::A2], flipping, m_is_ref);
                     processed_snps.insert(bim_token[+BIM::RS]);
                     retain_snp[base_idx->second] = true;
-                    num_retained++;
+                    ++num_retained;
                 }
             }
             else

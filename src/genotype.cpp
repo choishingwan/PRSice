@@ -302,6 +302,7 @@ void Genotype::read_base(
         if (line.empty()) continue;
         ++num_line_in_base;
         token = misc::split(line);
+        for (auto&& t : token) { misc::trim(t); }
         if (token.size() <= max_index)
         {
             std::string error_message = line;
@@ -896,6 +897,11 @@ void Genotype::load_snps(
     }
     std::string action = "excluded";
     if (m_keep_ambig) action = "kept";
+    if (m_num_ref_target_mismatch != 0)
+    {
+        message.append(std::to_string(m_num_ref_target_mismatch)
+                       + " variant(s) with mismatch information\n");
+    }
     if (m_num_ambig != 0)
     {
         message.append(std::to_string(m_num_ambig) + " ambiguous variant(s) "
@@ -1077,7 +1083,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         // now read in core snp
         reference.read_genotype(clump_geno_idx, core_snp.get_byte_pos(true),
                                 core_snp.get_file_idx(true));
-         
+
         update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
                          index_data, index_tots, founder_include2,
                          clump_geno_idx);
@@ -1133,7 +1139,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
     if (num_core_snps != m_existed_snps.size())
     { shrink_snp_vector(remain_snps); }
-    
+
     // we no longer require the index. might as well clear it (and hope it will
     // release the memory)
     m_existed_snps_index.clear();
@@ -1304,7 +1310,7 @@ void Genotype::plink_clumping(const Clumping& clump_info, Genotype& reference)
             // Most important information is the ref_byte_pos (reference byte
             // position for reading) and ref_file_name (which reference file
             // should we read from)
-            
+
             reference.read_genotype(window_data_ptr,
                                     pair_target_snp.get_byte_pos(true),
                                     pair_target_snp.get_file_idx(true));
