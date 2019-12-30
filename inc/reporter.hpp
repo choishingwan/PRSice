@@ -38,7 +38,7 @@ public:
             throw std::runtime_error("Error: " + log_name + " cannot be open");
         }
     }
-    void initiailize(const std::string& log_name, size_t width = 60)
+    void initialize(const std::string& log_name, size_t width = 60)
     {
         m_width = width;
         if (m_log_file.is_open()) m_log_file.close();
