@@ -374,7 +374,19 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     error |= !target_check();
     // check all flags
     std::string log_name = m_out_prefix + ".log";
-    reporter.initiailize(log_name);
+    try
+    {
+        reporter.initialize(log_name);
+    }
+    catch (const std::runtime_error& er)
+    {
+        std::string error_reason = er.what();
+        if (error_reason.find('/') != std::string::npos
+            || error_reason.find('\\') != std::string::npos)
+            std::cerr << "Maybe the path to file does not exists?" << std::endl;
+        else
+            return false;
+    }
 
 
     if (m_allow_inter) m_parameter_log["allow-inter"] = "";
