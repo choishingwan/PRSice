@@ -384,7 +384,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         std::string error_reason = er.what();
         if (error_reason.find('/') != std::string::npos
             || error_reason.find('\\') != std::string::npos)
-            std::cerr << "Maybe the path to file does not exists?" << std::endl;
+            reporter.report(error_reason
+                            + ". Maybe the path to file does not exists?");
         else
             return false;
     }
@@ -412,6 +413,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     { message.append(" \\\n    --" + com.first + " " + com.second); }
     message.append("\n");
     reporter.report(message, false);
+
     if (!m_error_message.empty()) reporter.report(m_error_message);
     if (error) throw std::runtime_error(m_error_message);
     return true;
@@ -1105,8 +1107,8 @@ bool Commander::base_check()
         m_error_message.append(
             "Error: Column for the P-value must be provided!\n");
     }
-    error |= set_base_info_threshold(column_names);
-    error |= set_base_maf_filter(column_names);
+    error |= !set_base_info_threshold(column_names);
+    error |= !set_base_maf_filter(column_names);
     // now process the statistic column
     if (m_base_info.is_or && m_base_info.is_beta)
     {
@@ -1243,6 +1245,8 @@ bool Commander::ref_check()
 std::vector<std::string>
 Commander::transform_covariate(const std::string& cov_in)
 {
+    if (cov_in.empty() || cov_in.at(0) != '@')
+        return std::vector<std::string> {cov_in};
     std::vector<std::string> final_covariates;
     std::vector<std::string> open;
     std::vector<std::string> close;
@@ -1252,80 +1256,71 @@ Commander::transform_covariate(const std::string& cov_in)
     std::string cov = cov_in;
     std::string prefix, suffix;
     // simplify to reasonable use cases
-    if (cov.at(0) == '@')
+    cov.erase(0, 1);
+    // find the start of range by identifying [
+    open = misc::split(cov, "[");
+    prefix = open.front();
+    if (open.size() != 2)
     {
-        cov.erase(0, 1);
-        // find the start of range by identifying [
-        open = misc::split(cov, "[");
-        prefix = open.front();
-        if (open.size() != 2)
-        {
-            throw std::runtime_error("Error: Currently only support simple "
-                                     "list (i.e. with one set of [])");
-        }
-        // check for the second set, we do allow XXX[123]YYY
-        close = misc::split(open.back(), "]");
-        if (close.size() == 2)
-            suffix = close.back();
-        else
-            suffix = "";
-        if (close.size() > 2)
-        {
-            throw std::runtime_error("Error: Currently only support simple "
-                                     "list (i.e. with one set of [])");
-        }
-        individual = misc::split(close.front(), ".");
-        for (auto&& ind : individual)
-        {
-            if (ind.find("-") != std::string::npos)
-            {
-                // This is list
-                range = misc::split(ind, "-");
-                if (range.size() != 2)
-                {
-                    throw std::runtime_error(
-                        "Error: Invalid range format, range "
-                        "must be in the form of start-end");
-                }
-                try
-                {
-                    size_t start = misc::string_to_size_t(range[0].c_str());
-                    size_t end = misc::string_to_size_t(range[1].c_str());
-                    if (start > end) { std::swap(start, end); }
-                    for (; start <= end; ++start)
-                    {
-                        final_covariates.push_back(
-                            prefix + misc::to_string(start) + suffix);
-                    }
-                }
-                catch (const std::runtime_error&)
-                {
-                    std::string error_message = "Error: Invalid parameter: "
-                                                + ind + ", only allow integer!";
-                    throw std::runtime_error(error_message);
-                }
-            }
-            else
-            {
-                // this is single value
-                try
-                {
-                    misc::convert<int>(ind);
-                    final_covariates.push_back(prefix + ind + suffix);
-                }
-                catch (const std::runtime_error&)
-                {
-                    std::string error_message = "Error: Invalid parameter: "
-                                                + ind + ", only allow integer!";
-                    throw std::runtime_error(error_message);
-                }
-            }
-        }
+        throw std::runtime_error("Error: Currently only support simple "
+                                 "list (i.e. with one set of [])");
     }
+    // check for the second set, we do allow XXX[123]YYY
+    close = misc::split(open.back(), "]");
+    if (close.size() == 2)
+        suffix = close.back();
     else
+        suffix = "";
+    if (close.size() > 2)
     {
-        // this doesn't need transformation, just return this
-        final_covariates.push_back(cov);
+        throw std::runtime_error("Error: Currently only support simple "
+                                 "list (i.e. with one set of [])");
+    }
+    individual = misc::split(close.front(), ".");
+    for (auto&& ind : individual)
+    {
+        if (ind.find("-") != std::string::npos)
+        {
+            // This is list
+            range = misc::split(ind, "-");
+            if (range.size() != 2)
+            {
+                throw std::runtime_error("Error: Invalid range format, range "
+                                         "must be in the form of start-end");
+            }
+            try
+            {
+                size_t start = misc::string_to_size_t(range[0].c_str());
+                size_t end = misc::string_to_size_t(range[1].c_str());
+                if (start > end) { std::swap(start, end); }
+                for (; start <= end; ++start)
+                {
+                    final_covariates.push_back(prefix + misc::to_string(start)
+                                               + suffix);
+                }
+            }
+            catch (const std::runtime_error&)
+            {
+                std::string error_message = "Error: Invalid parameter: " + ind
+                                            + ", only allow integer!";
+                throw std::runtime_error(error_message);
+            }
+        }
+        else
+        {
+            // this is single value
+            try
+            {
+                misc::convert<int>(ind);
+                final_covariates.push_back(prefix + ind + suffix);
+            }
+            catch (const std::runtime_error&)
+            {
+                std::string error_message = "Error: Invalid parameter: " + ind
+                                            + ", only allow integer!";
+                throw std::runtime_error(error_message);
+            }
+        }
     }
     return final_covariates;
 }

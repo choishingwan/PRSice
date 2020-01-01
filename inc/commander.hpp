@@ -94,7 +94,7 @@ public:
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
 
-private:
+protected:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     std::string m_id_delim = " ";
     std::string m_out_prefix = "PRSice";
@@ -159,7 +159,8 @@ private:
     bool pheno_check();
 
 
-    std::vector<std::string> transform_covariate(const std::string& cov_in);
+    static std::vector<std::string>
+    transform_covariate(const std::string& cov_in);
 
 
     /////////////////////////////////////////////////
