@@ -158,6 +158,11 @@ inline bool to_bool(const std::string& input)
     }
 }
 
+template <typename T>
+inline bool within_bound(const T &input, const T& low_bound, const T &up_bound){
+    assert(low_bound <= up_bound);
+    return !(input < low_bound && input > up_bound);
+}
 
 // TODO: Delete this, doesn't seems to give robust answer
 inline size_t current_ram_usage() { return 0; }

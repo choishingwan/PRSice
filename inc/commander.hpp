@@ -77,75 +77,24 @@ public:
         return !m_clump_info.no_clump || m_prs_info.use_ref_maf;
     }
     bool use_inter() const { return m_allow_inter; }
-    // misc
     std::string delim() const { return m_id_delim; }
-    /*!
-     * \brief Get output prefix
-     * \return the output prefix
-     */
     std::string out() const { return m_out_prefix; }
-    /*!
-     * \brief Get the exclusion_range
-     * \return The string containign the exclusion range
-     */
     std::string exclusion_range() const { return m_exclusion_range; }
-    /*!
-     * \brief Return if all score should be printed
-     * \return True if all score should be printed
-     */
     bool all_scores() const { return m_print_all_scores; }
-    /*!
-     * \brief Return if non-cumulative PRS should be calculated
-     * \return True for non-cumulative PRS calculation
-     */
-
-    /*!
-     * \brief Return if we should generate the .snp file
-     * \return true if we should
-     */
     bool print_snp() const { return m_print_snp; }
-
-
-    /*!
-     * \brief Return the maximum memory allowed to use
-     * \param detected should be the available memory
-     * \return Maximum memory we can use
-     */
     unsigned long long max_memory(const unsigned long long detected) const
     {
         return (!m_provided_memory || m_memory > detected) ? detected
                                                            : m_memory;
     }
     unsigned long long memory() const { return m_memory; }
-
-    // prs_snp_filtering
-    /*!
-     * \brief Return the file name of the exclusion file
-     * \return the name of the exclusion file
-     */
     std::string exclude_file() const { return m_exclude_file; }
-    /*!
-     * \brief Return the file name of the extraction file
-     * \return the name of the extract file
-     */
     std::string extract_file() const { return m_extract_file; }
-
-    /*!
-     * \brief Check if we should retain ambiguous SNPs
-     * \return true if ambiguous SNPs should be retained
-     */
     bool keep_ambig() const { return m_keep_ambig; }
-
-
-    /*!
-     * \brief Check if we want to include non-founders in our analysis
-     * \return True if non-founders should be included
-     */
     bool nonfounders() const { return m_include_nonfounders; }
     bool enable_mmap() const { return m_enable_mmap; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
 
-protected:
 private:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
     std::string m_id_delim = " ";
@@ -154,8 +103,7 @@ private:
     std::string m_exclude_file = "";
     std::string m_extract_file = "";
     std::string m_help_message;
-    // TODO: might consider using 1e-8 instead
-    unsigned long long m_memory = 1e10;
+    size_t m_memory = 1e10;
     int m_allow_inter = false;
     int m_enable_mmap = false;
     int m_include_nonfounders = false;
@@ -199,68 +147,16 @@ private:
      */
     bool parse_command(int argc, char* argv[], const char* optString,
                        const struct option longOpts[], Reporter& reporter);
-    /*!
-     * \brief Print the usage information
-     */
     void usage();
-    /*!
-     * \brief Set the help message
-     */
     void set_help_message();
 
-
-    /*!
-     * \brief Function to check if parameters for clumping
-     * \param message is the parameter storage
-     * \param
-     * error_message is the storage for error messages
-     * \return  return true if
-     * clumping parameters are alright
-     */
     bool clump_check();
-    /*!
-     * \brief Function to check if parameters for reference panel are correct
-     * \param message is the parameter storage
-     * \param
-     * error_message is the storage for error messages
-     * \return  return true if
-     * reference panel parameters are alright
-     */
     bool ref_check();
-    /*!
-     * \brief Function to check if parameters for covariate are correct
-     * \return true if parameters are alright
-     */
     bool covariate_check();
-    /*!
-     * \brief Function to check if parameters for filtering are correct
-     * \param error_message is the storage for error messages
-     * \return true if parameters are alright
-     */
     bool filter_check();
-    /*!
-     * \brief Function to check if parameters for misc options are correct
-     * \param error_message is the storage for error messages
-     * \return true if parameters are alright
-     */
     bool misc_check();
-    /*!
-     * \brief Function to check if parameters for prset are correct
-     * \param error_message is the storage for error messages
-     * \return true if parameters are alright
-     */
     bool prset_check();
-    /*!
-     * \brief Function to check if parameters for prsice thresholding are
-     * correct \param error_message is the storage for error messages \return
-     * true if parameters are alright
-     */
     bool prsice_check();
-    /*!
-     * \brief Function to check if parameters for target are correct
-     * \param error_message is the storage for error messages
-     * \return true if parameters are alright
-     */
     bool target_check();
     bool pheno_check();
 
@@ -293,31 +189,41 @@ private:
     inline void set_string(const std::string& input, const std::string& c,
                            size_t base_index)
     {
-        check_duplicate(c);
-        m_parameter_log[c] = input;
-        m_base_info.column_name[base_index] = input;
-        m_base_info.has_column[base_index] = true;
-    }
-    inline void set_string(const std::string& input, const std::string& c,
-                           std::string& target, bool& target_boolean,
-                           bool add_quote = false)
-    {
-        check_duplicate(c);
-        if (add_quote) { m_parameter_log[c] = "\"" + input + "\""; }
-        else
-        {
-            m_parameter_log[c] = input;
-        }
-        target = input;
-        target_boolean = true;
+        set_string<int>(input, c, m_base_info.column_name[base_index],
+                        m_base_info.has_column[base_index]);
     }
     inline void set_string(const std::string& input, const std::string& c,
                            std::string& target)
     {
         bool dumy;
-        set_string(input, c, target, dumy);
+        set_string<bool>(input, c, target, dumy);
     }
-
+    template <typename T>
+    inline void set_string(const std::string& input, const std::string& c,
+                           std::string& target, T& target_boolean,
+                           bool add_quote = false)
+    {
+        check_duplicate(c);
+        std::string in = input;
+        if (add_quote) { in = "\"" + input + "\""; }
+        m_parameter_log[c] = in;
+        target = input;
+        target_boolean = true;
+    }
+    template <typename T>
+    inline bool convert_to_numeric_vector(const std::vector<std::string>& token,
+                                          std::vector<T>& target)
+    {
+        try
+        {
+            for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return true;
+    }
     template <typename T>
     inline bool load_numeric_vector(const std::string& input,
                                     const std::string& c,
@@ -336,11 +242,7 @@ private:
                   "your input? (Space is not allowed)\n");
         }
         std::vector<std::string> token = misc::split(input, ",");
-        try
-        {
-            for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
-        }
-        catch (...)
+        if (!convert_to_numeric_vector<T>(token, target))
         {
             m_error_message.append("Error: Non numeric argument passed to " + c
                                    + ": " + input + "!\n");
@@ -348,36 +250,59 @@ private:
         }
         return true;
     }
+
+    inline bool check_true_false_ending(const std::string& in, size_t& length)
+    {
+        length = 1;
+        if (misc::hasEnding(in, "F")) { return false; }
+        else if (misc::hasEnding(in, "T"))
+        {
+            return true;
+        }
+        else if (misc::hasEnding(in, "TRUE"))
+        {
+            length = 4;
+            return true;
+        }
+        else if (misc::hasEnding(in, "FALSE"))
+        {
+            length = 5;
+            return false;
+        }
+        throw std::runtime_error("Error: Undefined input");
+    }
     size_t number_boolean(const std::string& input, bool& result)
     {
-        bool found = false;
-        if (misc::hasEnding(input, "T") || misc::hasEnding(input, "TRUE"))
-        {
-            result = true;
-            found = true;
-        }
-        else if (misc::hasEnding(input, "F") || misc::hasEnding(input, "FALSE"))
-        {
-            found = true;
-            result = false;
-        }
-        if (!found) { throw std::runtime_error(""); }
+        size_t bool_length = 0;
         try
         {
-            return misc::string_to_size_t(
-                input.substr(0, input.length() - 1).c_str());
+            result = check_true_false_ending(input, bool_length);
+        }
+        catch (const std::runtime_error& er)
+        {
+            throw er;
+        }
+        try
+        {
+            if (bool_length != input.length())
+            {
+                return misc::string_to_size_t(
+                    input.substr(0, input.length() - bool_length).c_str());
+            }
+            else
+            {
+                return 1;
+            }
         }
         catch (const std::runtime_error&)
         {
-            throw std::runtime_error("");
+            throw std::runtime_error("Error: None Numeric Pattern");
         }
     }
     inline bool parse_binary_vector(const std::string& input,
                                     const std::string& c,
                                     std::vector<bool>& target)
     {
-        // allow more complex regrex
-        // should not come in without something
         if (input.empty()) return false;
         std::string comma = "";
         if (m_parameter_log.find(c) != m_parameter_log.end()) { comma = ","; }
@@ -396,30 +321,21 @@ private:
             {
                 // check if this is true or false, if, not, try parsing
                 std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
-                if (bin == "T" || bin == "TRUE") { target.push_back(true); }
-                else if (bin == "F" || bin == "FALSE")
+                try
                 {
-                    target.push_back(false);
+                    bool value = false;
+                    size_t num_repeat = number_boolean(bin, value);
+                    for (size_t i = 0; i < num_repeat; ++i)
+                    { target.push_back(value); }
                 }
-                else
+                catch (const std::runtime_error&)
                 {
-                    try
-                    {
-                        bool value = false;
-                        size_t num_repeat = number_boolean(bin, value);
-                        for (size_t i = 0; i < num_repeat; ++i)
-                        { target.push_back(value); }
-                    }
-                    catch (const std::runtime_error&)
-                    {
-                        m_error_message.append(
-                            "Error: Invalid argument passed to " + c + ": "
-                            + input
-                            + "! Require binary arguments e.g. T/F, "
-                              "True/False, or numerical combination e.g. "
-                              "10T,3F etc\n");
-                        return false;
-                    }
+                    m_error_message.append(
+                        "Error: Invalid argument passed to " + c + ": " + input
+                        + "! Require binary arguments e.g. T/F, "
+                          "True/False, or numerical combination e.g. "
+                          "10T,3F etc\n");
+                    return false;
                 }
             }
         }
@@ -433,131 +349,77 @@ private:
         return true;
     }
 
-    inline unsigned long long integer_value(const std::string& str,
-                                            const size_t& unit)
+    inline bool extract_unit(const std::string& input, double& value,
+                             std::string& unit)
     {
-        double cur_dist;
-        try
+        bool valid = false;
+        size_t unit_length = 0;
+        for (; unit_length <= 2; ++unit_length)
         {
-            cur_dist = misc::convert<double>(str) * unit;
-        }
-        catch (const std::runtime_error&)
-        {
-            throw std::runtime_error("Error: Invalid unit: " + str + "\t"
-                                     + std::to_string(unit));
-        }
-        unsigned long long res = static_cast<unsigned long long>(cur_dist);
-        if (trunc(cur_dist) != cur_dist)
-        {
-            throw std::runtime_error("Error: Non-integer value obtained: "
-                                     + misc::to_string(str) + " x "
-                                     + misc::to_string(unit) + "\n");
-        }
-        return res;
-    }
-    inline unsigned long long get_unit(const std::string& in,
-                                       const bool bit_thousand = false)
-    {
-        unsigned long long multiplication = 1;
-        const unsigned long long thousand = bit_thousand ? 1024 : 1000;
-        size_t unit_length = 2;
-        try
-        {
-            misc::convert<double>(in.substr(0, in.length() - unit_length));
-        }
-        catch (const std::runtime_error&)
-        {
-            // try one unit
-            unit_length = 1;
             try
             {
-                misc::convert<double>(in.substr(0, in.length() - unit_length));
+                value = misc::convert<double>(
+                    input.substr(0, input.length() - unit_length));
+                valid = true;
+                break;
             }
             catch (const std::runtime_error&)
             {
-                throw std::runtime_error("Error: Invalid input: " + in + "\n");
             }
         }
-        if (misc::hasEnding(in, "kb") || misc::hasEnding(in, "k"))
-        { multiplication = thousand; }
-        else if (misc::hasEnding(in, "mb") || misc::hasEnding(in, "m"))
-        {
-            multiplication = thousand * thousand;
-        }
-        else if (misc::hasEnding(in, "gb") || misc::hasEnding(in, "g"))
-        {
-            multiplication = thousand * thousand * thousand;
-        }
-        else if (misc::hasEnding(in, "tb") || misc::hasEnding(in, "t"))
-        {
-            multiplication = thousand * thousand * thousand * thousand;
-        }
-        else if (misc::hasEnding(in, "bp")
-                 || (misc::hasEnding(in, "b") && unit_length == 1))
-        {
-            // so that when we come here, all units ended with B is
-            // exhausted
-            multiplication = 1;
-        }
+        if (!valid) return false;
+        if (unit_length == 0) { unit = "b"; }
         else
         {
-            throw std::runtime_error("Error: Undefined input unit: " + in
-                                     + "\n");
+            unit = input.substr(input.length() - unit_length);
         }
-        return multiplication;
+        return true;
     }
-    inline unsigned long long set_distance(const std::string& input,
-                                           const std::string& command,
-                                           const size_t default_unit,
-                                           bool& error,
-                                           const bool for_memory = false)
+    inline size_t unit_power(const std::string& unit)
     {
-        check_duplicate(command);
+        const std::unordered_map<std::string, size_t> unit_map = {
+            {"b", 0},  {"bp", 0}, {"k", 1},  {"kb", 1}, {"m", 2},
+            {"mb", 2}, {"g", 3},  {"gb", 3}, {"t", 4},  {"tb", 4}};
+        return unit_map.at(unit);
+    }
+
+    inline bool parse_unit_value(const std::string& input, const std::string& c,
+                                 const size_t default_power, size_t& target,
+                                 bool memory = false)
+    {
+        check_duplicate(c);
         std::string in = input;
         std::transform(in.begin(), in.end(), in.begin(), ::tolower);
-        m_parameter_log[command] = in;
-        unsigned long long dist = 0;
-        unsigned long long multiplication = 1;
-        const size_t thousand = for_memory ? 1024 : 1000;
+        m_parameter_log[c] = in;
+        const size_t weight = memory ? 1024 : 1000;
+        double value;
+        std::string unit;
+        if (!extract_unit(in, value, unit))
+        {
+            m_error_message.append("Error: Invalid input: " + in + "\n");
+            return false;
+        }
+        size_t unit_power_level;
         try
         {
-            dist = integer_value(input, default_unit);
-            std::string unit = "bp";
-            if (default_unit == thousand)
-                unit = "kb";
-            else if (default_unit == thousand * thousand)
-                unit = "mb";
-            m_parameter_log[command] = input + unit;
-            return dist;
+            unit_power_level = unit_power(unit) + default_power;
         }
         catch (...)
         {
-            try
-            {
-                multiplication = get_unit(in, for_memory);
-            }
-            catch (const std::runtime_error& er)
-            {
-                m_error_message.append(er.what());
-            }
+            m_error_message.append("Error: Invalid input: " + in + "\n");
+            return false;
         }
-        try
+        value *= pow(weight, unit_power_level);
+        if (trunc(value) != value && value < 0)
         {
-            size_t length = 2;
-            if (!misc::hasEnding(in, "b")
-                || (multiplication == 1 && misc::hasEnding(in, "b")))
-            { length = 1; }
-            return integer_value(in.substr(0, in.length() - length),
-                                 multiplication);
+            m_error_message.append("Error: Non-integer value obtained: "
+                                   + misc::to_string(target) + "\n");
+            return false;
         }
-        catch (const std::runtime_error& er)
-        {
-            m_error_message.append(er.what());
-        }
-        m_parameter_log.erase(command);
-        error = true;
-        return ~size_t(0);
+        target = static_cast<size_t>(value);
+        return true;
     }
+
 
     void check_duplicate(const std::string& c)
     {
@@ -568,6 +430,13 @@ private:
         }
     }
 
+    template <typename Type>
+    inline bool set_numeric(const std::string& input, const std::string& c,
+                            Type& target)
+    {
+        bool dumy;
+        return set_numeric<Type>(input, c, target, dumy);
+    }
     template <typename Type>
     inline bool set_numeric(const std::string& input, const std::string& c,
                             Type& target, bool& target_boolean)
@@ -586,14 +455,6 @@ private:
                                    + c + ": " + input + "!\n");
             return false;
         }
-    }
-
-    template <typename Type>
-    inline bool set_numeric(const std::string& input, const std::string& c,
-                            Type& target)
-    {
-        bool dumy;
-        return set_numeric<Type>(input, c, target, dumy);
     }
 
     inline void load_string_vector(const std::string& input,
@@ -620,8 +481,7 @@ private:
 
     inline bool set_memory(const std::string& input)
     {
-        bool error = false;
-        m_memory = set_distance(input, "memory", 1024 * 1024, error, true);
+        bool error = parse_unit_value(input, "memory", 2, m_memory, true);
         return !error;
     }
 
@@ -629,22 +489,22 @@ private:
     {
         std::string input = in;
         check_duplicate("missing");
-        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
         switch (input.at(0))
         {
-        case 'C':
+        case 'c':
             input = "centre";
             m_prs_info.missing_score = MISSING_SCORE::CENTER;
             break;
-        case 'M':
+        case 'm':
             input = "mean_impute";
             m_prs_info.missing_score = MISSING_SCORE::MEAN_IMPUTE;
             break;
-        case 'S':
+        case 's':
             input = "set_zero";
             m_prs_info.missing_score = MISSING_SCORE::SET_ZERO;
             break;
-        case 'I':
+        case 'i':
             input = "impute_control";
             m_prs_info.missing_score = MISSING_SCORE::IMPUTE_CONTROL;
             break;
@@ -656,27 +516,26 @@ private:
         m_parameter_log["missing"] = input;
         return true;
     }
-
     inline bool set_model(const std::string& in)
     {
         std::string input = in;
-        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
         check_duplicate("model");
         switch (input.at(0))
         {
-        case 'A':
+        case 'a':
             input = "add";
             m_prs_info.genetic_model = MODEL::ADDITIVE;
             break;
-        case 'D':
+        case 'd':
             input = "dom";
             m_prs_info.genetic_model = MODEL::DOMINANT;
             break;
-        case 'R':
+        case 'r':
             input = "rec";
             m_prs_info.genetic_model = MODEL::RECESSIVE;
             break;
-        case 'H':
+        case 'h':
             input = "het";
             m_prs_info.genetic_model = MODEL::HETEROZYGOUS;
             break;
@@ -687,43 +546,22 @@ private:
         m_parameter_log["model"] = input;
         return true;
     }
-
-
-    /*!
-     * \brief Function parsing string into MISSING enum
-     * \param in the input
-     * \param message the parameter storage
-     * \param error_message the error message storage
-     * \return true if successfully parse the input into MISSING enum
-     */
     inline bool set_score(const std::string& in)
     {
         std::string input = in;
-        std::transform(input.begin(), input.end(), input.begin(), ::toupper);
+        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
         check_duplicate("score");
-        if (input.length() < 2)
+        if (input == "avg") { m_prs_info.scoring_method = SCORING::AVERAGE; }
+        else if (input == "std")
         {
-            m_error_message.append("Error: Invalid scoring method: " + input
-                                   + "!\n");
-        }
-        if (input == "AVG")
-        {
-            input = "avg";
-            m_prs_info.scoring_method = SCORING::AVERAGE;
-        }
-        else if (input == "STD")
-        {
-            input = "std";
             m_prs_info.scoring_method = SCORING::STANDARDIZE;
         }
-        else if (input == "SUM")
+        else if (input == "sum")
         {
-            input = "sum";
             m_prs_info.scoring_method = SCORING::SUM;
         }
-        else if (input == "CON_STD")
+        else if (input == "con_std")
         {
-            input = "con_std";
             m_prs_info.scoring_method = SCORING::CONTROL_STD;
         }
         else
@@ -757,10 +595,10 @@ private:
         m_base_info.has_column[index] = has_col;
         return has_col;
     }
-
-
-    inline void set_base_info_threshold(const std::vector<std::string>& ref,
-                                        bool& error)
+    /**
+     * @return True if we don't need to error out. False otherwise
+     */
+    inline bool set_base_info_threshold(const std::vector<std::string>& ref)
     {
         const std::vector<std::string> info =
             misc::split(m_base_info.column_name[+BASE_INDEX::INFO], ",");
@@ -777,26 +615,24 @@ private:
                 m_error_message.append("Warning: INFO field not found in base "
                                        "file, will ignore INFO filtering\n");
             }
-            return;
         }
         else if (info.size() != 2) // assume default always valid
         {
             m_error_message.append("Error: Invalid format of "
                                    "--base-info. Should be "
                                    "ColName,Threshold.\n");
-            error = true;
-            return;
+            return false;
         }
         try
         {
             m_base_filter.info_score = misc::convert<double>(info[1]);
-            if ((m_base_filter.info_score < 0 || m_base_filter.info_score > 1))
+            if (!misc::within_bound<double>(m_base_filter.info_score, 0.0, 1.0))
             {
                 if (has_input)
                 {
                     m_error_message.append("Error: Base INFO threshold "
                                            "must be within 0 and 1!\n");
-                    error = true;
+                    return false;
                 }
             }
         }
@@ -808,15 +644,53 @@ private:
                     "Error: Invalid argument passed to --base-info: "
                     + m_base_info.column_name[+BASE_INDEX::INFO]
                     + "! Second argument must be numeric\n");
-                error = true;
+                return false;
             }
         }
-        return;
+        return true;
     }
-
+    /**
+     * @return True if we don't need to error out. False otherwise
+     */
+    bool process_maf(const std::vector<std::string>& ref,
+                     const std::vector<std::string>& detail,
+                     size_t& column_index, int& has_column, double& maf)
+    {
+        size_t index = 0;
+        bool found = index_check(detail[0], ref, index);
+        has_column = found;
+        if (found) column_index = index;
+        if (!found)
+        {
+            m_error_message.append(
+                "Warning: MAF field not found in base file. "
+                "Will not perform MAF filtering on the base file\n");
+            return true;
+        }
+        double cur_maf;
+        try
+        {
+            cur_maf = misc::convert<double>(detail[1]);
+            if (!misc::within_bound<double>(cur_maf, 0.0, 1.0))
+            {
+                m_error_message.append("Error: Base MAF threshold must "
+                                       "be within 0 and 1!\n");
+                return false;
+            }
+        }
+        catch (...)
+        {
+            m_error_message.append(
+                "Error: Invalid argument passed to --base-maf: "
+                + m_base_info.column_name[+BASE_INDEX::MAF]
+                + "! Threshold must be numeric\n");
+            return false;
+        }
+        maf = cur_maf;
+        return true;
+    }
     // return true if valid
-    inline void set_base_maf_filter(const std::vector<std::string>& ref,
-                                    bool& error)
+    inline bool set_base_maf_filter(const std::vector<std::string>& ref)
     {
         const std::string maf_error =
             "Error: Invalid format of --base-maf. "
@@ -825,70 +699,30 @@ private:
         std::vector<std::string> case_control =
             misc::split(m_base_info.column_name[+BASE_INDEX::MAF], ":");
         const bool print_error = m_base_info.has_column[+BASE_INDEX::MAF];
+        // only process the maf filter if it is provided
+        if (!print_error) return true;
         if (case_control.size() > 2)
         {
-            if (print_error)
-            {
-                m_error_message.append(maf_error);
-                error = true;
-            }
-            return;
+            if (print_error) { m_error_message.append(maf_error); }
+            return false;
         }
-        bool control = true;
-        bool found = false;
-        BASE_INDEX maf_index = BASE_INDEX::MAF;
-        size_t index = 0;
-        for (auto&& maf : case_control)
+        std::vector<std::string> detail;
+        if (case_control.size() > 0)
         {
-            std::vector<std::string> detail = misc::split(maf, ",");
-            found = index_check(detail[0], ref, index);
-            m_base_info.has_column[+maf_index] = found;
-            if (found) m_base_info.column_index[+maf_index] = index;
-            if (!found)
-            {
-                if (print_error)
-                {
-                    m_error_message.append(
-                        "Warning: MAF field not found in base file. "
-                        "Will not perform MAF filtering on the base file\n");
-                }
-                return;
-            }
-            double cur_maf;
-            try
-            {
-                cur_maf = misc::convert<double>(detail[1]);
-                if ((cur_maf < 0 || cur_maf > 1))
-                {
-                    if (print_error)
-                    {
-                        m_error_message.append("Error: Base MAF threshold must "
-                                               "be within 0 and 1!\n");
-                        error = true;
-                    }
-                    return;
-                }
-            }
-            catch (...)
-            {
-                if (print_error)
-                {
-                    m_error_message.append(
-                        "Error: Invalid argument passed to --base-maf: "
-                        + m_base_info.column_name[+BASE_INDEX::MAF]
-                        + "! Threshold must be numeric\n");
-                    error = true;
-                }
-                return;
-            }
-            if (control) { m_base_filter.maf = cur_maf; }
-            else
-            {
-                m_base_filter.maf_case = cur_maf;
-            }
-            control = false;
+            detail = misc::split(case_control.front(), ",");
+            return process_maf(
+                ref, detail, m_base_info.column_index[+BASE_INDEX::MAF],
+                m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
         }
-        return;
+        if (case_control.size() == 2)
+        {
+            detail = misc::split(case_control.back(), ",");
+            return process_maf(ref, detail,
+                               m_base_info.column_index[+BASE_INDEX::MAF_CASE],
+                               m_base_info.has_column[+BASE_INDEX::MAF_CASE],
+                               m_base_filter.maf_case);
+        }
+        return true;
     }
     /*!
      * \brief Get the column index based on file header and the input string
@@ -920,6 +754,8 @@ private:
 
     bool get_statistic_column(const std::vector<std::string>& column_names);
     bool base_check();
+    bool get_statistic_flag();
+    std::string get_program_header(const std::string& name);
 };
 
 #endif // COMMANDER_H
