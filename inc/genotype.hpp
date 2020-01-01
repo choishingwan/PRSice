@@ -35,7 +35,6 @@
 #include <functional>
 #include <memory>
 #include <memoryread.hpp>
-#include <mio.hpp>
 #include <mutex>
 #include <random>
 #include <set>
@@ -520,7 +519,6 @@ protected:
     double m_homcom_weight = 0;
     double m_het_weight = 1;
     double m_homrar_weight = 2;
-    unsigned long long m_data_size;
     size_t m_num_thresholds = 0;
     size_t m_thread = 1; // number of final samples
     size_t m_max_window_size = 0;
@@ -871,7 +869,7 @@ protected:
      * the thrid parameter
      */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
-                                      const long long /*byte_pos*/,
+                                      const std::streampos /*byte_pos*/,
                                       const size_t& /*file_index*/)
     {
     }

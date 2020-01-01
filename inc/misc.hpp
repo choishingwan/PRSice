@@ -300,35 +300,36 @@ inline std::vector<std::string> split(const std::string& seq,
 inline void split(std::vector<std::string>& result, const std::string& seq,
                   const std::string& separators = "\t ")
 {
-    std::size_t prev = 0, pos, size = 0;
-    const size_t init = result.size();
+    std::size_t prev = 0, pos, idx= 0;
+    const size_t init_size = result.size();
     // assuming we have the same size
     // result.clear();
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
     {
         if (pos > prev)
         {
-            if (init <= size)
+            if (idx >= init_size)
             { result.emplace_back(seq.substr(prev, pos - prev)); }
             else
             {
-                result[size] = seq.substr(prev, pos - prev);
+                result[idx] = seq.substr(prev, pos - prev);
             }
-            ++size;
+            ++idx;
         }
         prev = pos + 1;
     }
     if (prev < seq.length())
     {
-        if (init <= size)
+        if (idx > init_size)
         { result.emplace_back(seq.substr(prev, std::string::npos)); }
         else
         {
-            result[size] = seq.substr(prev, std::string::npos);
+            result[idx] = seq.substr(prev, std::string::npos);
         }
+        ++idx;
     }
-    if(size < result.size()){
-        result.resize(size);
+    if(idx < init_size){
+        result.resize(idx);
     }
 }
 template <typename T>

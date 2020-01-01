@@ -3,7 +3,6 @@
 
 #include "misc.hpp"
 #include <fstream>
-#include <mio.hpp>
 #include <stdexcept>
 #include <string>
 

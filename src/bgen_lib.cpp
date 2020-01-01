@@ -372,14 +372,14 @@ namespace bgen
         buffer->resize(payload_size);
         aStream.read(reinterpret_cast<char*>(&(*buffer)[0]), payload_size);
     }
-    void read_genotype_data_block(MemoryRead& aStream,
+    void read_genotype_data_block(FileRead& aStream,
                                   const std::string& file_name,
                                   Context const& context,
                                   std::vector<byte_t>* buffer,
-                                  const unsigned long long idx)
+                                  const std::streampos idx)
     {
         uint32_t payload_size = 0;
-        unsigned long long cur_idx = idx;
+        std::streampos cur_idx = idx;
         if ((context.flags & e_Layout) == e_Layout2
             || ((context.flags & e_CompressedSNPBlocks) != e_NoCompression))
         {

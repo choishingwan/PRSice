@@ -62,36 +62,33 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     famfile.open(m_sample_file.c_str());
     if (!famfile.is_open())
     {
-        std::string error_message =
-            "Error: Cannot open fam file: " + m_sample_file;
-        throw std::runtime_error(error_message);
+        throw std::runtime_error("Error: Cannot open fam file: "
+                                 + m_sample_file);
     }
     // number of unfiltered samples
     // this must be correct as this value is use for all subsequent size
     // intiailization
     m_unfiltered_sample_ct = 0;
-
-    std::string line;
     // capture all founder name and check if they exists within the file
     std::unordered_set<std::string> founder_info;
     // first pass to get the number of samples and also get the founder ID
     std::vector<std::string> token;
+    std::string line;
     while (std::getline(famfile, line))
     {
         misc::trim(line);
         if (!line.empty())
         {
-            token = misc::split(line);
+            misc::split(token, line);
             if (token.size() < 6)
             {
-                std::string message =
+                throw std::runtime_error(
                     "Error: Malformed fam file. Less than 6 column on "
                     "line: "
-                    + std::to_string(m_unfiltered_sample_ct + 1) + "\n";
-                throw std::runtime_error(message);
+                    + std::to_string(m_unfiltered_sample_ct + 1) + "\n");
             }
             founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
-            m_unfiltered_sample_ct++;
+            ++m_unfiltered_sample_ct;
         }
     }
     // now reset the fam file to the start
@@ -124,21 +121,15 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     {
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
+        misc::split(token, line);
         // we have already checked for malformed file
         std::string id = (m_ignore_fid)
                              ? token[+FAM::IID]
                              : token[+FAM::FID] + m_delim + token[+FAM::IID];
-        if (!m_remove_sample)
-        {
-            inclusion = (m_sample_selection_list.find(id)
-                         != m_sample_selection_list.end());
-        }
-        else
-        {
-            inclusion = (m_sample_selection_list.find(id)
-                         == m_sample_selection_list.end());
-        }
+        auto&& find_id = m_sample_selection_list.find(id);
+        inclusion = m_remove_sample
+                        ? (find_id == m_sample_selection_list.end())
+                        : (find_id != m_sample_selection_list.end());
 
         if (founder_info.find(token[+FAM::FID] + m_delim + token[+FAM::FATHER])
                 == founder_info.end()
@@ -155,13 +146,15 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         }
         else if (inclusion)
         {
-            // use it for PRS, but not for LD (non-founder, but user wants to
-            // include it)
+            // we still calculate PRS for this sample
             SET_BIT(sample_index, m_sample_include.data());
             ++m_num_non_founder;
+            // but will only include it in the regression model if users asked
+            // to include non-founders
             founder = m_keep_nonfounder;
         }
         m_sample_ct += inclusion;
+        // TODO: Better sex parsing? Can also be 0, 1 or F and M
         if (token[+FAM::SEX] == "1") { ++m_num_male; }
         else if (token[+FAM::SEX] == "2")
         {
@@ -187,12 +180,10 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     if (number_duplicated_samples > 0)
     {
         // TODO: Produce a file containing id of all valid samples
-        std::string error_message = "Error: A total of "
-                                    + misc::to_string(number_duplicated_samples)
-                                    + " duplicated samples detected!\n";
-        error_message.append(
-            "Please ensure all samples have an unique identifier");
-        throw std::runtime_error(error_message);
+        throw std::runtime_error(
+            "Error: A total of " + misc::to_string(number_duplicated_samples)
+            + " duplicated samples detected!\n"
+            + "Please ensure all samples have an unique identifier");
     }
 
     famfile.close();
@@ -202,20 +193,20 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     // m_prs_info.reserve(m_sample_ct);
     // now we add the prs information. For some reason, we can't do a simple
     // reserve
-    for (size_t i = 0; i < m_sample_ct; ++i) { m_prs_info.emplace_back(PRS()); }
+    m_prs_info.resize(m_sample_ct, PRS());
+    // for (size_t i = 0; i < m_sample_ct; ++i) {
+    // m_prs_info.emplace_back(PRS()); }
     // also resize the in_regression flag
     m_in_regression.resize(m_sample_include.size(), 0);
     // initialize the sample_include2 and founder_include2 which are
     // both needed in cal_maf or read_score for MAF calculation
-    m_sample_include2.resize(unfiltered_sample_ctv2);
-    m_founder_include2.resize(unfiltered_sample_ctv2);
+    m_sample_include2.resize(unfiltered_sample_ctv2, 0);
+    m_founder_include2.resize(unfiltered_sample_ctv2, 0);
     // fill it with the required mask (copy from PLINK2)
     init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
                                m_sample_include2.data());
     init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
                                m_founder_include2.data());
-
-    m_data_size = (m_unfiltered_sample_ct + 3) / 4;
     return sample_name;
 }
 
@@ -622,7 +613,7 @@ void BinaryPlink::read_score(
     std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    bool ultra)
+    bool read_only)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -640,6 +631,8 @@ void BinaryPlink::read_score(
     size_t het_ct = 0;
     size_t homcom_ct = 0;
     size_t tmp_total = 0;
+    // currently hard code ploidy to 2. Will keep it this way unil we know how
+    // to properly handly non-diploid chromosomes in human and other organisms
     const size_t ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
@@ -719,7 +712,7 @@ void BinaryPlink::read_score(
                 genotype = m_tmp_genotype;
                 genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
             }
-            if (ultra) { cur_snp.assign_genotype(genotype); }
+            if (read_only) { cur_snp.assign_genotype(genotype); }
         }
         else
         {
@@ -727,7 +720,6 @@ void BinaryPlink::read_score(
             cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                m_prs_calculation.use_ref_maf);
         }
-        // directly read in the current location
         if (m_founder_ct == missing_ct)
         {
             // problematic snp
@@ -754,7 +746,7 @@ void BinaryPlink::read_score(
         miss_score = 0;
         if (mean_impute) { miss_score = ploidy * stat * maf; }
         // now we go through the SNP vector
-        if (!ultra)
+        if (!read_only)
         {
             read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
                      miss_count, homcom_weight, het_weight, homrar_weight,
