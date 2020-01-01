@@ -16,9 +16,6 @@
 
 #include "genotype.hpp"
 
-unsigned long long Genotype::g_allowed_memory = 1e10;
-bool Genotype::g_allow_mmap = false;
-
 std::string Genotype::print_duplicated_snps(
     const std::unordered_set<std::string>& duplicated_snp,
     const std::string& out_prefix)

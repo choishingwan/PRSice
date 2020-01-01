@@ -53,7 +53,6 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"version", no_argument, nullptr, 'v'},
         // flags, only need to set them to true
         {"allow-inter", no_argument, &m_allow_inter, 1},
-        {"enable-mmap", no_argument, &m_enable_mmap, 1},
         {"all-score", no_argument, &m_print_all_scores, 1},
         {"beta", no_argument, &m_base_info.is_beta, 1},
         {"fastscore", no_argument, &m_p_thresholds.fastscore, 1},

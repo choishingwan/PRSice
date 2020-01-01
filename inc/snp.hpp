@@ -53,14 +53,14 @@ public:
 
     virtual ~SNP();
 
-    void update_file(const size_t& idx, const long long byte_pos,
+    void update_file(const size_t& idx, const std::streampos byte_pos,
                      const bool is_ref)
     {
         auto&& target = is_ref ? m_reference : m_target;
         target.name_idx = idx;
         target.byte_pos = byte_pos;
     }
-    void update_file(const size_t& idx, const long long byte_pos,
+    void update_file(const size_t& idx, const std::streampos byte_pos,
                      const bool is_ref, const bool flip)
     {
         auto&& target = is_ref ? m_reference : m_target;
@@ -72,7 +72,7 @@ public:
             m_flipped = flip;
         }
     }
-    void add_snp_info(const size_t& idx, const long long byte_pos,
+    void add_snp_info(const size_t& idx, const std::streampos byte_pos,
                       const size_t chr, const size_t loc,
                       const std::string& ref, const std::string& alt,
                       const bool flipping, const bool is_ref)
@@ -207,7 +207,7 @@ public:
      * \return  the p-value threshold
      */
     double get_threshold() const { return m_p_threshold; }
-    void get_file_info(size_t& idx, long long& byte_pos,
+    void get_file_info(size_t& idx, std::streampos& byte_pos,
                        bool is_ref = false) const
     {
         auto&& from = is_ref ? m_reference : m_target;
@@ -218,7 +218,7 @@ public:
     {
         return is_ref ? m_reference.name_idx : m_target.name_idx;
     }
-    long long get_byte_pos(bool is_ref = false) const
+    std::streampos get_byte_pos(bool is_ref = false) const
     {
         return is_ref ? m_reference.byte_pos : m_target.byte_pos;
     }

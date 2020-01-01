@@ -56,7 +56,6 @@ int main(int argc, char* argv[])
         {
             return -1; // all error messages should have printed
         }
-        Genotype::set_memory(commander.memory(), commander.enable_mmap());
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
@@ -102,7 +101,6 @@ int main(int argc, char* argv[])
             // calculation
             if (commander.use_ref()) target_file->expect_reference();
             target_file->load_snps(commander.out(), exclusion_regions, verbose);
-            target_file->init_memory();
             // now load the reference file
             // initialize the memory map file
             if (commander.use_ref() && commander.need_ref())
@@ -131,8 +129,6 @@ int main(int argc, char* argv[])
             // required for handling dosage
             target_file->set_thresholds(commander.get_target_qc());
             // only calculate the MAF if we need to
-            // We want to only invoke the MAF calculation if we need to
-            // i.e after clumping, to speed up the process
             target_file->calc_freqs_and_intermediate(commander.get_target_qc(),
                                                      commander.out(), true);
             if (init_ref)

@@ -327,6 +327,9 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
             result[size] = seq.substr(prev, std::string::npos);
         }
     }
+    if(size < result.size()){
+        result.resize(size);
+    }
 }
 template <typename T>
 inline T convert(const std::string& str)

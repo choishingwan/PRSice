@@ -107,7 +107,7 @@ struct Phenotype
 struct FileInfo
 {
     size_t name_idx = ~size_t(0);
-    long long byte_pos = 0;
+    std::streampos byte_pos = 0;
 };
 struct Permutations
 {

@@ -92,7 +92,6 @@ public:
     std::string extract_file() const { return m_extract_file; }
     bool keep_ambig() const { return m_keep_ambig; }
     bool nonfounders() const { return m_include_nonfounders; }
-    bool enable_mmap() const { return m_enable_mmap; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
 
 private:
@@ -105,7 +104,6 @@ private:
     std::string m_help_message;
     size_t m_memory = 1e10;
     int m_allow_inter = false;
-    int m_enable_mmap = false;
     int m_include_nonfounders = false;
     int m_keep_ambig = false;
     int m_print_all_scores = false;

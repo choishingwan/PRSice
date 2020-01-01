@@ -90,11 +90,6 @@ public:
      * \param reporter is the logger
      */
     void load_samples(bool verbose = true);
-    static void set_memory(const unsigned long long& mem, const bool enable_mem)
-    {
-        g_allowed_memory = mem;
-        g_allow_mmap = enable_mem;
-    }
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
     // us to do the regional filtering. However, as exclusion and extractions
@@ -443,10 +438,6 @@ public:
         m_prs_calculation = prs;
         return *this;
     }
-    void init_memory()
-    {
-        m_genotype_file.init_memory_map(g_allowed_memory, m_data_size);
-    }
     void snp_extraction(const std::string& extract_snps,
                         const std::string& exclude_snps);
 
@@ -494,7 +485,7 @@ protected:
     friend class BinaryGen;
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
-    MemoryRead m_genotype_file;
+    FileRead m_genotype_file;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
@@ -503,7 +494,6 @@ protected:
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_file_names;
-    std::vector<mio::mmap_source> m_genotype_files;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
@@ -527,7 +517,6 @@ protected:
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;
     double m_dose_threshold = 0.0;
-
     double m_homcom_weight = 0;
     double m_het_weight = 1;
     double m_homrar_weight = 2;
@@ -541,7 +530,6 @@ protected:
     size_t m_num_info_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
-    static unsigned long long g_allowed_memory;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_sample_ct = 0;
@@ -556,7 +544,6 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
-    static bool g_allow_mmap;
     bool m_genotype_stored = false;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
