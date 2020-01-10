@@ -72,6 +72,20 @@ public:
     }
 };
 
+void invalid_cov_input(const std::string& cov_string)
+{
+    try
+    {
+        // invalid input
+        std::vector<std::string> results =
+            CovariateTest::transform_covariate(cov_string);
+        FAIL();
+    }
+    catch (const std::runtime_error&)
+    {
+        SUCCEED();
+    }
+}
 TEST(COVARITE_TRANSFORM, TRANSFORMATION)
 {
     // should not do transformation when not start with @
@@ -105,5 +119,13 @@ TEST(COVARITE_TRANSFORM, TRANSFORMATION)
     EXPECT_EQ(results.size(), expected_outputs.size());
     for (size_t i = 0; i < results.size(); ++i)
     { EXPECT_STREQ(expected_outputs[i].c_str(), results[i].c_str()); }
+    invalid_cov_input("@PC[[1-5]]");
+    invalid_cov_input("@PC[1-5");
+    invalid_cov_input("@PC1-5]");
+    invalid_cov_input("@PC[[1-5]");
+    invalid_cov_input("@PC[1-5]]");
+    invalid_cov_input("@PC[1-5][");
+    invalid_cov_input("@PC[1-5,]");
+    invalid_cov_input("@PC[,1-5]");
 }
 #endif // COMMANDER_TEST_H
