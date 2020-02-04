@@ -339,10 +339,10 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    void read_base(const BaseFile& base_file, const QCFiltering& base_qc,
-                   const PThresholding& threshold_info,
-                   const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const bool keep_ambig);
+    void
+    read_base(const BaseFile& base_file, const QCFiltering& base_qc,
+              const PThresholding& threshold_info,
+              const std::vector<IITree<size_t, size_t>>& exclusion_regions);
     void build_clump_windows(const unsigned long long& clump_distance);
     intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
     void
@@ -420,6 +420,11 @@ public:
     Genotype& keep_ambig(bool keep)
     {
         m_keep_ambig = keep;
+        return *this;
+    }
+    Genotype& ambig_no_flip(bool keep)
+    {
+        m_ambig_no_flip = keep;
         return *this;
     }
     Genotype& reference()
@@ -542,6 +547,7 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
+    bool m_ambig_no_flip = false;
     bool m_genotype_stored = false;
     bool m_use_proxy = false;
     bool m_ignore_fid = false;
