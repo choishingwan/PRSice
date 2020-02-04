@@ -75,6 +75,7 @@ int main(int argc, char* argv[])
             target_file =
                 &target_file->keep_nonfounder(commander.nonfounders())
                      .keep_ambig(commander.keep_ambig())
+                     .ambig_no_flip(commander.ambig_no_flip())
                      .intermediate(commander.use_inter())
                      .set_weight()
                      .set_prs_instruction(commander.get_prs_instruction());
@@ -85,10 +86,9 @@ int main(int argc, char* argv[])
             reporter.report(message);
             target_file->snp_extraction(commander.extract_file(),
                                         commander.exclude_file());
-            target_file->read_base(commander.get_base(),
-                                   commander.get_base_qc(),
-                                   commander.get_p_threshold(),
-                                   exclusion_regions, commander.keep_ambig());
+            target_file->read_base(
+                commander.get_base(), commander.get_base_qc(),
+                commander.get_p_threshold(), exclusion_regions);
             // no longer need the exclusion region object
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
