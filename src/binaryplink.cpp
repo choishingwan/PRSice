@@ -463,19 +463,18 @@ void BinaryPlink::gen_snp_vector(
                            bim_token[+BIM::A2].end(),
                            bim_token[+BIM::A2].begin(), ::toupper);
             // check if this is a duplicated SNP
+            bool ambig = ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
             if (processed_snps.find(bim_token[+BIM::RS])
                 != processed_snps.end())
             {
                 duplicated_snp.insert(bim_token[+BIM::RS]);
                 continue;
             }
-            else if (!ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2])
-                     || m_keep_ambig)
+            else if (!ambig || m_keep_ambig)
             {
                 // if the SNP is not ambiguous (or if we want to keep ambiguous
                 // SNPs)
-                m_num_ambig +=
-                    ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
+                m_num_ambig += ambig;
                 if (!genotype->m_existed_snps[base_idx->second].matching(
                         chr_num, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
                         flipping))
@@ -492,6 +491,7 @@ void BinaryPlink::gen_snp_vector(
                     byte_pos = static_cast<std::streampos>(
                         bed_offset
                         + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
+                    if (flipping && ambig && m_ambig_no_flip) flipping = false;
                     genotype->m_existed_snps[base_idx->second].add_snp_info(
                         idx, byte_pos, chr_num, loc, bim_token[+BIM::A1],
                         bim_token[+BIM::A2], flipping, m_is_ref);

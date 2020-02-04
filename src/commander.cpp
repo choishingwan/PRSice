@@ -61,6 +61,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"ignore-fid", no_argument, &m_pheno_info.ignore_fid, 1},
         {"index", no_argument, &m_base_info.is_index, 1},
         {"keep-ambig", no_argument, &m_keep_ambig, 1},
+        {"keep-ambig-as-is", no_argument, &m_ambig_no_flip, 1},
         {"logit-perm", no_argument, &m_perm_info.logit_perm, 1},
         {"no-clump", no_argument, &m_clump_info.no_clump, 1},
         {"non-cumulate", no_argument, &m_prs_info.non_cumulate, 1},
@@ -1559,6 +1560,7 @@ bool Commander::misc_check()
                                "hard-coded bgen file. Will disable it\n");
         m_ultra_aggressive = false;
     }
+    if (m_ambig_no_flip) m_keep_ambig = true;
     return !error;
 }
 

@@ -625,13 +625,14 @@ void BinaryGen::gen_snp_vector(
                 cur_id = RSID;
             }
 
+            bool ambig = ambiguous(A1, A2);
             if (processed_snps.find(cur_id) != processed_snps.end())
             {
                 duplicated_snps.insert(cur_id);
                 exclude_snp = true;
             }
             // perform check on ambiguousity
-            else if (ambiguous(A1, A2))
+            else if (ambig)
             {
                 ++m_num_ambig;
                 if (!m_keep_ambig) exclude_snp = true;
@@ -660,7 +661,6 @@ void BinaryGen::gen_snp_vector(
                 if (!genotype->m_existed_snps[target_index].matching(
                         chr_num, SNP_position, A1, A2, flipping))
                 {
-
                     genotype->print_mismatch(
                         mismatch_snp_record_name, mismatch_source,
                         genotype->m_existed_snps[target_index], cur_id, A1, A2,
@@ -669,6 +669,7 @@ void BinaryGen::gen_snp_vector(
                 }
                 else
                 {
+                    if (ambig && flipping && m_ambig_no_flip) flipping = false;
                     processed_snps.insert(cur_id);
                     genotype->m_existed_snps[target_index].add_snp_info(
                         file_idx, byte_pos, chr_num, SNP_position, A1, A2,

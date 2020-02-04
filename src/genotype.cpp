@@ -192,8 +192,7 @@ void Genotype::snp_extraction(const std::string& extract_snps,
 void Genotype::read_base(
     const BaseFile& base_file, const QCFiltering& base_qc,
     const PThresholding& threshold_info,
-    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    const bool keep_ambig)
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions)
 {
     const unsigned long long max_index =
         base_file.column_index[+BASE_INDEX::MAX];
@@ -433,7 +432,7 @@ void Genotype::read_base(
         if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
         {
             ++num_ambiguous;
-            if (!keep_ambig) continue;
+            if (!m_keep_ambig) continue;
         }
         category = 0;
         pthres = 0.0;
@@ -525,7 +524,7 @@ void Genotype::read_base(
     if (num_ambiguous)
     {
         message.append(std::to_string(num_ambiguous) + " ambiguous variant(s)");
-        if (!keep_ambig) { message.append(" excluded"); }
+        if (!m_keep_ambig) { message.append(" excluded"); }
         message.append("\n");
     }
     message.append(std::to_string(m_existed_snps.size())
