@@ -1129,6 +1129,7 @@ bool PRSice::run_prsice(
             prsice_result cur_result;
             cur_result.threshold = cur_threshold;
             cur_result.num_snp = m_num_snp_included;
+            cur_result.p = -1;
             m_prs_results[prs_result_idx] = cur_result;
         }
         ++prs_result_idx;
@@ -1676,22 +1677,22 @@ void PRSice::prep_output(const Genotype& target,
     }
     // .prsice output
     // we only need to generate the header for it
+    m_prsice_out.open(out_prsice.c_str());
+    if (!m_prsice_out.is_open())
+    {
+        throw std::runtime_error("Error: Cannot open file: " + out_prsice
+                                 + " to write");
+    }
+    // we won't store the empirical p and competitive p output in the
+    // prsice file now as that seems like a waste (only one threshold
+    // will contain that information, storing that in the summary file
+    // should be enough)
+    m_prsice_out << "Set\tThreshold\tR2\t";
+    // but generate the adjusted R2 if prevalence is provided
+    if (!m_pheno_info.prevalence.empty()) m_prsice_out << "R2.adj\t";
+    m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
     if (!m_prs_info.no_regress)
     {
-        m_prsice_out.open(out_prsice.c_str());
-        if (!m_prsice_out.is_open())
-        {
-            throw std::runtime_error("Error: Cannot open file: " + out_prsice
-                                     + " to write");
-        }
-        // we won't store the empirical p and competitive p output in the
-        // prsice file now as that seems like a waste (only one threshold
-        // will contain that information, storing that in the summary file
-        // should be enough)
-        m_prsice_out << "Set\tThreshold\tR2\t";
-        // but generate the adjusted R2 if prevalence is provided
-        if (!m_pheno_info.prevalence.empty()) m_prsice_out << "R2.adj\t";
-        m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
         // .best output
         try
         {
@@ -1884,6 +1885,7 @@ void PRSice::adjustment_factor(const double prevalence, double& top,
 void PRSice::print_na(const std::string& region_name, const double threshold,
                       const size_t num_snp, const bool has_prevalence)
 {
+    assert(m_prsice_out.is_open());
     m_prsice_out << region_name << "\t" << threshold << "\tNA\tNA\tNA\tNA\t";
     if (has_prevalence) m_prsice_out << "NA\t";
     m_prsice_out << num_snp << "\n";

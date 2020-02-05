@@ -62,7 +62,6 @@ int main(int argc, char* argv[])
         std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
-
         bool init_ref = false;
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
