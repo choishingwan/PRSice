@@ -308,7 +308,6 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
     long long fid_length, iid_length;
     const bool ctrl_std =
         binary && m_prs_info.scoring_method == SCORING::CONTROL_STD;
-    const bool standardize = m_prs_info.scoring_method == SCORING::STANDARDIZE;
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
     {
         // got through each sample
@@ -336,12 +335,11 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
                 // the in regression flag is only use for output
                 target.set_in_regression(i_sample);
                 // so only standardize samples if they are with valid phenotype
-                if ((ctrl_std
-                     && !misc::logically_equal(
-                         m_phenotype[static_cast<Eigen::Index>(
-                             pheno_idx->second)],
-                         0))
-                    || standardize)
+                if (ctrl_std
+                    && !misc::logically_equal(
+                        m_phenotype[static_cast<Eigen::Index>(
+                            pheno_idx->second)],
+                        0))
                 {
                     // this will not be used for standardization
                     target.exclude_from_std(i_sample);

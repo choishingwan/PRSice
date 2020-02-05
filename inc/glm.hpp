@@ -89,7 +89,7 @@ public:
         //        {
         //            m_type = 2;
         //        }
-        m_type = 2;
+        m_type = 1;
         m_beta = Eigen::VectorXd::Zero(m_X.cols());
         m_eta = m_family.link(m_family.initialize(m_Y, m_w));
         m_mu = m_family.linkinv(m_eta);
@@ -352,7 +352,6 @@ private:
                 m_se = m_Pmat * m_se;
             }
         }
-
         if (m_type == 2) { m_se = m_se.array().sqrt(); }
     }
 };
