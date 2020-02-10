@@ -439,6 +439,7 @@ public:
     }
     Genotype& set_prs_instruction(const CalculatePRS& prs)
     {
+        m_has_prs_instruction = true;
         m_prs_calculation = prs;
         return *this;
     }
@@ -447,6 +448,7 @@ public:
 
     Genotype& set_weight()
     {
+        assert(m_has_prs_instruction);
         switch (m_prs_calculation.genetic_model)
         {
         case MODEL::HETEROZYGOUS:
@@ -550,6 +552,7 @@ protected:
     bool m_ambig_no_flip = false;
     bool m_genotype_stored = false;
     bool m_use_proxy = false;
+    bool m_has_prs_instruction = false;
     bool m_ignore_fid = false;
     bool m_intermediate = false;
     bool m_is_ref = false;

@@ -76,8 +76,8 @@ int main(int argc, char* argv[])
                      .keep_ambig(commander.keep_ambig())
                      .ambig_no_flip(commander.ambig_no_flip())
                      .intermediate(commander.use_inter())
-                     .set_weight()
-                     .set_prs_instruction(commander.get_prs_instruction());
+                     .set_prs_instruction(commander.get_prs_instruction())
+                     .set_weight();
             const std::string base_name = commander.get_base_name();
             std::string message = "Start processing " + base_name + "\n";
             message.append(
