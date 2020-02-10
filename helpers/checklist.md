@@ -1,0 +1,78 @@
+- Base file 
+    - [ ] Info filtering
+    - [ ] MAF filtering
+    - [ ] Case control MAF filtering
+    - [ ] Format check
+- PLINK Format
+    - [ ] Clumping (target)
+    - [ ] Clumping (reference)
+    - [ ] MAF filtering (target)
+    - [ ] MAF filtering (reference
+    - [ ] Geno filtering (target)
+    - [ ] Geno filtering (reference)
+    - [ ] PRS calculation - avg
+    - [ ] PRS calculation - std
+    - [ ] PRS calculation - sum
+    - [ ] PRS calculation - con-std
+    - [ ] Missingness handling - MEAN_IMPUTE
+    - [ ] Missingness handling - SET_ZERO
+    - [ ] Missingness handling - CENTRE
+    - [ ] Inclusion of nonfounder
+    - [ ] Correct use of model
+    - [ ] Proper handling of ambiguous SNPs - `--keep-ambig`
+    - [ ] Proper handling of ambiguous SNPs - `--keep-ambig-as-is`
+- BGEN Format
+    - [ ] Clumping (target)
+    - [ ] Clumping (reference)
+    - [ ] Clumping (target) - `--allow-inter`
+    - [ ] Clumping (reference) - `--allow-inter`
+    - [ ] Clumping (target) - `--hard`
+    - [ ] Clumping (reference) - `--hard`
+    - [ ] MAF filtering (target)
+    - [ ] MAF filtering (reference
+    - [ ] Geno filtering (target)
+    - [ ] Geno filtering (reference)
+    - [ ] PRS calculation - avg (`--hard`)
+    - [ ] PRS calculation - std (`--hard`)
+    - [ ] PRS calculation - sum (`--hard`)
+    - [ ] PRS calculation - con-std (`--hard`)
+    - [ ] PRS calculation - avg (`--hard` + `--allow-inter`)
+    - [ ] PRS calculation - std (`--hard` + `--allow-inter`)
+    - [ ] PRS calculation - sum (`--hard` + `--allow-inter`)
+    - [ ] PRS calculation - con-std (`--hard` + `--allow-inter`)
+    - [ ] PRS calculation - avg
+    - [ ] PRS calculation - std
+    - [ ] PRS calculation - sum
+    - [ ] PRS calculation - con-std
+    - [ ] Missingness handling - MEAN_IMPUTE (`--hard`)
+    - [ ] Missingness handling - SET_ZERO (`--hard`)
+    - [ ] Missingness handling - CENTRE (`--hard`)
+    - [ ] Missingness handling - MEAN_IMPUTE (`--hard` + `--allow-inter`)
+    - [ ] Missingness handling - SET_ZERO (`--hard` + `--allow-inter`)
+    - [ ] Missingness handling - CENTRE (`--hard` + `--allow-inter`)
+    - [ ] Missingness handling - MEAN_IMPUTE
+    - [ ] Missingness handling - SET_ZERO
+    - [ ] Missingness handling - CENTRE
+    - [ ] Correct use of model
+    - [ ] Correct use of model (`--hard`)
+    - [ ] Correct use of model (`--hard` + `--allow-inter`)
+    - [ ] Proper handling of ambiguous SNPs - `--keep-ambig`
+    - [ ] Proper handling of ambiguous SNPs - `--keep-ambig-as-is`
+- Covariance
+    - [ ] Proper regression results when including covariate
+    - [ ] Proper regression results when using factor covariate
+- PRSet
+    - Got automatic unit testing for most part 
+- Permutation 
+    - Haven't figure out how to do testing for permutation
+- Misc
+    - [ ] `--no-regress` output
+    - [ ] `--all-score` output
+    - [ ] Correct settings for model - add
+    - [ ] Correct settings for model - dom
+    - [ ] Correct settings for model - rec
+    - [ ] Correct settings for model - het
+TODO:
+    - [ ] Update website to remove `--pearson`
+    - [ ] Update website to include `--score con-std`
+    - [ ] Update website to remove `--enable-mmap`
