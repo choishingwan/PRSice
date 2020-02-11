@@ -36,8 +36,11 @@ void print_empty_region(
     const std::string& out,
     const std::vector<std::vector<size_t>>& region_membership,
     std::vector<std::string>& region_names);
+
 int main(int argc, char* argv[])
 {
+    const std::string separator =
+        "==================================================";
     // initialize reporter, use to generate log
     Reporter reporter;
     try
@@ -80,25 +83,23 @@ int main(int argc, char* argv[])
                      .set_weight();
             const std::string base_name = commander.get_base_name();
             std::string message = "Start processing " + base_name + "\n";
-            message.append(
-                "==================================================");
+            message.append(separator);
             reporter.report(message);
             target_file->snp_extraction(commander.extract_file(),
                                         commander.exclude_file());
             target_file->read_base(
                 commander.get_base(), commander.get_base_qc(),
                 commander.get_p_threshold(), exclusion_regions);
-            // no longer need the exclusion region object
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
-            message.append(
-                "==================================================");
+            message.append(separator);
             reporter.report(message);
-            target_file->load_samples();
-            // Need to know if we use the reference, because we need to generate
-            // the intermediate for target even if it is not hard coded for LD
-            // calculation
+            // Need to know if we use the reference
+            // When reference isn't used, we will need to generate the
+            // intermediate file for LD calculation if user used --allow-inter
+            // and --type bge
             if (commander.use_ref()) target_file->expect_reference();
+            target_file->load_samples();
             target_file->load_snps(commander.out(), exclusion_regions, verbose);
             // now load the reference file
             // initialize the memory map file
@@ -113,8 +114,7 @@ int main(int argc, char* argv[])
                     commander.use_inter());
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
-                message.append(
-                    "==================================================");
+                message.append(separator);
                 reporter.report(message);
                 reference_file->load_samples();
                 // load the reference file
@@ -139,16 +139,12 @@ int main(int argc, char* argv[])
             // now should get the correct MAF and should have filtered the
             // SNPs accordingly Generate Region flag information
             Region region(commander.get_set(), &reporter);
-            std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-            std::vector<IITree<size_t, size_t>> gene_sets;
-            size_t num_regions =
+            const size_t num_regions =
                 region.generate_regions(target_file->max_chr());
             std::vector<std::string> region_names = region.get_names();
             target_file->add_flags(region.get_gene_sets(),
                                    region.get_snp_sets(), num_regions,
                                    commander.get_set().full_as_background);
-
-            gene_sets.clear();
             // start processing other files before doing clumping
             PRSice prsice(commander.get_prs_instruction(),
                           commander.get_p_threshold(), commander.get_pheno(),
@@ -161,7 +157,7 @@ int main(int argc, char* argv[])
             {
                 // now go through the snp vector an define the
                 // windows so that we can jump directly to the
-                // relevant SNPs immediately when doing clumping
+                // relevant SNPs immediately during clumping
                 target_file->build_clump_windows(
                     commander.get_clump_info().distance);
                 // get the sort by p index vector for target
