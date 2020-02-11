@@ -141,48 +141,54 @@ public:
     std::string
     print_duplicated_snps(const std::unordered_set<std::string>& snp_name,
                           const std::string& out_prefix);
-    bool base_filter_by_value(const std::string& input, const double& threshold,
-                              size_t& filter_count)
+    bool base_filter_by_value(const std::vector<std::string>& token,
+                              const BaseFile& base_file,
+                              const double& threshold, size_t index)
     {
+        if (!base_file.has_column[index]) return false;
         double value = 1;
-        // only read in if we want to perform MAF filtering
         try
         {
-            value = misc::convert<double>(input.c_str());
+            value = misc::convert<double>(
+                token[base_file.column_index[index]].c_str());
         }
         catch (...)
         {
-            // exclude because we can't read the MAF, therefore assume
-            // this is problematic
-            ++filter_count;
             return true;
         }
-        if (value < threshold)
-        {
-            ++filter_count;
-            return true;
-        }
+        if (value < threshold) return true;
         return false;
     }
-    size_t get_chr_code(const std::string& chr, size_t& invalid_count,
-                        size_t haploid_count)
+    int parse_chr(const std::vector<std::string>& token,
+                  const BaseFile& base_file, size_t index, size_t& chr)
     {
+        if (!base_file.has_column[index]) return 0;
         int32_t chr_code = -1;
-        chr_code = get_chrom_code_raw(chr.c_str());
-        bool sex_error = false, chr_error = false;
-        std::string error_message;
-        if (chr_code_check(chr_code, sex_error, chr_error, error_message))
-        {
-            if (chr_error) { ++invalid_count; }
-            else if (sex_error)
-            {
-                ++haploid_count;
-            }
-            return ~size_t(0);
-        }
-        return static_cast<size_t>(chr_code);
+        chr = ~size_t(0);
+        chr_code =
+            get_chrom_code_raw(token[base_file.column_index[index]].c_str());
+        if (chr_code < 0) { return 1; }
+        if (chr_code > MAX_POSSIBLE_CHROM
+            || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
+        { return 2; }
+        return 0;
     }
+    bool parse_loc(const std::vector<std::string>& token,
+                   const BaseFile& base_file, size_t index, size_t& loc)
+    {
 
+        if (!base_file.has_column[index]) return true;
+        try
+        {
+            loc = misc::string_to_size_t(
+                token[base_file.column_index[index]].c_str());
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return true;
+    }
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
     void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
@@ -572,6 +578,62 @@ protected:
                         const SNP& target, const std::string& rs,
                         const std::string& a1, const std::string& a2,
                         const size_t chr_num, const size_t loc);
+
+    int parse_rs_id(const std::vector<std::string>& token,
+                    const std::unordered_set<std::string>& dup_index,
+                    const BaseFile& base_file, std::string& rs_id)
+    {
+        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
+        if (dup_index.find(rs_id) != dup_index.end()) { return 1; }
+
+        auto&& selection = m_snp_selection_list.find(rs_id);
+        if ((!m_exclude_snp && selection == m_snp_selection_list.end())
+            || (m_exclude_snp && selection != m_snp_selection_list.end()))
+        { return 2; }
+        return 0;
+    }
+    void parse_allele(const std::vector<std::string>& token,
+                      const BaseFile& base_file, size_t index,
+                      std::string& allele)
+    {
+        allele = (base_file.has_column[index])
+                     ? token[base_file.column_index[index]]
+                     : "";
+        std::transform(allele.begin(), allele.end(), allele.begin(), ::toupper);
+    }
+    int parse_pvalue(const std::string& p_value_str, const double max_threshold,
+                     double& pvalue)
+    {
+        try
+        {
+            pvalue = misc::convert<double>(p_value_str);
+        }
+        catch (...)
+        {
+            return 1;
+        }
+        if (pvalue < 0.0 || pvalue > 1.0) return 3;
+        if (pvalue > max_threshold) { return 2; }
+        return 0;
+    }
+    int parse_stat(const std::string& stat_str, const bool odd_ratio,
+                   double& stat)
+    {
+        try
+        {
+            stat = misc::convert<double>(stat_str);
+            if (odd_ratio && misc::logically_equal(stat, 0.0)) { return 1; }
+            else if (odd_ratio && stat < 0.0)
+                return 2;
+            else if (odd_ratio)
+                stat = log(stat);
+            return 0;
+        }
+        catch (...)
+        {
+            return 1;
+        }
+    }
     /*!
      * \brief Calculate the threshold bin based on the p-value and bound
      * info \param pvalue the input p-value \param bound_start is the start

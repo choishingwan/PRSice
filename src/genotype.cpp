@@ -1,4 +1,4 @@
-// This file is part of PRSice-2, copyright (C) 2016-2019
+﻿// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -227,10 +227,8 @@ void Genotype::read_base(
     size_t num_info_filter = 0;
     size_t num_chr_filter = 0;
     size_t num_maf_filter = 0;
-    int32_t chr_code;
     std::streampos file_length = 0;
     unsigned long long category = 0;
-    bool to_remove = false;
     bool gz_input = false;
     try
     {
@@ -305,129 +303,61 @@ void Genotype::read_base(
             error_message.append("\nMore index than column in data\n");
             throw std::runtime_error(error_message);
         }
-        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
-        if (dup_index.find(rs_id) != dup_index.end())
+        switch (parse_rs_id(token, dup_index, base_file, rs_id))
         {
-            ++num_duplicated;
-            continue;
+        case 1: ++num_duplicated; continue;
+        case 2: ++num_selected; continue;
+        default: dup_index.insert(rs_id);
         }
-
-        auto&& selection = m_snp_selection_list.find(rs_id);
-        if ((!m_exclude_snp && selection == m_snp_selection_list.end())
-            || (m_exclude_snp && selection != m_snp_selection_list.end()))
+        switch (parse_chr(token, base_file, +BASE_INDEX::CHR, chr))
         {
-            ++num_selected;
-            continue;
+        case 1: ++num_chr_filter; continue;
+        case 2: ++num_haploid; continue;
         }
-        dup_index.insert(rs_id);
-        chr_code = -1;
-        chr = ~size_t(0);
-        if (base_file.has_column[+BASE_INDEX::CHR])
+        parse_allele(token, base_file, +BASE_INDEX::EFFECT, ref_allele);
+        parse_allele(token, base_file, +BASE_INDEX::NONEFFECT, alt_allele);
+        if (!parse_loc(token, base_file, +BASE_INDEX::BP, loc))
         {
-            chr = get_chr_code(
-                token[base_file.column_index[+BASE_INDEX::CHR]].c_str(),
-                num_chr_filter, num_haploid);
-            if (chr == ~size_t(0)) continue;
+            throw std::runtime_error(
+                "Error: Invalid loci for " + rs_id + ": "
+                + token[base_file.column_index[+BASE_INDEX::BP]] + "\n");
         }
-        ref_allele = (base_file.has_column[+BASE_INDEX::EFFECT])
-                         ? token[base_file.column_index[+BASE_INDEX::EFFECT]]
-                         : "";
-        alt_allele = (base_file.has_column[+BASE_INDEX::NONEFFECT])
-                         ? token[base_file.column_index[+BASE_INDEX::NONEFFECT]]
-                         : "";
-        std::transform(ref_allele.begin(), ref_allele.end(), ref_allele.begin(),
-                       ::toupper);
-        std::transform(alt_allele.begin(), alt_allele.end(), alt_allele.begin(),
-                       ::toupper);
-        loc = ~size_t(0);
-        if (base_file.has_column[+BASE_INDEX::BP])
-        {
-            // obtain the SNP coordinate
-            try
-            {
-                loc = misc::string_to_size_t(
-                    token[base_file.column_index[+BASE_INDEX::BP]].c_str());
-            }
-            catch (...)
-            {
-                throw std::runtime_error(
-                    "Error: Invalid loci for " + rs_id + ": "
-                    + token[base_file.column_index[+BASE_INDEX::BP]] + "\n");
-            }
-        }
-        to_remove = false;
         if (base_file.has_column[+BASE_INDEX::BP]
             && base_file.has_column[+BASE_INDEX::CHR])
-            to_remove = Genotype::within_region(exclusion_regions, chr, loc);
-        if (to_remove)
         {
-            ++num_region_exclude;
-            continue;
+            if (Genotype::within_region(exclusion_regions, chr, loc))
+            {
+                ++num_region_exclude;
+                continue;
+            }
         }
+        if (!base_filter_by_value(token, base_file, base_qc.maf,
+                                  +BASE_INDEX::MAF))
+        {
+            // don't need to test case filtering if we have already filtered the
+            // SNP with the control MAF
+            num_maf_filter += base_filter_by_value(
+                token, base_file, base_qc.maf_case, +BASE_INDEX::MAF_CASE);
+        }
+        else
+            ++num_maf_filter;
+        num_info_filter += base_filter_by_value(
+            token, base_file, base_qc.info_score, +BASE_INDEX::INFO);
 
-        if (base_file.has_column[+BASE_INDEX::MAF])
+        switch (parse_pvalue(token[base_file.column_index[+BASE_INDEX::P]],
+                             max_threshold, pvalue))
         {
-            base_filter_by_value(
-                token[base_file.column_index[+BASE_INDEX::MAF]], base_qc.maf,
-                num_maf_filter);
+        case 1: ++num_not_converted; continue;
+        case 2: ++num_excluded; continue;
+        case 3:
+            throw std::runtime_error("Error: Invalid p-value for " + rs_id
+                                     + ": " + misc::to_string(pvalue) + "!\n");
         }
-        if (base_file.has_column[+BASE_INDEX::MAF_CASE])
+        switch (parse_stat(token[base_file.column_index[+BASE_INDEX::STAT]],
+                           base_file.is_or, stat))
         {
-            base_filter_by_value(
-                token[base_file.column_index[+BASE_INDEX::MAF_CASE]],
-                base_qc.maf, num_maf_filter);
-        }
-        if (base_file.has_column[+BASE_INDEX::INFO])
-        {
-            base_filter_by_value(
-                token[base_file.column_index[+BASE_INDEX::INFO]], base_qc.maf,
-                num_info_filter);
-        }
-        pvalue = 2.0;
-        try
-        {
-            pvalue = misc::convert<double>(
-                token[base_file.column_index[+BASE_INDEX::P]]);
-            if (pvalue < 0.0 || pvalue > 1.0)
-            {
-                std::string error_message =
-                    "Error: Invalid p-value for " + rs_id + ": "
-                    + token[base_file.column_index[+BASE_INDEX::P]] + "!\n";
-                throw std::runtime_error(error_message);
-            }
-            else if (pvalue > max_threshold)
-            {
-                ++num_excluded;
-                continue;
-            }
-        }
-        catch (...)
-        {
-            ++num_not_converted;
-            continue;
-        }
-        stat = 0.0;
-        try
-        {
-            stat = misc::convert<double>(
-                token[base_file.column_index[+BASE_INDEX::STAT]]);
-            if (stat < 0 && base_file.is_or)
-            {
-                ++num_negative_stat;
-                continue;
-            }
-            else if (misc::logically_equal(stat, 0.0) && base_file.is_or)
-            {
-                ++num_not_converted;
-                continue;
-            }
-            else if (base_file.is_or)
-                stat = log(stat);
-        }
-        catch (...)
-        {
-            ++num_not_converted;
-            continue;
+        case 1: ++num_not_converted; continue;
+        case 2: ++num_negative_stat; continue;
         }
         if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
         {
