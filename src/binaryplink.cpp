@@ -62,37 +62,32 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     famfile.open(m_sample_file.c_str());
     if (!famfile.is_open())
     {
-        std::string error_message =
-            "Error: Cannot open fam file: " + m_sample_file;
-        throw std::runtime_error(error_message);
+        throw std::runtime_error("Error: Cannot open fam file: "
+                                 + m_sample_file);
     }
     // number of unfiltered samples
     // this must be correct as this value is use for all subsequent size
     // intiailization
     m_unfiltered_sample_ct = 0;
-
-    std::string line;
     // capture all founder name and check if they exists within the file
     std::unordered_set<std::string> founder_info;
     // first pass to get the number of samples and also get the founder ID
     std::vector<std::string> token;
+    std::string line;
     while (std::getline(famfile, line))
     {
         misc::trim(line);
-        if (!line.empty())
+        if (line.empty()) continue;
+        misc::split(token, line);
+        if (token.size() < 6)
         {
-            token = misc::split(line);
-            if (token.size() < 6)
-            {
-                std::string message =
-                    "Error: Malformed fam file. Less than 6 column on "
-                    "line: "
-                    + std::to_string(m_unfiltered_sample_ct + 1) + "\n";
-                throw std::runtime_error(message);
-            }
-            founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
-            m_unfiltered_sample_ct++;
+            throw std::runtime_error(
+                "Error: Malformed fam file. Less than 6 column on "
+                "line: "
+                + std::to_string(m_unfiltered_sample_ct + 1) + "\n");
         }
+        founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
+        ++m_unfiltered_sample_ct;
     }
     // now reset the fam file to the start
     famfile.clear();
@@ -124,26 +119,18 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     {
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
+        misc::split(token, line);
         // we have already checked for malformed file
-        std::string id = (m_ignore_fid)
-                             ? token[+FAM::IID]
-                             : token[+FAM::FID] + m_delim + token[+FAM::IID];
-        if (!m_remove_sample)
-        {
-            inclusion = (m_sample_selection_list.find(id)
-                         != m_sample_selection_list.end());
-        }
-        else
-        {
-            inclusion = (m_sample_selection_list.find(id)
-                         == m_sample_selection_list.end());
-        }
+        const std::string fid = token[+FAM::FID] + m_delim;
+        const std::string id =
+            (m_ignore_fid) ? token[+FAM::IID] : fid + token[+FAM::IID];
+        auto&& find_id = m_sample_selection_list.find(id);
+        inclusion = m_remove_sample
+                        ? (find_id == m_sample_selection_list.end())
+                        : (find_id != m_sample_selection_list.end());
 
-        if (founder_info.find(token[+FAM::FID] + m_delim + token[+FAM::FATHER])
-                == founder_info.end()
-            && founder_info.find(token[+FAM::FID] + m_delim
-                                 + token[+FAM::MOTHER])
+        if (founder_info.find(fid + token[+FAM::FATHER]) == founder_info.end()
+            && founder_info.find(fid + token[+FAM::MOTHER])
                    == founder_info.end()
             && inclusion)
         {
@@ -155,13 +142,15 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         }
         else if (inclusion)
         {
-            // use it for PRS, but not for LD (non-founder, but user wants to
-            // include it)
+            // we still calculate PRS for this sample
             SET_BIT(sample_index, m_sample_include.data());
             ++m_num_non_founder;
+            // but will only include it in the regression model if users asked
+            // to include non-founders
             founder = m_keep_nonfounder;
         }
         m_sample_ct += inclusion;
+        // TODO: Better sex parsing? Can also be 0, 1 or F and M
         if (token[+FAM::SEX] == "1") { ++m_num_male; }
         else if (token[+FAM::SEX] == "2")
         {
@@ -187,12 +176,10 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     if (number_duplicated_samples > 0)
     {
         // TODO: Produce a file containing id of all valid samples
-        std::string error_message = "Error: A total of "
-                                    + misc::to_string(number_duplicated_samples)
-                                    + " duplicated samples detected!\n";
-        error_message.append(
-            "Please ensure all samples have an unique identifier");
-        throw std::runtime_error(error_message);
+        throw std::runtime_error(
+            "Error: A total of " + misc::to_string(number_duplicated_samples)
+            + " duplicated samples detected!\n"
+            + "Please ensure all samples have an unique identifier");
     }
 
     famfile.close();
@@ -202,20 +189,20 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     // m_prs_info.reserve(m_sample_ct);
     // now we add the prs information. For some reason, we can't do a simple
     // reserve
-    for (size_t i = 0; i < m_sample_ct; ++i) { m_prs_info.emplace_back(PRS()); }
+    m_prs_info.resize(m_sample_ct, PRS());
+    // for (size_t i = 0; i < m_sample_ct; ++i) {
+    // m_prs_info.emplace_back(PRS()); }
     // also resize the in_regression flag
     m_in_regression.resize(m_sample_include.size(), 0);
     // initialize the sample_include2 and founder_include2 which are
     // both needed in cal_maf or read_score for MAF calculation
-    m_sample_include2.resize(unfiltered_sample_ctv2);
-    m_founder_include2.resize(unfiltered_sample_ctv2);
+    m_sample_include2.resize(unfiltered_sample_ctv2, 0);
+    m_founder_include2.resize(unfiltered_sample_ctv2, 0);
     // fill it with the required mask (copy from PLINK2)
     init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
                                m_sample_include2.data());
     init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
                                m_founder_include2.data());
-
-    m_data_size = (m_unfiltered_sample_ct + 3) / 4;
     return sample_name;
 }
 
@@ -224,10 +211,8 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
                                       bool force_cal)
 {
     // we will go through all the SNPs
-    if ((misc::logically_equal(filter_info.geno, 1.0) || filter_info.geno > 1.0)
-        && (misc::logically_equal(filter_info.maf, 0.0)
-            || filter_info.maf < 0.0)
-        && !force_cal)
+    if (misc::logically_equal(filter_info.geno, 1.0)
+        && misc::logically_equal(filter_info.maf, 0.0) && !force_cal)
     { return false; }
     const std::string print_target = (m_is_ref) ? "reference" : "target";
     m_reporter->report("Calculate MAF and perform filtering on " + print_target
@@ -256,7 +241,7 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
     std::string prev_file = "";
     double progress = 0.0, prev_progress = -1.0;
     double cur_maf, cur_geno;
-    long long byte_pos = 1;
+    std::streampos byte_pos;
     size_t processed_count = 0;
     size_t retained = 0;
     size_t cur_file_idx = 0;
@@ -315,7 +300,6 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
             continue;
         }
         // filter by genotype missingness
-
         if (filter_info.geno < cur_geno)
         {
             ++m_num_geno_filter;
@@ -333,7 +317,6 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
         // to avoid continue skipping out the addition
         retain_snps[processed_count - 1] = true;
     }
-
     fprintf(stderr, "\rCalculating allele frequencies: %03.2f%%\n", 100.0);
     // now update the vector
     if (retained != genotype->m_existed_snps.size())
@@ -346,6 +329,8 @@ void BinaryPlink::gen_snp_vector(
     const std::string& out_prefix, Genotype* target)
 {
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
+    const std::string mismatch_snp_record_name = out_prefix + ".mismatch";
+    const std::string mismatch_print_type = (m_is_ref) ? "Reference" : "Base";
     std::unordered_set<std::string> processed_snps;
     std::unordered_set<std::string> duplicated_snp;
     std::vector<std::string> bim_token;
@@ -354,14 +339,12 @@ void BinaryPlink::gen_snp_vector(
     std::ifstream bim;
     std::string bim_name, bed_name, chr, line;
     std::string prev_chr = "", error_message = "";
-    const std::string mismatch_snp_record_name = out_prefix + ".mismatch";
     std::string prefix;
-    const std::string mismatch_print_type = (m_is_ref) ? "Reference" : "Base";
     uintptr_t bed_offset;
     size_t num_retained = 0;
     size_t chr_num = 0;
     size_t num_snp_read = 0;
-    long long byte_pos;
+    std::streampos byte_pos;
     int chr_code = 0;
     bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
          prev_chr_error = false, flipping = false;
@@ -377,9 +360,8 @@ void BinaryPlink::gen_snp_vector(
         bim.open(bim_name.c_str());
         if (!bim.is_open())
         {
-            std::string error_message =
-                "Error: Cannot open bim file: " + bim_name;
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Cannot open bim file: "
+                                     + bim_name);
         }
         // First pass, get the number of marker in bed & bim
         // as we want the number for checking, num_snp_read will start at 0
@@ -403,14 +385,13 @@ void BinaryPlink::gen_snp_vector(
             if (line.empty()) continue;
             // we need to remember the actual number read is num_snp_read+1
             ++num_snp_read;
-            bim_token = misc::split(line);
+            misc::split(bim_token, line);
             if (bim_token.size() < 6)
             {
-                std::string error_message =
+                throw std::runtime_error(
                     "Error: Malformed bim file. Less than 6 column on "
                     "line: "
-                    + misc::to_string(num_snp_read) + "\n";
-                throw std::runtime_error(error_message);
+                    + misc::to_string(num_snp_read) + "\n");
             }
             auto&& base_idx =
                 genotype->m_existed_snps_index.find(bim_token[+BIM::RS]);
@@ -419,7 +400,6 @@ void BinaryPlink::gen_snp_vector(
                 ++m_base_missed;
                 continue;
             }
-
             // read in the chromosome string
             chr = bim_token[+BIM::CHR];
             // check if this is a new chromosome. If this is a new chromosome,
@@ -435,13 +415,13 @@ void BinaryPlink::gen_snp_vector(
                     // only print chr error message if we haven't already
                     if (chr_error && !prev_chr_error)
                     {
-                        std::cerr << error_message << "\n";
+                        m_reporter->report(error_message);
                         prev_chr_error = chr_error;
                     }
                     // only print sex chr error message if we haven't already
                     else if (chr_sex_error && !prev_chr_sex_error)
                     {
-                        std::cerr << error_message << "\n";
+                        m_reporter->report(error_message);
                         prev_chr_sex_error = chr_sex_error;
                     }
                     continue;
@@ -479,24 +459,18 @@ void BinaryPlink::gen_snp_vector(
                            bim_token[+BIM::A2].end(),
                            bim_token[+BIM::A2].begin(), ::toupper);
             // check if this is a duplicated SNP
+            bool ambig = ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
             if (processed_snps.find(bim_token[+BIM::RS])
                 != processed_snps.end())
             {
                 duplicated_snp.insert(bim_token[+BIM::RS]);
                 continue;
             }
-            else if (!ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2])
-                     || m_keep_ambig)
+            else if (!ambig || m_keep_ambig)
             {
                 // if the SNP is not ambiguous (or if we want to keep ambiguous
-                // SNPs), we will start processing the bed file (if required)
-
-                // now read in the binary information and determine if we
-                // want to keep this SNP only do the filtering if we need to
-                // as my current implementation isn't as efficient as PLINK
-                m_num_ambig +=
-                    ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
-
+                // SNPs)
+                m_num_ambig += ambig;
                 if (!genotype->m_existed_snps[base_idx->second].matching(
                         chr_num, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
                         flipping))
@@ -510,15 +484,16 @@ void BinaryPlink::gen_snp_vector(
                 }
                 else
                 {
-                    byte_pos = static_cast<long long>(
+                    byte_pos = static_cast<std::streampos>(
                         bed_offset
                         + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
+                    if (flipping && ambig && m_ambig_no_flip) flipping = false;
                     genotype->m_existed_snps[base_idx->second].add_snp_info(
                         idx, byte_pos, chr_num, loc, bim_token[+BIM::A1],
                         bim_token[+BIM::A2], flipping, m_is_ref);
                     processed_snps.insert(bim_token[+BIM::RS]);
                     retain_snp[base_idx->second] = true;
-                    num_retained++;
+                    ++num_retained;
                 }
             }
             else
@@ -535,14 +510,12 @@ void BinaryPlink::gen_snp_vector(
         // need to update index search after we updated the vector
         genotype->update_snp_index();
     }
-
     if (duplicated_snp.size() != 0)
     {
         throw std::runtime_error(
             genotype->print_duplicated_snps(duplicated_snp, out_prefix));
     }
 }
-
 
 void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
                             uintptr_t& bed_offset)
@@ -555,26 +528,19 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
     uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     std::ifstream bed(bed_name.c_str(), std::ios::binary);
     if (!bed.is_open())
-    {
-        std::string error_message = "Cannot read bed file: " + bed_name;
-        throw std::runtime_error(error_message);
-    }
+    { throw std::runtime_error("Cannot read bed file: " + bed_name); }
     bed.seekg(0, bed.end);
     llxx = bed.tellg();
     if (!llxx)
-    {
-        std::string error_message = "Error: Empty .bed file: " + bed_name;
-        throw std::runtime_error(error_message);
-    }
+    { throw std::runtime_error("Error: Empty .bed file: " + bed_name); }
     bed.seekg(0, bed.beg);
     bed.clear();
     char version_check[3];
     bed.read(version_check, 3);
     uii = static_cast<uint32_t>(bed.gcount());
-    llyy = static_cast<int64_t>((static_cast<uint64_t>(unfiltered_sample_ct4))
-                                * num_marker);
-    llzz = static_cast<int64_t>(static_cast<uint64_t>(m_unfiltered_sample_ct)
-                                * ((num_marker + 3) / 4));
+    llyy = static_cast<int64_t>(unfiltered_sample_ct4 * num_marker);
+    llzz =
+        static_cast<int64_t>(m_unfiltered_sample_ct * ((num_marker + 3) / 4));
     bool sample_major = false;
     // compare only the first 3 bytes
     if ((uii == 3) && (!memcmp(version_check, "l\x1b\x01", 3))) { llyy += 3; }
@@ -606,10 +572,8 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
         {
             // probably not PLINK-format at all, so give this error instead
             // of "invalid file size"
-
-            std::string error_message =
-                "Error: Invalid header bytes in .bed file: " + bed_name;
-            throw std::runtime_error(error_message);
+            throw std::runtime_error(
+                "Error: Invalid header bytes in .bed file: " + bed_name);
         }
         llyy = llzz;
         bed_offset = 2;
@@ -619,18 +583,16 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
         if ((*version_check == '#')
             || ((uii == 3) && (!memcmp(version_check, "chr", 3))))
         {
-            std::string error_message = "Error: Invalid header bytes in PLINK "
-                                        "1 .bed file: "
-                                        + bed_name
-                                        + "  (Is this a UCSC "
-                                          "Genome\nBrowser BED file instead?)";
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Invalid header bytes in PLINK "
+                                     "1 .bed file: "
+                                     + bed_name
+                                     + "  (Is this a UCSC "
+                                       "Genome\nBrowser BED file instead?)");
         }
         else
         {
-            std::string error_message =
-                "Error: Invalid .bed file size for " + bed_name;
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Invalid .bed file size for "
+                                     + bed_name);
         }
     }
     if (sample_major)
@@ -644,8 +606,10 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
 BinaryPlink::~BinaryPlink() {}
 
 void BinaryPlink::read_score(
+    std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
+    bool read_only)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -663,6 +627,8 @@ void BinaryPlink::read_score(
     size_t het_ct = 0;
     size_t homcom_ct = 0;
     size_t tmp_total = 0;
+    // currently hard code ploidy to 2. Will keep it this way unil we know how
+    // to properly handly non-diploid chromosomes in human and other organisms
     const size_t ploidy = 2;
     // those are the weight (0,1,2) for each genotype observation
     double homcom_weight = m_homcom_weight;
@@ -691,54 +657,65 @@ void BinaryPlink::read_score(
     // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
-    long long cur_line;
+    std::streampos cur_line;
     std::string file_name;
     size_t file_idx;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        cur_snp.get_file_info(file_idx, cur_line, false);
-        file_name = m_genotype_file_names[file_idx] + ".bed";
-        // we now read the genotype from the file by calling
-        // load_and_collapse_incl
-        // important point to note here is the use of m_sample_include and
-        // m_sample_ct instead of using the m_founder m_founder_info as the
-        // founder vector is for LD calculation whereas the sample_include is
-        // for PRS
-        m_genotype_file.read(file_name, cur_line, unfiltered_sample_ct4,
-                             reinterpret_cast<char*>(m_tmp_genotype.data()));
-        if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                m_prs_calculation.use_ref_maf))
+        if (!cur_snp.stored_genotype())
         {
-            // we need to calculate the MA
-            // if we want to use reference, we will always have calculated the
-            // MAF
-            single_marker_freqs_and_hwe(
-                unfiltered_sample_ctv2, m_tmp_genotype.data(),
-                m_sample_include2.data(), m_founder_include2.data(),
-                m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf,
-                &lh_ctf, &hh_ctf);
-            homcom_ct = ll_ctf;
-            het_ct = lh_ctf;
-            homrar_ct = hh_ctf;
-            tmp_total = (homcom_ct + het_ct + homrar_ct);
-            assert(m_founder_ct >= tmp_total);
-            missing_ct = m_founder_ct - tmp_total;
-            cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct, false);
-        }
-        if (m_unfiltered_sample_ct != m_sample_ct)
-        {
-            copy_quaterarr_nonempty_subset(
-                m_tmp_genotype.data(), m_sample_include.data(),
-                static_cast<uint32_t>(m_unfiltered_sample_ct),
-                static_cast<uint32_t>(m_sample_ct), genotype.data());
+            cur_snp.get_file_info(file_idx, cur_line, false);
+            file_name = m_genotype_file_names[file_idx] + ".bed";
+            // we now read the genotype from the file by calling
+            // load_and_collapse_incl
+            // important point to note here is the use of m_sample_include and
+            // m_sample_ct instead of using the m_founder m_founder_info as the
+            // founder vector is for LD calculation whereas the sample_include
+            // is for PRS
+            m_genotype_file.read(
+                file_name, cur_line, unfiltered_sample_ct4,
+                reinterpret_cast<char*>(m_tmp_genotype.data()));
+            if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                    m_prs_calculation.use_ref_maf))
+            {
+                // we need to calculate the MA
+                // if we want to use reference, we will always have calculated
+                // the MAF
+                single_marker_freqs_and_hwe(
+                    unfiltered_sample_ctv2, m_tmp_genotype.data(),
+                    m_sample_include2.data(), m_founder_include2.data(),
+                    m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf,
+                    &lh_ctf, &hh_ctf);
+                homcom_ct = ll_ctf;
+                het_ct = lh_ctf;
+                homrar_ct = hh_ctf;
+                tmp_total = (homcom_ct + het_ct + homrar_ct);
+                assert(m_founder_ct >= tmp_total);
+                missing_ct = m_founder_ct - tmp_total;
+                cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                   false);
+            }
+            if (m_unfiltered_sample_ct != m_sample_ct)
+            {
+                copy_quaterarr_nonempty_subset(
+                    m_tmp_genotype.data(), m_sample_include.data(),
+                    static_cast<uint32_t>(m_unfiltered_sample_ct),
+                    static_cast<uint32_t>(m_sample_ct), genotype.data());
+            }
+            else
+            {
+                genotype = m_tmp_genotype;
+                genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+            }
+            if (read_only) { cur_snp.assign_genotype(genotype); }
         }
         else
         {
-            genotype = m_tmp_genotype;
-            genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+            genotype = cur_snp.get_genotype();
+            cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                               m_prs_calculation.use_ref_maf);
         }
-        // directly read in the current location
         if (m_founder_ct == missing_ct)
         {
             // problematic snp
@@ -765,8 +742,12 @@ void BinaryPlink::read_score(
         miss_score = 0;
         if (mean_impute) { miss_score = ploidy * stat * maf; }
         // now we go through the SNP vector
-        read_prs(genotype, ploidy, stat, adj_score, miss_score, miss_count,
-                 homcom_weight, het_weight, homrar_weight, not_first);
+        if (!read_only)
+        {
+            read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
+                     miss_count, homcom_weight, het_weight, homrar_weight,
+                     not_first);
+        }
         // indicate that we've already read in the first SNP and no longer need
         // to reset the PRS
         not_first = true;

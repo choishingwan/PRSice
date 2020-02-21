@@ -35,7 +35,6 @@
 #include <functional>
 #include <memory>
 #include <memoryread.hpp>
-#include <mio.hpp>
 #include <mutex>
 #include <random>
 #include <set>
@@ -90,11 +89,6 @@ public:
      * \param reporter is the logger
      */
     void load_samples(bool verbose = true);
-    static void set_memory(const unsigned long long& mem, const bool enable_mem)
-    {
-        g_allowed_memory = mem;
-        g_allow_mmap = enable_mem;
-    }
     // We need the exclusion_region parameter because when we read in the base
     // we do allow users to provide a base without the CHR and LOC, which forbid
     // us to do the regional filtering. However, as exclusion and extractions
@@ -147,50 +141,56 @@ public:
     std::string
     print_duplicated_snps(const std::unordered_set<std::string>& snp_name,
                           const std::string& out_prefix);
-    bool base_filter_by_value(const std::string& input, const double& threshold,
-                              size_t& filter_count)
+    bool base_filter_by_value(const std::vector<std::string>& token,
+                              const BaseFile& base_file,
+                              const double& threshold, size_t index)
     {
+        if (!base_file.has_column[index]) return false;
         double value = 1;
-        // only read in if we want to perform MAF filtering
         try
         {
-            value = misc::convert<double>(input.c_str());
+            value = misc::convert<double>(
+                token[base_file.column_index[index]].c_str());
         }
         catch (...)
         {
-            // exclude because we can't read the MAF, therefore assume
-            // this is problematic
-            ++filter_count;
             return true;
         }
-        if (value < threshold)
-        {
-            ++filter_count;
-            return true;
-        }
+        if (value < threshold) return true;
         return false;
     }
-    size_t get_chr_code(const std::string& chr, size_t& invalid_count,
-                        size_t haploid_count)
+    int parse_chr(const std::vector<std::string>& token,
+                  const BaseFile& base_file, size_t index, size_t& chr)
     {
+        if (!base_file.has_column[index]) return 0;
         int32_t chr_code = -1;
-        chr_code = get_chrom_code_raw(chr.c_str());
-        bool sex_error = false, chr_error = false;
-        std::string error_message;
-        if (chr_code_check(chr_code, sex_error, chr_error, error_message))
-        {
-            if (chr_error) { ++invalid_count; }
-            else if (sex_error)
-            {
-                ++haploid_count;
-            }
-            return ~size_t(0);
-        }
-        return static_cast<size_t>(chr_code);
+        chr = ~size_t(0);
+        chr_code =
+            get_chrom_code_raw(token[base_file.column_index[index]].c_str());
+        if (chr_code < 0) { return 1; }
+        if (chr_code > MAX_POSSIBLE_CHROM
+            || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
+        { return 2; }
+        return 0;
     }
+    bool parse_loc(const std::vector<std::string>& token,
+                   const BaseFile& base_file, size_t index, size_t& loc)
+    {
 
+        if (!base_file.has_column[index]) return true;
+        try
+        {
+            loc = misc::string_to_size_t(
+                token[base_file.column_index[index]].c_str());
+        }
+        catch (...)
+        {
+            return false;
+        }
+        return true;
+    }
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
-
+    void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression flag
      * to false and propagate it later on to indicate if the sample is used in
@@ -286,28 +286,32 @@ public:
      * \param i is the sample index
      * \return the PRS
      */
-    inline double calculate_score(size_t i) const
+    inline double calculate_score(const std::vector<PRS>& prs_list,
+                                  size_t i) const
     {
-        if (i >= m_prs_info.size())
+        if (i >= prs_list.size())
             throw std::out_of_range("Sample name vector out of range");
-        double prs = m_prs_info[i].prs;
-        size_t num_snp = m_prs_info[i].num_snp;
+        const size_t num_snp = prs_list[i].num_snp;
+        double prs = prs_list[i].prs;
         double avg = prs;
         if (num_snp == 0) { avg = 0.0; }
         else
         {
             avg = prs / static_cast<double>(num_snp);
         }
-
         switch (m_prs_calculation.scoring_method)
         {
-        case SCORING::SUM: return m_prs_info[i].prs;
+        case SCORING::SUM: return prs_list[i].prs;
         case SCORING::STANDARDIZE:
         case SCORING::CONTROL_STD: return (avg - m_mean_score) / m_score_sd;
         default:
             // default is avg
             return avg;
         }
+    }
+    inline double calculate_score(size_t i) const
+    {
+        return calculate_score(m_prs_info, i);
     }
     /*!
      * \brief Function for calculating the PRS from the null set
@@ -320,9 +324,17 @@ public:
      * \param require_standardize is a boolean representing if we need to
      * calculate the mean and SD
      */
-    void get_null_score(const size_t& set_size, const size_t& prev_size,
+    void get_null_score(std::vector<PRS>& prs_list, const size_t& set_size,
+                        const size_t& prev_size,
                         std::vector<size_t>& background_list,
                         const bool first_run);
+    void get_null_score(const size_t& set_size, const size_t& prev_size,
+                        std::vector<size_t>& background_list,
+                        const bool first_run)
+    {
+        get_null_score(m_prs_info, set_size, prev_size, background_list,
+                       first_run);
+    }
     /*!
      * \brief return the largest chromosome allowed
      * \return  the largest chromosome
@@ -333,19 +345,21 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    void read_base(const BaseFile& base_file, const QCFiltering& base_qc,
-                   const PThresholding& threshold_info,
-                   const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const bool keep_ambig);
+    void
+    read_base(const BaseFile& base_file, const QCFiltering& base_qc,
+              const PThresholding& threshold_info,
+              const std::vector<IITree<size_t, size_t>>& exclusion_regions);
     void build_clump_windows(const unsigned long long& clump_distance);
     intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
-    void build_membership_matrix(std::vector<size_t>& region_membership,
-                                 std::vector<size_t>& region_start_idx,
-                                 const size_t num_sets, const std::string& out,
-                                 const std::vector<std::string>& region_name,
-                                 const bool print_snps);
-    size_t num_threshold() const { return m_num_thresholds; }
-    std::vector<double> get_thresholds() const { return m_thresholds; }
+    void
+    build_membership_matrix(std::vector<std::vector<size_t>>& region_membership,
+                            const size_t num_sets, const std::string& out,
+                            const std::vector<std::string>& region_name,
+                            const bool print_snps);
+    size_t num_threshold(size_t idx) const
+    {
+        return m_set_thresholds[idx].size();
+    }
     std::vector<std::set<double>> get_set_thresholds() const
     {
         return m_set_thresholds;
@@ -414,6 +428,11 @@ public:
         m_keep_ambig = keep;
         return *this;
     }
+    Genotype& ambig_no_flip(bool keep)
+    {
+        m_ambig_no_flip = keep;
+        return *this;
+    }
     Genotype& reference()
     {
         m_is_ref = true;
@@ -426,18 +445,16 @@ public:
     }
     Genotype& set_prs_instruction(const CalculatePRS& prs)
     {
+        m_has_prs_instruction = true;
         m_prs_calculation = prs;
         return *this;
-    }
-    void init_memory()
-    {
-        m_genotype_file.init_memory_map(g_allowed_memory, m_data_size);
     }
     void snp_extraction(const std::string& extract_snps,
                         const std::string& exclude_snps);
 
     Genotype& set_weight()
     {
+        assert(m_has_prs_instruction);
         switch (m_prs_calculation.genetic_model)
         {
         case MODEL::HETEROZYGOUS:
@@ -470,6 +487,9 @@ public:
         m_dose_threshold = qc.dose_threshold;
     }
 
+    void load_genotype_to_memory();
+    bool genotyped_stored() const { return m_genotype_stored; }
+
 protected:
     // friend with all child class so that they can also access the
     // protected elements
@@ -477,7 +497,7 @@ protected:
     friend class BinaryGen;
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
-    MemoryRead m_genotype_file;
+    FileRead m_genotype_file;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
@@ -486,8 +506,6 @@ protected:
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_file_names;
-    std::vector<mio::mmap_source> m_genotype_files;
-    std::vector<double> m_thresholds;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_founder_info;
@@ -511,11 +529,9 @@ protected:
     double m_score_sd = 0.0;
     double m_hard_threshold = 0.0;
     double m_dose_threshold = 0.0;
-
     double m_homcom_weight = 0;
     double m_het_weight = 1;
     double m_homrar_weight = 2;
-    unsigned long long m_data_size;
     size_t m_num_thresholds = 0;
     size_t m_thread = 1; // number of final samples
     size_t m_max_window_size = 0;
@@ -525,7 +541,6 @@ protected:
     size_t m_num_info_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
-    static unsigned long long g_allowed_memory;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_sample_ct = 0;
@@ -540,8 +555,10 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
-    static bool g_allow_mmap;
+    bool m_ambig_no_flip = false;
+    bool m_genotype_stored = false;
     bool m_use_proxy = false;
+    bool m_has_prs_instruction = false;
     bool m_ignore_fid = false;
     bool m_intermediate = false;
     bool m_is_ref = false;
@@ -561,6 +578,62 @@ protected:
                         const SNP& target, const std::string& rs,
                         const std::string& a1, const std::string& a2,
                         const size_t chr_num, const size_t loc);
+
+    int parse_rs_id(const std::vector<std::string>& token,
+                    const std::unordered_set<std::string>& dup_index,
+                    const BaseFile& base_file, std::string& rs_id)
+    {
+        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
+        if (dup_index.find(rs_id) != dup_index.end()) { return 1; }
+
+        auto&& selection = m_snp_selection_list.find(rs_id);
+        if ((!m_exclude_snp && selection == m_snp_selection_list.end())
+            || (m_exclude_snp && selection != m_snp_selection_list.end()))
+        { return 2; }
+        return 0;
+    }
+    void parse_allele(const std::vector<std::string>& token,
+                      const BaseFile& base_file, size_t index,
+                      std::string& allele)
+    {
+        allele = (base_file.has_column[index])
+                     ? token[base_file.column_index[index]]
+                     : "";
+        std::transform(allele.begin(), allele.end(), allele.begin(), ::toupper);
+    }
+    int parse_pvalue(const std::string& p_value_str, const double max_threshold,
+                     double& pvalue)
+    {
+        try
+        {
+            pvalue = misc::convert<double>(p_value_str);
+        }
+        catch (...)
+        {
+            return 1;
+        }
+        if (pvalue < 0.0 || pvalue > 1.0) return 3;
+        if (pvalue > max_threshold) { return 2; }
+        return 0;
+    }
+    int parse_stat(const std::string& stat_str, const bool odd_ratio,
+                   double& stat)
+    {
+        try
+        {
+            stat = misc::convert<double>(stat_str);
+            if (odd_ratio && misc::logically_equal(stat, 0.0)) { return 1; }
+            else if (odd_ratio && stat < 0.0)
+                return 2;
+            else if (odd_ratio)
+                stat = log(stat);
+            return 0;
+        }
+        catch (...)
+        {
+            return 1;
+        }
+    }
     /*!
      * \brief Calculate the threshold bin based on the p-value and bound
      * info \param pvalue the input p-value \param bound_start is the start
@@ -699,6 +772,8 @@ protected:
                           std::vector<uintptr_t>& founder_include2,
                           uintptr_t* index_genotype)
     {
+        // reset the index_data information
+        std::fill(index_data.begin(), index_data.end(), 0);
         vec_datamask(founder_count, 0, index_genotype, founder_include2.data(),
                      index_data.data());
         index_tots[0] = popcount2_longs(index_data.data(), founder_ctl2);
@@ -763,11 +838,12 @@ protected:
         }
         return -1;
     }
-    void read_prs(std::vector<uintptr_t>& genotype, const size_t ploidy,
-                  const double stat, const double adj_score,
-                  const double miss_score, const size_t miss_count,
-                  const double homcom_weight, const double het_weight,
-                  const double homrar_weight, const bool not_first)
+    void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,
+                  const size_t ploidy, const double stat,
+                  const double adj_score, const double miss_score,
+                  const size_t miss_count, const double homcom_weight,
+                  const double het_weight, const double homrar_weight,
+                  const bool not_first)
     {
         uintptr_t* lbptr = genotype.data();
         uintptr_t ulii;
@@ -795,7 +871,7 @@ protected:
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
                 if (uii + (ujj / 2) >= m_sample_ct) { break; }
-                auto&& sample_prs = m_prs_info[uii + (ujj / 2)];
+                auto&& sample_prs = prs_list[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 if (not_first)
                 {
@@ -864,15 +940,22 @@ protected:
      * the thrid parameter
      */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
-                                      const long long /*byte_pos*/,
+                                      const std::streampos /*byte_pos*/,
                                       const size_t& /*file_index*/)
     {
     }
     virtual void
-    read_score(const std::vector<size_t>::const_iterator& /*start*/,
+    read_score(std::vector<PRS>& /*prs_list*/,
+               const std::vector<size_t>::const_iterator& /*start*/,
                const std::vector<size_t>::const_iterator& /*end*/,
-               bool /*reset_zero*/)
+               bool /*reset_zero*/, bool ultra = false)
     {
+    }
+    void read_score(const std::vector<size_t>::const_iterator& start,
+                    const std::vector<size_t>::const_iterator& end,
+                    bool reset_zero, bool ultra = false)
+    {
+        read_score(m_prs_info, start, end, reset_zero, ultra);
     }
     void standardize_prs();
     // for loading the sample inclusion / exclusion set

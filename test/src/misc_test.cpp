@@ -56,7 +56,7 @@ TEST(REPORTER, INITIALIZE)
     {
         // initialize with nothing
         Reporter reporter;
-        reporter.initiailize(std::string(path + "LOC"));
+        reporter.initialize(std::string(path + "LOC"));
         SUCCEED();
     }
     catch (...)
@@ -71,7 +71,7 @@ TEST(REPORTER, FAIL_INITIALIZE)
     {
         // initialize with nothing
         Reporter reporter;
-        reporter.initiailize("");
+        reporter.initialize("");
         FAIL();
     }
     catch (...)

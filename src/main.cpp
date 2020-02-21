@@ -32,12 +32,15 @@
 #include <utility>
 
 
-void print_empty_region(const std::string& out,
-                        const std::vector<size_t>& region_membership,
-                        const std::vector<size_t>& region_start_idx,
-                        std::vector<std::string>& region_names);
+void print_empty_region(
+    const std::string& out,
+    const std::vector<std::vector<size_t>>& region_membership,
+    std::vector<std::string>& region_names);
+
 int main(int argc, char* argv[])
 {
+    const std::string separator =
+        "==================================================";
     // initialize reporter, use to generate log
     Reporter reporter;
     try
@@ -56,14 +59,12 @@ int main(int argc, char* argv[])
         {
             return -1; // all error messages should have printed
         }
-        Genotype::set_memory(commander.memory(), commander.enable_mmap());
         bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
         std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
-
         bool init_ref = false;
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
@@ -76,33 +77,30 @@ int main(int argc, char* argv[])
             target_file =
                 &target_file->keep_nonfounder(commander.nonfounders())
                      .keep_ambig(commander.keep_ambig())
+                     .ambig_no_flip(commander.ambig_no_flip())
                      .intermediate(commander.use_inter())
-                     .set_weight()
-                     .set_prs_instruction(commander.get_prs_instruction());
+                     .set_prs_instruction(commander.get_prs_instruction())
+                     .set_weight();
             const std::string base_name = commander.get_base_name();
             std::string message = "Start processing " + base_name + "\n";
-            message.append(
-                "==================================================");
+            message.append(separator);
             reporter.report(message);
             target_file->snp_extraction(commander.extract_file(),
                                         commander.exclude_file());
-            target_file->read_base(commander.get_base(),
-                                   commander.get_base_qc(),
-                                   commander.get_p_threshold(),
-                                   exclusion_regions, commander.keep_ambig());
-            // no longer need the exclusion region object
+            target_file->read_base(
+                commander.get_base(), commander.get_base_qc(),
+                commander.get_p_threshold(), exclusion_regions);
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
-            message.append(
-                "==================================================");
+            message.append(separator);
             reporter.report(message);
-            target_file->load_samples();
-            // Need to know if we use the reference, because we need to generate
-            // the intermediate for target even if it is not hard coded for LD
-            // calculation
+            // Need to know if we use the reference
+            // When reference isn't used, we will need to generate the
+            // intermediate file for LD calculation if user used --allow-inter
+            // and --type bge
             if (commander.use_ref()) target_file->expect_reference();
+            target_file->load_samples();
             target_file->load_snps(commander.out(), exclusion_regions, verbose);
-            target_file->init_memory();
             // now load the reference file
             // initialize the memory map file
             if (commander.use_ref() && commander.need_ref())
@@ -116,8 +114,7 @@ int main(int argc, char* argv[])
                     commander.use_inter());
                 init_ref = true;
                 message = "Loading Genotype info from reference\n";
-                message.append(
-                    "==================================================");
+                message.append(separator);
                 reporter.report(message);
                 reference_file->load_samples();
                 // load the reference file
@@ -131,8 +128,6 @@ int main(int argc, char* argv[])
             // required for handling dosage
             target_file->set_thresholds(commander.get_target_qc());
             // only calculate the MAF if we need to
-            // We want to only invoke the MAF calculation if we need to
-            // i.e after clumping, to speed up the process
             target_file->calc_freqs_and_intermediate(commander.get_target_qc(),
                                                      commander.out(), true);
             if (init_ref)
@@ -144,16 +139,12 @@ int main(int argc, char* argv[])
             // now should get the correct MAF and should have filtered the
             // SNPs accordingly Generate Region flag information
             Region region(commander.get_set(), &reporter);
-            std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
-            std::vector<IITree<size_t, size_t>> gene_sets;
-            size_t num_regions =
+            const size_t num_regions =
                 region.generate_regions(target_file->max_chr());
             std::vector<std::string> region_names = region.get_names();
             target_file->add_flags(region.get_gene_sets(),
                                    region.get_snp_sets(), num_regions,
                                    commander.get_set().full_as_background);
-
-            gene_sets.clear();
             // start processing other files before doing clumping
             PRSice prsice(commander.get_prs_instruction(),
                           commander.get_p_threshold(), commander.get_pheno(),
@@ -166,7 +157,7 @@ int main(int argc, char* argv[])
             {
                 // now go through the snp vector an define the
                 // windows so that we can jump directly to the
-                // relevant SNPs immediately when doing clumping
+                // relevant SNPs immediately during clumping
                 target_file->build_clump_windows(
                     commander.get_clump_info().distance);
                 // get the sort by p index vector for target
@@ -184,32 +175,29 @@ int main(int argc, char* argv[])
                 // immediately free the memory
             }
             if (init_ref) { delete reference_file; }
+            if (commander.ultra_aggressive())
+            {
+                // we will do something ultra aggressive here: To load all SNP
+                // information into memory (does not work for bgen if hard
+                // coding isn't used)
+                target_file->load_genotype_to_memory();
+            }
+
             // can do the update structure here
             // Use sparse matrix for space and speed
             // Column = set, row = SNPs (because EIGEN is column major)
             // need to also know the number of threshold included
-            std::vector<size_t> region_membership;
-            std::vector<size_t> region_start_idx;
-            std::vector<size_t>::const_iterator background_start_idx,
-                background_end_idx;
+            std::vector<std::vector<size_t>> region_membership;
             target_file->prepare_prsice(commander.get_p_threshold());
-            target_file->build_membership_matrix(
-                region_membership, region_start_idx, num_regions,
-                commander.out(), region_names, commander.print_snp());
-            background_start_idx = region_membership.cbegin();
-            std::advance(background_start_idx,
-                         static_cast<long>(region_start_idx[1]));
-            background_end_idx = region_membership.cbegin();
-            if (num_regions > 2)
-            {
-                std::advance(background_end_idx,
-                             static_cast<long>(region_start_idx[2]));
-            }
+            // from now on, we are not allow to sort the m_existed_snps
+            target_file->build_membership_matrix(region_membership, num_regions,
+                                                 commander.out(), region_names,
+                                                 commander.print_snp());
             // we can now quickly check if any of the region are empty
             try
             {
                 print_empty_region(commander.out(), region_membership,
-                                   region_start_idx, region_names);
+                                   region_names);
             }
             catch (const std::runtime_error& er)
             {
@@ -218,7 +206,7 @@ int main(int argc, char* argv[])
             }
             // Initialize the progress bar
             prsice.init_progress_count(num_regions,
-                                       target_file->num_threshold());
+                                       target_file->get_set_thresholds());
             const size_t num_pheno = prsice.num_phenotype();
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
@@ -240,34 +228,27 @@ int main(int argc, char* argv[])
                     // always skip background region
                     if (i_region == 1) continue;
                     if (!prsice.run_prsice(i_pheno, i_region, region_membership,
-                                           region_start_idx,
                                            commander.all_scores(),
                                            *target_file))
                     {
                         // did not run
                         continue;
                     }
-                    if (!commander.get_prs_instruction().no_regress)
-                    {
-                        // if we performed regression, we'd like to generate
-                        // the output file (.prsice)
-                        prsice.output(region_names, i_pheno, i_region);
-                    }
-                    else
-                    {
-                        prsice.no_regress_out(region_names, i_pheno, i_region);
-                    }
+                    prsice.output(region_names, i_pheno, i_region);
                 }
                 if (!commander.get_prs_instruction().no_regress)
-                { prsice.print_best(*target_file, region_names, i_pheno); }
-                if (!commander.get_prs_instruction().no_regress
-                    && commander.get_perm().run_set_perm
-                    && region_names.size() > 2)
                 {
-                    // only perform permutation if regression is performed
-                    // and user request it
-                    prsice.run_competitive(*target_file, background_start_idx,
-                                           background_end_idx, i_pheno);
+                    prsice.print_best(*target_file, region_names, i_pheno);
+                    if (commander.get_perm().run_set_perm
+                        && region_names.size() > 2)
+                    {
+                        // only perform permutation if regression is performed
+                        // and user request it
+                        assert(region_membership.size() >= 2);
+                        prsice.run_competitive(
+                            *target_file, region_membership[1].begin(),
+                            region_membership[1].end(), i_pheno);
+                    }
                 }
             }
             prsice.print_progress(true);
@@ -321,23 +302,20 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-void print_empty_region(const std::string& out,
-                        const std::vector<size_t>& region_membership,
-                        const std::vector<size_t>& region_start_idx,
-                        std::vector<std::string>& region_names)
+void print_empty_region(
+    const std::string& out,
+    const std::vector<std::vector<size_t>>& region_membership,
+    std::vector<std::string>& region_names)
 {
     bool has_empty_region = false;
     std::ofstream empty_region;
     std::string empty_region_name = out + ".xregion";
     // region_start_idx size always = num_regions
     // check regions to see if there are any empty regions
-
-    for (size_t i = 2; i < region_start_idx.size(); ++i)
+    for (size_t region_idx = 2; region_idx < region_membership.size();
+         ++region_idx)
     {
-        size_t cur_idx = region_start_idx[i];
-        if ((i + 1 >= region_start_idx.size()
-             && cur_idx == region_membership.size())
-            || cur_idx == region_start_idx[i + 1])
+        if (region_membership[region_idx].empty())
         {
             if (!has_empty_region)
             {
@@ -350,8 +328,8 @@ void print_empty_region(const std::string& out,
                 }
                 has_empty_region = true;
             }
-            empty_region << region_names[i] << std::endl;
-            region_names[i] = "";
+            empty_region << region_names[region_idx] << std::endl;
+            region_names[region_idx] = "";
         }
     }
     if (has_empty_region) empty_region.close();

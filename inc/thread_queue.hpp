@@ -44,6 +44,22 @@ public:
         return completed;
     }
 
+    bool pop(T& item, size_t num_thread)
+    {
+        std::unique_lock<std::mutex> mlock(m_mutex);
+        m_cond_not_empty.wait(mlock, [this, num_thread] {
+            return (m_storage_queue.size() || (m_num_completed == num_thread));
+        });
+        if (m_num_completed != num_thread)
+        {
+            item = std::move(m_storage_queue.front());
+            m_storage_queue.pop();
+        }
+        m_num_processing--;
+        mlock.unlock();
+        m_cond_not_full.notify_one();
+        return (m_num_completed == num_thread);
+    }
     void push(const T& item, size_t max_process)
     {
         std::unique_lock<std::mutex> mlock(m_mutex);
@@ -76,10 +92,20 @@ public:
         mlock.unlock();
         m_cond_not_empty.notify_one();
     }
+    void emplace(T&& item)
+    {
+        std::unique_lock<std::mutex> mlock(m_mutex);
+        m_storage_queue.emplace(std::forward<T>(item));
+        // m_storage_queue.push(item);
+        m_num_processing++;
+        mlock.unlock();
+        m_cond_not_empty.notify_one();
+    }
     void completed()
     {
         std::unique_lock<std::mutex> mlock(m_mutex);
         m_completed = true;
+        ++m_num_completed;
         mlock.unlock();
         m_cond_not_empty.notify_all();
     }
@@ -93,6 +119,7 @@ private:
     std::condition_variable m_cond_not_empty;
     std::condition_variable m_cond_not_full;
     size_t m_num_processing = 0;
+    size_t m_num_completed = 0;
     bool m_completed = false;
 };
 

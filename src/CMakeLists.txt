@@ -38,6 +38,7 @@ add_library(prsice_lib
     ${CMAKE_SOURCE_DIR}/src/fastlm.cpp
     ${CMAKE_SOURCE_DIR}/src/genotype.cpp
     ${CMAKE_SOURCE_DIR}/src/misc.cpp
+    ${CMAKE_SOURCE_DIR}/src/prset.cpp
     ${CMAKE_SOURCE_DIR}/src/prsice.cpp
     ${CMAKE_SOURCE_DIR}/src/region.cpp
     ${CMAKE_SOURCE_DIR}/src/regression.cpp

@@ -158,6 +158,11 @@ inline bool to_bool(const std::string& input)
     }
 }
 
+template <typename T>
+inline bool within_bound(const T &input, const T& low_bound, const T &up_bound){
+    assert(low_bound <= up_bound);
+    return !(input < low_bound && input > up_bound);
+}
 
 // TODO: Delete this, doesn't seems to give robust answer
 inline size_t current_ram_usage() { return 0; }
@@ -295,32 +300,36 @@ inline std::vector<std::string> split(const std::string& seq,
 inline void split(std::vector<std::string>& result, const std::string& seq,
                   const std::string& separators = "\t ")
 {
-    std::size_t prev = 0, pos, size = 0;
-    const size_t init = result.size();
+    std::size_t prev = 0, pos, idx= 0;
+    const size_t init_size = result.size();
     // assuming we have the same size
     // result.clear();
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
     {
         if (pos > prev)
         {
-            if (init <= size)
+            if (idx >= init_size)
             { result.emplace_back(seq.substr(prev, pos - prev)); }
             else
             {
-                result[size] = seq.substr(prev, pos - prev);
+                result[idx] = seq.substr(prev, pos - prev);
             }
-            ++size;
+            ++idx;
         }
         prev = pos + 1;
     }
     if (prev < seq.length())
     {
-        if (init <= size)
+        if (idx > init_size)
         { result.emplace_back(seq.substr(prev, std::string::npos)); }
         else
         {
-            result[size] = seq.substr(prev, std::string::npos);
+            result[idx] = seq.substr(prev, std::string::npos);
         }
+        ++idx;
+    }
+    if(idx < init_size){
+        result.resize(idx);
     }
 }
 template <typename T>
@@ -341,18 +350,18 @@ inline std::string to_string(T value)
     out << value;
     return out.str();
 }
+// trim functions from https://stackoverflow.com/a/217605
 // trim from start (in place)
 inline void ltrim(std::string& s)
 {
-    s.erase(s.begin(),
-            std::find_if(s.begin(), s.end(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+                                    [](int ch) { return std::isgraph(ch); }));
 };
 // trim from end (in place)
 inline void rtrim(std::string& s)
 {
     s.erase(std::find_if(s.rbegin(), s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace)))
+                         [](int ch) { return std::isgraph(ch); })
                 .base(),
             s.end());
 };

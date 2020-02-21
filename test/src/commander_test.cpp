@@ -61,4 +61,71 @@ TEST(COMMANDER_BASIC, NO_ARG)
         SUCCEED();
     }
 }
+
+class CovariateTest : public Commander
+{
+public:
+    static std::vector<std::string>
+    transform_covariate(const std::string& cov_in)
+    {
+        return Commander::transform_covariate(cov_in);
+    }
+};
+
+void invalid_cov_input(const std::string& cov_string)
+{
+    try
+    {
+        // invalid input
+        std::vector<std::string> results =
+            CovariateTest::transform_covariate(cov_string);
+        FAIL();
+    }
+    catch (const std::runtime_error&)
+    {
+        SUCCEED();
+    }
+}
+TEST(COVARITE_TRANSFORM, TRANSFORMATION)
+{
+    // should not do transformation when not start with @
+    std::string cov_string = "PC1";
+    std::string expected = cov_string;
+    ASSERT_STREQ(
+        expected.c_str(),
+        CovariateTest::transform_covariate(cov_string).front().c_str());
+    // same for empty string
+    cov_string = expected = "";
+    ASSERT_STREQ(
+        expected.c_str(),
+        CovariateTest::transform_covariate(cov_string).front().c_str());
+    // should be fine if the @ is in middle of the string
+    cov_string = expected = "PC1@Home";
+    ASSERT_STREQ(
+        expected.c_str(),
+        CovariateTest::transform_covariate(cov_string).front().c_str());
+    // when start with @ but not with any [], we will just remove the @
+    cov_string = "@PC1";
+    expected = "PC1";
+    ASSERT_STREQ(
+        expected.c_str(),
+        CovariateTest::transform_covariate(cov_string).front().c_str());
+    cov_string = "@PC[1-5]";
+    // in this order
+    std::vector<std::string> expected_outputs = {"PC1", "PC2", "PC3", "PC4",
+                                                 "PC5"};
+    std::vector<std::string> results =
+        CovariateTest::transform_covariate(cov_string);
+    EXPECT_EQ(results.size(), expected_outputs.size());
+    for (size_t i = 0; i < results.size(); ++i)
+    { EXPECT_STREQ(expected_outputs[i].c_str(), results[i].c_str()); }
+    invalid_cov_input("@PC[[1-5]]");
+    invalid_cov_input("@PC[1-5");
+    invalid_cov_input("@PC1-5]");
+    invalid_cov_input("@PC[[1-5]");
+    invalid_cov_input("@PC[1-5]]");
+    invalid_cov_input("@PC[1-5][");
+    invalid_cov_input("@PC[1-5,]");
+    invalid_cov_input("@PC[,1-5]");
+}
 #endif // COMMANDER_TEST_H

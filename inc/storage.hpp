@@ -18,12 +18,29 @@
 #ifndef PRSICE_INC_STORAGE_HPP_
 #define PRSICE_INC_STORAGE_HPP_
 #include "enumerators.h"
+#include <Eigen/Dense>
 #include <cstdint>
 #include <memory>
 #include <random>
 #include <string>
 #include <vector>
 // From http://stackoverflow.com/a/12927952/1441789
+
+struct Regress
+{
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PQR;
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType Pmat;
+    Eigen::Index rank;
+    Eigen::MatrixXd Rinv;
+    Eigen::MatrixXd YCov;
+    Eigen::VectorXd beta;
+    Eigen::VectorXd se;
+    Eigen::VectorXd effects;
+    Eigen::VectorXd prs;
+    Eigen::VectorXd fitted;
+    Eigen::VectorXd resid;
+    Eigen::VectorXd se_base;
+};
 
 struct PRS
 {
@@ -46,17 +63,8 @@ struct Sample_ID
     Sample_ID() : FID(""), IID(""), pheno(""), founder(false) {}
 };
 
-struct MAF_Store
-{
-    double maf;
-    size_t index;
-    int category;
-};
-
-
 struct BaseFile
 {
-
     std::vector<size_t> column_index =
         std::vector<size_t>(+BASE_INDEX::MAX + 1, 0);
     std::vector<std::string> column_name = {
@@ -99,7 +107,7 @@ struct Phenotype
 struct FileInfo
 {
     size_t name_idx = ~size_t(0);
-    long long byte_pos = 0;
+    std::streampos byte_pos = 0;
 };
 struct Permutations
 {
@@ -110,6 +118,8 @@ struct Permutations
     bool run_set_perm = false;
 };
 
+// use size_t for low bound and up bound just in case if we encounter some huge
+// chromosomes
 struct SNPClump
 {
     std::vector<uintptr_t> flags;
@@ -136,8 +146,8 @@ struct GeneSets
     std::vector<std::string> feature;
     std::string background;
     std::string gtf;
-    unsigned long long wind_3 = 0;
-    unsigned long long wind_5 = 0;
+    size_t wind_3 = 0;
+    size_t wind_5 = 0;
     int full_as_background = false;
     bool run = false;
 };
@@ -149,6 +159,7 @@ struct PThresholding
     double upper = 0.5;
     int fastscore = false;
     int no_full = false;
+    // indicate if we want to do thresholding with set based analysis
     bool set_threshold = false;
 };
 
@@ -180,7 +191,7 @@ struct Clumping
     double r2 = 0.1;
     double proxy = -1;
     double pvalue = 1;
-    unsigned long long distance = 250000;
+    size_t distance = 250000;
     int no_clump = false;
     bool use_proxy = false;
     bool provided_distance = false;

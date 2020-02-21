@@ -25,8 +25,8 @@ lm& lm::setThreshold(const Eigen::MatrixXd::RealScalar& threshold)
 ColPivQR::ColPivQR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
     : lm(X, y)
 {
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PQR(
-        X); // decompose the model matrix
+    // decompose the model matrix
+    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PQR(X);
     Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType Pmat(
         PQR.colsPermutation());
     m_r = PQR.rank();
@@ -47,6 +47,9 @@ ColPivQR::ColPivQR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
                              .topLeftCorner(m_r, m_r)
                              .triangularView<Eigen::Upper>()
                              .solve(Eigen::MatrixXd::Identity(m_r, m_r)));
+    m_se.head(m_r) = Rinv.rowwise().norm();
+    m_se = Pmat * m_se;
+
     Eigen::VectorXd effects(PQR.householderQ().adjoint() * y);
     m_coef.head(m_r) = Rinv * effects.head(m_r);
     m_coef = Pmat * m_coef;
@@ -54,8 +57,6 @@ ColPivQR::ColPivQR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
     // (can't use X*m_coef if X is rank-deficient)
     effects.tail(m_n - m_r).setZero();
     m_fitted = PQR.householderQ() * effects;
-    m_se.head(m_r) = Rinv.rowwise().norm();
-    m_se = Pmat * m_se;
 }
 
 QR::QR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y) : lm(X, y)

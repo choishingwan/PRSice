@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.10"
+r.version <- "2.2.12"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -229,6 +229,8 @@ help_message <-
                             Available methods include:\n
                             avg - Take the average effect size (default)\n
                             std - Standardize the effect size \n
+                            con-std - Standardize the effect size using mean \n
+                                      and sd derived from control samples\n
                             sum - Direct summation of the effect size \n
     --upper         | -u    The final p-value threshold. Default: 0.5 \n
 \nPRSet:\n
@@ -289,10 +291,6 @@ help_message <-
 \nMisc:\n
     --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
-    --enable-mmap           Enable memory mapping. This will provide a\n
-                            small speed boost if large amount of memory\n
-                            is available and if all genotypes were stored\n
-                            in the same file\n
     --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
@@ -300,6 +298,8 @@ help_message <-
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
+    --keep-ambig-as-is      Will not flip ambiguous SNPs when they are kept.\n
+                            Will also set the --keep-ambig flag\n
     --id-delim              This parameter causes sample IDs to be parsed as\n
                             <FID><delimiter><IID>; the default delimiter\n
                             is '_'. \n
@@ -356,7 +356,7 @@ libraries <-
 found.library.dir <- FALSE
 argv <- commandArgs(trailingOnly = TRUE)
 dir.arg.idx <- grep("--dir",argv)
-no.install <- length(grep("--no-install", argv))>0
+no.install <- length(grep("--no-install", argv)) > 0
 if (length(dir.arg.idx) != 0) {
     dir.arg.idx <- dir.arg.idx + 1
     found.library.dir <- TRUE
@@ -455,12 +455,12 @@ option_list <- list(
   make_option(c("--A2"), type = "character"),
   make_option(c("-b", "--base"), type = "character"),
   make_option(c("--base-info"), type = "character", dest = "base_info"),
-  make_option(c("--base-maf"), type = "character", dest="base_maf"),
+  make_option(c("--base-maf"), type = "character", dest = "base_maf"), 
   make_option(c("--beta"), action = "store_true"),
   make_option(c("--bp"), type = "character"),
   make_option(c("--chr"), type = "character"),
   make_option(c("--index"), action = "store_true"),
-  make_option(c("--no-default"), action = "store_true", dest="no_default"),
+  make_option(c("--no-default"), action = "store_true", dest = "no_default"), 
   make_option(c("--or"), action = "store_true"),
   make_option(c("-p", "--pvalue"), type = "character"),
   make_option(c("--snp"), type = "character"),
@@ -478,27 +478,27 @@ option_list <- list(
   make_option(c("-k", "--prevalence"), type = "character"),
   make_option(c("--remove"), type = "character"),
   make_option(c("-t", "--target"), type = "character"),
-  make_option(c("--target-list"), type = "character", dest="target_list"),
+  make_option(c("--target-list"), type = "character", dest = "target_list"), 
   make_option(c("--type"), type = "character"),
   # Dosage
-  make_option(c("--allow-inter"), action = "store_true", dest="allow_inter"),
-  make_option(c("--hard-thres"), type = "numeric", dest="hard_thres"),
-  make_option(c("--dose-thres"), type = "numeric", dest="dose_thres"),
+  make_option(c("--allow-inter"), action = "store_true", dest = "allow_inter"),
+  make_option(c("--hard-thres"), type = "numeric", dest = "hard_thres"),
+  make_option(c("--dose-thres"), type = "numeric", dest = "dose_thres"), 
   make_option(c("--hard"), action = "store_true"),
   # Clumping
   make_option(c("--clump-kb"), type = "character", dest = "clump_kb"),
   make_option(c("--clump-r2"), type = "numeric", dest = "clump_r2"),
   make_option(c("--clump-p"), type = "numeric", dest = "clump_p"),
   make_option(c("-L", "--ld"), type = "character"),
-  make_option(c("--ld-list"), type = "character", dest="ld_list"),
-  make_option(c("--ld-geno"), type = "numeric", dest="ld_geno"),
-  make_option(c("--ld-info"), type = "numeric", dest="ld_info"),
-  make_option(c("--ld-hard-thres"), type = "numeric", dest="ld_hard_thres"),
-  make_option(c("--ld-dose-thres"), type = "numeric", dest="ld_dose_thres"),
-  make_option(c("--ld-keep"), type = "character", dest="ld_keep"),
-  make_option(c("--ld-maf"), type = "numeric", dest="ld_maf"),
-  make_option(c("--ld-remove"), type = "character", dest="ld_remove"),
-  make_option(c("--ld-type"), type = "character", dest="ld_type"),
+  make_option(c("--ld-list"), type = "character", dest = "ld_list"),
+  make_option(c("--ld-geno"), type = "numeric", dest = "ld_geno"),
+  make_option(c("--ld-info"), type = "numeric", dest = "ld_info"),
+  make_option(c("--ld-hard-thres"), type = "numeric", dest = "ld_hard_thres"),
+  make_option(c("--ld-dose-thres"), type = "numeric", dest = "ld_dose_thres"),
+  make_option(c("--ld-keep"), type = "character", dest = "ld_keep"),
+  make_option(c("--ld-maf"), type = "numeric", dest = "ld_maf"),
+  make_option(c("--ld-remove"), type = "character", dest = "ld_remove"),
+  make_option(c("--ld-type"), type = "character", dest = "ld_type"), 
   make_option(c("--no-clump"), action = "store_true", dest = "no_clump"),
   make_option(c("--proxy"), type = "numeric"),
   # Covariates
@@ -525,41 +525,42 @@ option_list <- list(
   make_option(c("-B", "--bed"), type = "character"),
   make_option(c("--background"), type = "character"),
   make_option(c("--feature"), type = "character"),
-  make_option(c("--full-back"), action="store_true", dest="full_back"),
+  make_option(c("--full-back"), action = "store_true", dest = "full_back"),
   make_option(c("-g", "--gtf"), type = "character"),
   make_option(c("-m", "--msigdb"), type = "character"),
-  make_option(c("--set-perm"), type = "numeric",dest="set_perm"),
-  make_option(c("--wind-5"), type = "character", dest="wind_5"),
-  make_option(c("--wind-3"), type = "character", dest="wind_3"),
-  make_option(c("--snp-set"), type = "character", dest="snp_set"),
+  make_option(c("--set-perm"), type = "numeric", dest = "set_perm"),
+  make_option(c("--wind-5"), type = "character", dest = "wind_5"),
+  make_option(c("--wind-3"), type = "character", dest = "wind_3"),
+  make_option(c("--snp-set"), type = "character", dest = "snp_set"),
   # Misc
-  make_option(c("--all-score"), action = "store_true", dest="all_score"),
+  make_option(c("--all-score"), action = "store_true", dest = "all_score"),
   make_option(c("--exclude"), type = "character"),
   make_option(c("--extract"), type = "character"),
   make_option(c("--enable-mmap"), action = "store_true", dest = "enable_mmap"),
   make_option(c("--ignore-fid"), action = "store_true", dest = "ignore_fid"),
-  make_option(c("--id-delim"), type="character"),
+  make_option(c("--id-delim"), type = "character"), 
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
   make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
+  make_option(c("--keep-ambig-as-is"), action = "store_true", dest = "keep_ambig_as_is"),
   make_option(c("--memory"), type = "character", dest="memory"),
   make_option(c("-o", "--out"), type = "character", default = "PRSice"),
   make_option(c("--perm"), type = "numeric"),
   make_option(c("-s", "--seed"), type = "numeric"),
   make_option(c("--print-snp"), action = "store_true", dest = "print_snp"),
   make_option(c("--non-cumulate"), action = "store_true", dest = "non_cumulate"),
-  make_option(c("--pearson"), action = "store_true"),
   make_option(c("-n", "--thread"), type = "numeric"),
+  make_option(c( "--num-auto"), type = "numeric"),
   make_option(c("--use-ref-maf"), action = "store_true", dest = "use_ref_maf"),
-  make_option(c("--x-range"), type = "character", dest="x_range"),
+  make_option(c("--x-range"), type = "character", dest = "x_range"),
   #R Specified options
   make_option(c("--plot"), action = "store_true"),
   make_option(c("--quantile", "-q"), type = "numeric"),
-  make_option(c("--quant-break"), type="character", dest="quant_break"),
+  make_option(c("--quant-break"), type = "character", dest = "quant_break"),
   make_option(c("--multi-plot"), type = "numeric", dest = "multi_plot"),
   make_option(c("--plot-set"),
               type = "character",
               dest = "plot_set",
-              default = "Base"),
+              default = "Base"), 
   make_option(c("--quant-pheno"), action = "store_true", dest = "quant_pheno"),
   make_option(c("--quant-extract", "-e"), type = "character", dest = "quant_extract"),
   make_option("--quant-ref", type = "numeric", dest = "quant_ref"),
@@ -584,7 +585,7 @@ option_list <- list(
               default = "YlOrRd",
               dest = "bar_palatte"),
   make_option("--prsice", type = "character"),
-  make_option("--device", type="character", default="png"),
+  make_option("--device", type = "character", default = "png"), 
   make_option("--dir", type = "character")
 )
 
@@ -629,20 +630,21 @@ if (is.null(argv$cov_col) && !is.null(argv$cov_header))
 }
 
 # Check help messages --------------------------------------------------
-get_os <- function(){
-    sysinf <- Sys.info()
-    if (!is.null(sysinf)){
-        os <- sysinf['sysname']
-        if (os == 'Darwin')
-            os <- "osx"
-    } else { ## mystery machine
-        os <- .Platform$OS.type
-        if (grepl("^darwin", R.version$os))
-            os <- "osx"
-        if (grepl("linux-gnu", R.version$os))
-            os <- "linux"
-    }
-    tolower(os)
+get_os <- function() {
+  sysinf <- Sys.info()
+  if (!is.null(sysinf)) {
+    os <- sysinf['sysname']
+    if (os == 'Darwin')
+      os <- "osx"
+  } else {
+    ## mystery machine
+    os <- .Platform$OS.type
+    if (grepl("^darwin", R.version$os))
+      os <- "osx"
+    if (grepl("linux-gnu", R.version$os))
+      os <- "linux"
+  }
+  tolower(os)
 }
 
 # CALL_PRSICE: Call the cpp PRSice if required
@@ -653,12 +655,13 @@ get_os <- function(){
 provided <- function(name, argv) {
     return(name %in% names(argv))
 }
+
 os <- get_os()
 if (provided("prsice", argv)) {
-    if (!startsWith(argv$prsice, "/") &&
-        !startsWith(argv$prsice, ".") && os!="windows") {
-        argv$prsice = paste("./", argv$prsice, sep = "")
-    }
+  if (!startsWith(argv$prsice, "/") &&
+      !startsWith(argv$prsice, ".") && os != "windows") {
+    argv$prsice = paste("./", argv$prsice, sep = "")
+  }
 }
 
 
@@ -684,11 +687,11 @@ flags <-
         "all-score",
         "allow-inter",
         "beta",
-        "enable-mmap",
         "fastscore",
         "ignore-fid",
         "index",
         "keep-ambig",
+        "keep-ambig-as-is",
         "logit-perm",
         "no-clump",
         "no-default",
@@ -705,37 +708,37 @@ flags <-
     )
 # Skip PRSice core function if only plotting is requirec
 if (!provided("plot", argv)) {
-    for (i in names(argv_c)) {
-        # only need special processing for flags and specific inputs
-        if(i=="id-delim") {
-            if(!is.na(i)){
-                command = paste(command, " --", i, " \"",argv_c[[i]],"\"", sep="" )
-            }
-        }else if (i %in% flags) {
-            if (argv_c[[i]])
-                command = paste(command, " --", i, sep = "")
-        } else if (i %in% not_cpp) {
-            # ignore
-        } else{
-            temp = add_command(argv_c[[i]])
-            if (!is.na(temp)) {
-                command = paste(command, " --", i, " ", temp, sep = "")
-            }
-        }
-    }
-    if (nchar(command) == 0) {
-        cat(help_message)
-        quit()
-    }
-    if (provided("prsice", argv_c)) {
-        ret <- system2(argv_c$prsice, command)
-        if (ret != 0 || provided(help, argv)) {
-            stop()
-            
-        }
+  for (i in names(argv_c)) {
+    # only need special processing for flags and specific inputs
+    if (i == "id-delim") {
+      if (!is.na(i)) {
+        command = paste(command, " --", i, " \"", argv_c[[i]], "\"", sep = "")
+      }
+    } else if (i %in% flags) {
+      if (argv_c[[i]])
+        command = paste(command, " --", i, sep = "")
+    } else if (i %in% not_cpp) {
+      # ignore
     } else{
-        stop("Cannot run PRSice without the PRSice binary file")
+      temp = add_command(argv_c[[i]])
+      if (!is.na(temp)) {
+        command = paste(command, " --", i, " ", temp, sep = "")
+      }
     }
+  }
+  if (nchar(command) == 0) {
+    cat(help_message)
+    quit()
+  }
+  if (provided("prsice", argv_c)) {
+    ret <- system2(argv_c$prsice, command)
+    if (ret != 0 || provided(help, argv)) {
+      stop()
+      
+    }
+  } else{
+    stop("Cannot run PRSice without the PRSice binary file")
+  }
 }
 
 

@@ -66,6 +66,7 @@
 #include <mach/vm_statistics.h>
 #endif
 // This should be the class to handle all the procedures
+
 class PRSice
 {
 public:
@@ -113,8 +114,7 @@ public:
     }
     void new_phenotype(Genotype& target);
     bool run_prsice(const size_t pheno_index, const size_t region_index,
-                    const std::vector<size_t>& region_membership,
-                    const std::vector<size_t>& region_start_idx,
+                    const std::vector<std::vector<size_t>>& region_membership,
                     const bool all_scores, Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the
@@ -140,8 +140,6 @@ public:
      */
     void output(const std::vector<std::string>& region_names,
                 const size_t pheno_index, const size_t region_index);
-    void no_regress_out(const std::vector<std::string>& region_names,
-                        const size_t pheno_index, const size_t region_index);
     /*!
      * \brief Function that prepare the output files by writing out white
      * spaces, this allow us to generate a nice vertical file
@@ -171,19 +169,26 @@ public:
      * \param num_thresholds the number of thresholds to process
      */
     void init_progress_count(const size_t num_region,
-                             const size_t num_thresholds)
+                             const std::vector<std::set<double>>& thresholds)
     {
         const size_t num_perm = m_perm_info.num_permutation;
         const bool perm = m_perm_info.run_perm;
         const bool set_perm = m_perm_info.run_set_perm;
-        // the number of raw PRSice run
-        m_total_process = num_thresholds * num_phenotype()
-                          * ((num_region > 2) ? num_region - 1 : 1);
+        // total number of non-permutation processes
+        m_total_process = 0;
+        for (size_t i = 0; i < thresholds.size(); ++i)
+        {
+            if (i == 1) continue;
+            m_total_process += thresholds[i].size();
+        }
+        // then repeat for each phenotype
+        m_total_process *= num_phenotype();
+        // for empirical p, we just repeat the whole process num_perm time
         if (perm) { m_total_process *= (num_perm + 1); }
         else if (set_perm)
         {
-            // the additional permutation we've got to run, num_region -2 as we
-            // don't perform permutation on the background set nor the base set
+            // for set p, we just repeat the best threshold for each set
+            // num_perm time and we skip the base and background
             m_total_process += num_phenotype() * (num_region - 2) * num_perm;
         }
     }
@@ -317,6 +322,7 @@ private:
     size_t m_total_process = 0;
     uint32_t m_num_snp_included = 0;
     uint32_t m_analysis_done = 0;
+
     // As R has a default precision of 7, we will go a bit
     // higher to ensure we use up all precision
     const long long m_precision = 9;
@@ -379,6 +385,14 @@ private:
      * \param reporter is the logger
      */
     void gen_cov_matrix(const std::string& delim);
+    void adjustment_factor(const double prevalence, double& top,
+                           double& bottom);
+    void print_na(const std::string& region_name, const double threshold,
+                  const size_t num_snp, const bool has_prevalence);
+    void store_best(const std::string& pheno_name,
+                    const std::string& region_name, const double top,
+                    const double bottom, const double prevalence,
+                    const bool is_base);
     /*!
      * \brief Function use to process the covariate file, should be able to
      * determine the level of factors
@@ -410,10 +424,24 @@ private:
             Pmat,
         const Eigen::MatrixXd& Rinv, const Eigen::Index p,
         const Eigen::Index rank, Eigen::VectorXd& se_base);
+    void observe_set_perm(Thread_Queue<size_t>& progress_observer,
+                          size_t total_perm);
+    double get_coeff_resid_norm(const Regress& decomposed,
+                                const Eigen::VectorXd& prs,
+                                Eigen::VectorXd& beta, Eigen::VectorXd effects);
+    template <typename T>
+    void subject_set_perm(T& progress_observer, Genotype& target,
+                          std::vector<size_t> background,
+                          std::map<size_t, std::vector<size_t>>& set_index,
+                          std::vector<std::atomic<size_t>>& set_perm_res,
+                          const std::vector<double>& obs_t_value,
+                          const std::random_device::result_type seed,
+                          const Regress& decomposed, const size_t num_perm,
+                          const bool is_binary);
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
-     * p-value thresholds we will run this function to calculate the empirical
-     * p-value
+     * p-value thresholds we will run this function to calculate the
+     * empirical p-value
      */
     void process_permutations();
 
@@ -433,8 +461,8 @@ private:
      */
     void
     produce_null_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-                     Genotype& target, const size_t& num_background,
-                     std::vector<size_t> background, size_t num_consumer,
+                     Genotype& target, std::vector<size_t> background,
+                     size_t num_consumer,
                      std::map<size_t, std::vector<size_t>>& set_index);
     /*!
      * \brief This is the "consumer" function responsible for reading in the PRS
@@ -449,27 +477,22 @@ private:
      * for a specific set
      * \param is_binary indicate if the phenotype is binary or not
      */
-    void consume_prs(
-        Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
-        const Eigen::MatrixXd& X,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
-            Pmat,
-        const Eigen::MatrixXd& Rinv,
-        std::map<size_t, std::vector<size_t>>& set_index,
-        std::vector<double>& obs_t_value,
-        std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
+    void consume_prs(Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
+                     const Regress& decomposed,
+                     std::map<size_t, std::vector<size_t>>& set_index,
+                     const std::vector<double>& obs_t_value,
+                     std::vector<std::atomic<size_t>>& set_perm_res,
+                     const bool is_binary);
 
     void null_set_no_thread(
         Genotype& target, const size_t num_background,
         std::vector<size_t> background,
         const std::map<size_t, std::vector<size_t>>& set_index,
-        const Eigen::MatrixXd& X,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
-            Pmat,
-        const Eigen::MatrixXd& Rinv, std::vector<double>& obs_t_value,
+        const Regress& decomposed, std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
+    double get_t_value(const Regress& decomposed, const Eigen::VectorXd& prs,
+                       Eigen::VectorXd& beta, Eigen::VectorXd& effects,
+                       double& coefficient, double& standard_error);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
      * \param q is the queue for contacting the consumers
@@ -517,6 +540,23 @@ private:
     load_pheno_map(const size_t idx, const std::string& delim);
     void reset_result_containers(const Genotype& target,
                                  const size_t region_idx);
+
+    void fisher_yates(std::vector<size_t>& idx, std::mt19937& g, size_t n);
+    template <typename T>
+    class dummy_reporter
+    {
+        PRSice& m_parent;
+        bool m_completed = false;
+
+    public:
+        dummy_reporter(PRSice& p) : m_parent(p) {}
+        void emplace(T&& /*item*/)
+        {
+            ++m_parent.m_analysis_done;
+            m_parent.print_progress();
+        }
+        void completed() { m_completed = true; }
+    };
 };
 
 #endif // PRSICE_H
