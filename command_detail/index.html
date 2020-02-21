@@ -464,7 +464,7 @@ Default is to use dosage.</p>
     For example, if <code>--clump-kb 250</code> is provided, PRSice will clump any SNPs that is 
     within 250kb to <strong>both</strong> end of the index SNP (therefore a 500kb window with the index SNP at the center).
     Now also support distance with a unit. e.g. <code>--clump-kb 1M</code> is a valid input.
-    Default: 1M</p>
+    Default: 250kb for PRSice, 1mb for PRSet</p>
 </li>
 <li>
 <p><code>--clump-r2</code></p>
@@ -570,10 +570,6 @@ and bgen format. Default: bed\n"</p>
 a pre-clumped list of SNPs is available.</p>
 </li>
 <li>
-<p><code>--pearson</code></p>
-<p>Use Pearson Correlation instead of maximum likelihood haplotype frequency estimates for LD calculation</p>
-</li>
-<li>
 <p><code>--proxy</code></p>
 <p>Proxy threshold for index SNP to be considered
 as part of the region represented by the clumped
@@ -652,11 +648,13 @@ Available models include:</p>
 <li>
 <p><code>--missing</code></p>
 <p>Method to handle missing genotypes. 
-Available methods include:
-- <code>MEAN_IMPUTE</code> - Missing genotypes contribute an amount
-proportional to imputed allele frequency (default)
-- <code>SET_ZERO</code> - To throw out missing observations instead
-- <code>CENTER</code> - shift all scores to mean zero.</p>
+Available methods include:</p>
+<ul>
+<li><code>MEAN_IMPUTE</code> - Missing genotypes contribute an amount
+proportional to imputed allele frequency (default)</li>
+<li><code>SET_ZERO</code> - To throw out missing observations instead</li>
+<li><code>CENTER</code> - shift all scores to mean zero.</li>
+</ul>
 </li>
 <li>
 <p><code>--no-regress</code>            </p>
@@ -668,9 +666,10 @@ output all PRS.</p>
 <p>Method to calculate the polygenic score.
 Available methods include:</p>
 <ul>
-<li><code>avg</code> - Take the average effect size (default)</li>
-<li><code>std</code> - Standardize the effect size</li>
-<li><code>sum</code> - Direct summation of the effect size</li>
+<li><code>avg</code>     - Take the average effect size (default)</li>
+<li><code>std</code>     - Standardize the effect size</li>
+<li><code>con-std</code> - Standardize the effect size using mean and sd derived from control samples</li>
+<li><code>sum</code>     - Direct summation of the effect size</li>
 </ul>
 </li>
 <li>
@@ -868,16 +867,6 @@ phenotype or if the target phenotype is quantitative</p>
 </div>
 </li>
 <li>
-<p><code>--enable-mmap</code></p>
-<p>Enable memory mapping. This will provide a small speed boost if large amount of memory
-is available and if all genotypes were stored in the same file</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>If you don't have enough memory, and if your genotypes were stored in different files, 
-memory mapping will actually slow down PRSice. </p>
-</div>
-</li>
-<li>
 <p><code>--exclude</code></p>
 <p>File contains SNPs to be excluded from the analysis.
 Mutually exclusive from <code>--extract</code></p>
@@ -902,6 +891,12 @@ be IID instead of FID</p>
 <p><code>--keep-ambig</code></p>
 <p>Keep ambiguous SNPs. Only use this option
 whe base and target has the same A1 and A2 alleles</p>
+</li>
+<li>
+<p><code>--keep-ambig-as-is</code></p>
+<p>Keep ambiguous SNPs and do not perform flipping on the 
+<em>ambiguous</em> SNPs. This will allow user to better handle
+the ambiguous SNPs according to their liking.</p>
 </li>
 <li>
 <p><code>--logit-perm</code></p>

@@ -478,12 +478,16 @@ $$</p>
 $$
     PRS_j = \frac{\sum_i({S_i\times G_{ij}}) - \text{Mean}(PRS)}{\text{SD}(PRS)}
 $$</p>
-<p>Sometimes, sample can have missing genotype. 
+<p><code>--score con-std</code>:
+$$
+    PRS_j = \frac{\sum_i({S_i\times G_{ij}}) - \text{Mean}(PRS in control)}{\text{SD}(PRS in control)}
+$$
+Sometimes, sample can have missing genotype. 
 The <code>--missing</code> option is used to determine how
 PRSice handle the missingness.</p>
 <p>When not specified, the Minor Allele Frequency (MAF) in the target sample will be used as the
 genotype as the sample with missing genotype.</p>
-<p>If <code>--missing NO_MEAN_IMPUTATION</code> is set, the SNP for the missing
+<p>If <code>--missing SET_ZERO</code> is set, the SNP for the missing
 samples will be excluded.
 Alternatively, if <code>--missing CENTER</code> is set, all PRS calculated will be minused by
 the MAF of the SNP (therefore, missing samples will have PRS of 0).</p>

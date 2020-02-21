@@ -213,8 +213,7 @@
 Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed">PLINK binary</a> or <a href="http://www.well.ox.ac.uk/~gav/bgen_format/">BGEN</a></li>
 </ul>
 <h1 id="running-prsice">Running PRSice<a class="headerlink" href="#running-prsice" title="Permanent link">&para;</a></h1>
-<p>In most case, PRSice can simply be run using the following command, assuming the
-PRSice executable is located in <code>($HOME)/PRSice/</code> and the working directory is <code>($HOME)/PRSice</code></p>
+<p>In most case,  assuming the PRSice executable is located in <code>($HOME)/PRSice/</code> and the working directory is <code>($HOME)/PRSice</code>, you can run PRSice with the following commands:</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For window users, please use <strong>Rscript.exe</strong> instead of <strong>Rscript</strong></p>
@@ -281,7 +280,7 @@ PRSice executable is located in <code>($HOME)/PRSice/</code> and the working dir
 <p>When <em>BETA</em> (case insensitive) is found in the header and <code>--stat</code> was not provided, <code>--beta</code> will be added to the command, and if <code>--binary-target</code> was not provided, <code>--binary-target F</code> will be added to the command </p>
 </li>
 <li>
-<p>When <em>OR</em> (case insensitive) is found in the header and <code>--binary-target</code> was not provided, <code>--binary-target T</code> will be added to the command</p>
+<p>When <em>OR</em> (case insensitive) is found in the header and <code>--binary-target</code> was not provided, <code>--or</code> will be added to the command, and if <code>--binary-target</code> was not provided, <code>--binary-target T</code> will be added to the command</p>
 </li>
 <li>
 <p>PRSice cannot determine if the type of effect / data type if the base file contains both <em>OR</em> and <em>BETA</em></p>
@@ -318,7 +317,8 @@ A good starting point is (assume <strong><em>($target)</em></strong> is the pref
 </div>
 <p>Then, <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> can be added to the PRSice command to filter out
 the samples and SNPs.</p>
-<p>You can refer to <a href="https://www.ncbi.nlm.nih.gov/pubmed/29484742">Marees et al (2018)</a> for a more detail guide.</p>
+<p>You can refer to <a href="https://www.ncbi.nlm.nih.gov/pubmed/29484742">Marees et al (2018)</a> for a more detail guide. 
+You can also find our PRS tutorial <a href="https://choishingwan.github.io/PRS-Tutorial/">here</a>.</p>
               
             </div>
           </div>
