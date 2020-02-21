@@ -893,7 +893,7 @@ void Commander::set_help_message()
           "                            has the same A1 and A2 alleles\n"
           "    --keep-ambig-as-is      Will not flip ambiguous SNPs when they "
           "are kept.\n"
-          "                            Will also set the --keep-ambig flag"
+          "                            Will also set the --keep-ambig flag\n"
           "    --logit-perm            When performing permutation, still use "
           "logistic\n"
           "                            regression instead of linear "
