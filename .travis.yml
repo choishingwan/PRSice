@@ -69,7 +69,7 @@ addons:
 script:
   - mkdir build
   - cd build
-  - cmake -DCODE_COVERAGE=ON -DBUILD_TESTING=ON ../
+  - cmake -DCODE_COVERAGE=OFF -DBUILD_TESTING=OFF ../
   - make
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   #- ../bin/runUnitTests ../test/data
