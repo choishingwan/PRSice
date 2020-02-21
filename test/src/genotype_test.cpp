@@ -117,6 +117,14 @@ TEST_F(GENOTYPE_BASIC, CATEGORY)
     ASSERT_EQ(category, 1);
     ASSERT_DOUBLE_EQ(pthres, 0.06);
 }
+
+void category_threshold(unsigned long long category,
+                        unsigned long long expected_category, double pthres,
+                        double expected_pthres)
+{
+    ASSERT_EQ(category, expected_category);
+    ASSERT_DOUBLE_EQ(pthres, expected_pthres);
+}
 TEST_F(GENOTYPE_BASIC, BAR_LEVELS)
 {
     unsigned long long category;
@@ -124,16 +132,14 @@ TEST_F(GENOTYPE_BASIC, BAR_LEVELS)
     std::vector<double> barlevels = {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5};
     // anything less than lowest threshold is consider 0
     category = calculate_category(0.0, barlevels, pthres);
-    ASSERT_EQ(category, 0);
-    ASSERT_DOUBLE_EQ(pthres, 0.001);
+    category_threshold(category, 0, pthres, 0.001);
     category = calculate_category(0.001, barlevels, pthres);
-    ASSERT_EQ(category, 0);
-    ASSERT_DOUBLE_EQ(pthres, 0.001);
+    category_threshold(category, 0, pthres, 0.001);
     category = calculate_category(0.5, barlevels, pthres);
-    ASSERT_EQ(category, 6);
-    ASSERT_DOUBLE_EQ(pthres, 0.5);
+    category_threshold(category, 6, pthres, 0.5);
     category = calculate_category(0.7, barlevels, pthres);
-    ASSERT_EQ(category, 7);
-    ASSERT_DOUBLE_EQ(pthres, 1);
+    category_threshold(category, 7, pthres, 1);
 }
+
+
 #endif // GENOTYPE_TEST_HPP
