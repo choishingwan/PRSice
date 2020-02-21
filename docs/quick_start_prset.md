@@ -14,16 +14,17 @@ PRSet is based on [PRSice](quick_start.md), with additional input requirements
 - **PRSice binary file**: Perform all analysis except plotting
 - **Base data set**: GWAS summary results, which the PRS is based on
 - **Target data set**: Raw genotype data of "target phenotype". Can be in the form of  [PLINK binary](https://www.cog-genomics.org/plink2/formats#bed) or [BGEN](http://www.well.ox.ac.uk/~gav/bgen_format/)
+
 ## PRSet Specific Input
 - **Bed file(s)**: Bed file(s) containing region of genes within a gene set; or
 - **MSigDB file**: File containing name of each gene sets and the ID of genes within the
 gene set on each individual line. If MSigDB is provided, GTF file is required.
 - **GTF file**: A file contain the genome boundary of each individual gene
+- **SNP file**: A file containing SNPs constituting the gene set of interest. Can be in MSigDB (gmt) format or a file contain a single column of SNP IDs.
 
 # Running PRSet
 
-In most case, PRSet can simply be run using the following command, assuming the
-PRSice binary is located in `($HOME)/PRSice/bin/` and the working directory is `($HOME)/PRSice`
+In most case, assuming the PRSice binary is located in `($HOME)/PRSice/bin/` and the working directory is `($HOME)/PRSice`, you can run PRSet with the following commands:
 
 ## With MSigDB data
 Assuming a MSigDB file (*set.txt*) is [downloaded](http://software.broadinstitute.org/gsea/msigdb/) and a gene gtf file (gene.gtf) from [Ensemble](http://www.ensembl.org/index.html) is available, PRSet can then be performed using: 
@@ -52,12 +53,15 @@ Rscript PRSice.R \
     --target TOY_TARGET_DATA \
     --binary-target T \
     --thread 1 \
-    --bed A.bed,B.bed \
+    --bed A.bed:SetA,B.bed \
     --multi-plot 10
 ```
 
 !!! Note
     Both bed and GTF+MSigDB input can be used together
+
+!!! Tips
+    Name of the set will be the bed file name or can be provided using `--bed File:Name`
 
 ## With SNP Set
 Finally, if you want to construct sets based on a list of SNPs, you can use `--snp-set`:

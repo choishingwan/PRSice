@@ -259,7 +259,7 @@ This page contains all command available in PRSice.
     For example, if `--clump-kb 250` is provided, PRSice will clump any SNPs that is 
     within 250kb to **both** end of the index SNP (therefore a 500kb window with the index SNP at the center).
     Now also support distance with a unit. e.g. `--clump-kb 1M` is a valid input.
-    Default: 1M
+    Default: 250kb for PRSice, 1mb for PRSet
 
 - `--clump-r2`
 
@@ -366,10 +366,6 @@ This page contains all command available in PRSice.
     When set, PRSice will not perform clumping. This is useful
     a pre-clumped list of SNPs is available.
 
-- `--pearson`
-
-    Use Pearson Correlation instead of maximum likelihood haplotype frequency estimates for LD calculation
-
 - `--proxy`
 
     Proxy threshold for index SNP to be considered
@@ -444,6 +440,7 @@ This page contains all command available in PRSice.
 
     Method to handle missing genotypes. 
     Available methods include:
+
     - `MEAN_IMPUTE` - Missing genotypes contribute an amount
     proportional to imputed allele frequency (default)
     - `SET_ZERO` - To throw out missing observations instead
@@ -459,9 +456,10 @@ This page contains all command available in PRSice.
     Method to calculate the polygenic score.
     Available methods include:
 
-    - `avg` - Take the average effect size (default)
-    - `std` - Standardize the effect size
-    - `sum` - Direct summation of the effect size
+    - `avg`     - Take the average effect size (default)
+    - `std`     - Standardize the effect size
+    - `con-std` - Standardize the effect size using mean and sd derived from control samples
+    - `sum`     - Direct summation of the effect size
 
 - `--upper` | `-u`
 
@@ -470,7 +468,6 @@ This page contains all command available in PRSice.
 # PRSet
 - `--background`
 
-    
     String to indicate a background file. This string
     should have the format of Name:Type where type can be
 
@@ -654,15 +651,6 @@ This page contains all command available in PRSice.
     !!! warning
         This will generate a huge file
 
-- `--enable-mmap`
-           
-    Enable memory mapping. This will provide a small speed boost if large amount of memory
-    is available and if all genotypes were stored in the same file
-
-    !!! Warning
-        If you don't have enough memory, and if your genotypes were stored in different files, 
-        memory mapping will actually slow down PRSice. 
-
 - `--exclude`
 
     File contains SNPs to be excluded from the analysis.
@@ -689,6 +677,12 @@ This page contains all command available in PRSice.
 
     Keep ambiguous SNPs. Only use this option
     whe base and target has the same A1 and A2 alleles
+
+- `--keep-ambig-as-is`
+
+    Keep ambiguous SNPs and do not perform flipping on the 
+    *ambiguous* SNPs. This will allow user to better handle
+    the ambiguous SNPs according to their liking.
 
 - `--logit-perm`
 
