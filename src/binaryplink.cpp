@@ -77,19 +77,17 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     while (std::getline(famfile, line))
     {
         misc::trim(line);
-        if (!line.empty())
+        if (line.empty()) continue;
+        misc::split(token, line);
+        if (token.size() < 6)
         {
-            misc::split(token, line);
-            if (token.size() < 6)
-            {
-                throw std::runtime_error(
-                    "Error: Malformed fam file. Less than 6 column on "
-                    "line: "
-                    + std::to_string(m_unfiltered_sample_ct + 1) + "\n");
-            }
-            founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
-            ++m_unfiltered_sample_ct;
+            throw std::runtime_error(
+                "Error: Malformed fam file. Less than 6 column on "
+                "line: "
+                + std::to_string(m_unfiltered_sample_ct + 1) + "\n");
         }
+        founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
+        ++m_unfiltered_sample_ct;
     }
     // now reset the fam file to the start
     famfile.clear();
@@ -123,18 +121,16 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         if (line.empty()) continue;
         misc::split(token, line);
         // we have already checked for malformed file
-        std::string id = (m_ignore_fid)
-                             ? token[+FAM::IID]
-                             : token[+FAM::FID] + m_delim + token[+FAM::IID];
+        const std::string fid = token[+FAM::FID] + m_delim;
+        const std::string id =
+            (m_ignore_fid) ? token[+FAM::IID] : fid + token[+FAM::IID];
         auto&& find_id = m_sample_selection_list.find(id);
         inclusion = m_remove_sample
                         ? (find_id == m_sample_selection_list.end())
                         : (find_id != m_sample_selection_list.end());
 
-        if (founder_info.find(token[+FAM::FID] + m_delim + token[+FAM::FATHER])
-                == founder_info.end()
-            && founder_info.find(token[+FAM::FID] + m_delim
-                                 + token[+FAM::MOTHER])
+        if (founder_info.find(fid + token[+FAM::FATHER]) == founder_info.end()
+            && founder_info.find(fid + token[+FAM::MOTHER])
                    == founder_info.end()
             && inclusion)
         {
