@@ -1,7 +1,7 @@
 - Base file 
-    - [ ] Info filtering
-    - [ ] MAF filtering
-    - [ ] Case control MAF filtering
+    - [x] Info filtering
+    - [x] MAF filtering
+    - [x] Case control MAF filtering
     - [ ] Format check
 - PLINK Format
     - [ ] Clumping (target)
@@ -10,7 +10,7 @@
     - [ ] MAF filtering (reference
     - [ ] Geno filtering (target)
     - [ ] Geno filtering (reference)
-    - [ ] PRS calculation - avg
+    - [x] PRS calculation - avg
     - [ ] PRS calculation - std
     - [ ] PRS calculation - sum
     - [ ] PRS calculation - con-std
@@ -66,8 +66,8 @@
 - Permutation 
     - Haven't figure out how to do testing for permutation
 - Misc
-    - [ ] `--no-regress` output
-    - [ ] `--all-score` output
+    - [x] `--no-regress` output
+    - [x] `--all-score` output
     - [ ] Correct settings for model - add
     - [ ] Correct settings for model - dom
     - [ ] Correct settings for model - rec
@@ -76,3 +76,7 @@ TODO:
     - [ ] Update website to remove `--pearson`
     - [ ] Update website to include `--score con-std`
     - [ ] Update website to remove `--enable-mmap`
+
+Possible Bug:
+    - [ ] User report segmentation fault when using --score std and --perm 1000 together
+
