@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.10"
+r.version <- "2.2.12"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -549,6 +549,7 @@ option_list <- list(
   make_option(c("--non-cumulate"), action = "store_true", dest = "non_cumulate"),
   make_option(c("--pearson"), action = "store_true"),
   make_option(c("-n", "--thread"), type = "numeric"),
+  make_option(c( "--num-auto"), type = "numeric"),
   make_option(c("--use-ref-maf"), action = "store_true", dest = "use_ref_maf"),
   make_option(c("--x-range"), type = "character", dest="x_range"),
   #R Specified options

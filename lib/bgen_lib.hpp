@@ -299,11 +299,11 @@ namespace bgen
     // appear in the buffer).
     void read_genotype_data_block(std::istream& aStream, Context const& context,
                                   std::vector<byte_t>* buffer1);
-    void read_genotype_data_block(MemoryRead& aStream,
+    void read_genotype_data_block(FileRead& aStream,
                                   const std::string& file_name,
                                   Context const& context,
                                   std::vector<byte_t>* buffer1,
-                                  const unsigned long long idx);
+                                  const std::streampos idx);
 
     // Low-level function which uncompresses probability data stored in the
     // genotype data block contained in the first buffer into a second buffer
@@ -395,9 +395,9 @@ namespace bgen
                                             std::vector<byte_t>* buffer2);
     template <typename Setter>
     void read_and_parse_genotype_data_block(
-        MemoryRead& aStream, const std::string& file_name,
-        Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
-        std::vector<byte_t>* buffer2, long long idx);
+        FileRead& aStream, const std::string& file_name, Context const& context,
+        Setter& setter, std::vector<byte_t>* buffer1,
+        std::vector<byte_t>* buffer2, std::streampos idx);
 }
 }
 
@@ -441,10 +441,10 @@ namespace bgen
                                    integer_ptr);
     }
     template <typename IntegerType>
-    void read_little_endian_integer(MemoryRead& in_stream,
+    void read_little_endian_integer(FileRead& in_stream,
                                     const std::string& file_name,
                                     IntegerType* integer_ptr,
-                                    const unsigned long long idx)
+                                    const std::streampos idx)
     {
         byte_t buffer[sizeof(IntegerType)];
         in_stream.read(file_name, idx, sizeof(IntegerType),
@@ -1511,9 +1511,9 @@ namespace bgen
     }
     template <typename Setter>
     void read_and_parse_genotype_data_block(
-        MemoryRead& aStream, const std::string& file_name,
-        Context const& context, Setter& setter, std::vector<byte_t>* buffer1,
-        std::vector<byte_t>* buffer2, const long long idx)
+        FileRead& aStream, const std::string& file_name, Context const& context,
+        Setter& setter, std::vector<byte_t>* buffer1,
+        std::vector<byte_t>* buffer2, const std::streampos idx)
     {
         read_genotype_data_block(aStream, file_name, context, buffer1, idx);
         uncompress_probability_data(context, *buffer1, buffer2);

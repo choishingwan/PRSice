@@ -495,7 +495,7 @@ void BinaryGen::gen_snp_vector(
     std::string file_name;
     std::string error_message = "";
     std::string A1, A2, prefix;
-    long long byte_pos, start, data_size;
+    std::streampos byte_pos, start;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
     size_t num_snp;
@@ -625,13 +625,14 @@ void BinaryGen::gen_snp_vector(
                 cur_id = RSID;
             }
 
+            bool ambig = ambiguous(A1, A2);
             if (processed_snps.find(cur_id) != processed_snps.end())
             {
                 duplicated_snps.insert(cur_id);
                 exclude_snp = true;
             }
             // perform check on ambiguousity
-            else if (ambiguous(A1, A2))
+            else if (ambig)
             {
                 ++m_num_ambig;
                 if (!m_keep_ambig) exclude_snp = true;
@@ -650,9 +651,6 @@ void BinaryGen::gen_snp_vector(
             // read in the genotype data block so that we advance the ifstream
             // pointer to the next SNP entry
             read_genotype_data_block(bgen_file, context, &m_buffer1);
-            data_size = static_cast<long long>(bgen_file.tellg()) - start;
-            if (data_size > static_cast<long long>(m_data_size))
-            { m_data_size = static_cast<unsigned long long>(data_size); }
             // if we want to exclude this SNP, we will not perform
             // decompression
             if (!exclude_snp)
@@ -663,7 +661,6 @@ void BinaryGen::gen_snp_vector(
                 if (!genotype->m_existed_snps[target_index].matching(
                         chr_num, SNP_position, A1, A2, flipping))
                 {
-
                     genotype->print_mismatch(
                         mismatch_snp_record_name, mismatch_source,
                         genotype->m_existed_snps[target_index], cur_id, A1, A2,
@@ -672,6 +669,7 @@ void BinaryGen::gen_snp_vector(
                 }
                 else
                 {
+                    if (ambig && flipping && m_ambig_no_flip) flipping = false;
                     processed_snps.insert(cur_id);
                     genotype->m_existed_snps[target_index].add_snp_info(
                         file_idx, byte_pos, chr_num, SNP_position, A1, A2,
@@ -745,7 +743,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     const std::string intermediate_name = prefix + ".inter";
     std::ifstream bgen_file;
     double cur_maf, cur_geno;
-    long long byte_pos, tmp_byte_pos;
+    std::streampos byte_pos, tmp_byte_pos;
     size_t processed_count = 0;
     size_t cur_file_idx = 0;
     size_t retained = 0;
@@ -942,7 +940,7 @@ void BinaryGen::dosage_score(
                            m_prs_calculation.missing_score);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     size_t file_idx;
-    long long byte_pos;
+    std::streampos byte_pos;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& snp = m_existed_snps[(*cur_idx)];
@@ -968,7 +966,7 @@ void BinaryGen::hard_code_score(
     std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
     const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    bool ultra)
+    bool read_only)
 {
     // we need to calculate the size of possible vectors
     const uintptr_t unfiltered_sample_ctl =
@@ -994,7 +992,7 @@ void BinaryGen::hard_code_score(
     // check if we need to reset the sample's PRS
     bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
-    long long byte_pos;
+    std::streampos byte_pos;
     // initialize the data structure for storing the genotype
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     genfile::bgen::Context context;
@@ -1010,7 +1008,7 @@ void BinaryGen::hard_code_score(
         // an intermediate file
         // if it has the intermediate file, then we should have already
         // calculated the counts
-        if (!ultra)
+        if (!cur_snp.stored_genotype())
         {
             cur_snp.get_file_info(idx, byte_pos, m_is_ref);
 
@@ -1040,7 +1038,7 @@ void BinaryGen::hard_code_score(
                                      byte_pos);
                 setter.get_count(homcom_ct, het_ct, homrar_ct, missing_ct);
             }
-            cur_snp.assign_genotype(genotype);
+            if (read_only) cur_snp.assign_genotype(genotype);
         }
         else
         {
@@ -1079,7 +1077,7 @@ void BinaryGen::hard_code_score(
             miss_score = ploidy * stat * maf;
         }
         // start reading the genotype
-        if (!ultra)
+        if (!read_only)
         {
             read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
                      miss_count, homcom_weight, het_weight, homrar_weight,

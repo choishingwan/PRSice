@@ -75,7 +75,7 @@ TEST_F(SNP_INIT_TEST, ADD_REF)
     ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
     // we also need to know if we are flipping
     size_t file_idx = 3;
-    long long byte_pos = 1;
+    std::streampos byte_pos = 1;
     size_t chr = 1, loc = 1;
     bool flipping = true;
     std::string ref = "";
@@ -112,7 +112,7 @@ TEST_F(SNP_INIT_TEST, UPDATE_REF)
     ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
     ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
     size_t file_idx = 2, chr = 1, loc = 1;
-    long long byte_pos = 3;
+    std::streampos byte_pos = 3;
     std::string ref, alt;
     // we also need to know if we are flipping
     snp.add_snp_info(file_idx, byte_pos, chr, loc, ref, alt, flipped, is_ref);
@@ -194,7 +194,7 @@ TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
     std::string new_ref = "C";
     std::string new_alt = "G";
     std::string target_name = "Target";
-    long long new_pos = 1;
+    std::streampos new_pos = 1;
 
     size_t file_idx = 1;
     snp.add_snp_info(file_idx, new_pos, new_chr, new_loc, new_ref, new_alt,
@@ -213,7 +213,7 @@ TEST_F(SNP_INIT_TEST, UPDATE_TARGET)
     ASSERT_FALSE(snp.is_ref_flipped());
     // check update
     std::string new_target_name = "Test";
-    long long updated_pos = 1426;
+    std::streampos updated_pos = 1426;
     size_t new_file_idx = 4;
     snp.update_file(new_file_idx, updated_pos, !is_ref);
     ASSERT_EQ(snp.get_byte_pos(!is_ref), updated_pos);

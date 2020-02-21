@@ -23,7 +23,6 @@
 #include "misc.hpp"
 #include "reporter.hpp"
 #include <functional>
-#include <mio.hpp>
 class BinaryPlink : public Genotype
 {
 public:
@@ -58,7 +57,8 @@ protected:
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
     inline void read_genotype(uintptr_t* __restrict genotype,
-                              const long long byte_pos, const size_t& file_idx)
+                              const std::streampos byte_pos,
+                              const size_t& file_idx)
     {
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
@@ -74,7 +74,7 @@ protected:
         m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
                              unfiltered_sample_ct4,
                              reinterpret_cast<char*>(m_tmp_genotype.data()));
-        if (m_unfiltered_sample_ct != m_founder_ct)
+        if (m_unfiltered_sample_ct == m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
                 m_tmp_genotype.data(), m_founder_info.data(),
@@ -83,7 +83,11 @@ protected:
         }
         else
         {
-            genotype = m_tmp_genotype.data();
+            // not sure why the genotype = m_tmp_genotype.data() worked before
+            // but not now.
+            for (size_t i = 0; i < m_tmp_genotype.size(); ++i)
+            { *genotype++ = m_tmp_genotype[i]; }
+            // genotype = m_tmp_genotype.data();
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
     }

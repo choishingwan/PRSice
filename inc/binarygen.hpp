@@ -89,7 +89,8 @@ protected:
      * \param byte_pos is the streampos of the bgen file, for quick seek
      * \param file_name is the file name of the bgen file
      */
-    inline void read_genotype(uintptr_t* genotype, const long long byte_pos,
+    inline void read_genotype(uintptr_t* genotype,
+                              const std::streampos byte_pos,
                               const size_t& file_idx)
     {
         const uintptr_t unfiltered_sample_ct4 =
@@ -132,7 +133,7 @@ protected:
      * intermediate file
      * \return 0 if sucessful
      */
-    uint32_t load_and_collapse_incl(const long long byte_pos,
+    uint32_t load_and_collapse_incl(const std::streampos byte_pos,
                                     const size_t& file_idx,
                                     uintptr_t* __restrict mainbuf)
     {
