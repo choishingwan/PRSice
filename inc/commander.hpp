@@ -582,7 +582,10 @@ protected:
     {
         if ((no_default && !static_cast<bool>(m_base_info.has_column[index]))
             || m_base_info.column_name[index].empty())
-        { return false; }
+        {
+            m_base_info.has_column[index] = false;
+            return false;
+        }
         size_t col_index;
         bool has_col = index_check(m_base_info.column_name[index], column_names,
                                    col_index, case_sensitive);
