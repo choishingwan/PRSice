@@ -282,9 +282,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "type")
                 set_string(optarg, command, m_target.type);
             else if (command == "wind-3")
-                error |= parse_unit_value(optarg, command, 0, m_prset.wind_3);
+                error |= !parse_unit_value(optarg, command, 0, m_prset.wind_3);
             else if (command == "wind-5")
-                error |= parse_unit_value(optarg, command, 0, m_prset.wind_5);
+                error |= !parse_unit_value(optarg, command, 0, m_prset.wind_5);
             else if (command.compare("x-range") == 0)
                 set_string(optarg, command, m_exclusion_range);
             else
