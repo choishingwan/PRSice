@@ -34,10 +34,15 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.11.b](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_linux.nightly.zip) |
-| OS X 64-bit | [v2.2.11.b](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_mac.nightly.zip) |
-| Windows 32-bit | [v2.2.11.b](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_win32.nightly.zip) |
-| Windows 64-bit | [v2.2.11.b](https://github.com/choishingwan/PRSice/releases/download/2.2.11/PRSice_win64.nightly.zip) |
+| Linux 64-bit | [v2.2.12](https://github.com/choishingwan/PRSice/releases/download/2.2.12/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.12](https://github.com/choishingwan/PRSice/releases/download/2.2.12/PRSice_mac.zip) |
+| Windows 32-bit | Not available |
+| Windows 64-bit | Not available |
+
+!!! Caution
+
+    PRSice currently does not work on Window machine. We are currently looking into the problem but do not expect this to be fixed anytime soon. 
+
 
 !!! Caution 
 
@@ -48,7 +53,7 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 
 	If you are expereiencing problem with "Unable to convert the input" error, that's likely due to NA in your covariate file. This problem is now fixed. 
 
-	If you are using either `--score`, `--model` or `--missing` parameter, please use version 2.2.11+ as 2.2.10 has a bug which cause PRsice to ignore these parameters
+	If you are using either `--score`, `--model` or `--missing` parameter, please use version 2.2.12+ as 2.2.10 has a bug which cause PRsice to ignore these parameters
 
 # R Packages Requirements
 
@@ -115,8 +120,6 @@ For more details on the authors, see:
 
 - [Dr Shing Wan Choi](https:choishingwan.github.io)
 - [Dr Paul O'Reilly](http://www.pauloreilly.info/)
-
-[PRSet](prset_detail.md) is test run by [Yunfeng Ruan](https://www.researchgate.net/profile/Yunfeng_Ruan2)
 
 PRSice-2 and all new functionalities are coded by:
 

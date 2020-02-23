@@ -10,8 +10,7 @@ Before performing PRSice, quality control should be performed on the target samp
 Can be in the form of  [PLINK binary](https://www.cog-genomics.org/plink2/formats#bed) or [BGEN](http://www.well.ox.ac.uk/~gav/bgen_format/)
 
 # Running PRSice
-In most case, PRSice can simply be run using the following command, assuming the
-PRSice executable is located in `($HOME)/PRSice/` and the working directory is `($HOME)/PRSice`
+In most case,  assuming the PRSice executable is located in `($HOME)/PRSice/` and the working directory is `($HOME)/PRSice`, you can run PRSice with the following commands:
 
 !!! Note
     For window users, please use **Rscript.exe** instead of **Rscript**
@@ -73,7 +72,7 @@ Rscript.exe PRSice.R --dir . ^
 
     1. When *BETA* (case insensitive) is found in the header and `--stat` was not provided, `--beta` will be added to the command, and if `--binary-target` was not provided, `--binary-target F` will be added to the command 
    
-    2. When *OR* (case insensitive) is found in the header and `--binary-target` was not provided, `--binary-target T` will be added to the command
+    2. When *OR* (case insensitive) is found in the header and `--binary-target` was not provided, `--or` will be added to the command, and if `--binary-target` was not provided, `--binary-target T` will be added to the command
 
     3. PRSice cannot determine if the type of effect / data type if the base file contains both *OR* and *BETA*
 
@@ -110,4 +109,5 @@ plink.exe --bfile ($target) ^
 Then, `--keep ($target).qc.fam --extract ($target).qc.bim` can be added to the PRSice command to filter out
 the samples and SNPs.
 
-You can refer to [Marees et al (2018)](https://www.ncbi.nlm.nih.gov/pubmed/29484742) for a more detail guide.
+You can refer to [Marees et al (2018)](https://www.ncbi.nlm.nih.gov/pubmed/29484742) for a more detail guide. 
+You can also find our PRS tutorial [here](https://choishingwan.github.io/PRS-Tutorial/).
