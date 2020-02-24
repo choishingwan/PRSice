@@ -162,9 +162,9 @@ public:
     int parse_chr(const std::vector<std::string>& token,
                   const BaseFile& base_file, size_t index, size_t& chr)
     {
+        chr = ~size_t(0);
         if (!base_file.has_column[index]) return 0;
         int32_t chr_code = -1;
-        chr = ~size_t(0);
         chr_code =
             get_chrom_code_raw(token[base_file.column_index[index]].c_str());
         if (chr_code < 0) { return 1; }
@@ -176,7 +176,7 @@ public:
     bool parse_loc(const std::vector<std::string>& token,
                    const BaseFile& base_file, size_t index, size_t& loc)
     {
-
+        loc = ~size_t(0);
         if (!base_file.has_column[index]) return true;
         try
         {
