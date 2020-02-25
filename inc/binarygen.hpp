@@ -524,7 +524,13 @@ protected:
             //                m_geno = (geno == 2) ? 3 : geno;
             //                m_hard_prob = value;
             //            }
-            m_prob[geno] = value;
+            // TODO: To account for situation where there are more than 3
+            // genotype (which shouldn't happen to be honest)
+            if (geno >= m_prob.size())
+            {
+                m_prob.resize(geno + 1);
+                m_prob[geno] = value;
+            }
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
