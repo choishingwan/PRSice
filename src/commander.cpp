@@ -171,8 +171,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, command, +BASE_INDEX::CHR);
             else if (command == "clump-kb")
             {
-                error |=
-                    parse_unit_value(optarg, command, 2, m_clump_info.distance);
+                error |= !parse_unit_value(optarg, command, 2,
+                                           m_clump_info.distance);
                 m_clump_info.provided_distance = true;
             }
             else if (command == "clump-p")
