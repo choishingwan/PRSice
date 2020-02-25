@@ -1135,6 +1135,9 @@ bool PRSice::run_prsice(
     }
     if (m_quick_best)
     {
+        std::cerr << "Check size: " << m_best_sample_score.size() << "\t"
+                  << m_fast_best_output.rows() << "\t"
+                  << m_fast_best_output.cols() << std::endl;
         m_fast_best_output.col(static_cast<Eigen::Index>(region_index)) =
             Eigen::Map<Eigen::VectorXd>(
                 m_best_sample_score.data(),
