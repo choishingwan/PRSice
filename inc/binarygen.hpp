@@ -438,6 +438,7 @@ protected:
             , m_hard_threshold(hard_threshold)
             , m_dose_threshold(dose_threshold)
         {
+            m_prob.resize(3, 0);
         }
         void initialise(std::size_t, std::size_t)
         {
@@ -622,6 +623,7 @@ protected:
             homrar_ct = m_homrar_ct;
             missing_ct = m_missing_ct;
         }
+        virtual ~PLINK_generator() {}
 
     private:
         // is the sample inclusion vector, if bit is set, sample is required
