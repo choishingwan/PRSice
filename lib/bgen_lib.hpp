@@ -1090,7 +1090,6 @@ namespace bgen
                             : genfile::bgen::impl::n_choose_k(
                                 uint32_t(ploidy + pack.numberOfAlleles - 1),
                                 uint32_t(pack.numberOfAlleles - 1));
-
                     uint32_t const storedValueCount =
                         valueCount - (pack.phased ? ploidy : 1);
 
