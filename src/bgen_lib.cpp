@@ -1,11 +1,16 @@
-#include "bgen_lib.hpp"
 
-
-//          Copyright Gavin Band 2008 - 2012.
+//			Copyright Gavin Band 2008 - 2012.
 // Distributed under the Boost Software License, Version 1.0.
-//    (See accompanying file LICENSE_1_0.txt or copy at
-//          http://www.boost.org/LICENSE_1_0.txt)
+//	  (See accompanying file LICENSE_1_0.txt or copy at
+//			http://www.boost.org/LICENSE_1_0.txt)
 
+#include "bgen_lib.hpp"
+#include <algorithm>
+#include <climits>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <string>
 #ifdef CHAR_BIT
 #if (CHAR_BIT != 8)
 #error CHAR_BIT "Sorry, this implementation assumes 8-bit bytes. It won't work on your platform"
@@ -97,6 +102,7 @@ namespace bgen
             && (magic[0] != 0 || magic[1] != 0 || magic[2] != 0
                 || magic[3] != 0))
         { throw BGenError(); }
+
         if (aStream)
         {
             context->number_of_samples = number_of_samples;
@@ -394,7 +400,6 @@ namespace bgen
         aStream.read(file_name, cur_idx, payload_size,
                      reinterpret_cast<char*>(buffer->data()));
     }
-
     void uncompress_probability_data(Context const& context,
                                      std::vector<byte_t> const& compressed_data,
                                      std::vector<byte_t>* buffer)
@@ -422,8 +427,9 @@ namespace bgen
             else if (compressionType == e_ZstdCompression)
             {
                 throw std::runtime_error(
-                    "Error: zstd compression currently not supported");
-                // zstd_uncompress( begin, end, buffer ) ;
+                    "Error: ZSTD compression currently unsupported");
+                // ZSTD
+                // zstd_uncompress(begin, end, buffer);
             }
             assert(buffer->size() == uncompressed_data_size);
         }
@@ -438,43 +444,18 @@ namespace bgen
     {
         namespace impl
         {
-            // Fill a data field, encoded as a 64-bit integer, with bytes
-            // from a buffer, until the data contains at least the given number
-            // of bits. (For this to work we require in general that bits <= 56
-            // (on an 8-bit byte machine).
-            byte_t const* read_bits_from_buffer(byte_t const* buffer,
-                                                byte_t const* const end,
-                                                uint64_t* data, int* size,
-                                                uint8_t const bits)
-            {
-                assert(bits <= 64 - 8);
-                while ((*size) < bits && buffer < end)
-                {
-                    (*data) |=
-                        uint64_t(*(reinterpret_cast<byte_t const*>(buffer++)))
-                        << (*size);
-                    (*size) += 8;
-                }
-                if ((*size) < bits) { throw BGenError(); }
-                return buffer;
-            }
-
-            // Consume the given number of bits from the the least significant
-            // end of a data field (encoded as a uint64_t) and interpret them as
-            // a floating-point number in the range 0...1
-            double parse_bit_representation(uint64_t* data, int* size,
-                                            int const bits)
-            {
-                assert(bits <= 32);
-                uint64_t bitMask = (0xFFFFFFFFFFFFFFFF >> (64 - bits));
-                double const result = (*data & bitMask) / double(bitMask);
-                (*size) -= bits;
-                (*data) >>= bits;
-                return result;
-            }
-
             namespace
             {
+                // std::floor seems to sometimes eat cycles
+                // so roll our own.
+                // All values should be in the range 0...2^31-1 so should fit in
+                // a uint32.
+                double floor(double v) { return double(long(v)); }
+
+                double fractional_part(double v) { return (v - floor(v)); }
+
+                double round(double v) { return floor(v + 0.5); }
+
                 struct CompareFractionalPart
                 {
                     CompareFractionalPart(double* v, std::size_t n)
@@ -495,8 +476,8 @@ namespace bgen
 
                     bool operator()(std::size_t a, std::size_t b) const
                     {
-                        return (m_v[a] - std::floor(m_v[a]))
-                               > (m_v[b] - std::floor(m_v[b]));
+                        return (fractional_part(m_v[a])
+                                > fractional_part(m_v[b]));
                     }
 
                 private:
@@ -519,7 +500,7 @@ namespace bgen
                     p[i] *= scale;
                     sum += p[i];
                     index[i] = i;
-                    total_fractional_part += p[i] - std::floor(p[i]);
+                    total_fractional_part += fractional_part(p[i]);
                 }
                 // Suppose the n input numbers sum to 1
                 // Each has rounding error of at most machine epsilon
@@ -535,13 +516,13 @@ namespace bgen
                 // where r is an integer. Since scale = sum_i floor(p_i) + r,
                 // rounding up r of the p_i's yields a set of integers summing
                 // to scale.
-                std::size_t const r = std::floor(total_fractional_part + 0.5);
+                std::size_t const r = round(total_fractional_part);
                 std::sort(index, index + n, CompareFractionalPart(p, n));
 
                 for (std::size_t i = 0; i < r; ++i)
                 { p[index[i]] = std::ceil(p[index[i]]); }
                 for (std::size_t i = r; i < n; ++i)
-                { p[index[i]] = std::floor(p[index[i]]); }
+                { p[index[i]] = floor(p[index[i]]); }
             }
 
             byte_t* write_scaled_probs(uint64_t* data, std::size_t* offset,
