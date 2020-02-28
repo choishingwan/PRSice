@@ -944,7 +944,7 @@ protected:
         bed_name = path + "Test.bed";
         std::vector<std::string> bed = {bed_name};
         bool genome_wide_background = false;
-        reporter = new Reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"), true);
         region = new FAKE_REGION(bed, feature, msigdb, snp_set, background, gtf,
                                  window_5, window_3, genome_wide_background,
                                  reporter);
@@ -1102,7 +1102,7 @@ TEST(REGION_MALFORM_BED, MALFORM_INPUT_SET)
     std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<IITree<size_t, size_t>> gene_sets;
     std::unordered_map<std::string, std::vector<size_t>> snp_in_sets;
     try
@@ -1443,7 +1443,7 @@ TEST(REGION_STD_BED_INPUT, NO_RUN)
     std::vector<std::string> snp_set;
     std::vector<std::string> bed;
     std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf, window_5,
                        window_3, genome_wide_background, &reporter);
     size_t num_regions = region.generate_regions(22);
@@ -1493,7 +1493,7 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_TRACE)
     std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
@@ -1533,7 +1533,7 @@ TEST(REGION_STD_BED_INPUT, DUPLICATED_SET_NAME)
     std::vector<std::string> snp_set;
     std::vector<std::string> bed = {std::string(bed_name + ":Base")};
     std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
@@ -1573,7 +1573,7 @@ TEST(REGION_STD_BED_INPUT, WITH_HEADER_BROWSER)
     std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         FAKE_REGION region(bed, feature, msigdb, snp_set, background, gtf,
@@ -1687,7 +1687,7 @@ TEST(REGION_MALFORM_BED, INVALID_HEADER_FOR_SET_SELECT)
     std::vector<std::string> snp_set;
     std::vector<std::string> bed = {bed_name};
     std::string background = "";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         // malformed anything are considered as fatal
@@ -1754,7 +1754,7 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -1879,7 +1879,7 @@ protected:
                  << "chr21 9363 49431 . . .\n"
                  << "chr21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -2004,7 +2004,7 @@ protected:
                  << "21 9363 49431 . . .\n"
                  << "21 43440 82120 . . .\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 10;
@@ -2104,7 +2104,7 @@ protected:
                  << "21 9363 49431\n"
                  << "21 43440 82120\n"; // overlap
         bed_file.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 10;
@@ -2161,7 +2161,7 @@ TEST_F(REGION_MINIMUM_BED_PAD, CHECK_PAD)
 
 TEST(REGION_MULTI_BED, CHECK_NAME)
 {
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     std::string second_bed_name = path + "Test2.bed";
@@ -2203,7 +2203,7 @@ TEST(REGION_MULTI_BED, CHECK_NAME)
 
 TEST(REGION_MULTI_BED, CHECK_NAME2)
 {
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::ofstream bed_file;
     std::string bed_name = path + "Test.bed";
     std::string second_bed_name = path + "Test2.bed";
@@ -2258,7 +2258,7 @@ protected:
     std::string gtf_name = path + "Test.gtf";
     void SetUp() override
     {
-        reporter = new Reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -2814,7 +2814,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -2935,7 +2935,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -3134,7 +3134,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 10;
@@ -3306,7 +3306,7 @@ protected:
         gmt << "SET5 ENSG00000223973" << std::endl;
         gmt << "SET6 ENSG00000122966" << std::endl;
         gmt.close();
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -3405,7 +3405,7 @@ protected:
         gmt << "SET1 DDX11L1" << std::endl;
         gmt << "SET2 CIT" << std::endl;
         gmt.close();
-        reporter = new Reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"), true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
@@ -3721,7 +3721,7 @@ TEST(REGION_MSIGDB_SPECIAL, CHR_OVER)
     gtf.close();
     gmt << "SET1 DDX11L1" << std::endl;
     gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -3830,7 +3830,7 @@ TEST(REGION_MSIGDB_SPECIAL, WRONG_MSIG_NAME)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -3862,7 +3862,7 @@ TEST(REGION_SNP_SET, INVALID_SNP_SET_NAME)
     snp_set.open(snp_set_name.c_str());
     snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
     snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -3892,7 +3892,7 @@ TEST(REGION_SNP_SET, SNP_FILE_NOT_FOUND)
 {
     std::string snp_set_name = path + "404_set";
     std::remove(snp_set_name.c_str());
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
@@ -3923,7 +3923,7 @@ TEST(REGION_SNP_SET, DUPLICATED_SET_NAME)
     snp_set.open(snp_set_name.c_str());
     snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
     snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
@@ -3955,7 +3955,7 @@ TEST(REGION_SNP_SET, VERTICAL_SNP_SET)
     snp_set.open(snp_set_name.c_str());
     snp_set << "SNP_1\nSNP_2\nSNP_4\nSNP_5\n";
     snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
@@ -4053,7 +4053,7 @@ TEST(REGION_SNP_SET, MULTI_SNP_SET)
     snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
     snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
     snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
@@ -4156,7 +4156,7 @@ TEST(REGION_SNP_SET, DUPLICATED_MULTI_SNP_SET_NAME)
     snp_set << "SET_4 SNP_86 SNP_478 SNP_155 SNP_743\n";
     snp_set << "SET_5 SNP_97 SNP_912 SNP_132 SNP_53\n";
     snp_set.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
@@ -4241,7 +4241,7 @@ TEST(REGION_BACKGROUND, GTF_BACKGROUND)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -4340,7 +4340,7 @@ TEST(REGION_BACKGROUND, GENOME_BACKGROUND)
     gmt << "SET1 DDX11L1" << std::endl;
     gmt << "SET2 CIT" << std::endl;
     gmt.close();
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -4434,7 +4434,7 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -4582,7 +4582,7 @@ TEST(REGION_BACKGROUND, RANGE_BACKGROUND)
                 "14 22104 47572\n";
     bed_file.close();
     background.append(":range");
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {bed_name};
@@ -4729,7 +4729,7 @@ TEST(REGION_BACKGROUND, GENE_NAME_BACKGROUND)
     gmt << "CIT CCTV" << std::endl;
     gmt.close();
     background.append(":gene");
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     std::vector<std::string> bed_names = {};
@@ -4900,7 +4900,7 @@ TEST(REGION_BACKGROUND, INVALID_FORMAT)
     bed_file.close();
 
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -4973,7 +4973,7 @@ TEST(REGION_BACKGROUND, UNDEFINED_FORMAT)
     bed_file.close();
     background.append(":undefined");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5046,7 +5046,7 @@ TEST(REGION_BACKGROUND, MALFORMED_COLUMN)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5119,7 +5119,7 @@ TEST(REGION_BACKGROUND, NEGATIVE_END)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5191,7 +5191,7 @@ TEST(REGION_BACKGROUND, NEGATIVE_START)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5264,7 +5264,7 @@ TEST(REGION_BACKGROUND, INVALID_END)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5336,7 +5336,7 @@ TEST(REGION_BACKGROUND, INVALID_START)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5409,7 +5409,7 @@ TEST(REGION_BACKGROUND, SMALLER_END)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5447,7 +5447,7 @@ TEST(REGION_BACKGROUND, NOT_FOUND)
     std::remove(background.c_str());
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5521,7 +5521,7 @@ TEST(REGION_BACKGROUND, SKIP_CHR)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 0;
@@ -5653,7 +5653,7 @@ TEST(REGION_BACKGROUND, BED_BACKGROUND_STRANDED)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 10;
@@ -5823,7 +5823,7 @@ TEST(REGION_BACKGROUND, UNSTRANDED_BED_WITH_PAD)
     bed_file.close();
     background.append(":bed");
     std::vector<std::string> bed_names = {bed_name};
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                         "CDS"};
     size_t window_5 = 10;

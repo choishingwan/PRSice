@@ -30,7 +30,9 @@ class Reporter
 {
 public:
     Reporter() {}
-    Reporter(const std::string& log_name, size_t width = 60) : m_width(width)
+    Reporter(bool test) : m_unit_test(test) {}
+    Reporter(const std::string& log_name, size_t width = 60, bool test = false)
+        : m_width(width), m_unit_test(test)
     {
         m_log_file.open(log_name.c_str());
         if (!m_log_file.is_open())
@@ -59,6 +61,7 @@ private:
     const size_t m_error_prefix_size = 6;
     const size_t m_warning_prefix_size = 8;
     size_t m_width = 60;
+    bool m_unit_test = false;
 #if defined(WIN32) || defined(_WIN32) \
     || defined(__WIN32) && !defined(__CYGWIN__)
     const std::string m_error_color_start = "";

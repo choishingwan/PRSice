@@ -7,6 +7,39 @@
 #include "gtest/gtest.h"
 #include <vector>
 
+TEST(HAS_ENDING, CHECK_VALIDITY)
+{
+    std::string full_text;
+    std::string ending;
+    try
+    {
+        misc::hasEnding(full_text, ending);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    full_text = "Hello";
+    try
+    {
+        misc::hasEnding(full_text, ending);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    ending = "lo";
+    ASSERT_TRUE(misc::hasEnding(full_text, ending));
+    ending = "Lo";
+    ASSERT_FALSE(misc::hasEnding(full_text, ending));
+    ending = "Hello";
+    ASSERT_TRUE(misc::hasEnding(full_text, ending));
+    ending = "HEllO";
+    ASSERT_FALSE(misc::hasEnding(full_text, ending));
+}
+
 TEST(REPORTER, CHANGE_WIDTH)
 {
     try
@@ -86,7 +119,7 @@ TEST(REPORTER, REPORTING_MESSAGE)
     try
     {
         // initialize with nothing
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         reporter.report("OUTPUT");
         SUCCEED();
     }
@@ -101,7 +134,7 @@ TEST(REPORTER, LIST_MESSAGE)
     try
     {
         // initialize with nothing
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         reporter.report("1) Testing\n2)If this is ok\n");
         SUCCEED();
     }

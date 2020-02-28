@@ -11,7 +11,7 @@
 TEST(PRSICE, CONSTRUCT)
 {
     // should do nothing but assignment
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::string output;
     CalculatePRS prs_info;
     PThresholding p_info;
@@ -31,7 +31,7 @@ TEST(PRSICE, CONSTRUCT)
 TEST(PRSICE, PHENO_CHECK)
 {
     // Test if the phenotype checking function works
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     std::string output;
     CalculatePRS prs_info;
     // will still run if no_regress is use as we don't actually read the

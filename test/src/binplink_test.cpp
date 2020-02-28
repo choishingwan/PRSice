@@ -28,7 +28,7 @@ protected:
         geno.is_ref = false;
         Phenotype pheno;
         pheno.ignore_fid = false;
-        reporter = new Reporter(std::string(path + "LOG"));
+        reporter = new Reporter(std::string(path + "LOG"), true);
         plink = new BinaryPlink(geno, pheno, " ", reporter);
     }
     void TearDown() override
@@ -131,7 +131,7 @@ TEST(BPLINK_EXTERNAL, EXTERNAL_SAMPLE)
     uint32_t thread = 1;
     bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
          is_ref = false;
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
                             keep_nonfounder, keep_ambig, is_ref, &reporter);
     plinkBinary.load_samples("", "", delim, true);
@@ -146,7 +146,7 @@ TEST(BPLINK_SAMPLE_CHECK, DUPLICATE_SAMPLE)
     size_t thread = 1;
     bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
          is_ref = false;
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
                             keep_nonfounder, keep_ambig, is_ref, &reporter);
     try
@@ -171,7 +171,7 @@ TEST(BPLINK_FOUNDER, FOUNDER_REMOVE)
     uint32_t thread = 1;
     bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
          is_ref = false;
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     BinaryPlink plinkBinary(file_list, file, thread, ignore_fid,
                             keep_nonfounder, keep_ambig, is_ref, &reporter);
     plinkBinary.load_samples("", "", delim, true);
@@ -199,7 +199,7 @@ protected:
         uint32_t thread = 1;
         bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
              is_ref = false;
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         plink = new BinaryPlink(file_list, file, thread, ignore_fid,
                                 keep_nonfounder, keep_ambig, is_ref, reporter);
         plink->load_samples("", "", true, reporter);
@@ -210,7 +210,7 @@ protected:
 TEST_F(BPLINK_GEN_SNP_TARGET, SIMPLE_READ)
 {
     std::string out = path + "test";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     Region exclusion_region("", reporter);
 
     double maf = 0.0;
@@ -238,7 +238,7 @@ TEST_F(BPLINK_GEN_SNP_TARGET, SIMPLE_READ)
 TEST_F(BPLINK_GEN_SNP_TARGET, MAF_FILTERING_1)
 {
     std::string out = path + "test";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     Region exclusion_region("", reporter);
 
     double maf = 0.2;
@@ -266,7 +266,7 @@ TEST_F(BPLINK_GEN_SNP_TARGET, MAF_FILTERING_1)
 TEST_F(BPLINK_GEN_SNP_TARGET, MAF_FILTERING_2)
 {
     std::string out = path + "test";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     Region exclusion_region("", reporter);
 
     double maf = 0.2068;
@@ -293,7 +293,7 @@ TEST_F(BPLINK_GEN_SNP_TARGET, MAF_FILTERING_2)
 TEST_F(BPLINK_GEN_SNP_TARGET, GENO_FILTERING)
 {
     std::string out = path + "test";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     Region exclusion_region("", reporter);
 
     double maf = 0.2068;
@@ -321,7 +321,7 @@ TEST_F(BPLINK_GEN_SNP_TARGET, GENO_FILTERING)
 TEST_F(BPLINK_GEN_SNP_TARGET, MAF_GENO_FILTERING)
 {
     std::string out = path + "test";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     Region exclusion_region("", reporter);
 
     double maf = 0.2068;
@@ -352,7 +352,7 @@ TEST_F(BPLINK_GEN_SNP_TARGET, TEST_EXCLUSION_FUNCTION)
     // function. We don't need to test the exclusion performance as that should
     // be tested in region's unit testing
     std::string out = path + "test";
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     // NOTE: The end range boundary is exclusion. Any SNP with exact match on
     // that number will not be excluded. E.g. SNP on chr1 2842568
     Region exclusion_region("1:2832179-2842568", reporter);
@@ -386,7 +386,7 @@ TEST(BPLINK_GEN_SNP, DUP_SNP)
     uint32_t thread = 1;
     bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
          is_ref = false;
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     BinaryPlink plink(file_list, file, thread, ignore_fid, keep_nonfounder,
                       keep_ambig, is_ref, reporter);
     plink.load_samples("", "", true, reporter);
@@ -438,7 +438,7 @@ TEST(BPLINK_GEN_SNP, SEQ_INPUT)
     uint32_t thread = 1;
     bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
          is_ref = false;
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     BinaryPlink plink(file_list, file, thread, ignore_fid, keep_nonfounder,
                       keep_ambig, is_ref, reporter);
     plink.load_samples("", "", true, reporter);
@@ -478,7 +478,7 @@ protected:
         uint32_t thread = 1;
         bool ignore_fid = false, keep_ambig = false, keep_nonfounder = false,
              is_ref = false;
-        Reporter reporter(std::string(path + "LOG"));
+        Reporter reporter(std::string(path + "LOG"), true);
         plink = new BinaryPlink(file_list, file, thread, ignore_fid,
                                 keep_nonfounder, keep_ambig, is_ref, reporter);
         plink->load_samples("", "", true, reporter);
@@ -524,7 +524,7 @@ TEST_F(BPLINK_BASE_READ, SIMPLE_BETA)
     bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
@@ -567,7 +567,7 @@ TEST_F(BPLINK_BASE_READ, SIMPLE_OR)
     bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
@@ -607,7 +607,7 @@ TEST_F(BPLINK_BASE_READ, PROBLEM_OR)
     bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
@@ -652,7 +652,7 @@ TEST_F(BPLINK_BASE_READ, WRONG_P)
     bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
@@ -697,7 +697,7 @@ TEST_F(BPLINK_BASE_READ, WRONG_COORDINATE)
     bool perform_shrinkage = false;
     std::vector<std::string> feature;
     Region region(feature, 0, 0, false, false);
-    Reporter reporter(std::string(path + "LOG"));
+    Reporter reporter(std::string(path + "LOG"), true);
     try
     {
         plink->read_base(base, out, index, barlevels, lower, inter, upper,
