@@ -76,6 +76,8 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
         {"A2", required_argument, nullptr, 0},
+        {"a1", required_argument, nullptr, 0},
+        {"a2", required_argument, nullptr, 0},
         {"background", required_argument, nullptr, 0},
         {"bar-levels", required_argument, nullptr, 0},
         {"base-info", required_argument, nullptr, 0},

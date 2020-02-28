@@ -169,23 +169,6 @@ protected:
     /// REFACTORED FUNCTIONS
     /////////////////////////////////////////////////
 
-    int32_t maximum_thread()
-    {
-        int32_t max_threads = 1;
-#if defined(WIN32) || defined(_WIN32) \
-    || defined(__WIN32) && !defined(__CYGWIN__)
-        // max thread estimation using windows
-        SYSTEM_INFO sysinfo;
-        GetSystemInfo(&sysinfo);
-        max_threads = sysinfo.dwNumberOfProcessors;
-        int32_t known_procs = max_threads;
-#else
-        int32_t known_procs =
-            static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN));
-        max_threads = (known_procs == -1) ? 1 : known_procs;
-#endif
-        return max_threads;
-    }
     inline void set_string(const std::string& input, const std::string& c,
                            size_t base_index)
     {
@@ -210,10 +193,15 @@ protected:
         target = input;
         target_boolean = true;
     }
+
     template <typename T>
     inline bool convert_to_numeric_vector(const std::vector<std::string>& token,
                                           std::vector<T>& target)
     {
+        if (target.empty())
+            target.reserve(token.size());
+        else
+            target.reserve(target.size() + token.size());
         try
         {
             for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
@@ -271,6 +259,7 @@ protected:
         }
         throw std::runtime_error("Error: Undefined input");
     }
+
     size_t number_boolean(const std::string& input, bool& result)
     {
         size_t bool_length = 0;
@@ -286,7 +275,9 @@ protected:
         {
             if (bool_length != input.length())
             {
-                return misc::string_to_size_t(
+                // if the boolean string doesn't take up the whole of the input
+                // string
+                return misc::convert<size_t>(
                     input.substr(0, input.length() - bool_length).c_str());
             }
             else
@@ -299,6 +290,7 @@ protected:
             throw std::runtime_error("Error: None Numeric Pattern");
         }
     }
+
     inline bool parse_binary_vector(const std::string& input,
                                     const std::string& c,
                                     std::vector<bool>& target)
@@ -320,7 +312,7 @@ protected:
             for (auto&& bin : token)
             {
                 // check if this is true or false, if, not, try parsing
-                std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
+                misc::to_upper(bin);
                 try
                 {
                     bool value = false;
@@ -349,6 +341,7 @@ protected:
         return true;
     }
 
+    // return false when we can't extract the unit
     inline bool extract_unit(const std::string& input, double& value,
                              std::string& unit)
     {
@@ -367,14 +360,19 @@ protected:
             {
             }
         }
-        if (!valid) return false;
-        if (unit_length == 0) { unit = "b"; }
+        if (!valid)
+            return false;
+        else if (unit_length == 0)
+        {
+            unit = "";
+        }
         else
         {
             unit = input.substr(input.length() - unit_length);
         }
         return true;
     }
+
     inline size_t unit_power(const std::string& unit)
     {
         const std::unordered_map<std::string, size_t> unit_map = {
@@ -389,7 +387,7 @@ protected:
     {
         check_duplicate(c);
         std::string in = input;
-        std::transform(in.begin(), in.end(), in.begin(), ::tolower);
+        misc::to_lower(in);
         m_parameter_log[c] = in;
         const size_t weight = memory ? 1024 : 1000;
         double value;
@@ -402,20 +400,34 @@ protected:
         size_t unit_power_level;
         try
         {
-            unit_power_level = unit_power(unit) + default_power;
+            // only use default when unit isn't provided
+            if (unit.empty()) { unit_power_level = default_power; }
+            else
+                unit_power_level = unit_power(unit);
         }
         catch (...)
         {
             m_error_message.append("Error: Invalid input: " + in + "\n");
             return false;
         }
+        // TODO: This can go out of bound if the level is too high
+        // if the power function go out of bound, then value multiplication will
+        // also go out of bound
+        if (misc::overflow<double>(value, pow(weight, unit_power_level)))
+        {
+            m_error_message.append("Error: Value input is exceptionally large. "
+                                   "Are you sure you have the correct input?");
+            return false;
+        }
         value *= pow(weight, unit_power_level);
+
         if (trunc(value) != value && value < 0)
         {
             m_error_message.append("Error: Non-integer value obtained: "
                                    + misc::to_string(target) + "\n");
             return false;
         }
+        // there will be lost of precision with this?
         target = static_cast<size_t>(value);
         return true;
     }
@@ -759,6 +771,25 @@ protected:
     bool base_check();
     bool get_statistic_flag();
     std::string get_program_header(const std::string& name);
+
+
+    int32_t maximum_thread()
+    {
+        int32_t max_threads = 1;
+#if defined(WIN32) || defined(_WIN32) \
+    || defined(__WIN32) && !defined(__CYGWIN__)
+        // max thread estimation using windows
+        SYSTEM_INFO sysinfo;
+        GetSystemInfo(&sysinfo);
+        max_threads = sysinfo.dwNumberOfProcessors;
+        int32_t known_procs = max_threads;
+#else
+        int32_t known_procs =
+            static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN));
+        max_threads = (known_procs == -1) ? 1 : known_procs;
+#endif
+        return max_threads;
+    }
 };
 
 #endif // COMMANDER_H
