@@ -31,7 +31,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"base", required_argument, nullptr, 'b'},
         {"bed", required_argument, nullptr, 'B'},
         {"cov-col", required_argument, nullptr, 'c'},
-        // Add short form (because I am lazy)
+        // Allow short form for cov-file and pheno-file
         {"cov", required_argument, nullptr, 'C'},
         {"cov-file", required_argument, nullptr, 'C'},
         {"pheno", required_argument, nullptr, 'f'},
@@ -70,7 +70,6 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"no-regress", no_argument, &m_prs_info.no_regress, 1},
         {"nonfounders", no_argument, &m_include_nonfounders, 1},
         {"or", no_argument, &m_base_info.is_or, 1},
-        {"pearson", no_argument, nullptr, 0},
         {"print-snp", no_argument, &m_print_snp, 1},
         {"ultra", no_argument, &m_ultra_aggressive, 1},
         {"use-ref-maf", no_argument, &m_prs_info.use_ref_maf, 1},
@@ -116,7 +115,6 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"remove", required_argument, nullptr, 0},
         {"score", required_argument, nullptr, 0},
         {"set-perm", required_argument, nullptr, 0},
-        {"shrink-perm", required_argument, nullptr, 0},
         {"snp", required_argument, nullptr, 0},
         {"snp-set", required_argument, nullptr, 0},
         {"stat", required_argument, nullptr, 0},
@@ -138,6 +136,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     int opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     std::string command;
     bool error = false;
+    // TODO: Standardize function return such that they will return error if
+    // failed
     while (opt != -1)
     {
         switch (opt)

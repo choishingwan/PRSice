@@ -186,7 +186,6 @@ protected:
 #endif
         return max_threads;
     }
-
     inline void set_string(const std::string& input, const std::string& c,
                            size_t base_index)
     {

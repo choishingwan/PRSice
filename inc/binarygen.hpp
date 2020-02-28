@@ -544,7 +544,6 @@ protected:
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
             // representation
-
             m_exp_value += static_cast<double>(geno) * value;
         }
         /*!
