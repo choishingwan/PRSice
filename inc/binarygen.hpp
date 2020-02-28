@@ -322,7 +322,7 @@ protected:
             // adding up three times the SNP number, and to account for the
             // missingness (bgen v1.1), we will first store the sample PRS in
             // the double sum and only add it to the sample if it is not missing
-            if (m_phased == genfile::OrderType::ePerOrderedHaplotype
+            if (m_phased == genfile::OrderType::ePerPhasedHaplotypePerAllele
                 && geno > 1)
             {
                 switch (geno)
@@ -531,7 +531,7 @@ protected:
             //            }
             // TODO: To account for situation where there are more than 3
             // genotype (which shouldn't happen to be honest)
-            if (m_phased == genfile::OrderType::ePerOrderedHaplotype
+            if (m_phased == genfile::OrderType::ePerPhasedHaplotypePerAllele
                 && geno > 1)
             {
                 switch (geno)
