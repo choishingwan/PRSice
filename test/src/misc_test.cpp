@@ -5,6 +5,7 @@
 #include "misc.hpp"
 #include "reporter.hpp"
 #include "gtest/gtest.h"
+#include <string_view>
 #include <vector>
 
 TEST(HAS_ENDING, CHECK_VALIDITY)
@@ -38,6 +39,26 @@ TEST(HAS_ENDING, CHECK_VALIDITY)
     ASSERT_TRUE(misc::hasEnding(full_text, ending));
     ending = "HEllO";
     ASSERT_FALSE(misc::hasEnding(full_text, ending));
+}
+
+TEST(SPLIT, STRING_VIEW_FORMAT)
+{
+    std::string input = "test,the,splitter,and,make,sure-it,works well";
+    std::vector<std::string_view> token =
+        misc::split(input, std::string_view(","));
+    ASSERT_EQ(token.size(), 7);
+    ASSERT_EQ(token[0], "test");
+    ASSERT_EQ(token[1], "the");
+    ASSERT_EQ(token[2], "splitter");
+    ASSERT_EQ(token[3], "and");
+    ASSERT_EQ(token[4], "make");
+    ASSERT_EQ(token[5], "sure-it");
+    ASSERT_EQ(token[6], "works well");
+}
+TEST(OVERFLOW_CHECK, OVERFLOW_CHECK)
+{
+    ASSERT_FALSE(misc::overflow(10, 1));
+    ASSERT_FALSE(misc::overflow(1000000000, 0));
 }
 
 TEST(REPORTER, CHANGE_WIDTH)
@@ -119,7 +140,7 @@ TEST(REPORTER, REPORTING_MESSAGE)
     try
     {
         // initialize with nothing
-        Reporter reporter(std::string(path + "LOG"), true);
+        Reporter reporter(std::string(path + "LOG"), 60, true);
         reporter.report("OUTPUT");
         SUCCEED();
     }
@@ -134,7 +155,7 @@ TEST(REPORTER, LIST_MESSAGE)
     try
     {
         // initialize with nothing
-        Reporter reporter(std::string(path + "LOG"), true);
+        Reporter reporter(std::string(path + "LOG"), 60, true);
         reporter.report("1) Testing\n2)If this is ok\n");
         SUCCEED();
     }

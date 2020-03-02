@@ -607,7 +607,7 @@ protected:
                "ENSG00000223973 ENSG00000255790 ENSG00000122966 "
             << std::endl;
         gmt.close();
-        Reporter reporter(std::string(path + "LOG"), true);
+        Reporter reporter(std::string(path + "LOG"), 60, true);
         std::vector<std::string> feature = {"exon", "gene", "protein_coding",
                                             "CDS"};
         size_t window_5 = 0;
