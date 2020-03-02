@@ -22,7 +22,7 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
 {
     if (argc <= 1)
     {
-        usage();
+        reporter.report(m_help_message);
         throw std::runtime_error("Please provide the required parameters");
     }
     const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
@@ -354,7 +354,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                           m_p_thresholds.set_threshold);
             break;
         case 'h':
-        case '?': usage(); return false;
+        case '?': reporter.report(m_help_message); return false;
         case 'v':
             std::cerr << version << " (" << date << ") " << std::endl;
             return false;
@@ -431,7 +431,7 @@ std::string Commander::get_program_header(const std::string& name)
     char buffer[80];
     timeinfo = localtime(&start_time);
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
-    std::string message = "\nPRSice " + version + " (" + date + ") \n";
+    std::string message = "\n\nPRSice " + version + " (" + date + ") \n";
     message.append("https://github.com/choishingwan/PRSice\n");
     message.append("(C) 2016-2020 Shing Wan (Sam) Choi and Paul F. O'Reilly\n");
     message.append("GNU General Public License v3\n\n");
@@ -951,10 +951,6 @@ void Commander::set_help_message()
           "    --help          | -h    Display this help message\n";
 }
 
-// Print the help message
-void Commander::usage() { fprintf(stderr, "%s\n", m_help_message.c_str()); }
-
-
 std::vector<std::string> get_base_header(const std::string& file)
 {
     if (file.empty())
@@ -995,9 +991,11 @@ bool Commander::get_statistic_column(
     const std::vector<std::string>& column_names)
 {
     bool has_col;
+    // don't allow both OR and BETA to be set
     if (m_base_info.is_or && m_base_info.is_beta) return false;
     if (m_base_info.is_or || m_base_info.is_beta)
     {
+        // guess default based on --or and --beta
         const std::string target = m_base_info.is_or ? "OR" : "BETA";
         m_base_info.column_name[+BASE_INDEX::STAT] = target;
         has_col = in_file(column_names, +BASE_INDEX::STAT, "Error",
@@ -1039,11 +1037,12 @@ bool Commander::get_statistic_column(
         }
     }
 }
+
 bool Commander::get_statistic_flag()
 {
     std::string stat_temp = m_base_info.column_name[+BASE_INDEX::STAT];
-    std::transform(stat_temp.begin(), stat_temp.end(), stat_temp.begin(),
-                   ::toupper);
+    // guess flag based on stat provided
+    misc::to_upper(stat_temp);
     if (stat_temp == "OR")
     {
         m_base_info.is_or = true;
@@ -1063,6 +1062,7 @@ bool Commander::get_statistic_flag()
     }
     return true;
 }
+
 bool Commander::base_check()
 {
     bool error = false;
@@ -1115,8 +1115,11 @@ bool Commander::base_check()
     if (!m_user_no_default && !has_col)
     { error |= !get_statistic_column(column_names); }
     // Statistic is ok, but beta and or not provided
+    // use has_column vector instead of has_col as get_statistic_column might
+    // have found the state column?
     if (m_base_info.has_column[+BASE_INDEX::STAT])
     {
+        // flag not provided, need to guess
         if (!(m_base_info.is_or || m_base_info.is_beta))
         { error |= !get_statistic_flag(); }
     }
@@ -1129,7 +1132,6 @@ bool Commander::clump_check()
 {
     bool error = false;
     if (m_clump_info.no_clump) return true;
-
     if (m_clump_info.use_proxy
         && !misc::within_bound<double>(m_clump_info.proxy, 0.0, 1.0))
     {
@@ -1181,7 +1183,7 @@ bool Commander::ref_check()
                 "Error: Unsupported LD format: " + m_reference.type + "\n");
         }
     }
-    if (m_ref_filter.geno < 0 || m_ref_filter.geno > 1)
+    if (!misc::within_bound<double>(m_ref_filter.geno, 0.0, 1.0))
     {
         error = true;
         m_error_message.append("Error: LD genotype missingness threshold "
@@ -1236,6 +1238,91 @@ bool Commander::ref_check()
     }
     return !error;
 }
+
+size_t Commander::find_first_end(const std::string_view& cov, const size_t idx)
+{
+    assert(cov.at[idx] == '[');
+    for (size_t i = idx + 1; i < cov.length(); ++i)
+    {
+        if (cov.at(i) == ']') return i;
+        if (cov.at(i) == '[')
+            throw std::runtime_error(
+                "Error: Invalid format, we don't allow embedded range");
+    }
+    throw std::runtime_error(
+        "Error: Invalid format, [ must accompany with a ]");
+}
+std::vector<size_t> Commander::parse_range(const std::string_view& cov)
+{
+    std::vector<size_t> res;
+    std::vector<std::string_view> token = misc::split(cov, "-");
+    // from_chars will be faster, but less robust (1,5 will be converted to 1)
+    if (token.size() == 1) { res = {misc::convert<size_t>(std::string(cov))}; }
+    else
+    {
+        size_t start, end;
+        start = misc::convert<size_t>(std::string(token.front()));
+        end = misc::convert<size_t>(std::string(token.back()));
+        if (start > end) { std::swap(start, end); }
+        res.resize(end - start + 1, start);
+        std::iota(res.begin(), res.end(), start);
+    }
+    return res;
+}
+std::vector<size_t> Commander::get_range(const std::string_view& cov,
+                                         const size_t start, const size_t end)
+{
+    // need to remove []
+    if (end >= cov.length() || start >= end)
+    { throw std::runtime_error("Error: Wrong start and end format"); }
+    if (!(cov.at(0) == '[' && cov.at(cov.length() - 1) == ']'))
+    {
+        throw std::runtime_error("Error: Invalid input. Expect something "
+                                 "starts with [ and end with ]");
+    }
+    std::vector<std::string_view> token =
+        misc::split(cov.substr(start + 1, end - start - 1), ",");
+    std::vector<size_t> results, tmp;
+    for (auto&& value : token)
+    {
+        // now try to account for -
+        tmp = parse_range(value);
+        results.insert(results.end(), tmp.begin(), tmp.end());
+    }
+    std::sort(results.begin(), results.end());
+    results.erase(std::unique(results.begin(), results.end()), results.end());
+    return results;
+}
+
+std::vector<std::string>
+Commander::transform_covariate(const std::string& cov_in)
+{
+    // do not allow embedded range
+    if (cov_in.empty() || cov_in.at(0) != '@')
+    { return std::vector<std::string> {cov_in}; }
+    // remove first @
+    std::string cov = cov_in;
+    cov.erase(0, 1);
+    std::vector<std::string> result;
+    std::vector<size_t> range;
+    for (size_t i = 0; i < cov.length(); ++i)
+    {
+        if (cov.at(i) == '[')
+        {
+            try
+            {
+                size_t end = find_first_end(cov, i);
+                std::vector<size_t> ranges = get_range(cov, i, end);
+            }
+            catch (const std::runtime_error& er)
+            {
+                throw std::runtime_error(er.what());
+            }
+        }
+    }
+    return result;
+}
+/*
 std::vector<std::string>
 Commander::transform_covariate(const std::string& cov_in)
 {
@@ -1249,7 +1336,7 @@ Commander::transform_covariate(const std::string& cov_in)
     std::vector<std::string> range;
     std::string cov = cov_in;
     std::string prefix, suffix;
-    // simplify to reasonable use cases
+    // Remove the first @
     cov.erase(0, 1);
     // find the start of range by identifying [
     open = misc::split(cov, "[");
@@ -1317,7 +1404,7 @@ Commander::transform_covariate(const std::string& cov_in)
         }
     }
     return final_covariates;
-}
+}*/
 
 bool Commander::covariate_check()
 {
@@ -1516,7 +1603,7 @@ bool Commander::misc_check()
     // of thread used
     m_parameter_log["thread"] = std::to_string(m_prs_info.thread);
     m_parameter_log["out"] = m_out_prefix;
-    bool use_reference =
+    const bool use_reference =
         !(m_reference.file_list.empty() && m_reference.file_name.empty());
     if (m_prs_info.use_ref_maf && !use_reference)
     {
@@ -1529,10 +1616,15 @@ bool Commander::misc_check()
     }
     if (m_allow_inter)
     {
-        if ((m_target.type != "bgen" && m_reference.type != "bgen")
+        if ((m_target.type != "bgen"
+             && m_reference.type != "bgen") // none are bgen
             || (use_reference && m_reference.type != "bgen"
-                && !m_target.hard_coded)
-            || (!use_reference && m_target.type != "bgen"))
+                && !m_target.hard_coded) // reference file isn't bgen and not
+                                         // require hard coding PRS
+            || (!use_reference
+                && m_target.type != "bgen") // Doesn't have a reference file and
+                                            // target isn't bgen either
+        )
         {
             m_allow_inter = false;
             m_error_message.append(
@@ -1570,10 +1662,7 @@ bool Commander::prset_check()
 
     if (m_prset.feature.empty() && !m_prset.gtf.empty())
     {
-        m_prset.feature.push_back("exon");
-        m_prset.feature.push_back("gene");
-        m_prset.feature.push_back("protein_coding");
-        m_prset.feature.push_back("CDS");
+        m_prset.feature = {"exon", "gene", "protein_coding", "CDS"};
         m_parameter_log["feature"] = "exon,gene,protein_coding,CDS";
     }
     if (m_perm_info.run_perm && m_perm_info.run_set_perm)

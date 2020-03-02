@@ -147,7 +147,7 @@ protected:
      */
     bool parse_command(int argc, char* argv[], const char* optString,
                        const struct option longOpts[], Reporter& reporter);
-    void usage();
+
     void set_help_message();
 
     bool clump_check();
@@ -164,7 +164,10 @@ protected:
     static std::vector<std::string>
     transform_covariate(const std::string& cov_in);
 
-
+    static size_t find_first_end(const std::string_view& cov, const size_t idx);
+    static std::vector<size_t> parse_range(const std::string_view& cov);
+    static std::vector<size_t> get_range(const std::string_view& cov,
+                                         const size_t start, const size_t end);
     /////////////////////////////////////////////////
     /// REFACTORED FUNCTIONS
     /////////////////////////////////////////////////
@@ -219,9 +222,7 @@ protected:
     {
         // should always have an input
         if (input.empty()) return false;
-        std::string comma = "";
-        if (m_parameter_log.find(c) != m_parameter_log.end()) { comma = ","; }
-        m_parameter_log[c].append(comma + input);
+        append_log(c, input);
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
@@ -397,6 +398,14 @@ protected:
             m_error_message.append("Error: Invalid input: " + in + "\n");
             return false;
         }
+        if (value <= 0)
+        {
+            m_error_message.append("Error: Non-zero positive number required. "
+                                   + misc::to_string(target)
+                                   + " provided, please check if you have "
+                                     "provided the correct input\n");
+            return false;
+        }
         size_t unit_power_level;
         try
         {
@@ -410,24 +419,28 @@ protected:
             m_error_message.append("Error: Invalid input: " + in + "\n");
             return false;
         }
-        // TODO: This can go out of bound if the level is too high
-        // if the power function go out of bound, then value multiplication will
-        // also go out of bound
-        if (misc::overflow<double>(value, pow(weight, unit_power_level)))
+        double power = pow(weight, unit_power_level);
+        if (value > std::numeric_limits<size_t>::max()
+            || power > std::numeric_limits<size_t>::max()
+            || misc::overflow<double>(value, power))
         {
             m_error_message.append("Error: Value input is exceptionally large. "
-                                   "Are you sure you have the correct input?");
+                                   "PRSice won't be able to handle this\n");
             return false;
         }
-        value *= pow(weight, unit_power_level);
-
-        if (trunc(value) != value && value < 0)
+        value *= power;
+        if (value > std::numeric_limits<size_t>::max())
+        {
+            m_error_message.append("Error: Value input is exceptionally large. "
+                                   "PRSice won't be able to handle this\n");
+            return false;
+        }
+        if (trunc(value) != value)
         {
             m_error_message.append("Error: Non-integer value obtained: "
                                    + misc::to_string(target) + "\n");
             return false;
         }
-        // there will be lost of precision with this?
         target = static_cast<size_t>(value);
         return true;
     }
@@ -468,18 +481,21 @@ protected:
             return false;
         }
     }
-
-    inline void load_string_vector(const std::string& input,
-                                   const std::string& c,
-                                   std::vector<std::string>& target)
+    inline void append_log(const std::string& c, const std::string& input)
     {
-        if (input.empty()) return;
         if (m_parameter_log.find(c) == m_parameter_log.end())
         { m_parameter_log[c] = input; }
         else
         {
             m_parameter_log[c] = "," + input;
         }
+    }
+    inline void load_string_vector(const std::string& input,
+                                   const std::string& c,
+                                   std::vector<std::string>& target)
+    {
+        if (input.empty()) return;
+        append_log(c, input);
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
@@ -501,7 +517,7 @@ protected:
     {
         std::string input = in;
         check_duplicate("missing");
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+        misc::to_lower(input);
         switch (input.at(0))
         {
         case 'c':
@@ -531,7 +547,7 @@ protected:
     inline bool set_model(const std::string& in)
     {
         std::string input = in;
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+        misc::to_lower(input);
         check_duplicate("model");
         switch (input.at(0))
         {
@@ -561,7 +577,7 @@ protected:
     inline bool set_score(const std::string& in)
     {
         std::string input = in;
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+        misc::to_lower(input);
         check_duplicate("score");
         if (input == "avg") { m_prs_info.scoring_method = SCORING::AVERAGE; }
         else if (input == "std")
@@ -591,7 +607,7 @@ protected:
                  bool no_default, bool case_sensitive = true,
                  bool print_error = true)
     {
-        if ((no_default && !static_cast<bool>(m_base_info.has_column[index]))
+        if ((no_default && !m_base_info.has_column[index])
             || m_base_info.column_name[index].empty())
         {
             m_base_info.has_column[index] = false;
@@ -603,6 +619,7 @@ protected:
         if (has_col) { m_base_info.column_index[index] = col_index; }
         else if (m_base_info.has_column[index] && print_error)
         {
+            // cannot find column but user has provided a column name
             m_error_message.append(warning + ": "
                                    + m_base_info.column_name[index]
                                    + " not found in base file\n");
@@ -620,46 +637,52 @@ protected:
         const bool has_input = m_base_info.has_column[+BASE_INDEX::INFO];
 
         size_t index;
+        // first, try and see if the header can be found in base
         const bool found = index_check(info[0], ref, index);
         if (found) m_base_info.column_index[+BASE_INDEX::INFO] = index;
         m_base_info.has_column[+BASE_INDEX::INFO] = found;
-        if (!found)
+        if (!has_input && !found)
         {
-            if (has_input)
+            // do nothing, because we can't find the default
+        }
+        else
+        {
+            if (!found)
             {
                 m_error_message.append("Warning: INFO field not found in base "
                                        "file, will ignore INFO filtering\n");
             }
-        }
-        else if (info.size() != 2) // assume default always valid
-        {
-            m_error_message.append("Error: Invalid format of "
-                                   "--base-info. Should be "
-                                   "ColName,Threshold.\n");
-            return false;
-        }
-        try
-        {
-            m_base_filter.info_score = misc::convert<double>(info[1]);
-            if (!misc::within_bound<double>(m_base_filter.info_score, 0.0, 1.0))
+            else if (info.size() != 2)
             {
-                if (has_input)
+                // invalid format
+                m_error_message.append("Error: Invalid format of "
+                                       "--base-info. Should be "
+                                       "ColName,Threshold.\n");
+                return false;
+            }
+            else
+            {
+                // we have found valid formatted info, now check if threshold is
+                // correct
+                try
                 {
-                    m_error_message.append("Error: Base INFO threshold "
-                                           "must be within 0 and 1!\n");
+                    m_base_filter.info_score = misc::convert<double>(info[1]);
+                    if (!misc::within_bound<double>(m_base_filter.info_score,
+                                                    0.0, 1.0))
+                    {
+                        m_error_message.append("Error: Base INFO threshold "
+                                               "must be within 0 and 1!\n");
+                        return false;
+                    }
+                }
+                catch (...)
+                {
+                    m_error_message.append(
+                        "Error: Invalid argument passed to --base-info: "
+                        + m_base_info.column_name[+BASE_INDEX::INFO]
+                        + "! Second argument must be numeric\n");
                     return false;
                 }
-            }
-        }
-        catch (...)
-        {
-            if (has_input)
-            {
-                m_error_message.append(
-                    "Error: Invalid argument passed to --base-info: "
-                    + m_base_info.column_name[+BASE_INDEX::INFO]
-                    + "! Second argument must be numeric\n");
-                return false;
             }
         }
         return true;
@@ -710,28 +733,28 @@ protected:
         const std::string maf_error =
             "Error: Invalid format of --base-maf. "
             "Should be ColName,Threshold."
-            "or ColName,Threshold:ColName,Threshold.\n";
+            "or ColName:Threshold,ColName:Threshold.\n";
         std::vector<std::string> case_control =
-            misc::split(m_base_info.column_name[+BASE_INDEX::MAF], ":");
-        const bool print_error = m_base_info.has_column[+BASE_INDEX::MAF];
+            misc::split(m_base_info.column_name[+BASE_INDEX::MAF], ",");
+        const bool user_require_maf_filter =
+            m_base_info.has_column[+BASE_INDEX::MAF];
         // only process the maf filter if it is provided
-        if (!print_error) return true;
+        if (!user_require_maf_filter) return true;
         if (case_control.size() > 2)
         {
-            if (print_error) { m_error_message.append(maf_error); }
+            if (user_require_maf_filter) { m_error_message.append(maf_error); }
             return false;
         }
         std::vector<std::string> detail;
-        if (case_control.size() > 0)
-        {
-            detail = misc::split(case_control.front(), ",");
-            return process_maf(
-                ref, detail, m_base_info.column_index[+BASE_INDEX::MAF],
-                m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
-        }
+        // process the control filter threshold
+        detail = misc::split(case_control.front(), ":");
+        bool parse_control_ok = process_maf(
+            ref, detail, m_base_info.column_index[+BASE_INDEX::MAF],
+            m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
+        if (!parse_control_ok) return false;
         if (case_control.size() == 2)
         {
-            detail = misc::split(case_control.back(), ",");
+            detail = misc::split(case_control.back(), ":");
             return process_maf(ref, detail,
                                m_base_info.column_index[+BASE_INDEX::MAF_CASE],
                                m_base_info.has_column[+BASE_INDEX::MAF_CASE],
@@ -754,10 +777,7 @@ protected:
         for (size_t i = 0; i < ref.size(); ++i)
         {
             tmp = ref[i];
-            if (!case_sensitive)
-            {
-                std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::toupper);
-            }
+            if (!case_sensitive) { misc::to_upper(tmp); }
             if (target == tmp)
             {
                 index = i;

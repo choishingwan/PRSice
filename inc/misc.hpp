@@ -21,6 +21,7 @@
 #include <stdio.h>
 #define _USE_MATH_DEFINES
 #include <algorithm>
+#include <charconv>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -28,6 +29,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #if defined __APPLE__
@@ -298,6 +300,23 @@ inline std::vector<std::string> split(const std::string& seq,
     return result;
 }
 
+
+inline std::vector<std::string_view> split(std::string_view str,
+                                           std::string_view delims = " ")
+{
+    std::vector<std::string_view> output;
+    // output.reserve(str.size() / 2);
+    for (auto first = str.data(), second = str.data(),
+              last = first + str.size();
+         second != last && first != last; first = second + 1)
+    {
+        second = std::find_first_of(first, last, std::cbegin(delims),
+                                    std::cend(delims));
+        if (first != second) output.emplace_back(first, second - first);
+    }
+    return output;
+}
+
 inline void split(std::vector<std::string>& result, const std::string& seq,
                   const std::string& separators = "\t ")
 {
@@ -331,6 +350,7 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
     }
     if (idx < init_size) { result.resize(idx); }
 }
+
 template <typename T>
 inline T convert(const std::string& str)
 {
@@ -342,6 +362,7 @@ inline T convert(const std::string& str)
     { throw std::runtime_error("Unable to convert the input"); }
     return obj;
 }
+
 template <typename T>
 inline std::string to_string(T value)
 {
@@ -376,6 +397,7 @@ inline bool overflow(const T a, const T b)
     T result = a * b;
     return !(a == result / b);
 }
+
 
 // trim functions from https://stackoverflow.com/a/217605
 // trim from start (in place)
