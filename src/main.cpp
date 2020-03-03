@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
         Commander commander;
         try
         {
-            if (!commander.init(argc, argv, reporter))
+            if (!commander.process_command(argc, argv, reporter))
             {
                 return 0; // only require the usage information
             }

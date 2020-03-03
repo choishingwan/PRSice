@@ -49,7 +49,7 @@ class Commander
 public:
     Commander();
     virtual ~Commander();
-    bool init(int argc, char* argv[], Reporter& reporter);
+    bool process_command(int argc, char* argv[], Reporter& reporter);
     std::string get_base_name() const
     {
         return misc::remove_extension<std::string>(
@@ -145,6 +145,8 @@ protected:
      * \param reporter is the object to report all messages
      * \return true if we want to continue the program
      */
+
+    bool init(int argc, char* argv[], Reporter& reporter);
     bool parse_command(int argc, char* argv[], const char* optString,
                        const struct option longOpts[], Reporter& reporter);
 
@@ -293,7 +295,7 @@ protected:
             throw std::runtime_error("Error: None Numeric Pattern");
         }
     }
-
+    inline bool validate_command(Reporter& reporter);
     inline bool parse_binary_vector(const std::string& input,
                                     const std::string& c,
                                     std::vector<bool>& target)

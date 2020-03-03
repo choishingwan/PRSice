@@ -18,6 +18,20 @@
 
 Commander::Commander() { set_help_message(); }
 
+bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
+{
+    bool error = init(argc, argv, reporter);
+    error |= validate_command(reporter);
+    std::string message = get_program_header(argv[0]);
+    for (auto&& com : m_parameter_log)
+    { message.append(" \\\n    --" + com.first + " " + com.second); }
+    message.append("\n");
+    reporter.report(message, false);
+
+    if (!m_error_message.empty()) reporter.report(m_error_message);
+    if (error) throw std::runtime_error(m_error_message);
+    return true;
+}
 bool Commander::init(int argc, char* argv[], Reporter& reporter)
 {
     if (argc <= 1)
@@ -364,7 +378,32 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         }
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-    error |= !base_check();
+
+    if (m_allow_inter) m_parameter_log["allow-inter"] = "";
+    if (m_p_thresholds.fastscore) m_parameter_log["fastscore"] = "";
+    if (m_pheno_info.ignore_fid) m_parameter_log["ignore-fid"] = "";
+    if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
+    if (m_base_info.is_index) m_parameter_log["index"] = "";
+    if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
+    if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
+    if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
+    if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
+    if (m_prs_info.no_regress) m_parameter_log["no-regress"] = "";
+    if (m_prs_info.non_cumulate) m_parameter_log["non-cumulate"] = "";
+    if (m_print_all_scores) m_parameter_log["all-score"] = "";
+    if (m_print_snp) m_parameter_log["print-snp"] = "";
+    if (m_base_info.is_beta) m_parameter_log["beta"] = "";
+    if (m_base_info.is_or) m_parameter_log["or"] = "";
+    if (m_target.hard_coded) m_parameter_log["hard"] = "";
+    if (m_ultra_aggressive) m_parameter_log["ultra"] = "";
+    if (m_prs_info.use_ref_maf) m_parameter_log["use-ref-maf"] = "";
+    if (m_user_no_default) m_parameter_log["no-default"] = "";
+    return error;
+}
+
+bool Commander::validate_command(Reporter& reporter)
+{
+    bool error = !base_check();
     error |= !clump_check();
     error |= !covariate_check();
     error |= !filter_check();
@@ -392,33 +431,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
         else
             return false;
     }
-    if (m_allow_inter) m_parameter_log["allow-inter"] = "";
-    if (m_p_thresholds.fastscore) m_parameter_log["fastscore"] = "";
-    if (m_pheno_info.ignore_fid) m_parameter_log["ignore-fid"] = "";
-    if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
-    if (m_base_info.is_index) m_parameter_log["index"] = "";
-    if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
-    if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
-    if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
-    if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
-    if (m_prs_info.no_regress) m_parameter_log["no-regress"] = "";
-    if (m_prs_info.non_cumulate) m_parameter_log["non-cumulate"] = "";
-    if (m_print_all_scores) m_parameter_log["all-score"] = "";
-    if (m_print_snp) m_parameter_log["print-snp"] = "";
-    if (m_base_info.is_beta) m_parameter_log["beta"] = "";
-    if (m_base_info.is_or) m_parameter_log["or"] = "";
-    if (m_target.hard_coded) m_parameter_log["hard"] = "";
-    if (m_ultra_aggressive) m_parameter_log["ultra"] = "";
-    if (m_prs_info.use_ref_maf) m_parameter_log["use-ref-maf"] = "";
-    if (m_user_no_default) m_parameter_log["no-default"] = "";
-    std::string message = get_program_header(argv[0]);
-    for (auto&& com : m_parameter_log)
-    { message.append(" \\\n    --" + com.first + " " + com.second); }
-    message.append("\n");
-    reporter.report(message, false);
-
-    if (!m_error_message.empty()) reporter.report(m_error_message);
-    if (error) throw std::runtime_error(m_error_message);
     return true;
 }
 
