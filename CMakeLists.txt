@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required(VERSION 3.1)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -7,13 +7,19 @@ endif()
 set(PROJECT_NAME PRSice)
 project(${PROJECT_NAME})
 set(CMAKE_CXX_FLAGS "-g -Wall")
-
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++17" COMPILER_SUPPORTS_CXX17)
+if(COMPILER_SUPPORTS_CXX17)
+    message(STATUS "${COMPILER_SUPPORTS_CXX17}")
+else(COMPILER_SUPPORTS_CXX17)
+    message(FATAL_ERROR "${COMPILER_SUPPORTS_CXX17}")
+endif(COMPILER_SUPPORTS_CXX17)
 option(march "Use --march." OFF)
 if(march)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 # Use C++11
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 # Require (at least) it
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Don't use e.g. GNU extension (like -std=gnu++11) for portability
