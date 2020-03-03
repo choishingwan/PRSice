@@ -116,6 +116,20 @@ public:
             return false;
         }
     }
+    static bool
+    update_covariate_ranges_wrapper(std::vector<std::string>& result,
+                                    std::vector<size_t> ranges)
+    {
+        try
+        {
+            update_covariate_range(ranges, result);
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
 };
 
 
@@ -212,6 +226,28 @@ TEST(COVARIATE_TRANSFORM, GET_RANGE)
     // One fail, all fail
     res.clear();
     ASSERT_FALSE(mockCommander::get_range_wrapper(cov, 2, 9, res));
+}
+TEST(COVARIATE_TRANSFORM, UPDATE_COVARIATE_WITH_RANGE)
+{
+    std::vector<std::string> result;
+    std::vector<size_t> range;
+    ASSERT_FALSE(mockCommander::update_covariate_ranges_wrapper(result, range));
+    range = {1, 3, 5, 7, 9};
+    result.clear();
+    std::vector<std::string> expected = {"1", "3", "5", "7", "9"};
+    ASSERT_TRUE(mockCommander::update_covariate_ranges_wrapper(result, range));
+    ASSERT_EQ(result.size(), range.size());
+    for (size_t i = 0; i < result.size(); ++i)
+    { ASSERT_STREQ(result[i].c_str(), expected[i].c_str()); }
+    result.clear();
+    result = {"PC1AB", "PC2AB"};
+    // sequence = iterate result then range
+    expected = {"PC1AB1", "PC1AB3", "PC1AB5", "PC1AB7", "PC1AB9",
+                "PC2AB1", "PC2AB3", "PC2AB5", "PC2AB7", "PC2AB9"};
+    ASSERT_TRUE(mockCommander::update_covariate_ranges_wrapper(result, range));
+    ASSERT_EQ(result.size(), expected.size());
+    for (size_t i = 0; i < result.size(); ++i)
+    { ASSERT_STREQ(result[i].c_str(), expected[i].c_str()); }
 }
 /*
 TEST(COVARIATE_TRANSFORM, TRANSFORMATION)

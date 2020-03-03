@@ -168,6 +168,8 @@ protected:
     static std::vector<size_t> parse_range(const std::string_view& cov);
     static std::vector<size_t> get_range(const std::string_view& cov,
                                          const size_t start, const size_t end);
+    static void update_covariate_range(const std::vector<size_t>& range,
+                                       std::vector<std::string>& res);
     /////////////////////////////////////////////////
     /// REFACTORED FUNCTIONS
     /////////////////////////////////////////////////

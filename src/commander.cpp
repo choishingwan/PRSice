@@ -1277,7 +1277,7 @@ std::vector<size_t> Commander::get_range(const std::string_view& cov,
     // need to remove []
     if (end >= cov.length() || start >= end)
     { throw std::runtime_error("Error: Wrong start and end format"); }
-    if (!(cov.at(0) == '[' && cov.at(cov.length() - 1) == ']'))
+    if (!(cov.at(start) == '[' && cov.at(end) == ']'))
     {
         throw std::runtime_error("Error: Invalid input. Expect something "
                                  "starts with [ and end with ]");
@@ -1294,6 +1294,35 @@ std::vector<size_t> Commander::get_range(const std::string_view& cov,
     std::sort(results.begin(), results.end());
     results.erase(std::unique(results.begin(), results.end()), results.end());
     return results;
+}
+
+void Commander::update_covariate_range(const std::vector<size_t>& range,
+                                       std::vector<std::string>& res)
+{
+    if (range.empty())
+    {
+        throw std::runtime_error(
+            "Error: Invalid input. Something is wrong with Sam");
+    }
+    if (res.empty())
+    {
+        res.reserve(range.size());
+        for (auto&& value : range) { res.push_back(std::to_string(value)); }
+    }
+    else
+    {
+        // there are content in res, so we will duplicate it w.r.t number in
+        // range
+        std::vector<std::string> tmp;
+        tmp.reserve(res.size() * range.size());
+        for (auto&& r : res)
+        {
+            for (auto&& value : range)
+            { tmp.push_back(r + std::to_string(value)); }
+        }
+        res.clear();
+        res = tmp;
+    }
 }
 
 std::vector<std::string>
@@ -1314,7 +1343,7 @@ Commander::transform_covariate(const std::string& cov_in)
             try
             {
                 size_t end = find_first_end(cov, i);
-                std::vector<size_t> ranges = get_range(cov, i, end);
+                update_covariate_range(get_range(cov, i, end), result);
             }
             catch (const std::runtime_error& er)
             {
