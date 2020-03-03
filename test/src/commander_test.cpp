@@ -130,6 +130,19 @@ public:
             return false;
         }
     }
+    static bool transform_wrapper(const std::string& str,
+                                  std::vector<std::string>& result)
+    {
+        try
+        {
+            result = transform_covariate(str);
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
 };
 
 
@@ -248,6 +261,39 @@ TEST(COVARIATE_TRANSFORM, UPDATE_COVARIATE_WITH_RANGE)
     ASSERT_EQ(result.size(), expected.size());
     for (size_t i = 0; i < result.size(); ++i)
     { ASSERT_STREQ(result[i].c_str(), expected[i].c_str()); }
+}
+void transform_test(const std::string& cov,
+                    const std::vector<std::string>& expected,
+                    bool expect_success)
+{
+    std::vector<std::string> result;
+    if (!expect_success)
+    { ASSERT_FALSE(mockCommander::transform_wrapper(cov, result)); }
+    else
+    {
+        ASSERT_TRUE(mockCommander::transform_wrapper(cov, result));
+        ASSERT_EQ(result.size(), expected.size());
+        for (size_t i = 0; i < result.size(); ++i)
+        { ASSERT_STREQ(result[i].c_str(), expected[i].c_str()); }
+    }
+}
+TEST(COVARIATE_TRANSFORM, TRANSFORMATION)
+{
+    transform_test("@PC", std::vector<std::string> {"PC"}, true);
+    transform_test("@@PC", std::vector<std::string> {"@PC"}, true);
+    transform_test("PC1", std::vector<std::string> {"PC1"}, true);
+    transform_test("PC1-5", std::vector<std::string> {"PC1-5"}, true);
+    transform_test("PC1@5", std::vector<std::string> {"PC1@5"}, true);
+    transform_test("@PC1-5", std::vector<std::string> {"PC1-5"}, true);
+    transform_test("@PC[1-5]",
+                   std::vector<std::string> {"PC1", "PC2", "PC3", "PC4", "PC5"},
+                   true);
+    transform_test("@PC[1-2,5]", std::vector<std::string> {"PC1", "PC2", "PC5"},
+                   true);
+    transform_test(
+        "@PC[1-2,4,3-6]",
+        std::vector<std::string> {"PC1", "PC2", "PC3", "PC4", "PC5", "PC6"},
+        true);
 }
 /*
 TEST(COVARIATE_TRANSFORM, TRANSFORMATION)

@@ -1336,19 +1336,33 @@ Commander::transform_covariate(const std::string& cov_in)
     cov.erase(0, 1);
     std::vector<std::string> result;
     std::vector<size_t> range;
-    for (size_t i = 0; i < cov.length(); ++i)
+    std::size_t prev = 0, pos;
+    while ((pos = cov.find_first_of("[", prev)) != std::string::npos)
     {
-        if (cov.at(i) == '[')
+        if (pos > prev)
         {
-            try
+            std::string_view substring = cov.substr(prev, pos - prev);
+            if (result.empty())
+                result.emplace_back(substring);
+            else
             {
-                size_t end = find_first_end(cov, i);
-                update_covariate_range(get_range(cov, i, end), result);
+                for (size_t i = 0; i < result.size(); ++i)
+                { result[i] = result[i].append(substring); }
             }
-            catch (const std::runtime_error& er)
-            {
-                throw std::runtime_error(er.what());
-            }
+            size_t end = find_first_end(cov, pos);
+            update_covariate_range(get_range(cov, pos, end), result);
+            pos = end;
+        }
+        prev = pos + 1;
+    }
+    if (prev < cov.length())
+    {
+        if (result.empty())
+            result.emplace_back(cov.substr(prev, std::string::npos));
+        else
+        {
+            std::string_view substring = cov.substr(prev, std::string::npos);
+            for (auto&& c : result) { c.append(substring); }
         }
     }
     return result;
