@@ -146,9 +146,11 @@ protected:
      * \return true if we want to continue the program
      */
 
-    bool init(int argc, char* argv[], Reporter& reporter);
+    bool init(int argc, char* argv[], bool& early_termination,
+              Reporter& reporter);
     bool parse_command(int argc, char* argv[], const char* optString,
-                       const struct option longOpts[], Reporter& reporter);
+                       const struct option longOpts[], bool& early_termination,
+                       Reporter& reporter);
 
     void set_help_message();
 
@@ -637,7 +639,7 @@ protected:
     inline bool set_base_info_threshold(const std::vector<std::string>& ref)
     {
         const std::vector<std::string> info =
-            misc::split(m_base_info.column_name[+BASE_INDEX::INFO], ",");
+            misc::split(m_base_info.column_name[+BASE_INDEX::INFO], ":");
         const bool has_input = m_base_info.has_column[+BASE_INDEX::INFO];
 
         size_t index;

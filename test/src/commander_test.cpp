@@ -143,8 +143,104 @@ public:
             return false;
         }
     }
+    bool parse_command_wrapper(const std::string& command)
+    {
+        bool early_terminate = false;
+        return parse_command_wrapper(command, early_terminate);
+    }
+    bool parse_command_wrapper(const std::string& command,
+                               bool& early_terminate)
+    {
+        Reporter reporter(std::string(path + "LOG"), 60, true);
+        std::vector<std::string> argv_str = misc::split("PRSice " + command);
+        std::vector<char*> cstrings;
+        cstrings.reserve(argv_str.size());
+        for (size_t i = 0; i < argv_str.size(); ++i)
+        { cstrings.push_back(const_cast<char*>(argv_str[i].c_str())); }
+        int argc = static_cast<int>(argv_str.size());
+        try
+        {
+            early_terminate = false;
+            // return true if error
+            return init(argc, &cstrings[0], early_terminate, reporter);
+        }
+        catch (...)
+        {
+            return false;
+        }
+    }
 };
 
+TEST(COMMANDER_PARSING, USAGE)
+{
+    mockCommander commander;
+    bool early_terminate = false;
+    ASSERT_TRUE(commander.parse_command_wrapper("--help", early_terminate));
+    ASSERT_TRUE(early_terminate);
+    ASSERT_TRUE(commander.parse_command_wrapper("-?", early_terminate));
+    ASSERT_TRUE(early_terminate);
+    ASSERT_TRUE(commander.parse_command_wrapper("-h", early_terminate));
+    ASSERT_TRUE(early_terminate);
+    // this is a throw error
+    ASSERT_FALSE(commander.parse_command_wrapper("", early_terminate));
+    ASSERT_FALSE(early_terminate);
+    ASSERT_TRUE(commander.parse_command_wrapper("-v", early_terminate));
+    ASSERT_TRUE(early_terminate);
+    ASSERT_TRUE(commander.parse_command_wrapper("--version", early_terminate));
+    ASSERT_TRUE(early_terminate);
+}
+
+void check_bar_threshold(const std::string& command,
+                         const std::vector<double>& expected,
+                         const bool expect_fail)
+{
+    mockCommander commander;
+    if (expect_fail) { ASSERT_TRUE(commander.parse_command_wrapper(command)); }
+    else
+    {
+        ASSERT_FALSE(commander.parse_command_wrapper(command));
+        auto res = commander.get_p_threshold();
+        ASSERT_EQ(expected.size(), res.bar_levels.size());
+        for (size_t i = 0; i < res.bar_levels.size(); ++i)
+        { ASSERT_DOUBLE_EQ(res.bar_levels[i], expected[i]); }
+    }
+}
+TEST(COMMAND_PARSING, BAR_LEVELS_VALID)
+{
+    // valid
+    check_bar_threshold("--bar-levels 0.1,0.2,0.3,0.4,0.5",
+                        std::vector<double> {0.1, 0.2, 0.3, 0.4, 0.5}, false);
+    // we have not deal with duplicates yet
+    check_bar_threshold("--bar-levels 0.1,0.2,0.3,0.3,0.4,0.5",
+                        std::vector<double> {0.1, 0.2, 0.3, 0.3, 0.4, 0.5},
+                        false);
+    // Have not sorted either
+    check_bar_threshold("--bar-levels 0.5,0.2,0.3,0.3,0.4,0.1",
+                        std::vector<double> {0.5, 0.2, 0.3, 0.3, 0.4, 0.1},
+                        false);
+    // supposed to fail but init didn't check for these either
+    // negative number is no no
+    check_bar_threshold("--bar-levels 0.1,-0.2,0.3,0.4,0.5",
+                        std::vector<double> {0.1, -0.2, 0.3, 0.4, 0.5}, false);
+    // No zero surely?
+    check_bar_threshold("--bar-levels 0,0.2,0.3,0.3,0.4,0.5",
+                        std::vector<double> {0, 0.2, 0.3, 0.3, 0.4, 0.5},
+                        false);
+    // Number that is too big is also prohibited
+    check_bar_threshold("--bar-levels 0.5,0.2,0.3,0.3,0.4,0.1,2",
+                        std::vector<double> {0.5, 0.2, 0.3, 0.3, 0.4, 0.1, 2},
+                        false);
+}
+TEST(COMMAND_PARSING, BAR_LEVELS_INVALID)
+{
+    // the only situation where this will fail in init is if there are
+    // non-numeric inputs
+    check_bar_threshold("--bar-levels 0.1,0.2,0.3,a,0.4,0.5",
+                        std::vector<double> {}, true);
+    // if the value overflow,it should also error out
+    check_bar_threshold("--bar-levels 0.1,0.2,0.3,0.4,1.79769e+309",
+                        std::vector<double> {}, true);
+}
 
 void invalid_cov_input(const std::string& cov_string)
 {

@@ -20,7 +20,9 @@ Commander::Commander() { set_help_message(); }
 
 bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
 {
-    bool error = init(argc, argv, reporter);
+    bool early_termination = false;
+    bool error = init(argc, argv, early_termination, reporter);
+    if (early_termination) return false;
     error |= validate_command(reporter);
     std::string message = get_program_header(argv[0]);
     for (auto&& com : m_parameter_log)
@@ -31,8 +33,13 @@ bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
     if (!m_error_message.empty()) reporter.report(m_error_message);
     return true;
 }
-bool Commander::init(int argc, char* argv[], Reporter& reporter)
+bool Commander::init(int argc, char* argv[], bool& early_termination,
+                     Reporter& reporter)
 {
+    // initialize get_opt. To be honest, with PRSice usage, this shouldn't be
+    // required, but then it is required for our unit test where we repeatedly
+    // test the get_opt
+    optind = 0;
     if (argc <= 1)
     {
         reporter.report(m_help_message);
@@ -139,12 +146,13 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"wind-3", required_argument, nullptr, 0},
         {"x-range", required_argument, nullptr, 0},
         {nullptr, 0, nullptr, 0}};
-    return parse_command(argc, argv, optString, longOpts, reporter);
+    return parse_command(argc, argv, optString, longOpts, early_termination,
+                         reporter);
 }
 
 bool Commander::parse_command(int argc, char* argv[], const char* optString,
                               const struct option longOpts[],
-                              Reporter& reporter)
+                              bool& early_termination, Reporter& reporter)
 {
     int32_t max_threads = maximum_thread();
     int longIndex = 0;
@@ -367,17 +375,21 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                           m_p_thresholds.set_threshold);
             break;
         case 'h':
-        case '?': reporter.report(m_help_message); return false;
+        case '?':
+            reporter.report(m_help_message);
+            early_termination = true;
+            return true;
         case 'v':
             std::cerr << version << " (" << date << ") " << std::endl;
-            return false;
+            early_termination = true;
+            return true;
         default:
-            throw "Error: Undefined operator, please use --help for more "
+            throw "Error: Undefined operator, please use "
+                  "--help for more "
                   "information!";
         }
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-
     if (m_allow_inter) m_parameter_log["allow-inter"] = "";
     if (m_p_thresholds.fastscore) m_parameter_log["fastscore"] = "";
     if (m_pheno_info.ignore_fid) m_parameter_log["ignore-fid"] = "";
