@@ -294,6 +294,11 @@ TEST(COVARIATE_TRANSFORM, TRANSFORMATION)
         "@PC[1-2,4,3-6]",
         std::vector<std::string> {"PC1", "PC2", "PC3", "PC4", "PC5", "PC6"},
         true);
+    transform_test("@PC[1-2]A", std::vector<std::string> {"PC1A", "PC2A"},
+                   true);
+    transform_test(
+        "@PC[1-2]A[1-2]",
+        std::vector<std::string> {"PC1A1", "PC1A2", "PC2A1", "PC2A2"}, true);
 }
 /*
 TEST(COVARIATE_TRANSFORM, TRANSFORMATION)
