@@ -1253,7 +1253,7 @@ bool Commander::ref_check()
 
 size_t Commander::find_first_end(const std::string_view& cov, const size_t idx)
 {
-    assert(cov.at[idx] == '[');
+    assert(cov.at(idx) == '[');
     for (size_t i = idx + 1; i < cov.length(); ++i)
     {
         if (cov.at(i) == ']') return i;
