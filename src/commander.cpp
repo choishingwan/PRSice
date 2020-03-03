@@ -1255,6 +1255,8 @@ size_t Commander::find_first_end(const std::string_view& cov, const size_t idx)
 std::vector<size_t> Commander::parse_range(const std::string_view& cov)
 {
     std::vector<size_t> res;
+    if (cov.at(0) == '-' || cov.find("--") != std::string::npos)
+    { throw std::runtime_error("Error: Do not accept negative ranges"); }
     std::vector<std::string_view> token = misc::split(cov, "-");
     // from_chars will be faster, but less robust (1,5 will be converted to 1)
     if (token.size() == 1) { res = {misc::convert<size_t>(std::string(cov))}; }

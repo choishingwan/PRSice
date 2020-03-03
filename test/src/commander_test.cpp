@@ -175,7 +175,14 @@ TEST(COVARIATE_TRANSFORM, PARSE_RANGE)
     cov = "-1";
     res.clear();
     ASSERT_FALSE(mockCommander::parse_range_wrapper(cov, res));
+    cov = "1--5";
     res.clear();
+    ASSERT_FALSE(mockCommander::parse_range_wrapper(cov, res));
+    cov = "-1--5";
+    res.clear();
+    ASSERT_FALSE(mockCommander::parse_range_wrapper(cov, res));
+    res.clear();
+    cov = "1,5";
     // we assume , is already dealt with
     ASSERT_FALSE(mockCommander::parse_range_wrapper(cov, res));
 }
