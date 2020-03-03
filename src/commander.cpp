@@ -27,9 +27,8 @@ bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
     { message.append(" \\\n    --" + com.first + " " + com.second); }
     message.append("\n");
     reporter.report(message, false);
-
-    if (!m_error_message.empty()) reporter.report(m_error_message);
     if (error) throw std::runtime_error(m_error_message);
+    if (!m_error_message.empty()) reporter.report(m_error_message);
     return true;
 }
 bool Commander::init(int argc, char* argv[], Reporter& reporter)
@@ -429,9 +428,9 @@ bool Commander::validate_command(Reporter& reporter)
             reporter.report(error_reason
                             + ". Maybe the path to file does not exists?");
         else
-            return false;
+            return true;
     }
-    return true;
+    return error;
 }
 
 std::string Commander::get_program_header(const std::string& name)

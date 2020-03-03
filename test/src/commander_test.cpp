@@ -21,7 +21,7 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_DOUBLE_EQ(commander.max_memory(1.0), 1.0);
     ASSERT_DOUBLE_EQ(commander.max_memory(2.0), 2.0);
 }
-
+/*
 TEST(COMMANDER_BASIC, USAGE)
 {
     Commander commander;
@@ -40,7 +40,7 @@ TEST(COMMANDER_BASIC, USAGE)
         FAIL();
     }
 }
-
+*//*
 
 TEST(COMMANDER_BASIC, NO_ARG)
 {
@@ -61,7 +61,7 @@ TEST(COMMANDER_BASIC, NO_ARG)
         SUCCEED();
     }
 }
-
+*/
 class mockCommander : public Commander
 {
 public:
