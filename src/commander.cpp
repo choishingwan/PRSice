@@ -1310,7 +1310,7 @@ std::vector<size_t> Commander::get_range(const std::string_view& cov,
                                  "starts with [ and end with ]");
     }
     std::vector<std::string_view> token =
-        misc::split(cov.substr(start + 1, end - start - 1), ",");
+        misc::split(cov.substr(start + 1, end - start - 1), ".");
     std::vector<size_t> results, tmp;
     for (auto&& value : token)
     {
