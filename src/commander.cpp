@@ -76,7 +76,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"all-score", no_argument, &m_print_all_scores, 1},
         {"beta", no_argument, &m_base_info.is_beta, 1},
         {"fastscore", no_argument, &m_p_thresholds.fastscore, 1},
-        {"full-back", required_argument, &m_prset.full_as_background, 1},
+        {"full-back", no_argument, &m_prset.full_as_background, 1},
         {"hard", no_argument, &m_target.hard_coded, 1},
         {"ignore-fid", no_argument, &m_pheno_info.ignore_fid, 1},
         {"index", no_argument, &m_base_info.is_index, 1},
@@ -169,9 +169,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             command = longOpts[longIndex].name;
             if (longOpts[longIndex].flag != nullptr) break;
             // reorganize all long ops according to alphabetical order
-            else if (command == "A1")
+            else if (command == "A1" || command == "a1")
                 set_string(optarg, command, +BASE_INDEX::EFFECT);
-            else if (command == "A2")
+            else if (command == "A2" || command == "a2")
                 set_string(optarg, command, +BASE_INDEX::NONEFFECT);
             else if (command == "background")
                 set_string(optarg, command, m_prset.background);
