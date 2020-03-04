@@ -189,7 +189,7 @@ struct QCFiltering
 struct Clumping
 {
     double r2 = 0.1;
-    double proxy = -1;
+    double proxy = 0.0;
     double pvalue = 1;
     size_t distance = 250000;
     int no_clump = false;
