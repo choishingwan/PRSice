@@ -21,47 +21,7 @@ TEST(COMMANDER_BASIC, INIT)
     ASSERT_DOUBLE_EQ(commander.max_memory(1.0), 1.0);
     ASSERT_DOUBLE_EQ(commander.max_memory(2.0), 2.0);
 }
-/*
-TEST(COMMANDER_BASIC, USAGE)
-{
-    Commander commander;
-    Reporter reporter(std::string(path + "LOG"), 60, true);
-    int argc = 2;
-    char name[7], help[7];
-    strcpy(name, "PRSice");
-    strcpy(help, "--help");
-    char* argv[2] = {name, help};
-    try
-    {
-        ASSERT_FALSE(commander.init(argc, argv, reporter));
-    }
-    catch (...)
-    {
-        FAIL();
-    }
-}
-*//*
 
-TEST(COMMANDER_BASIC, NO_ARG)
-{
-    Commander commander;
-    Reporter reporter(std::string(path + "LOG"), 60, true);
-    int argc = 1;
-    std::string name = "PRSice";
-    char name_c[7];
-    strcpy(name_c, name.c_str());
-    char* argv[1] = {name_c};
-    try
-    {
-        commander.init(argc, argv, reporter);
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-}
-*/
 class mockCommander : public Commander
 {
 public:
@@ -166,7 +126,8 @@ public:
         }
         catch (...)
         {
-            return true;
+            // error = false
+            return false;
         }
     }
 
@@ -179,13 +140,15 @@ TEST(COMMANDER_PARSING, USAGE)
     bool early_terminate = false;
     ASSERT_FALSE(commander.parse_command_wrapper("--help", early_terminate));
     ASSERT_TRUE(early_terminate);
-    ASSERT_FALSE(commander.parse_command_wrapper("-?", early_terminate));
-    ASSERT_TRUE(early_terminate);
     ASSERT_FALSE(commander.parse_command_wrapper("-h", early_terminate));
     ASSERT_TRUE(early_terminate);
     // this is a throw error
-    ASSERT_TRUE(commander.parse_command_wrapper("", early_terminate));
+    ASSERT_FALSE(commander.parse_command_wrapper("", early_terminate));
     ASSERT_FALSE(early_terminate);
+    // this should fail, as ? is reserved for invalid operators
+    ASSERT_FALSE(commander.parse_command_wrapper("-?", early_terminate));
+    ASSERT_FALSE(early_terminate);
+    // version check should be similar to --help
     ASSERT_FALSE(commander.parse_command_wrapper("-v", early_terminate));
     ASSERT_TRUE(early_terminate);
     ASSERT_FALSE(commander.parse_command_wrapper("--version", early_terminate));
@@ -426,7 +389,6 @@ void check_set_base_flag(const std::string& command,
     ASSERT_FALSE(get_has_base(commander, idx));
     if (default_str != expected)
         ASSERT_STRNE(get_base_name(commander, idx).c_str(), expected.c_str());
-    std::cerr << command + " " + expected << std::endl;
     ASSERT_TRUE(commander.parse_command_wrapper(command + " " + expected));
     ASSERT_STREQ(get_base_name(commander, idx).c_str(), expected.c_str());
     ASSERT_TRUE(get_has_base(commander, idx));
@@ -453,6 +415,338 @@ TEST(COMMAND_PARSING, SET_BASE)
     check_set_base_flag("--base-info", "INFO_FILTER", "INFO,0.9",
                         +BASE_INDEX::INFO);
     check_set_base_flag("--base-maf", "MAF_FILTER", "", +BASE_INDEX::MAF);
+}
+
+void check_binary_target(const std::string& command,
+                         const std::vector<bool> expected, bool expect_fail)
+{
+    mockCommander commander;
+    // no default at the beginning
+    ASSERT_TRUE(commander.get_pheno().binary.empty());
+    bool success =
+        commander.parse_command_wrapper("--binary-target " + command);
+    if (expect_fail) { ASSERT_FALSE(success); }
+    else
+    {
+        ASSERT_TRUE(success);
+        ASSERT_EQ(commander.get_pheno().binary.size(), expected.size());
+        for (size_t i = 0; i < expected.size(); ++i)
+        { ASSERT_EQ(commander.get_pheno().binary[i], expected[i]); }
+    }
+}
+TEST(COMMAND_PARSING, BINARY_TARGET_INVALID)
+{
+    // we no longer allow numeric representation of T/F as we need those for
+    // parsing
+    check_binary_target("1", std::vector<bool> {true}, true);
+    check_binary_target("0", std::vector<bool> {false}, true);
+    // way too much
+    check_binary_target("1e200T", std::vector<bool> {false}, true);
+    // Wrong spelling
+    check_binary_target("Tru", std::vector<bool> {false}, true);
+    // Non numeric multiplier
+    check_binary_target("aT", std::vector<bool> {false}, true);
+    // negative multiplier
+    check_binary_target("-1T", std::vector<bool> {false}, true);
+    check_binary_target("F,-10T", std::vector<bool> {false}, true);
+    // this in theory is correct, but as the second argument starts with -, and
+    // PRSice doesn't have a -1 parameter, it will cause an error
+    check_binary_target("F, -10T", std::vector<bool> {false}, true);
+    // this is "valid" but wrong in the sense that 3F will not be processed and
+    // PRSice can in theory continue to run until we reach check
+    check_binary_target("F,2T, 3F", std::vector<bool> {false, true, true},
+                        false);
+}
+TEST(COMMAND_PARSING, BINARY_TARGET_VALID)
+{
+    // try differnent form of binary target input
+    // valid
+    check_binary_target("T", std::vector<bool> {true}, false);
+    check_binary_target("True", std::vector<bool> {true}, false);
+    check_binary_target("true", std::vector<bool> {true}, false);
+    check_binary_target("1true", std::vector<bool> {true}, false);
+    check_binary_target("1T", std::vector<bool> {true}, false);
+    check_binary_target("F", std::vector<bool> {false}, false);
+    check_binary_target("False", std::vector<bool> {false}, false);
+    check_binary_target("false", std::vector<bool> {false}, false);
+    check_binary_target("1false", std::vector<bool> {false}, false);
+    check_binary_target("1F", std::vector<bool> {false}, false);
+    // more complex
+    check_binary_target("4T", std::vector<bool> {true, true, true, true},
+                        false);
+    check_binary_target(
+        "6F", std::vector<bool> {false, false, false, false, false, false},
+        false);
+    check_binary_target("True,3F",
+                        std::vector<bool> {true, false, false, false}, false);
+    check_binary_target("True,3F",
+                        std::vector<bool> {true, false, false, false}, false);
+    // check if it append properly
+    mockCommander commander;
+    // no default at the beginning
+    ASSERT_TRUE(commander.get_pheno().binary.empty());
+    std::vector<bool> expected = {true, true, true, false};
+    ASSERT_TRUE(commander.parse_command_wrapper("--binary-target 3T,F"));
+    ASSERT_EQ(commander.get_pheno().binary.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_EQ(commander.get_pheno().binary[i], expected[i]); }
+    // now second invoke of --binary-target
+    ASSERT_TRUE(commander.parse_command_wrapper("--binary-target 2T"));
+    expected.push_back(true);
+    expected.push_back(true);
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_EQ(commander.get_pheno().binary[i], expected[i]); }
+}
+TEST(COMMAND_PARSING, DOSAGE)
+{
+    mockCommander commander;
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().dose_threshold, 0.0);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().hard_threshold, 0.1);
+    ASSERT_TRUE(commander.parse_command_wrapper("--dose-thres 1.0"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().dose_threshold, 1.0);
+    ASSERT_TRUE(commander.parse_command_wrapper("--hard-thres -0.1"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().hard_threshold, -0.1);
+    // out bound check
+    ASSERT_FALSE(commander.parse_command_wrapper("--hard-thres 1e400"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().dose_threshold, 0.0);
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().hard_threshold, 0.1);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-dose-thres 1.0"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().dose_threshold, 1.0);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-hard-thres -0.1"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().hard_threshold, -0.1);
+    // out bound check
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-hard-thres 1e400"));
+}
+TEST(COMMAND_PARSING, TARGET_DEFAULT)
+{
+    mockCommander commander;
+    // check default values
+    ASSERT_FALSE(commander.get_target().is_ref);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().geno, 1.0);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().info_score, 0.0);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().maf, 0.0);
+    ASSERT_TRUE(commander.get_pheno().pheno_file.empty());
+    ASSERT_TRUE(commander.get_pheno().pheno_col.empty());
+    ASSERT_TRUE(commander.get_pheno().prevalence.empty());
+    ASSERT_TRUE(commander.get_target().remove.empty());
+    ASSERT_TRUE(commander.get_target().keep.empty());
+    ASSERT_TRUE(commander.get_target().file_name.empty());
+    ASSERT_TRUE(commander.get_target().file_list.empty());
+    ASSERT_STREQ(commander.get_target().type.c_str(), "bed");
+}
+
+TEST(COMMAND_PARSING, CLUMP_DEFAULT)
+{
+    mockCommander commander;
+    // check default values
+    ASSERT_TRUE(commander.get_reference().is_ref);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().geno, 1.0);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().info_score, 0.0);
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().maf, 0.0);
+    ASSERT_TRUE(commander.get_reference().remove.empty());
+    ASSERT_TRUE(commander.get_reference().keep.empty());
+    ASSERT_TRUE(commander.get_reference().file_name.empty());
+    ASSERT_TRUE(commander.get_reference().file_list.empty());
+    ASSERT_STREQ(commander.get_reference().type.c_str(), "bed");
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().r2, 0.1);
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().proxy, 0.0);
+    ASSERT_EQ(commander.get_clump_info().distance, 250000);
+    ASSERT_FALSE(commander.get_clump_info().provided_distance);
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().pvalue, 1.0);
+}
+TEST(COMMANDER_PARSING, CLUMP_SETTINGS)
+{
+    mockCommander commander;
+    ASSERT_TRUE(commander.parse_command_wrapper("--clump-p 0.1"));
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().pvalue, 0.1);
+    ASSERT_TRUE(commander.parse_command_wrapper("--clump-r2 0.5"));
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().r2, 0.5);
+    ASSERT_TRUE(commander.parse_command_wrapper("--clump-kb 100"));
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 100000);
+    ASSERT_TRUE(commander.get_clump_info().provided_distance);
+    ASSERT_TRUE(commander.parse_command_wrapper("--clump-kb 100kb"));
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 100000);
+    ASSERT_TRUE(commander.parse_command_wrapper("--clump-kb 100b"));
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 100);
+    ASSERT_TRUE(commander.parse_command_wrapper("--clump-kb 200mb"));
+    ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 200000000);
+}
+TEST(COMMAND_PARSING, REFERENCE_FILE)
+{
+    mockCommander commander;
+    ASSERT_TRUE(commander.get_reference().is_ref);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld genotype"));
+    ASSERT_STREQ(commander.get_reference().file_name.c_str(), "genotype");
+    ASSERT_TRUE(commander.parse_command_wrapper("-L plink"));
+    ASSERT_STREQ(commander.get_reference().file_name.c_str(), "plink");
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-list testing"));
+    ASSERT_STREQ(commander.get_reference().file_list.c_str(), "testing");
+    // default is bed, currently don't do any check
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-type bgen"));
+    ASSERT_STREQ(commander.get_reference().type.c_str(), "bgen");
+    // so in theory, we can set whatever string we like
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-type beatrice"));
+    ASSERT_STREQ(commander.get_reference().type.c_str(), "beatrice");
+    // check keep and remove is correct
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-keep fun"));
+    ASSERT_STREQ(commander.get_reference().keep.c_str(), "fun");
+    ASSERT_TRUE(commander.get_reference().remove.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-remove depression"));
+    ASSERT_STREQ(commander.get_reference().remove.c_str(), "depression");
+    // we should not change keep when we set keep
+    ASSERT_STREQ(commander.get_reference().keep.c_str(), "fun");
+    ASSERT_TRUE(commander.get_reference().is_ref);
+}
+TEST(COMMAND_PARSING, TARGET_FILE)
+{
+    mockCommander commander;
+    ASSERT_FALSE(commander.get_target().is_ref);
+    ASSERT_TRUE(commander.parse_command_wrapper("--target genotype"));
+    ASSERT_STREQ(commander.get_target().file_name.c_str(), "genotype");
+    ASSERT_TRUE(commander.parse_command_wrapper("-t plink"));
+    ASSERT_STREQ(commander.get_target().file_name.c_str(), "plink");
+    ASSERT_TRUE(commander.parse_command_wrapper("--target-list testing"));
+    ASSERT_STREQ(commander.get_target().file_list.c_str(), "testing");
+    // default is bed, currently don't do any check
+    ASSERT_TRUE(commander.parse_command_wrapper("--type bgen"));
+    ASSERT_STREQ(commander.get_target().type.c_str(), "bgen");
+    // so in theory, we can set whatever string we like
+    ASSERT_TRUE(commander.parse_command_wrapper("--type beatrice"));
+    ASSERT_STREQ(commander.get_target().type.c_str(), "beatrice");
+    // check keep and remove is correct
+    ASSERT_TRUE(commander.parse_command_wrapper("--keep fun"));
+    ASSERT_STREQ(commander.get_target().keep.c_str(), "fun");
+    ASSERT_TRUE(commander.get_target().remove.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--remove depression"));
+    ASSERT_STREQ(commander.get_target().remove.c_str(), "depression");
+    // we should not change keep when we set keep
+    ASSERT_STREQ(commander.get_target().keep.c_str(), "fun");
+    ASSERT_FALSE(commander.get_target().is_ref);
+}
+TEST(COMMAND_PARSING, PHENO_SET)
+{
+    mockCommander commander;
+    ASSERT_TRUE(commander.get_pheno().pheno_file.empty());
+    ASSERT_TRUE(commander.get_pheno().pheno_col.empty());
+    ASSERT_TRUE(commander.get_pheno().pheno_col_idx.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--pheno Phenotype"));
+    ASSERT_STREQ(commander.get_pheno().pheno_file.c_str(), "Phenotype");
+    ASSERT_TRUE(commander.get_pheno().pheno_col.empty());
+    ASSERT_TRUE(commander.get_pheno().pheno_col_idx.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--pheno-col A1,B1"));
+    std::vector<std::string> expected = {"A1", "B1"};
+    ASSERT_EQ(commander.get_pheno().pheno_col.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_STREQ(commander.get_pheno().pheno_col[i].c_str(),
+                     expected[i].c_str());
+    }
+    ASSERT_TRUE(commander.get_pheno().pheno_col_idx.empty());
+    // We do allow multiple use of --pheno-col, though not sure if that is a
+    // good idea or not
+    ASSERT_TRUE(commander.parse_command_wrapper("--pheno-col C2,D2"));
+    expected = {"A1", "B1", "C2", "D2"};
+    ASSERT_EQ(commander.get_pheno().pheno_col.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_STREQ(commander.get_pheno().pheno_col[i].c_str(),
+                     expected[i].c_str());
+    }
+    // now check prevalence
+    ASSERT_TRUE(commander.get_pheno().prevalence.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("-k 0.1,0.3,1,3"));
+    // there is no bound check yet
+    std::vector<double> expected_prev = {0.1, 0.3, 1, 3};
+    ASSERT_EQ(commander.get_pheno().prevalence.size(), expected_prev.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_DOUBLE_EQ(commander.get_pheno().prevalence[i], expected_prev[i]);
+    }
+    // also check long flag
+    // use new mockCommander, as prevalence should stack
+    mockCommander second_command;
+    ASSERT_TRUE(
+        second_command.parse_command_wrapper("--prevalence -0.1,0.44,1e-5"));
+    // there is no bound check yet
+    expected_prev.clear();
+    expected_prev = {-0.1, 0.44, 1e-5};
+    ASSERT_EQ(second_command.get_pheno().prevalence.size(),
+              expected_prev.size());
+    for (size_t i = 0; i < expected_prev.size(); ++i)
+    {
+        ASSERT_DOUBLE_EQ(second_command.get_pheno().prevalence[i],
+                         expected_prev[i]);
+    }
+    ASSERT_TRUE(
+        second_command.parse_command_wrapper("--prevalence 0.1,0.3,0.5"));
+    // check stacking
+    expected_prev.push_back(0.1);
+    expected_prev.push_back(0.3);
+    expected_prev.push_back(0.5);
+    ASSERT_EQ(second_command.get_pheno().prevalence.size(),
+              expected_prev.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_DOUBLE_EQ(second_command.get_pheno().prevalence[i],
+                         expected_prev[i]);
+    }
+    // check out of bound
+    ASSERT_FALSE(second_command.parse_command_wrapper("-k 1e-400"));
+    // non-numeric
+    ASSERT_FALSE(second_command.parse_command_wrapper("-k common_disease"));
+}
+TEST(COMMAND_PARSING, TARGET_FILTER_CHECK)
+{
+    // now check the get set combo works
+    mockCommander commander;
+    // first check valid inputs
+    ASSERT_TRUE(commander.parse_command_wrapper("--geno 0.4"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().geno, 0.4);
+    ASSERT_TRUE(commander.parse_command_wrapper("--info 0.2"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().info_score, 0.2);
+    ASSERT_TRUE(commander.parse_command_wrapper("--maf 0.01"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().maf, 0.01);
+    // out of bound input (check later, so should still be valid as of now
+    ASSERT_TRUE(commander.parse_command_wrapper("--geno -0.4"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().geno, -0.4);
+    ASSERT_TRUE(commander.parse_command_wrapper("--info 20"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().info_score, 20);
+    ASSERT_TRUE(commander.parse_command_wrapper("--maf -10.01"));
+    ASSERT_DOUBLE_EQ(commander.get_target_qc().maf, -10.01);
+    // the invalid input e.g non-numeric
+    ASSERT_FALSE(commander.parse_command_wrapper("--geno --0.4"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--geno geno"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--info --0.2"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--info test_yourself"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--maf -+0.01"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--maf rare"));
+}
+
+TEST(COMMAND_PARSING, REFERENCE_FILTER_CHECK)
+{
+    // now check the get set combo works
+    mockCommander commander;
+    // first check valid inputs
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-geno 0.4"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().geno, 0.4);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-info 0.2"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().info_score, 0.2);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-maf 0.01"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().maf, 0.01);
+    // out of bound input (check later, so should still be valid as of now
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-geno -0.4"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().geno, -0.4);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-info 20"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().info_score, 20);
+    ASSERT_TRUE(commander.parse_command_wrapper("--ld-maf -10.01"));
+    ASSERT_DOUBLE_EQ(commander.get_ref_qc().maf, -10.01);
+    // the invalid input e.g non-numeric
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-geno --0.4"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-geno geno"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-info --0.2"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-info test_yourself"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-maf -+0.01"));
+    ASSERT_FALSE(commander.parse_command_wrapper("--ld-maf rare"));
 }
 void invalid_cov_input(const std::string& cov_string)
 {
@@ -608,49 +902,7 @@ TEST(COVARIATE_TRANSFORM, TRANSFORMATION)
         "@PC[1-2]A[1-2]",
         std::vector<std::string> {"PC1A1", "PC1A2", "PC2A1", "PC2A2"}, true);
 }
-/*
-TEST(COVARIATE_TRANSFORM, TRANSFORMATION)
-{
-    // should not do transformation when not start with @
-    std::string cov_string = "PC1";
-    std::string expected = cov_string;
-    ASSERT_STREQ(
-        expected.c_str(),
-        mockCommander::transform_covariate(cov_string).front().c_str());
-    // same for empty string
-    cov_string = expected = "";
-    ASSERT_STREQ(
-        expected.c_str(),
-        mockCommander::transform_covariate(cov_string).front().c_str());
-    // should be fine if the @ is in middle of the string
-    cov_string = expected = "PC1@Home";
-    ASSERT_STREQ(
-        expected.c_str(),
-        mockCommander::transform_covariate(cov_string).front().c_str());
-    // when start with @ but not with any [], we will just remove the @
-    cov_string = "@PC1";
-    expected = "PC1";
-    ASSERT_STREQ(
-        expected.c_str(),
-        mockCommander::transform_covariate(cov_string).front().c_str());
-    cov_string = "@PC[1-5]";
-    // in this order
-    std::vector<std::string> expected_outputs = {"PC1", "PC2", "PC3", "PC4",
-                                                 "PC5"};
-    auto results = mockCommander::transform_covariate(cov_string);
-    EXPECT_EQ(results.size(), expected_outputs.size());
-    for (size_t i = 0; i < results.size(); ++i)
-    { EXPECT_STREQ(expected_outputs[i].c_str(), results[i].c_str()); }
-    invalid_cov_input("@PC[[1-5]]");
-    invalid_cov_input("@PC[1-5");
-    invalid_cov_input("@PC1-5]");
-    invalid_cov_input("@PC[[1-5]");
-    invalid_cov_input("@PC[1-5]]");
-    invalid_cov_input("@PC[1-5][");
-    invalid_cov_input("@PC[1-5,]");
-    invalid_cov_input("@PC[,1-5]");
-}
-*/
+
 void quick_check_unit(const std::string& input_str, const size_t exp_output,
                       const size_t def_power = 0, const bool memory = false)
 {
