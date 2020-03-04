@@ -515,8 +515,7 @@ protected:
 
     inline bool set_memory(const std::string& input)
     {
-        bool error = parse_unit_value(input, "memory", 2, m_memory, true);
-        return !error;
+        return parse_unit_value(input, "memory", 2, m_memory, true);
     }
 
     inline bool set_missing(const std::string& in)
