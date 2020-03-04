@@ -16,7 +16,11 @@
 
 #include "commander.hpp"
 
-Commander::Commander() { set_help_message(); }
+Commander::Commander()
+{
+    set_help_message();
+    m_reference.is_ref = true;
+}
 
 bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
 {
@@ -194,7 +198,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, command, +BASE_INDEX::CHR);
             else if (command == "clump-kb")
             {
-                error |= !parse_unit_value(optarg, command, 2,
+                error |= !parse_unit_value(optarg, command, 1,
                                            m_clump_info.distance);
                 m_clump_info.provided_distance = true;
             }
@@ -375,7 +379,6 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                           m_p_thresholds.set_threshold);
             break;
         case 'h':
-        case '?':
             reporter.report(m_help_message);
             early_termination = true;
             return true;
@@ -383,6 +386,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             std::cerr << version << " (" << date << ") " << std::endl;
             early_termination = true;
             return true;
+        case '?':
         default:
             throw "Error: Undefined operator, please use "
                   "--help for more "
