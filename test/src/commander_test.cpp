@@ -161,32 +161,34 @@ public:
         try
         {
             early_terminate = false;
-            // return true if error
-            return init(argc, &cstrings[0], early_terminate, reporter);
+            // return false if error
+            return !init(argc, &cstrings[0], early_terminate, reporter);
         }
         catch (...)
         {
-            return false;
+            return true;
         }
     }
+
+    bool no_default() const { return m_user_no_default; }
 };
 
 TEST(COMMANDER_PARSING, USAGE)
 {
     mockCommander commander;
     bool early_terminate = false;
-    ASSERT_TRUE(commander.parse_command_wrapper("--help", early_terminate));
+    ASSERT_FALSE(commander.parse_command_wrapper("--help", early_terminate));
     ASSERT_TRUE(early_terminate);
-    ASSERT_TRUE(commander.parse_command_wrapper("-?", early_terminate));
+    ASSERT_FALSE(commander.parse_command_wrapper("-?", early_terminate));
     ASSERT_TRUE(early_terminate);
-    ASSERT_TRUE(commander.parse_command_wrapper("-h", early_terminate));
+    ASSERT_FALSE(commander.parse_command_wrapper("-h", early_terminate));
     ASSERT_TRUE(early_terminate);
     // this is a throw error
-    ASSERT_FALSE(commander.parse_command_wrapper("", early_terminate));
+    ASSERT_TRUE(commander.parse_command_wrapper("", early_terminate));
     ASSERT_FALSE(early_terminate);
-    ASSERT_TRUE(commander.parse_command_wrapper("-v", early_terminate));
+    ASSERT_FALSE(commander.parse_command_wrapper("-v", early_terminate));
     ASSERT_TRUE(early_terminate);
-    ASSERT_TRUE(commander.parse_command_wrapper("--version", early_terminate));
+    ASSERT_FALSE(commander.parse_command_wrapper("--version", early_terminate));
     ASSERT_TRUE(early_terminate);
 }
 
@@ -195,10 +197,10 @@ void check_bar_threshold(const std::string& command,
                          const bool expect_fail)
 {
     mockCommander commander;
-    if (expect_fail) { ASSERT_TRUE(commander.parse_command_wrapper(command)); }
+    if (expect_fail) { ASSERT_FALSE(commander.parse_command_wrapper(command)); }
     else
     {
-        ASSERT_FALSE(commander.parse_command_wrapper(command));
+        ASSERT_TRUE(commander.parse_command_wrapper(command));
         auto res = commander.get_p_threshold();
         ASSERT_EQ(expected.size(), res.bar_levels.size());
         for (size_t i = 0; i < res.bar_levels.size(); ++i)
@@ -241,7 +243,217 @@ TEST(COMMAND_PARSING, BAR_LEVELS_INVALID)
     check_bar_threshold("--bar-levels 0.1,0.2,0.3,0.4,1.79769e+309",
                         std::vector<double> {}, true);
 }
+TEST(COMMAND_PARSING, FASTSCORE)
+{
+    mockCommander set;
+    std::string command = "--fastscore";
+    // default is not using --fastscore
+    ASSERT_FALSE(set.get_p_threshold().fastscore);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_p_threshold().fastscore);
+}
+TEST(COMMAND_PARSING, NO_FULL)
+{
+    mockCommander set;
+    std::string command = "--no-full";
+    ASSERT_FALSE(set.get_p_threshold().no_full);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_p_threshold().no_full);
+}
+TEST(COMMAND_PARSING, NO_CLUMP)
+{
+    mockCommander set;
+    std::string command = "--no-clump";
+    ASSERT_FALSE(set.get_clump_info().no_clump);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_clump_info().no_clump);
+}
+TEST(COMMAND_PARSING, HARD_CODED)
+{
+    mockCommander set;
+    std::string command = "--hard";
+    ASSERT_FALSE(set.get_target().hard_coded);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_target().hard_coded);
+}
+TEST(COMMAND_PARSING, ALLOW_INTER)
+{
+    mockCommander set;
+    std::string command = "--allow-inter";
+    ASSERT_FALSE(set.use_inter());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.use_inter());
+}
+TEST(COMMAND_PARSING, NON_FOUNDERS)
+{
+    mockCommander set;
+    std::string command = "--nonfounders";
+    ASSERT_FALSE(set.nonfounders());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.nonfounders());
+}
+TEST(COMMAND_PARSING, BETA)
+{
+    mockCommander set;
+    std::string command = "--beta";
+    ASSERT_FALSE(set.get_base().is_beta);
+    ASSERT_FALSE(set.get_base().is_or);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_base().is_beta);
+    ASSERT_FALSE(set.get_base().is_or);
+}
+TEST(COMMAND_PARSING, OR)
+{
+    mockCommander set;
+    std::string command = "--or";
+    ASSERT_FALSE(set.get_base().is_or);
+    ASSERT_FALSE(set.get_base().is_beta);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_base().is_or);
+    ASSERT_FALSE(set.get_base().is_beta);
+}
+TEST(COMMAND_PARSING, INDEX)
+{
+    mockCommander set;
+    std::string command = "--index";
+    ASSERT_FALSE(set.get_base().is_index);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_base().is_index);
+}
+TEST(COMMAND_PARSING, ALLSCORE)
+{
+    mockCommander set;
+    std::string command = "--all-score";
+    // default is not using --allscore
+    ASSERT_FALSE(set.all_scores());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.all_scores());
+}
+TEST(COMMAND_PARSING, IGNORE_FID)
+{
+    mockCommander set;
+    std::string command = "--ignore-fid";
+    ASSERT_FALSE(set.get_pheno().ignore_fid);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_pheno().ignore_fid);
+}
+TEST(COMMAND_PARSING, KEEP_AMBIG)
+{
+    mockCommander set;
+    std::string command = "--keep-ambig";
+    ASSERT_FALSE(set.keep_ambig());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.keep_ambig());
+}
+TEST(COMMAND_PARSING, KEEP_AMBIG_AS_IS)
+{
+    mockCommander set;
+    std::string command = "--keep-ambig-as-is";
+    ASSERT_FALSE(set.ambig_no_flip());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.ambig_no_flip());
+}
+TEST(COMMAND_PARSING, NON_CUMULATE)
+{
+    mockCommander set;
+    std::string command = "--non-cumulate";
+    ASSERT_FALSE(set.get_prs_instruction().non_cumulate);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_prs_instruction().non_cumulate);
+}
+TEST(COMMAND_PARSING, NO_REGRESS)
+{
+    mockCommander set;
+    std::string command = "--no-regress";
+    ASSERT_FALSE(set.get_prs_instruction().no_regress);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_prs_instruction().no_regress);
+}
+TEST(COMMAND_PARSING, PRINT_SNP)
+{
+    mockCommander set;
+    std::string command = "--print-snp";
+    ASSERT_FALSE(set.print_snp());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.print_snp());
+}
+TEST(COMMAND_PARSING, USE_REF_MAF)
+{
+    mockCommander set;
+    std::string command = "--use-ref-maf";
+    ASSERT_FALSE(set.get_prs_instruction().use_ref_maf);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_prs_instruction().use_ref_maf);
+}
+TEST(COMMAND_PARSING, LOGIT_PERM)
+{
+    mockCommander set;
+    std::string command = "--logit-perm";
+    ASSERT_FALSE(set.get_perm().logit_perm);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_perm().logit_perm);
+}
+TEST(COMMAND_PARSING, FULL_BACK)
+{
+    mockCommander set;
+    std::string command = "--full-back";
+    ASSERT_FALSE(set.get_set().full_as_background);
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.get_set().full_as_background);
+}
+TEST(COMMAND_PARSING, NO_DEFAULT)
+{
+    mockCommander set;
+    std::string command = "--no-default";
+    ASSERT_FALSE(set.no_default());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.no_default());
+}
+std::string get_base_name(const mockCommander& commander, size_t idx)
+{
+    return commander.get_base().column_name[idx];
+}
+bool get_has_base(const mockCommander& commander, size_t idx)
+{
+    return commander.get_base().has_column[idx];
+}
+void check_set_base_flag(const std::string& command,
+                         const std::string& expected,
+                         const std::string& default_str, size_t idx)
+{
+    mockCommander commander;
+    ASSERT_STREQ(get_base_name(commander, idx).c_str(), default_str.c_str());
+    ASSERT_FALSE(get_has_base(commander, idx));
+    if (default_str != expected)
+        ASSERT_STRNE(get_base_name(commander, idx).c_str(), expected.c_str());
+    std::cerr << command + " " + expected << std::endl;
+    ASSERT_TRUE(commander.parse_command_wrapper(command + " " + expected));
+    ASSERT_STREQ(get_base_name(commander, idx).c_str(), expected.c_str());
+    ASSERT_TRUE(get_has_base(commander, idx));
+}
 
+TEST(COMMAND_PARSING, SET_BASE)
+{
+    check_set_base_flag("--A1", "a", "A1", +BASE_INDEX::EFFECT);
+    check_set_base_flag("--a1", "b", "A1", +BASE_INDEX::EFFECT);
+    check_set_base_flag("--A2", "c", "A2", +BASE_INDEX::NONEFFECT);
+    check_set_base_flag("--a2", "d", "A2", +BASE_INDEX::NONEFFECT);
+    check_set_base_flag("--stat", "statistic", "", +BASE_INDEX::STAT);
+    check_set_base_flag("--pvalue", "insignificant", "P", +BASE_INDEX::P);
+    check_set_base_flag("-p", "postdoc", "P", +BASE_INDEX::P);
+    check_set_base_flag("--chr", "chromosome", "CHR", +BASE_INDEX::CHR);
+    check_set_base_flag("--bp", "location", "BP", +BASE_INDEX::BP);
+    check_set_base_flag("--snp", "cnv", "SNP", +BASE_INDEX::RS);
+    mockCommander commander;
+    ASSERT_TRUE(commander.get_base().file_name.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--base BaseInfo"));
+    ASSERT_STREQ(commander.get_base().file_name.c_str(), "BaseInfo");
+    ASSERT_TRUE(commander.parse_command_wrapper("-b Basic"));
+    ASSERT_STREQ(commander.get_base().file_name.c_str(), "Basic");
+    check_set_base_flag("--base-info", "INFO_FILTER", "INFO,0.9",
+                        +BASE_INDEX::INFO);
+    check_set_base_flag("--base-maf", "MAF_FILTER", "", +BASE_INDEX::MAF);
+}
 void invalid_cov_input(const std::string& cov_string)
 {
     try
