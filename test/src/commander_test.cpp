@@ -111,7 +111,7 @@ public:
     bool parse_command_wrapper(const std::string& command,
                                bool& early_terminate)
     {
-        Reporter reporter(std::string(path + "LOG"), 60, true);
+        Reporter reporter(std::string("LOG"), 60, true);
         std::vector<std::string> argv_str = misc::split("PRSice " + command);
         std::vector<char*> cstrings;
         cstrings.reserve(argv_str.size());
@@ -132,9 +132,10 @@ public:
     }
 
     bool no_default() const { return m_user_no_default; }
+    int32_t max_thread() { return maximum_thread(); }
 };
 
-TEST(COMMANDER_PARSING, USAGE)
+TEST(COMMAND_PARSING, USAGE)
 {
     mockCommander commander;
     bool early_terminate = false;
@@ -554,7 +555,7 @@ TEST(COMMAND_PARSING, CLUMP_DEFAULT)
     ASSERT_FALSE(commander.get_clump_info().provided_distance);
     ASSERT_DOUBLE_EQ(commander.get_clump_info().pvalue, 1.0);
 }
-TEST(COMMANDER_PARSING, CLUMP_SETTINGS)
+TEST(COMMAND_PARSING, CLUMP_SETTINGS)
 {
     mockCommander commander;
     ASSERT_TRUE(commander.parse_command_wrapper("--clump-p 0.1"));
@@ -570,6 +571,217 @@ TEST(COMMANDER_PARSING, CLUMP_SETTINGS)
     ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 100);
     ASSERT_TRUE(commander.parse_command_wrapper("--clump-kb 200mb"));
     ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 200000000);
+}
+TEST(COMMAND_PARSING, PRSET)
+{
+    // wind-3 and --wind-5 use the same function as clump
+    mockCommander commander;
+    ASSERT_EQ(commander.get_set().wind_3, 0);
+    ASSERT_EQ(commander.get_set().wind_5, 0);
+    // default is bp
+    ASSERT_TRUE(commander.parse_command_wrapper("--wind-5 10"));
+    ASSERT_EQ(commander.get_set().wind_5, 10);
+    ASSERT_TRUE(commander.parse_command_wrapper("--wind-3 20k"));
+    ASSERT_EQ(commander.get_set().wind_3, 20000);
+    // now check the background stuff
+    ASSERT_TRUE(commander.get_set().background.empty());
+    ASSERT_TRUE(commander.get_set().msigdb.empty());
+    ASSERT_TRUE(commander.get_set().bed.empty());
+    ASSERT_TRUE(commander.get_set().snp.empty());
+    ASSERT_TRUE(commander.get_set().feature.empty());
+    ASSERT_TRUE(commander.get_set().gtf.empty());
+    ASSERT_FALSE(commander.get_set().run);
+    ASSERT_TRUE(commander.exclusion_range().empty());
+    // now check if they are loaded correctly (doesn't have to be in correct
+    // format at the moment)
+    ASSERT_TRUE(commander.parse_command_wrapper("--background Name:0"));
+    ASSERT_STREQ(commander.get_set().background.c_str(), "Name:0");
+    ASSERT_TRUE(commander.parse_command_wrapper("--msigdb kegg"));
+    ASSERT_EQ(commander.get_set().msigdb.size(), 1);
+    ASSERT_STREQ(commander.get_set().msigdb[0].c_str(), "kegg");
+    ASSERT_TRUE(commander.parse_command_wrapper("-m Reactome,MP"));
+    // it append
+    ASSERT_EQ(commander.get_set().msigdb.size(), 3);
+    ASSERT_STREQ(commander.get_set().msigdb[0].c_str(), "kegg");
+    ASSERT_STREQ(commander.get_set().msigdb[1].c_str(), "Reactome");
+    ASSERT_STREQ(commander.get_set().msigdb[2].c_str(), "MP");
+    // GTF
+    ASSERT_TRUE(commander.parse_command_wrapper("--gtf Homo"));
+    ASSERT_STREQ(commander.get_set().gtf.c_str(), "Homo");
+    ASSERT_TRUE(commander.parse_command_wrapper("-g Misc"));
+    ASSERT_STREQ(commander.get_set().gtf.c_str(), "Misc");
+    // bed B
+    ASSERT_TRUE(commander.parse_command_wrapper("--bed File:Name"));
+    ASSERT_EQ(commander.get_set().bed.size(), 1);
+    ASSERT_STREQ(commander.get_set().bed[0].c_str(), "File:Name");
+    ASSERT_TRUE(commander.parse_command_wrapper("-B Something,oK"));
+    ASSERT_STREQ(commander.get_set().bed[0].c_str(), "File:Name");
+    ASSERT_STREQ(commander.get_set().bed[1].c_str(), "Something");
+    ASSERT_STREQ(commander.get_set().bed[2].c_str(), "oK");
+    // snp-set
+    ASSERT_TRUE(commander.parse_command_wrapper("--snp-set list,of,snp"));
+    ASSERT_EQ(commander.get_set().snp.size(), 3);
+    ASSERT_STREQ(commander.get_set().snp[0].c_str(), "list");
+    ASSERT_STREQ(commander.get_set().snp[1].c_str(), "of");
+    ASSERT_STREQ(commander.get_set().snp[2].c_str(), "snp");
+    // feature
+    ASSERT_TRUE(commander.parse_command_wrapper("--feature gene"));
+    ASSERT_EQ(commander.get_set().feature.size(), 1);
+    ASSERT_STREQ(commander.get_set().feature[0].c_str(), "gene");
+    // no duplicate check
+    ASSERT_TRUE(commander.parse_command_wrapper("--feature protein,gene"));
+    ASSERT_EQ(commander.get_set().feature.size(), 3);
+    ASSERT_STREQ(commander.get_set().feature[0].c_str(), "gene");
+    ASSERT_STREQ(commander.get_set().feature[1].c_str(), "protein");
+    ASSERT_STREQ(commander.get_set().feature[2].c_str(), "gene");
+    // Exclusion range is a direct loading
+    ASSERT_TRUE(commander.parse_command_wrapper("--x-range chr6:1-10"));
+    ASSERT_STREQ(commander.exclusion_range().c_str(), "chr6:1-10");
+    // we don't even tokenize it
+    ASSERT_TRUE(
+        commander.parse_command_wrapper("--x-range chr6:1-10,chr22:133:288"));
+    ASSERT_STREQ(commander.exclusion_range().c_str(),
+                 "chr6:1-10,chr22:133:288");
+}
+
+TEST(COMMAND_PARSING, MISC)
+{
+    mockCommander commander;
+    // check defaults
+    ASSERT_STREQ(commander.out().c_str(), "PRSice");
+    ASSERT_EQ(commander.get_prs_instruction().thread, 1);
+    ASSERT_EQ(commander.memory(), 1e10);
+    ASSERT_STREQ(commander.delim().c_str(), " ");
+    ASSERT_TRUE(commander.exclude_file().empty());
+    ASSERT_TRUE(commander.extract_file().empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--out PRSet"));
+    ASSERT_STREQ(commander.out().c_str(), "PRSet");
+    int32_t max_thread = commander.max_thread();
+    if (max_thread > 2)
+    {
+        ASSERT_TRUE(commander.parse_command_wrapper("--thread 2"));
+        ASSERT_EQ(commander.get_prs_instruction().thread, 2);
+    }
+    ASSERT_TRUE(commander.parse_command_wrapper("--thread "
+                                                + std::to_string(max_thread)));
+    ASSERT_EQ(commander.get_prs_instruction().thread, max_thread);
+    // reset it first
+    ASSERT_TRUE(commander.parse_command_wrapper("--thread 1"));
+    ASSERT_EQ(commander.get_prs_instruction().thread, 1);
+    ASSERT_TRUE(commander.parse_command_wrapper("--thread max"));
+    ASSERT_EQ(commander.get_prs_instruction().thread, max_thread);
+    ASSERT_TRUE(commander.parse_command_wrapper("--extract Love"));
+    ASSERT_STREQ(commander.extract_file().c_str(), "Love");
+    ASSERT_TRUE(commander.parse_command_wrapper("--exclude Hate"));
+    ASSERT_STREQ(commander.exclude_file().c_str(), "Hate");
+    /*
+     not sure how to do proper escape here, will only do very simple cases
+    ASSERT_TRUE(commander.parse_command_wrapper("--id-delim \"-\""));
+    ASSERT_STREQ(commander.delim().c_str(), "-");
+    ASSERT_TRUE(commander.parse_command_wrapper("--id-delim \"  \""));
+    ASSERT_STREQ(commander.delim().c_str(), "  ");
+    */
+    ASSERT_TRUE(commander.parse_command_wrapper("--id-delim -"));
+    ASSERT_STREQ(commander.delim().c_str(), "-");
+    ASSERT_TRUE(commander.parse_command_wrapper("--memory 1k"));
+    ASSERT_EQ(commander.memory(), 1024);
+    // default is mb
+    ASSERT_TRUE(commander.parse_command_wrapper("--memory 10"));
+    ASSERT_EQ(commander.memory(), 10485760);
+    ASSERT_TRUE(commander.parse_command_wrapper("--memory 1gb"));
+    ASSERT_EQ(commander.memory(), 1073741824);
+    ASSERT_TRUE(commander.parse_command_wrapper("--memory 30tb"));
+    ASSERT_EQ(commander.memory(), 32985348833280);
+    // the default of seed is random, which is difficult to test. So we will
+    // just check if we set the seed correctly
+    ASSERT_TRUE(commander.parse_command_wrapper("--seed 123"));
+    ASSERT_EQ(commander.get_perm().seed, 123);
+    // check permutation default
+    ASSERT_EQ(commander.get_perm().num_permutation, 0);
+    ASSERT_FALSE(commander.get_perm().run_perm);
+    ASSERT_FALSE(commander.get_perm().run_set_perm);
+    ASSERT_TRUE(commander.parse_command_wrapper("--perm 100"));
+    ASSERT_EQ(commander.get_perm().num_permutation, 100);
+    ASSERT_TRUE(commander.get_perm().run_perm);
+    ASSERT_FALSE(commander.get_perm().run_set_perm);
+    ASSERT_TRUE(commander.parse_command_wrapper("--set-perm 1026"));
+    ASSERT_EQ(commander.get_perm().num_permutation, 1026);
+    ASSERT_TRUE(commander.get_perm().run_set_perm);
+    // we won't change the other
+    ASSERT_TRUE(commander.get_perm().run_perm);
+    // now check for overflow
+    ASSERT_FALSE(commander.parse_command_wrapper("--set-perm 1e200"));
+}
+
+void check_cov_loading(const std::string& command,
+                       const std::vector<std::string>& expected,
+                       const bool expect_fail, const bool factor = false)
+{
+    mockCommander commander;
+    bool success = commander.parse_command_wrapper(command);
+    if (expect_fail) { ASSERT_FALSE(success); }
+    else if (!factor)
+    {
+        ASSERT_TRUE(success);
+        ASSERT_EQ(expected.size(), commander.get_pheno().cov_colname.size());
+        for (size_t i = 0; i < expected.size(); ++i)
+        {
+            ASSERT_STREQ(expected[i].c_str(),
+                         commander.get_pheno().cov_colname[i].c_str());
+        }
+    }
+    else
+    {
+        ASSERT_TRUE(success);
+        ASSERT_EQ(expected.size(), commander.get_pheno().factor_cov.size());
+        for (size_t i = 0; i < expected.size(); ++i)
+        {
+            ASSERT_STREQ(expected[i].c_str(),
+                         commander.get_pheno().factor_cov[i].c_str());
+        }
+    }
+}
+TEST(COMMAND_PARSING, COVARIATE)
+{
+    mockCommander commander;
+    ASSERT_TRUE(commander.get_pheno().cov_file.empty());
+    ASSERT_TRUE(commander.get_pheno().cov_colname.empty());
+    ASSERT_TRUE(commander.get_pheno().factor_cov.empty());
+    ASSERT_TRUE(commander.parse_command_wrapper("--cov Covar"));
+    ASSERT_STREQ(commander.get_pheno().cov_file.c_str(), "Covar");
+    check_cov_loading("--cov-col Testing,@PC[1-55]",
+                      std::vector<std::string> {"Testing", "@PC[1-55]"}, false);
+    // this should be allowed
+    check_cov_loading("--cov-col Testing,@PC[1.3.5]",
+                      std::vector<std::string> {"Testing", "@PC[1.3.5]"},
+                      false);
+    // this will be stored but shouldn't pass the check
+
+    check_cov_loading("--cov-col Testing,@PC[1,3,5]",
+                      std::vector<std::string> {"Testing", "@PC[1", "3", "5]"},
+                      false);
+    // cov-factor uses the same function as cov-col, so will only test if it is
+    // set properly
+    check_cov_loading("--cov-factor Sex", std::vector<std::string> {"Sex"},
+                      false, true);
+    // can append
+    ASSERT_TRUE(commander.parse_command_wrapper("--cov-col Testing,@PC[1-55]"));
+    std::vector<std::string> expected {"Testing", "@PC[1-55]"};
+    ASSERT_EQ(expected.size(), commander.get_pheno().cov_colname.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_STREQ(expected[i].c_str(),
+                     commander.get_pheno().cov_colname[i].c_str());
+    }
+    ASSERT_TRUE(commander.parse_command_wrapper("--cov-col More,Covariate"));
+    expected.push_back("More");
+    expected.push_back("Covariate");
+    ASSERT_EQ(expected.size(), commander.get_pheno().cov_colname.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_STREQ(expected[i].c_str(),
+                     commander.get_pheno().cov_colname[i].c_str());
+    }
 }
 TEST(COMMAND_PARSING, REFERENCE_FILE)
 {
@@ -831,16 +1043,26 @@ TEST(COVARIATE_TRANSFORM, GET_RANGE)
     ASSERT_EQ(res.size(), 5);
     for (size_t i = 0; i < res.size(); ++i) { ASSERT_EQ(res[i], i + 1); }
     // complex options
-    cov = "PC[1-5,8,7-10]";
+    cov = "PC[1-5.8.7-10]";
     res.clear();
     ASSERT_TRUE(mockCommander::get_range_wrapper(cov, 2, 13, res));
     // should be sorted and removed the duplicates (8)
     std::vector<size_t> expected = {1, 2, 3, 4, 5, 7, 8, 9, 10};
+    ASSERT_EQ(res.size(), expected.size());
     for (size_t i = 0; i < res.size(); ++i) { ASSERT_EQ(res[i], expected[i]); }
-    cov = "PC[1-5,-6]";
+    cov = "PC[1-5.-6]";
     // One fail, all fail
     res.clear();
     ASSERT_FALSE(mockCommander::get_range_wrapper(cov, 2, 9, res));
+    // as we use . to separate each input, it means double value will be parsed
+    // to something else. User will have to read the log to check if the parsing
+    // is correct
+    cov = "PC[1-5.6.0.005]";
+    ASSERT_TRUE(mockCommander::get_range_wrapper(cov, 2, 14, res));
+    expected.clear();
+    expected = {0, 1, 2, 3, 4, 5, 6};
+    ASSERT_EQ(res.size(), expected.size());
+    for (size_t i = 0; i < res.size(); ++i) { ASSERT_EQ(res[i], expected[i]); }
 }
 TEST(COVARIATE_TRANSFORM, UPDATE_COVARIATE_WITH_RANGE)
 {
@@ -890,10 +1112,10 @@ TEST(COVARIATE_TRANSFORM, TRANSFORMATION)
     transform_test("@PC[1-5]",
                    std::vector<std::string> {"PC1", "PC2", "PC3", "PC4", "PC5"},
                    true);
-    transform_test("@PC[1-2,5]", std::vector<std::string> {"PC1", "PC2", "PC5"},
+    transform_test("@PC[1-2.5]", std::vector<std::string> {"PC1", "PC2", "PC5"},
                    true);
     transform_test(
-        "@PC[1-2,4,3-6]",
+        "@PC[1-2.4.3-6]",
         std::vector<std::string> {"PC1", "PC2", "PC3", "PC4", "PC5", "PC6"},
         true);
     transform_test("@PC[1-2]A", std::vector<std::string> {"PC1A", "PC2A"},
