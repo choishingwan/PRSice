@@ -284,8 +284,14 @@ protected:
             {
                 // if the boolean string doesn't take up the whole of the input
                 // string
-                return misc::convert<size_t>(
+                size_t num_repeat = misc::convert<size_t>(
                     input.substr(0, input.length() - bool_length).c_str());
+                if (static_cast<int>(num_repeat) < 0)
+                {
+                    throw std::runtime_error(
+                        "Error: Negative number of boolean required. ");
+                }
+                return num_repeat;
             }
             else
             {

@@ -1268,7 +1268,11 @@ bool Commander::ref_check()
 
 size_t Commander::find_first_end(const std::string_view& cov, const size_t idx)
 {
-    assert(cov.at(idx) == '[');
+    if (cov.at(idx) != '[')
+    {
+        throw std::runtime_error(
+            "Error: Invalid format. Expect string to start with [");
+    }
     for (size_t i = idx + 1; i < cov.length(); ++i)
     {
         if (cov.at(i) == ']') return i;
@@ -1285,7 +1289,7 @@ std::vector<size_t> Commander::parse_range(const std::string_view& cov)
     if (cov.at(0) == '-' || cov.find("--") != std::string::npos)
     { throw std::runtime_error("Error: Do not accept negative ranges"); }
     std::vector<std::string_view> token = misc::split(cov, "-");
-    // from_chars will be faster, but less robust (1,5 will be converted to 1)
+    // from_chars will be faster, but less robust (1.5 will be converted to 1)
     if (token.size() == 1) { res = {misc::convert<size_t>(std::string(cov))}; }
     else
     {
