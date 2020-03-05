@@ -713,6 +713,81 @@ TEST(COMMAND_PARSING, MISC)
     ASSERT_FALSE(commander.parse_command_wrapper("--set-perm 1e200"));
 }
 
+TEST(COMMAND_PARSE, PRS_MODEL_THRESHOLD)
+{
+    mockCommander commander;
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().inter, 0.00005);
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().lower, 5e-8);
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().upper, 0.5);
+    ASSERT_TRUE(commander.parse_command_wrapper("--inter 1e-10"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().inter, 1e-10);
+    ASSERT_TRUE(commander.parse_command_wrapper("-i 110"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().inter, 110);
+    ASSERT_TRUE(commander.parse_command_wrapper("--lower 1e-20"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().lower, 1e-20);
+    ASSERT_TRUE(commander.parse_command_wrapper("-l 123"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().lower, 123);
+    ASSERT_TRUE(commander.parse_command_wrapper("--upper 5e-70"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().upper, 5e-70);
+    ASSERT_TRUE(commander.parse_command_wrapper("-u 5e10"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().upper, 5e10);
+    //  extreme value
+    ASSERT_TRUE(commander.parse_command_wrapper("-u 5e300"));
+    ASSERT_DOUBLE_EQ(commander.get_p_threshold().upper, 5e300);
+    // fail
+    ASSERT_FALSE(commander.parse_command_wrapper("-u 5e400"));
+    ASSERT_FALSE(commander.parse_command_wrapper("-l -5e400"));
+    ASSERT_FALSE(commander.parse_command_wrapper("-i hi"));
+    // MODEL and SCORES
+    ASSERT_EQ(commander.get_prs_instruction().scoring_method, SCORING::AVERAGE);
+    ASSERT_TRUE(commander.parse_command_wrapper("--score Sum"));
+    ASSERT_EQ(commander.get_prs_instruction().scoring_method, SCORING::SUM);
+    ASSERT_TRUE(commander.parse_command_wrapper("--score std"));
+    ASSERT_EQ(commander.get_prs_instruction().scoring_method,
+              SCORING::STANDARDIZE);
+    ASSERT_TRUE(commander.parse_command_wrapper("--score con-std"));
+    ASSERT_EQ(commander.get_prs_instruction().scoring_method,
+              SCORING::CONTROL_STD);
+    ASSERT_TRUE(commander.parse_command_wrapper("--score avg"));
+    ASSERT_EQ(commander.get_prs_instruction().scoring_method, SCORING::AVERAGE);
+    // we do exact match
+    ASSERT_FALSE(commander.parse_command_wrapper("--score averaging"));
+
+    ASSERT_EQ(commander.get_prs_instruction().missing_score,
+              MISSING_SCORE::MEAN_IMPUTE);
+    ASSERT_TRUE(commander.parse_command_wrapper("--missing SET_Zero"));
+    ASSERT_EQ(commander.get_prs_instruction().missing_score,
+              MISSING_SCORE::SET_ZERO);
+    ASSERT_TRUE(commander.parse_command_wrapper("--missing Center"));
+    ASSERT_EQ(commander.get_prs_instruction().missing_score,
+              MISSING_SCORE::CENTER);
+    ASSERT_TRUE(commander.parse_command_wrapper("--missing mean_impute"));
+    ASSERT_EQ(commander.get_prs_instruction().missing_score,
+              MISSING_SCORE::MEAN_IMPUTE);
+    // Allowed, but don't think I have implemented this yet
+    ASSERT_TRUE(commander.parse_command_wrapper("--missing IMPUTE_CONTROL"));
+    ASSERT_EQ(commander.get_prs_instruction().missing_score,
+              MISSING_SCORE::IMPUTE_CONTROL);
+    // We only matched the first character
+    ASSERT_TRUE(commander.parse_command_wrapper("--missing cat"));
+    ASSERT_EQ(commander.get_prs_instruction().missing_score,
+              MISSING_SCORE::CENTER);
+    // but should fail if we have something that starts with different character
+    ASSERT_FALSE(commander.parse_command_wrapper("--missing beatrice"));
+    ASSERT_TRUE(commander.parse_command_wrapper("--model dom"));
+    ASSERT_EQ(commander.get_prs_instruction().genetic_model, MODEL::DOMINANT);
+    ASSERT_TRUE(commander.parse_command_wrapper("--model het"));
+    ASSERT_EQ(commander.get_prs_instruction().genetic_model,
+              MODEL::HETEROZYGOUS);
+    ASSERT_TRUE(commander.parse_command_wrapper("--model rec"));
+    ASSERT_EQ(commander.get_prs_instruction().genetic_model, MODEL::RECESSIVE);
+    ASSERT_TRUE(commander.parse_command_wrapper("--model ADD"));
+    ASSERT_EQ(commander.get_prs_instruction().genetic_model, MODEL::ADDITIVE);
+    // similar to missing
+    ASSERT_TRUE(commander.parse_command_wrapper("--model darwin"));
+    ASSERT_EQ(commander.get_prs_instruction().genetic_model, MODEL::DOMINANT);
+    ASSERT_FALSE(commander.parse_command_wrapper("--model mendel"));
+}
 void check_cov_loading(const std::string& command,
                        const std::vector<std::string>& expected,
                        const bool expect_fail, const bool factor = false)
