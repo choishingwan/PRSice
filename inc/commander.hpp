@@ -114,7 +114,7 @@ protected:
     int m_user_no_default = false;
     bool m_provided_memory = false;
     bool m_set_delim = false;
-
+    bool m_ran_base_check = false;
     BaseFile m_base_info;
     CalculatePRS m_prs_info;
     Clumping m_clump_info;
@@ -157,6 +157,18 @@ protected:
     bool clump_check();
     bool ref_check();
     bool covariate_check();
+    std::unordered_set<std::string> get_cov_names();
+    std::tuple<std::vector<std::string>,
+               std::unordered_map<std::string, size_t>>
+    get_covariate_header();
+    size_t
+    find_cov_idx(const std::unordered_set<std::string>& included,
+                 const std::unordered_map<std::string, size_t>& ref_index,
+                 std::string& missing);
+    void reorganize_cov_name(const std::vector<std::string>& cov_header);
+    bool process_factor_cov(
+        const std::unordered_set<std::string>& included,
+        const std::unordered_map<std::string, size_t>& ref_index);
     bool filter_check();
     bool misc_check();
     bool prset_check();
@@ -800,6 +812,7 @@ protected:
 
     bool get_statistic_column(const std::vector<std::string>& column_names);
     bool base_check();
+    bool base_column_check(std::vector<std::string>& column_names);
     bool get_statistic_flag();
     std::string get_program_header(const std::string& name);
 

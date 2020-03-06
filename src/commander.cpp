@@ -1092,9 +1092,16 @@ bool Commander::get_statistic_flag()
 
 bool Commander::base_check()
 {
-    bool error = false;
+    m_ran_base_check = true;
     std::vector<std::string> column_names =
         get_base_header(m_base_info.file_name);
+    return base_column_check(column_names);
+}
+
+bool Commander::base_column_check(std::vector<std::string>& column_names)
+{
+
+    bool error = false;
     for (auto&& c : column_names) { misc::trim(c); }
     if (m_base_info.is_index)
     {
@@ -1482,10 +1489,8 @@ Commander::transform_covariate(const std::string& cov_in)
     return final_covariates;
 }*/
 
-bool Commander::covariate_check()
+std::unordered_set<std::string> Commander::get_cov_names()
 {
-    // it is valid to have empty covariate file
-    if (m_pheno_info.cov_file.empty()) return true;
     // first, transform all the covariates
     // the actual column name to be included (after parsing)
     std::unordered_set<std::string> included;
@@ -1500,15 +1505,18 @@ bool Commander::covariate_check()
         transformed_cov = transform_covariate(cov);
         for (auto&& trans : transformed_cov) { included.insert(trans); }
     }
-    bool error = false;
-    // now try to read the header of the covariate file
+    return included;
+}
+std::tuple<std::vector<std::string>, std::unordered_map<std::string, size_t>>
+Commander::get_covariate_header()
+{
     std::ifstream cov_file;
     cov_file.open(m_pheno_info.cov_file.c_str());
     if (!cov_file.is_open())
     {
         m_error_message.append("Error: Cannot open covariate file: "
                                + m_pheno_info.cov_file + "\n");
-        return false;
+        throw std::runtime_error("Cannot open");
     }
     std::string line;
     std::getline(cov_file, line);
@@ -1518,85 +1526,121 @@ bool Commander::covariate_check()
     {
         m_error_message.append(
             "Error: First line of covariate file is empty!\n");
-        return false;
+        throw std::runtime_error("Empty line");
     }
-    const std::vector<std::string> cov_header = misc::split(line);
-    std::string missing = "";
     std::unordered_map<std::string, size_t> ref_index;
-    // now get the index for each column name in the covariate file
+    auto cov_header = misc::split(line);
     for (size_t i = 0; i < cov_header.size(); ++i)
     { ref_index[cov_header[i]] = i; }
-    // when user provide a covariate file but not the covariate name, we
-    // will just read in every covariates
-    if (m_pheno_info.cov_colname.size() == 0)
-    {
-        for (size_t i = (1 + !m_pheno_info.ignore_fid); i < cov_header.size();
-             ++i)
-        { included.insert(cov_header[i]); }
-    }
-    size_t valid_cov = 0;
+    return {cov_header, ref_index};
+}
+size_t Commander::find_cov_idx(
+    const std::unordered_set<std::string>& included,
+    const std::unordered_map<std::string, size_t>& ref_index,
+    std::string& missing)
+{
+    missing = "";
     m_pheno_info.col_index_of_cov.clear();
+    size_t valid_cov = 0;
+    std::string comma = "";
     for (auto&& cov : included)
     {
         // now for each covariate found in the covariate file, we add their
         // index to the storage
-        if (ref_index.find(cov) != ref_index.end())
+        auto idx = ref_index.find(cov);
+        if (idx != ref_index.end())
         {
-            m_pheno_info.col_index_of_cov.push_back(ref_index[cov]);
+            m_pheno_info.col_index_of_cov.push_back(idx->second);
             ++valid_cov;
-        }
-        else if (missing.empty())
-        {
-            missing = cov;
         }
         else
         {
-            missing.append("," + cov);
+            missing.append(comma + cov);
+            comma = ",";
         }
     }
-    if (!missing.empty())
-    {
-        m_error_message.append("Warning: Covariate(s) missing from file: "
-                               + missing + ". Header of file is: " + line
-                               + "\n");
-    }
-    if (valid_cov == 0)
-    {
-        error = true;
-        m_error_message.append("Error: No valid Covariate!\n");
-    }
-    // we will now push back the covariate name according to the order they
-    // appeared in the file
+    return valid_cov;
+}
+
+void Commander::reorganize_cov_name(const std::vector<std::string>& cov_header)
+{
     m_pheno_info.cov_colname.clear();
     std::sort(m_pheno_info.col_index_of_cov.begin(),
               m_pheno_info.col_index_of_cov.end());
     for (auto&& c : m_pheno_info.col_index_of_cov)
     { m_pheno_info.cov_colname.push_back(cov_header[c]); }
+}
+bool Commander::process_factor_cov(
+    const std::unordered_set<std::string>& included,
+    const std::unordered_map<std::string, size_t>& ref_index)
+{
     // now start to process the factor covariates
+
+    std::vector<std::string> transformed_cov;
+    std::unordered_set<std::string> ori_input(m_pheno_info.cov_colname.begin(),
+                                              m_pheno_info.cov_colname.end());
     for (auto cov : m_pheno_info.factor_cov)
     {
         if (cov.empty()) continue;
         transformed_cov = transform_covariate(cov);
         for (auto&& trans : transformed_cov)
         {
-            if (included.find(trans) != included.end())
-            {
-                m_pheno_info.col_index_of_factor_cov.push_back(
-                    ref_index[trans]);
-            }
+            auto&& ref = ref_index.find(trans);
+            if (included.find(trans) != included.end()
+                && ref != ref_index.end())
+            { m_pheno_info.col_index_of_factor_cov.push_back(ref->second); }
             else if (ori_input.find(cov) == ori_input.end())
             {
                 // only complain if untransform input isn't found in cov-col
-                error = true;
                 m_error_message.append("Error: All factor covariates must be "
                                        "found in covariate list. "
                                        + trans
                                        + " not found in covariate list");
+                return false;
             }
         }
     }
     std::sort(m_pheno_info.col_index_of_factor_cov.begin(),
               m_pheno_info.col_index_of_factor_cov.end());
+    return true;
+}
+bool Commander::covariate_check()
+{
+    // it is valid to have empty covariate file
+    if (m_pheno_info.cov_file.empty()) return true;
+    bool error = false;
+    // now try to read the header of the covariate file
+    // first, transform all the covariates
+    // the actual column name to be included (after parsing)
+    std::unordered_set<std::string> included = get_cov_names();
+    try
+    {
+        auto [cov_header, ref_index] = get_covariate_header();
+        if (m_pheno_info.cov_colname.size() == 0)
+        {
+            for (size_t i = (1 + !m_pheno_info.ignore_fid);
+                 i < cov_header.size(); ++i)
+            { included.insert(cov_header[i]); }
+        }
+        std::string missing;
+        size_t valid_cov = find_cov_idx(included, ref_index, missing);
+        if (!missing.empty())
+        {
+            m_error_message.append(
+                "Warning: Covariate(s) missing from file: " + missing + ".\n");
+        }
+        if (valid_cov == 0)
+        {
+            error = true;
+            m_error_message.append("Error: No valid Covariate!\n");
+        }
+        reorganize_cov_name(cov_header);
+        error |= !process_factor_cov(included, ref_index);
+    }
+    catch (std::runtime_error&)
+    {
+        return false;
+    }
     return !error;
 }
 
@@ -1898,6 +1942,7 @@ bool Commander::target_check()
 
 bool Commander::pheno_check()
 {
+    assert(m_ran_base_check);
     // pheno check must be performed after base check
     bool error = false;
     if (m_pheno_info.pheno_col.size() != 0 && m_pheno_info.pheno_file.empty())
