@@ -5,6 +5,7 @@
 #include "reporter.hpp"
 #include "storage.hpp"
 #include "gtest/gtest.h"
+#include <tuple>
 
 TEST(COMMANDER_BASIC, INIT)
 {
@@ -132,6 +133,9 @@ public:
     }
 
     bool no_default() const { return m_user_no_default; }
+    bool target_check_wrapper() { return target_check(); }
+    bool prsice_check_wrapper() { return prsice_check(); }
+    bool clump_check_wrapper() { return clump_check(); }
     int32_t max_thread() { return maximum_thread(); }
 };
 
@@ -571,6 +575,7 @@ TEST(COMMAND_PARSING, CLUMP_SETTINGS)
     ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 100);
     ASSERT_TRUE(commander.parse_command_wrapper("--clump-kb 200mb"));
     ASSERT_DOUBLE_EQ(commander.get_clump_info().distance, 200000000);
+    ASSERT_FALSE(commander.parse_command_wrapper("--clump-kb -100kb"));
 }
 TEST(COMMAND_PARSING, PRSET)
 {
@@ -670,6 +675,13 @@ TEST(COMMAND_PARSING, MISC)
     ASSERT_EQ(commander.get_prs_instruction().thread, 1);
     ASSERT_TRUE(commander.parse_command_wrapper("--thread max"));
     ASSERT_EQ(commander.get_prs_instruction().thread, max_thread);
+    // reset again
+    ASSERT_TRUE(commander.parse_command_wrapper(
+        "--thread " + std::to_string(max_thread * 2)));
+    ASSERT_EQ(commander.get_prs_instruction().thread, max_thread);
+    ASSERT_TRUE(commander.parse_command_wrapper("--thread "
+                                                + std::to_string(max_thread)));
+    ASSERT_EQ(commander.get_prs_instruction().thread, max_thread);
     ASSERT_TRUE(commander.parse_command_wrapper("--extract Love"));
     ASSERT_STREQ(commander.extract_file().c_str(), "Love");
     ASSERT_TRUE(commander.parse_command_wrapper("--exclude Hate"));
@@ -711,6 +723,15 @@ TEST(COMMAND_PARSING, MISC)
     ASSERT_TRUE(commander.get_perm().run_perm);
     // now check for overflow
     ASSERT_FALSE(commander.parse_command_wrapper("--set-perm 1e200"));
+    // number of autosome
+    ASSERT_EQ(commander.get_target().num_autosome, 22);
+    ASSERT_EQ(commander.get_reference().num_autosome, 22);
+    ASSERT_TRUE(commander.parse_command_wrapper("--num-auto 1"));
+    ASSERT_EQ(commander.get_target().num_autosome, 1);
+    ASSERT_EQ(commander.get_reference().num_autosome, 1);
+    ASSERT_TRUE(commander.parse_command_wrapper("--num-auto -100"));
+    ASSERT_EQ(commander.get_target().num_autosome, -100);
+    ASSERT_FALSE(commander.parse_command_wrapper("--num-auto 1e100"));
 }
 
 TEST(COMMAND_PARSE, PRS_MODEL_THRESHOLD)
@@ -1278,4 +1299,194 @@ TEST(PARSE_UNIT, DEFAULT_VALUE)
     quick_check_unit("1", 1000000000000000, 5);
     quick_check_unit("1", 1000000000000000000, 6);
 }
+
+bool test_target_check(const std::string& command)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    return commander.target_check_wrapper();
+}
+TEST(COMMAND_VALIDATION, TARGET)
+{
+    // Should fail, as target and target-list not provided
+    ASSERT_FALSE(test_target_check(""));
+    ASSERT_TRUE(test_target_check("--target test"));
+    ASSERT_TRUE(test_target_check("--target-list test"));
+    // but not both
+    ASSERT_FALSE(test_target_check("--target test --target-list listing"));
+    // Now check keep and remove
+    ASSERT_TRUE(test_target_check("--target test --remove No_more"));
+    ASSERT_TRUE(test_target_check("--target test --keep More"));
+    ASSERT_FALSE(
+        test_target_check("--target test --remove No_more --keep More"));
+    // check valid type
+    ASSERT_TRUE(test_target_check("--target test --type bgen"));
+    ASSERT_TRUE(test_target_check("--target test --type bed"));
+    ASSERT_TRUE(test_target_check("--target test --type ped"));
+    ASSERT_FALSE(test_target_check("--target test --type vcf"));
+    // now check number of autosome is correctly checked
+    ASSERT_TRUE(test_target_check("--target test --num-auto 24"));
+    ASSERT_FALSE(test_target_check("--target test --num-auto -10"));
+}
+
+std::tuple<bool, PThresholding> test_prsice_check(const std::string& command)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    return {commander.prsice_check_wrapper(), commander.get_p_threshold()};
+}
+void bar_check(const std::string& command, const std::vector<double>& expected,
+               bool expect_fail, bool is_fast = false)
+{
+    auto [success, p_thres] = test_prsice_check(command);
+    if (expect_fail) { ASSERT_FALSE(success); }
+    else
+    {
+        ASSERT_TRUE(success);
+        ASSERT_EQ(p_thres.bar_levels.size(), expected.size());
+        for (size_t i = 0; i < p_thres.bar_levels.size(); ++i)
+            ASSERT_DOUBLE_EQ(p_thres.bar_levels[i], expected[i]);
+        ASSERT_EQ(is_fast, p_thres.fastscore);
+    }
+}
+void interval_check(const std::string& command,
+                    const std::vector<double>& expected, bool expect_fail)
+{
+    auto [success, p_thres] = test_prsice_check(command);
+    if (expect_fail) { ASSERT_FALSE(success); }
+    else
+    {
+        ASSERT_TRUE(success);
+        ASSERT_DOUBLE_EQ(p_thres.lower, expected[0]);
+        ASSERT_DOUBLE_EQ(p_thres.inter, expected[1]);
+        ASSERT_DOUBLE_EQ(p_thres.upper, expected[2]);
+    }
+}
+TEST(COMMAND_VALIDATION, P_VALUE_THRESHOLDS)
+{
+    const bool EXPECT_FAIL = true;
+    const bool EXPECT_SUCCESS = false;
+    // check default
+    bar_check("", std::vector<double> {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1},
+              false);
+    // no full default
+    bar_check("--no-full",
+              std::vector<double> {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5},
+              EXPECT_SUCCESS);
+    // prset
+    bar_check("--msigdb PRSet", std::vector<double> {1}, EXPECT_SUCCESS, true);
+    // prset with any kind of thresholding
+    bar_check("--msigdb PRSet --fastscore",
+              std::vector<double> {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1},
+              EXPECT_SUCCESS, true);
+    bar_check("--msigdb PRSet --lower 1e-5",
+              std::vector<double> {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1},
+              EXPECT_SUCCESS, false);
+    bar_check("--msigdb PRSet --inter 1e-5",
+              std::vector<double> {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1},
+              EXPECT_SUCCESS, false);
+    bar_check("--msigdb PRSet --upper 0.6",
+              std::vector<double> {0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1},
+              EXPECT_SUCCESS, false);
+    // no-full doesn't work with PRSet
+    bar_check("--msigdb PRSet --no-full", std::vector<double> {1},
+              EXPECT_SUCCESS, true);
+    // now check for out of bound bar levels
+    bar_check("--bar-levels 0.1", std::vector<double> {0.1, 1}, EXPECT_SUCCESS,
+              false);
+    bar_check("--bar-levels -0.1", std::vector<double> {0.1, 1}, EXPECT_FAIL,
+              false);
+    bar_check("--bar-levels 1.1", std::vector<double> {0.1, 1}, EXPECT_FAIL,
+              false);
+    // duplicated bar levels should be removed
+    bar_check("--bar-levels 0.1,0.2,0.3,0.2",
+              std::vector<double> {0.1, 0.2, 0.3, 1}, EXPECT_SUCCESS, false);
+    // and should be ordered
+    bar_check("--bar-levels 0.3,0.2,0.3,0.1,1",
+              std::vector<double> {0.1, 0.2, 0.3, 1}, EXPECT_SUCCESS, false);
+    // now check threshold values
+    interval_check("--lower -0.01", std::vector<double> {5e-8, 0.00005, 0.5},
+                   EXPECT_FAIL);
+    interval_check("--lower 0.01", std::vector<double> {0.01, 0.00005, 0.5},
+                   EXPECT_SUCCESS);
+    interval_check("--lower 1.1", std::vector<double> {5e-8, 0.00005, 0.5},
+                   EXPECT_FAIL);
+    interval_check("--upper -0.02", std::vector<double> {5e-8, 0.00005, 0.5},
+                   EXPECT_FAIL);
+    interval_check("--upper 0.04", std::vector<double> {5e-8, 0.00005, 0.04},
+                   EXPECT_SUCCESS);
+    interval_check("--upper 1.1", std::vector<double> {5e-8, 0.00005, 0.5},
+                   EXPECT_FAIL);
+    // can't be lower
+    interval_check("--lower 0.01 --upper 0.001",
+                   std::vector<double> {0.01, 0.0005, 0.001}, EXPECT_FAIL);
+
+    interval_check("--inter -0.05", std::vector<double> {5e-8, 0.00005, 0.5},
+                   EXPECT_FAIL);
+    interval_check("--inter 1e-3", std::vector<double> {5e-8, 1e-3, 0.5},
+                   EXPECT_SUCCESS);
+    interval_check("--inter 123", std::vector<double> {5e-8, 0.00005, 0.5},
+                   EXPECT_FAIL);
+}
+
+void clump_param_check(const std::string& command,
+                       const std::vector<double>& expected,
+                       const size_t expected_distance, bool expect_fail,
+                       bool provided_distance, bool use_proxy)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    bool success = commander.clump_check_wrapper();
+    if (expect_fail) { ASSERT_FALSE(success); }
+    else
+    {
+        ASSERT_TRUE(success);
+        auto clump = commander.get_clump_info();
+        ASSERT_DOUBLE_EQ(clump.r2, expected[0]);
+        ASSERT_DOUBLE_EQ(clump.pvalue, expected[1]);
+        ASSERT_DOUBLE_EQ(clump.proxy, expected[2]);
+        ASSERT_EQ(clump.provided_distance, provided_distance);
+        ASSERT_EQ(clump.distance, expected_distance);
+        ASSERT_EQ(clump.use_proxy, use_proxy);
+    }
+}
+TEST(COMMAND_VALIDATION, CLUMP_CHECK)
+{
+    const bool EXPECT_FAIL = true, HAS_DIST = true, HAS_PROXY = true;
+    // check default
+    clump_param_check("", std::vector<double> {0.1, 1, 0}, 250000, !EXPECT_FAIL,
+                      !HAS_DIST, !HAS_PROXY);
+    // default change if set is used
+    clump_param_check("--msigdb RunPRSet", std::vector<double> {0.1, 1, 0},
+                      1000000, !EXPECT_FAIL, !HAS_DIST, !HAS_PROXY);
+    // out of bound
+    clump_param_check("--clump-r2 -0.1", std::vector<double> {}, 250000,
+                      EXPECT_FAIL, !HAS_DIST, !HAS_PROXY);
+    clump_param_check("--clump-r2 3", std::vector<double> {}, 250000,
+                      EXPECT_FAIL, !HAS_DIST, !HAS_PROXY);
+    clump_param_check("--clump-p -0.3", std::vector<double> {}, 250000,
+                      EXPECT_FAIL, !HAS_DIST, !HAS_PROXY);
+    clump_param_check("--clump-p 1.1", std::vector<double> {}, 250000,
+                      EXPECT_FAIL, !HAS_DIST, !HAS_PROXY);
+    // check proxy bound
+    clump_param_check("--proxy 0.3", std::vector<double> {0.1, 1, 0.3}, 250000,
+                      !EXPECT_FAIL, !HAS_DIST, HAS_PROXY);
+    clump_param_check("--proxy -123", std::vector<double> {}, 250000,
+                      EXPECT_FAIL, !HAS_DIST, HAS_PROXY);
+    clump_param_check("--proxy 456", std::vector<double> {}, 250000,
+                      EXPECT_FAIL, !HAS_DIST, HAS_PROXY);
+    // Negative distance will fail early on, we don't bother to check
+}
+// Now check each of the following validation functions
+/* error = !base_check(); // require reading base file
+    // pheno_check must come after base check because we want the beta / or
+    // information for defining the default
+    error |= !pheno_check();
+    error |= !covariate_check(); // require reading cov file
+    error |= !clump_check();
+    error |= !prset_check();
+    error |= !filter_check();
+    error |= !misc_check();
+    error |= !ref_check();
+    */
 #endif // COMMANDER_TEST_H

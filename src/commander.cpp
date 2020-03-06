@@ -1852,6 +1852,22 @@ bool Commander::prsice_check()
         std::unique(m_p_thresholds.bar_levels.begin(),
                     m_p_thresholds.bar_levels.end()),
         m_p_thresholds.bar_levels.end());
+    // now check if there are any negative / out bound in bar level
+    auto max_threshold = *max_element(m_p_thresholds.bar_levels.begin(),
+                                      m_p_thresholds.bar_levels.end());
+    auto min_threshold = *min_element(m_p_thresholds.bar_levels.begin(),
+                                      m_p_thresholds.bar_levels.end());
+    if (max_threshold > 1.0)
+    {
+        error = true;
+        m_error_message.append("Error: Cannot have p-value level > 1\n");
+    }
+    if (min_threshold < 0.0)
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Cannot have p-value level less than 0\n");
+    }
     std::string bar_message = "";
     for (auto&& b : m_p_thresholds.bar_levels)
     {
@@ -1881,6 +1897,11 @@ bool Commander::prsice_check()
             error = true;
             m_error_message.append(
                 "Error: Invalid p-value threshold boundary!\n");
+        }
+        if (!misc::within_bound(m_p_thresholds.inter, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append("Error: Invalid p-value step-size!\n");
         }
         m_parameter_log["interval"] = misc::to_string(m_p_thresholds.inter);
         m_parameter_log["lower"] = misc::to_string(m_p_thresholds.lower);
