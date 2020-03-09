@@ -759,7 +759,7 @@ TEST(COMMAND_PARSING, MISC)
     ASSERT_FALSE(commander.parse_command_wrapper("--num-auto 1e100"));
 }
 
-TEST(COMMAND_PARSE, PRS_MODEL_THRESHOLD)
+TEST(COMMAND_PARSING, PRS_MODEL_THRESHOLD)
 {
     mockCommander commander;
     ASSERT_DOUBLE_EQ(commander.get_p_threshold().inter, 0.00005);
@@ -1608,6 +1608,7 @@ TEST(COMMAND_VALIDATION, MISC_CHECK)
     // check if flip-ambig work
     ASSERT_FALSE(commander.keep_ambig());
     ASSERT_TRUE(commander.parse_command_wrapper("--flip-ambig"));
+    ASSERT_TRUE(commander.misc_check_wrapper());
     ASSERT_TRUE(commander.keep_ambig());
 }
 
