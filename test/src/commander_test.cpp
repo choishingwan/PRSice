@@ -140,6 +140,28 @@ public:
     bool misc_check_wrapper() { return misc_check(); }
     bool filter_check_wrapper() { return filter_check(); }
     bool prset_check_wrapper() { return prset_check(); }
+    bool base_check_wrapper()
+    {
+        try
+        {
+            return base_check();
+        }
+        catch (const std::runtime_error&)
+        {
+            return false;
+        }
+    }
+    bool base_column_check_wrapper(std::vector<std::string>& column_names)
+    {
+        return base_column_check(column_names);
+    }
+    bool pheno_check_wrapper(bool is_beta)
+    {
+        m_ran_base_check = true;
+        m_base_info.is_beta = is_beta;
+        m_base_info.is_or = !is_beta;
+        return pheno_check();
+    }
     std::string get_error() const { return m_error_message; }
     int32_t max_thread() { return maximum_thread(); }
     auto get_cov_names_wrap() { return get_cov_names(); }
@@ -1650,7 +1672,6 @@ bool test_prset_check(const std::string& command)
 {
     mockCommander commander;
     if (!command.empty()) commander.parse_command_wrapper(command);
-    std::cerr << commander.get_error() << std::endl;
     return commander.prset_check_wrapper();
 }
 TEST(COMMAND_VALIDATION, PRSET_CHECK)
@@ -1795,10 +1816,167 @@ TEST(COMMAND_VALIDATION, COVARIATE_CHECK)
     ASSERT_FALSE(
         factor_only.process_factor_cov_wrap(included, ref_index, ori_input));
 }
-// Now check each of the following validation functions
-/* error = !base_check(); // require reading base file
-    // pheno_check must come after base check because we want the beta / or
-    // information for defining the default
-    error |= !pheno_check();
-    */
+
+std::tuple<bool, Phenotype> test_pheno_check(const std::string& command,
+                                             const bool is_beta)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    return {commander.pheno_check_wrapper(is_beta), commander.get_pheno()};
+}
+TEST(COMMAND_VALIDATION, PHENO_CHECK)
+{
+    const bool IS_BETA = true;
+    // automatically decide the phenotype type as continuous or binary using
+    // --beta and --or
+    auto [success, pheno] = test_pheno_check("--pheno Phenotype", IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.binary.size(), 1);
+    ASSERT_FALSE(pheno.binary.front());
+    std::tie(success, pheno) = test_pheno_check("--pheno Phenotype", !IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.binary.size(), 1);
+    ASSERT_TRUE(pheno.binary.front());
+    // we don't allow pheno-col when no --pheno is provided
+    std::tie(success, pheno) = test_pheno_check("--pheno-col A,B,C", !IS_BETA);
+    ASSERT_FALSE(success);
+    // check default also works when more than 1 phenotype is provided
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --pheno-col A,B,C,D", IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.binary.size(), 4);
+    for (size_t i = 0; i < 4; ++i) { ASSERT_FALSE(pheno.binary[i]); }
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --pheno-col A,B,C", !IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.binary.size(), 3);
+    for (size_t i = 0; i < 3; ++i) { ASSERT_TRUE(pheno.binary[i]); }
+    // and we will fail if the binary-target and pheno-col size doesn't match
+    std::tie(success, pheno) = test_pheno_check(
+        "--pheno Pheno --binary-target T --pheno-col A,B,C", !IS_BETA);
+    ASSERT_FALSE(success);
+    std::tie(success, pheno) = test_pheno_check(
+        "--pheno Pheno --binary-target 10F --pheno-col A,B,C", !IS_BETA);
+    ASSERT_FALSE(success);
+    // default should never over-rule what we have
+    std::tie(success, pheno) = test_pheno_check(
+        "--pheno Pheno --binary-target 4T --pheno-col A,B,C,E", IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.binary.size(), 4);
+    for (auto bin : pheno.binary) ASSERT_TRUE(bin);
+    std::tie(success, pheno) = test_pheno_check(
+        "--pheno Pheno --binary-target 3F --pheno-col A,C,E", !IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.binary.size(), 3);
+    for (auto bin : pheno.binary) ASSERT_FALSE(bin);
+    // now check the prevalence is alright
+    std::tie(success, pheno) = test_pheno_check(
+        "--pheno Pheno --binary-target 3F --pheno-col A,C,E --prevalence 0.4",
+        !IS_BETA);
+    // fail as we don't have binary target
+    ASSERT_FALSE(success);
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --binary-target F,T,F --pheno-col "
+                         "A,C,E --prevalence 0.2",
+                         !IS_BETA);
+    // this is ok
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.prevalence.size(), 1);
+    ASSERT_DOUBLE_EQ(pheno.prevalence.front(), 0.2);
+    // ok with multiple
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --binary-target F,T,F,T --pheno-col "
+                         "A,C,E,F --prevalence 0.1,0.4",
+                         !IS_BETA);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(pheno.prevalence.size(), 2);
+    ASSERT_DOUBLE_EQ(pheno.prevalence.front(), 0.1);
+    ASSERT_DOUBLE_EQ(pheno.prevalence.back(), 0.4);
+    // not ok because prevalence out of bound
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --binary-target F,T,F,T,2F --pheno-col "
+                         "A,C,E,F,D,H --prevalence 0.1,-0.4",
+                         !IS_BETA);
+    ASSERT_FALSE(success);
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --binary-target F,T,F,T,2F --pheno-col "
+                         "A,C,E,F,D,H --prevalence 1.2,0.4",
+                         !IS_BETA);
+    ASSERT_FALSE(success);
+    // duplicated phenotype, we will should error out just in case (be extra
+    // causious)
+
+    std::tie(success, pheno) =
+        test_pheno_check("--pheno Pheno --binary-target F,T,F,T,2F --pheno-col "
+                         "A,C,E,F,A,H --prevalence 0.1,-0.4",
+                         !IS_BETA);
+    ASSERT_FALSE(success);
+}
+
+std::tuple<bool, BaseFile, QCFiltering, std::string>
+test_base_check(const std::string& command,
+                std::vector<std::string>& column_name)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    bool success = commander.base_column_check_wrapper(column_name);
+    return {success, commander.get_base(), commander.get_base_qc(),
+            commander.get_base_name()};
+}
+TEST(COMMAND_VALIDATION, BASE_CHECK)
+{
+    mockCommander commander;
+    // error out because base file not provided
+    ASSERT_FALSE(commander.base_check_wrapper());
+    // these are the default.
+    std::vector<std::string> col = {"P",  "BETA", "CHR", "LOC",
+                                    "A1", "A2",   "SNP"};
+    auto [success, base, qc, name] = test_base_check("--base Base", col);
+    ASSERT_TRUE(success);
+    // no chr
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --chr Hi", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::CHR]);
+    // no bp
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --bp BP", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::BP]);
+    // no A2
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --a2 Alternative", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::NONEFFECT]);
+    // no default, so we should fail
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --no-default", col);
+    ASSERT_FALSE(success);
+    // but won't fail if we have P BETA A1 and SNP
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --no-default --snp SNP --pvalue P --stat BETA --a1 A1",
+        col);
+    ASSERT_TRUE(success);
+    // and we should be able to get the --or and --beta automatically set
+    ASSERT_FALSE(base.is_or);
+    ASSERT_TRUE(base.is_beta);
+    // index check shouldn't allow non-numeric value so will always act as if
+    // --no-default is set
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --index", col);
+    ASSERT_FALSE(success);
+    // and will fail even if we provide all column name unless they are numeric
+    // values
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --index --snp SNP --pvalue P --stat BETA --a1 A1", col);
+    ASSERT_FALSE(success);
+
+    // check negative index
+    // check index work with correct input (set has_column and column_index)
+    // check has_column and column_index is correctly set each time
+    // check different way of determining --stat and --beta / --or
+    // check situation where we have multiple --beta or --or
+    // check that we correctly error out when required columns are not found
+}
+
 #endif // COMMANDER_TEST_H

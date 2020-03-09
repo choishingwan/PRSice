@@ -1986,27 +1986,52 @@ bool Commander::pheno_check()
     assert(m_ran_base_check);
     // pheno check must be performed after base check
     bool error = false;
-    if (m_pheno_info.pheno_col.size() != 0 && m_pheno_info.pheno_file.empty())
+    if (!m_pheno_info.pheno_col.empty() && m_pheno_info.pheno_file.empty())
     {
         error = true;
         m_error_message.append("Error: You must provide a phenotype file for "
                                "multiple phenotype analysis");
+        return !error;
+    }
+    // check for duplicates
+    if (!m_pheno_info.pheno_col.empty())
+    {
+        std::unordered_set<std::string> phenos(m_pheno_info.pheno_col.begin(),
+                                               m_pheno_info.pheno_col.end());
+        if (phenos.size() != m_pheno_info.pheno_col.size())
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Duplicated phenotype column detected. Please make sure "
+                "you have provided the correct input\n");
+            return !error;
+        }
     }
     if (m_pheno_info.binary.empty())
     {
         // add the default
+        const size_t repeat =
+            m_pheno_info.pheno_col.empty() ? 1 : m_pheno_info.pheno_col.size();
         if (m_base_info.is_beta)
         {
             m_parameter_log["binary-target"] = "F";
-            m_pheno_info.binary.push_back(false);
+            if (repeat > 1)
+            {
+                m_parameter_log["binary-target"] = std::to_string(repeat) + "F";
+            }
+            m_pheno_info.binary.resize(repeat, false);
         }
         else
         {
             m_parameter_log["binary-target"] = "T";
-            m_pheno_info.binary.push_back(true);
+            if (repeat > 1)
+            {
+                m_parameter_log["binary-target"] = std::to_string(repeat) + "T";
+            }
+            m_pheno_info.binary.resize(repeat, true);
         }
     }
-    // now check if the bar-level is sensible
+    // now check if binary-target is sensible
     if (m_pheno_info.pheno_col.size() != m_pheno_info.binary.size())
     {
         if (m_pheno_info.pheno_col.empty() && m_pheno_info.binary.size() == 1)
