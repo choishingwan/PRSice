@@ -136,7 +136,31 @@ public:
     bool target_check_wrapper() { return target_check(); }
     bool prsice_check_wrapper() { return prsice_check(); }
     bool clump_check_wrapper() { return clump_check(); }
+    bool ref_check_wrapper() { return ref_check(); }
+    bool misc_check_wrapper() { return misc_check(); }
+    bool filter_check_wrapper() { return filter_check(); }
+    bool prset_check_wrapper() { return prset_check(); }
+    std::string get_error() const { return m_error_message; }
     int32_t max_thread() { return maximum_thread(); }
+    auto get_cov_names_wrap() { return get_cov_names(); }
+    size_t
+    find_cov_idx_wrap(const std::unordered_set<std::string>& included,
+                      const std::unordered_map<std::string, size_t>& ref_index,
+                      std::string& missing)
+    {
+        return find_cov_idx(included, ref_index, missing);
+    }
+    void reorganize_cov_name_wrap(const std::vector<std::string>& cov_header)
+    {
+        reorganize_cov_name(cov_header);
+    }
+    bool process_factor_cov_wrap(
+        const std::unordered_set<std::string>& included,
+        const std::unordered_map<std::string, size_t>& ref_index,
+        const std::unordered_set<std::string>& ori_input)
+    {
+        return process_factor_cov(included, ref_index, ori_input);
+    }
 };
 
 TEST(COMMAND_PARSING, USAGE)
@@ -1477,16 +1501,298 @@ TEST(COMMAND_VALIDATION, CLUMP_CHECK)
                       EXPECT_FAIL, !HAS_DIST, HAS_PROXY);
     // Negative distance will fail early on, we don't bother to check
 }
+
+bool test_ref_check(const std::string& command)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    return commander.ref_check_wrapper();
+}
+TEST(COMMAND_VALIDATION, REF_CHECK)
+{
+    ASSERT_TRUE(test_ref_check("--ld 1000G"));
+    ASSERT_TRUE(test_ref_check("--ld-list 1000G-lists"));
+    ASSERT_FALSE(test_ref_check("--ld-list 1000G-lists --ld 1000G"));
+    // Without LD reference, we are not going to run any LD check, therefore we
+    // will never really encounter a situation within ref_check where both
+    // ld-list and ld are not provided
+    ASSERT_TRUE(test_ref_check(""));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-geno -1"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-geno 1.1"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-maf -20"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-maf 101"));
+    // don't check info score if we are not bgen
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-info 1.1"));
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-hard-thres 1.1"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-info 1.1 --ld-type bgen"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-info -2 --ld-type bgen"));
+    ASSERT_FALSE(
+        test_ref_check("--ld 1000G --ld-hard-thres 123 --ld-type bgen"));
+    ASSERT_FALSE(
+        test_ref_check("--ld 1000G --ld-hard-thres -200 --ld-type bgen"));
+    ASSERT_FALSE(
+        test_ref_check("--ld 1000G --ld-dose-thres 321 --ld-type bgen"));
+    ASSERT_FALSE(
+        test_ref_check("--ld 1000G --ld-dose-thres -234 --ld-type bgen"));
+    // check valid type
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-type bed"));
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-type ped"));
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-type bgen"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-type vcf"));
+    mockCommander ref, ref_list;
+    ASSERT_FALSE(ref.use_ref());
+    ASSERT_TRUE(ref.parse_command_wrapper("--ld test"));
+    ASSERT_TRUE(ref.use_ref());
+    ASSERT_FALSE(ref_list.use_ref());
+    ASSERT_TRUE(ref_list.parse_command_wrapper("--ld-list test_list"));
+    ASSERT_TRUE(ref_list.use_ref());
+}
+
+
+bool test_misc_check(const std::string& command)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    return commander.misc_check_wrapper();
+}
+
+bool intermediate_check(const std::string& command)
+{
+    mockCommander commander;
+    // we assume the command is valid
+    commander.parse_command_wrapper(command);
+    commander.misc_check_wrapper();
+    return commander.use_inter();
+}
+TEST(COMMAND_VALIDATION, MISC_CHECK)
+{
+    mockCommander commander;
+    // will also set keep ambig
+    ASSERT_TRUE(commander.parse_command_wrapper("--keep-ambig-as-is"));
+    ASSERT_TRUE(commander.misc_check_wrapper());
+    ASSERT_TRUE(commander.keep_ambig());
+    // no negative thread is allowed
+    ASSERT_FALSE(test_misc_check("--thread -10"));
+    // can specify --logit-perm without --perm or --set-perm, but should update
+    // error
+    ASSERT_TRUE(test_misc_check("--logit-perm"));
+    // Cannot use-ref-maf without --ld
+    ASSERT_FALSE(test_misc_check("--use-ref-maf"));
+    ASSERT_TRUE(test_misc_check("--use-ref-maf --ld testing"));
+    // both target and ref are not bgen, inter should be false
+    ASSERT_FALSE(intermediate_check("--allow-inter"));
+    // we will need intermediate because we will use the target file for ld
+    // construction
+    ASSERT_TRUE(intermediate_check("--allow-inter --type bgen"));
+    // we will need the intermediate because the ld file is in bgen format
+    ASSERT_TRUE(
+        intermediate_check("--allow-inter --type bed --ld-type bgen --ld ref"));
+    // we won't need intermediate, as we are using dosage score and reference is
+    // already in bed format
+    ASSERT_FALSE(
+        intermediate_check("--allow-inter --type bgen --ld-type bed --ld ref"));
+    // we will need intermediate for hard coded score
+    ASSERT_TRUE(intermediate_check(
+        "--allow-inter --type bgen --ld-type bed --hard --ld ref"));
+    // got nothing related to bgen
+    ASSERT_FALSE(intermediate_check("--allow-inter --type bed"));
+    // now check for ultra aggressive flag
+    // won't use it for dosage score
+    ASSERT_TRUE(commander.parse_command_wrapper("--type bgen --ultra"));
+    ASSERT_TRUE(commander.misc_check_wrapper());
+    ASSERT_FALSE(commander.ultra_aggressive());
+    // allow no regress for more than 1 pheno, but will only generate 1 file
+    ASSERT_TRUE(
+        commander.parse_command_wrapper("--pheno-col 1,2,3 --no-regress"));
+}
+
+bool test_filter_check(const std::string& command)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    return commander.filter_check_wrapper();
+}
+TEST(COMMAND_VALIDATION, FILTER_CHECK)
+{
+    ASSERT_TRUE(test_filter_check("--extract keep_snp"));
+    ASSERT_TRUE(test_filter_check("--exclude remove_snp"));
+    // can't do both
+    ASSERT_FALSE(test_filter_check("--exclude remove_snp --extract keep_snp"));
+    ASSERT_FALSE(test_filter_check("--maf -0.1"));
+    ASSERT_FALSE(test_filter_check("--maf 1.1"));
+    ASSERT_FALSE(test_filter_check("--geno 12"));
+    ASSERT_FALSE(test_filter_check("--geno -1"));
+    // won't do info and hard-threshold filtering if bgen isn't used
+    ASSERT_TRUE(test_filter_check("--hard-thres -19"));
+    ASSERT_TRUE(test_filter_check("--hard-thres 60"));
+    ASSERT_TRUE(test_filter_check("--info -0.5"));
+    ASSERT_TRUE(test_filter_check("--info 1.2"));
+    ASSERT_TRUE(test_filter_check("--hard-thres -133"));
+    ASSERT_TRUE(test_filter_check("--hard-thres 2887"));
+    // but if we use bgen, we will check the threshold
+
+    ASSERT_FALSE(test_filter_check("--type bgen --hard-thres -19"));
+    ASSERT_FALSE(test_filter_check("--type bgen --hard-thres 60"));
+    ASSERT_FALSE(test_filter_check("--type bgen --info -0.5"));
+    ASSERT_FALSE(test_filter_check("--type bgen --info 1.2"));
+    ASSERT_FALSE(test_filter_check("--type bgen --hard-thres -133"));
+    ASSERT_FALSE(test_filter_check("--type bgen --hard-thres 2887"));
+}
+
+
+bool test_prset_check(const std::string& command)
+{
+    mockCommander commander;
+    if (!command.empty()) commander.parse_command_wrapper(command);
+    std::cerr << commander.get_error() << std::endl;
+    return commander.prset_check_wrapper();
+}
+TEST(COMMAND_VALIDATION, PRSET_CHECK)
+{
+    // can't do both (note, need --bed or --snp-set as won't do check if prset
+    // isn't run
+    ASSERT_FALSE(test_prset_check("--perm 100 --set-perm 1000 --snp-set snps"));
+    // require GTF
+    ASSERT_FALSE(test_prset_check("--msigdb kegg"));
+    mockCommander commander, with_feature, bed_gtf;
+    // test default
+    ASSERT_TRUE(
+        commander.parse_command_wrapper("--msigdb kegg --gtf Homo.gtf"));
+    ASSERT_TRUE(commander.prset_check_wrapper());
+    std::vector<std::string> expected = {"exon", "gene", "protein_coding",
+                                         "CDS"};
+    ASSERT_EQ(commander.get_set().feature.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_STREQ(commander.get_set().feature[i].c_str(),
+                     expected[i].c_str());
+    }
+    // we won't overwrite
+    ASSERT_TRUE(with_feature.parse_command_wrapper(
+        "--bed test --feature gene,intron --set-perm 10"));
+    ASSERT_FALSE(with_feature.get_set().full_as_background);
+    ASSERT_TRUE(with_feature.prset_check_wrapper());
+    expected.clear();
+    expected = {"gene", "intron"};
+    ASSERT_EQ(with_feature.get_set().feature.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        ASSERT_STREQ(with_feature.get_set().feature[i].c_str(),
+                     expected[i].c_str());
+    }
+    // now also check that the full back is set as no gtf is provided
+    ASSERT_TRUE(with_feature.get_set().full_as_background);
+    // won't be the case if gtf is provided
+    ASSERT_TRUE(
+        bed_gtf.parse_command_wrapper("--bed hi --gtf Homo.gtf --set-perm 10"));
+    ASSERT_FALSE(bed_gtf.get_set().full_as_background);
+    ASSERT_TRUE(bed_gtf.prset_check_wrapper());
+    ASSERT_FALSE(bed_gtf.get_set().full_as_background);
+}
+
+TEST(COMMAND_VALIDATION, COVARIATE_CHECK)
+{
+    // slightly different than others, as we will only test the sub functions to
+    // check and see if they function. If they all work, then we can say that
+    // the covariate check works
+    mockCommander commander;
+    ASSERT_TRUE(commander.parse_command_wrapper(
+        "--cov test --cov-col Sex,@PC[1-5.6],@PC[6.8.9],@Hi"));
+    std::unordered_set<std::string> included = commander.get_cov_names_wrap();
+    std::unordered_set<std::string> ori_input = included;
+    std::vector<std::string> expected = {"Sex", "PC1", "PC2", "PC3", "PC4",
+                                         "PC5", "PC6", "PC8", "PC9", "Hi"};
+    std::vector<std::string> unexpected = {"Age", "BMI", "Bye", "PC7"};
+    for (auto&& exp : expected)
+    { ASSERT_TRUE(included.find(exp) != included.end()); }
+    for (auto&& unexp : unexpected)
+    { ASSERT_TRUE(included.find(unexp) == included.end()); }
+    // we will test different stuff
+    std::vector<std::string> cov_name = {"PC3", "PC2", "PC1"};
+    // represent the index of each col-name
+    std::unordered_map<std::string, size_t> ref_index = {
+        {"PC1", 2}, {"PC2", 1}, {"PC3", 0}};
+    std::string missing = "";
+    size_t valid_cov =
+        commander.find_cov_idx_wrap(included, ref_index, missing);
+    // order of col_cov_idx = input order in --cov-col
+    std::vector<size_t> idx_exp = {2, 1, 0};
+    ASSERT_EQ(valid_cov, 3);
+    auto cov = commander.get_pheno().cov_colname;
+    auto cov_idx = commander.get_pheno().col_index_of_cov;
+    // can't really test the ordering as we use unordered_set for included
+    ASSERT_EQ(cov_idx.size(), idx_exp.size());
+    expected.clear();
+    expected = {"Sex", "@PC[1-5.6]", "@PC[6.8.9]", "@Hi"};
+    ASSERT_EQ(cov.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_STREQ(cov[i].c_str(), expected[i].c_str()); }
+
+    commander.reorganize_cov_name_wrap(cov_name);
+    cov = commander.get_pheno().cov_colname;
+    expected.clear();
+    // now should be ordered by their appearance within the cov file
+    expected = {"PC3", "PC2", "PC1"};
+    idx_exp.clear();
+    idx_exp = {0, 1, 2};
+    cov_idx = commander.get_pheno().col_index_of_cov;
+    ASSERT_EQ(cov.size(), expected.size());
+    // now we can check the ordering as we know this should be sorted
+    ASSERT_EQ(cov_idx.size(), idx_exp.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_STREQ(cov[i].c_str(), expected[i].c_str()); }
+    for (size_t i = 0; i < cov_idx.size(); ++i)
+    { ASSERT_EQ(cov_idx[i], idx_exp[i]); }
+    // check that we should get the correct number (0)
+    included.clear();
+    included = {"Sex", "Age"};
+    valid_cov = commander.find_cov_idx_wrap(included, ref_index, missing);
+    ASSERT_EQ(valid_cov, 0);
+    // now reset and prepare for factor check
+    included.clear();
+    included = {"Sex", "PC1", "PC2", "PC3", "PC4",
+                "PC5", "PC6", "PC8", "PC9", "Hi"};
+    valid_cov = commander.find_cov_idx_wrap(included, ref_index, missing);
+    // and proceed
+    ASSERT_TRUE(
+        commander.parse_command_wrapper("--cov test --cov-factor @PC[6.8.9]"));
+    // if we don't have any of the factors in the file, but all the factors are
+    // provided in the cov-col, we are ok with it
+    ASSERT_TRUE(
+        commander.process_factor_cov_wrap(included, ref_index, ori_input));
+    // now check situation where we do have the factor
+    // Note: --cov-factor is additive if I remember correctly
+    ASSERT_TRUE(commander.parse_command_wrapper(
+        "--cov test --cov-factor @PC[3.6.8.9]"));
+    ASSERT_TRUE(
+        commander.process_factor_cov_wrap(included, ref_index, ori_input));
+    ASSERT_EQ(commander.get_pheno().col_index_of_factor_cov.size(), 1);
+    ASSERT_EQ(commander.get_pheno().col_index_of_factor_cov.front(), 0);
+    // now if we do have something that'd not found, we should error out
+    mockCommander error;
+    ASSERT_TRUE(error.parse_command_wrapper(
+        "--cov test --cov-col @PC[1-5] --cov-factor @PC[6-9]"));
+    included = error.get_cov_names_wrap();
+    ori_input = included;
+    valid_cov = error.find_cov_idx_wrap(included, ref_index, missing);
+    error.reorganize_cov_name_wrap(cov_name);
+    ASSERT_FALSE(error.process_factor_cov_wrap(included, ref_index, ori_input));
+    // Stuff in factor are not in col but were found in the covariate file
+    mockCommander factor_only;
+    ASSERT_TRUE(factor_only.parse_command_wrapper(
+        "--cov test --cov-factor @PC[1-2] --cov-col @PC[3-9]"));
+    included = factor_only.get_cov_names_wrap();
+    ori_input = included;
+    valid_cov = factor_only.find_cov_idx_wrap(included, ref_index, missing);
+    factor_only.reorganize_cov_name_wrap(cov_name);
+    // should error out as --cov-factor should always be a subset of --cov-col
+    ASSERT_FALSE(
+        factor_only.process_factor_cov_wrap(included, ref_index, ori_input));
+}
 // Now check each of the following validation functions
 /* error = !base_check(); // require reading base file
     // pheno_check must come after base check because we want the beta / or
     // information for defining the default
     error |= !pheno_check();
-    error |= !covariate_check(); // require reading cov file
-    error |= !clump_check();
-    error |= !prset_check();
-    error |= !filter_check();
-    error |= !misc_check();
-    error |= !ref_check();
     */
 #endif // COMMANDER_TEST_H
