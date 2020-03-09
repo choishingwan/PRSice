@@ -1546,6 +1546,10 @@ TEST(COMMAND_VALIDATION, REF_CHECK)
     ASSERT_FALSE(ref_list.use_ref());
     ASSERT_TRUE(ref_list.parse_command_wrapper("--ld-list test_list"));
     ASSERT_TRUE(ref_list.use_ref());
+    // can do keep and remove but not both
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-keep Good"));
+    ASSERT_TRUE(test_ref_check("--ld 1000G --ld-remove Bad"));
+    ASSERT_FALSE(test_ref_check("--ld 1000G --ld-keep Good --ld-remove Bad"));
 }
 
 
