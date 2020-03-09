@@ -670,6 +670,7 @@ void BinaryGen::gen_snp_vector(
                 else
                 {
                     processed_snps.insert(cur_id);
+                    if (m_force_flip_ambig && ambig) flipping = true;
                     genotype->m_existed_snps[target_index].add_snp_info(
                         file_idx, byte_pos, chr_num, SNP_position, A1, A2,
                         flipping, m_is_ref);

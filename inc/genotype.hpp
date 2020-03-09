@@ -428,6 +428,11 @@ public:
         m_keep_ambig = keep;
         return *this;
     }
+    Genotype& force_flip(bool flip)
+    {
+        m_force_flip_ambig = flip;
+        return *this;
+    }
     Genotype& reference()
     {
         m_is_ref = true;
@@ -558,6 +563,7 @@ protected:
     bool m_is_ref = false;
     bool m_keep_nonfounder = false;
     bool m_keep_ambig = false;
+    bool m_force_flip_ambig = false;
     bool m_remove_sample = true;
     bool m_exclude_snp = true;
     bool m_hard_coded = false;

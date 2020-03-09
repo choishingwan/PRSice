@@ -338,6 +338,14 @@ TEST(COMMAND_PARSING, KEEP_AMBIG)
     ASSERT_TRUE(set.keep_ambig());
 }
 
+TEST(COMMAND_PARSING, FORCE_FLIP)
+{
+    mockCommander set;
+    std::string command = "--flip-ambig";
+    ASSERT_FALSE(set.force_flip_ambig());
+    ASSERT_TRUE(set.parse_command_wrapper(command));
+    ASSERT_TRUE(set.force_flip_ambig());
+}
 TEST(COMMAND_PARSING, NON_CUMULATE)
 {
     mockCommander set;
@@ -1597,6 +1605,10 @@ TEST(COMMAND_VALIDATION, MISC_CHECK)
     // allow no regress for more than 1 pheno, but will only generate 1 file
     ASSERT_TRUE(
         commander.parse_command_wrapper("--pheno-col 1,2,3 --no-regress"));
+    // check if flip-ambig work
+    ASSERT_FALSE(commander.keep_ambig());
+    ASSERT_TRUE(commander.parse_command_wrapper("--flip-ambig"));
+    ASSERT_TRUE(commander.keep_ambig());
 }
 
 bool test_filter_check(const std::string& command)

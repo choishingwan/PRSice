@@ -85,6 +85,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"ignore-fid", no_argument, &m_pheno_info.ignore_fid, 1},
         {"index", no_argument, &m_base_info.is_index, 1},
         {"keep-ambig", no_argument, &m_keep_ambig, 1},
+        {"flip-ambig", no_argument, &m_force_ambig_flip, 1},
         {"logit-perm", no_argument, &m_perm_info.logit_perm, 1},
         {"no-clump", no_argument, &m_clump_info.no_clump, 1},
         {"non-cumulate", no_argument, &m_prs_info.non_cumulate, 1},
@@ -399,6 +400,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
     if (m_base_info.is_index) m_parameter_log["index"] = "";
     if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
+    if (m_force_ambig_flip) m_parameter_log["flip-ambig"] = "";
     if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
     if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
     if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
@@ -485,31 +487,31 @@ void Commander::set_help_message()
         "usage: PRSice [options] <-b base_file> <-t target_file>\n"
         // Base file
         "\nBase File:\n"
-        "    --A1                    Column header containing allele 1 "
+        "    --a1                    Column header containing allele 1 "
         "(effective allele)\n"
         "                            Default: A1\n"
-        "    --A2                    Column header containing allele 2 "
+        "    --a2                    Column header containing allele 2 "
         "(non-effective allele)\n"
         "                            Default: A2\n"
         "    --base          | -b    Base association file\n"
         "    --base-info             Base INFO score filtering. Format should "
         "be\n"
-        "                            <Column name>,<Threshold>. SNPs with info "
+        "                            <Column name>:<Threshold>. SNPs with info "
         "\n"
         "                            score less than <Threshold> will be "
         "ignored\n"
         "                            Column name default: INFO\n"
         "                            Threshold default: 0.9\n"
         "    --base-maf             Base MAF filtering. Format should be\n"
-        "                            <Column name>,<Threshold>. SNPs with maf\n"
+        "                            <Column name>:<Threshold>. SNPs with maf\n"
         "                            less than <Threshold> will be ignored. "
         "An\n"
         "                            additional column can also be added "
         "(e.g.\n"
         "                            also filter MAF for cases), using the\n"
         "                            following format:\n"
-        "                            <Column name>,<Threshold>:<Column "
-        "name>,<Threshold>\n"
+        "                            <Column name>:<Threshold>,<Column "
+        "name>:<Threshold>\n"
         "    --beta                  Whether the test statistic is in the form "
         "of \n"
         "                            BETA or OR. If set, test statistic is "
@@ -919,8 +921,8 @@ void Commander::set_help_message()
           "                            if you are certain that the base and "
           "target\n"
           "                            has the same A1 and A2 alleles\n"
-          "    --keep-ambig-as-is      Will not flip ambiguous SNPs when they "
-          "are kept.\n"
+          "    --flip-ambig            Force flipping of ambiguous SNPs when "
+          "they are kept.\n"
           "                            Will also set the --keep-ambig flag\n"
           "    --logit-perm            When performing permutation, still use "
           "logistic\n"
@@ -1722,6 +1724,7 @@ bool Commander::misc_check()
 {
     bool error = false;
     m_parameter_log["seed"] = misc::to_string(m_perm_info.seed);
+    if (m_force_ambig_flip) m_keep_ambig = true;
     if (m_prs_info.thread <= 0)
     {
         error = true;
