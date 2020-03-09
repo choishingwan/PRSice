@@ -400,6 +400,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
     if (m_base_info.is_index) m_parameter_log["index"] = "";
     if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
+    if (m_ambig_no_flip) m_parameter_log["keep-ambig-as-is"] = "";
     if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
     if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
     if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
@@ -1242,6 +1243,12 @@ bool Commander::ref_check()
             m_error_message.append("Error: LD hard threshold must be larger "
                                    "than 0 and smaller than 1!\n");
         }
+        if (!misc::within_bound<double>(m_ref_filter.dose_threshold, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append("Error: LD dosage threshold must be larger "
+                                   "than 0 and smaller than 1!\n");
+        }
         else if (!m_reference.file_name.empty()
                  || m_reference.file_name.empty())
         {
@@ -1257,18 +1264,18 @@ bool Commander::ref_check()
             m_parameter_log["dose-thres"] =
                 std::to_string(m_target_filter.dose_threshold);
         }
+        if (!misc::within_bound<double>(m_ref_filter.info_score, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append("Error: LD INFO score threshold must be "
+                                   "larger than 0 and smaller than 1!\n");
+        }
     }
     if (!misc::within_bound<double>(m_ref_filter.maf, 0.0, 1.0))
     {
         error = true;
         m_error_message.append("Error: LD MAF threshold must be larger than "
                                "0 and smaller than 1!\n");
-    }
-    if (!misc::within_bound<double>(m_ref_filter.info_score, 0.0, 1.0))
-    {
-        error = true;
-        m_error_message.append("Error: LD INFO score threshold must be "
-                               "larger than 0 and smaller than 1!\n");
     }
     return !error;
 }
@@ -1663,13 +1670,6 @@ bool Commander::filter_check()
                 "imputation input.\n");
         }
     }
-    if (m_target.type == "bgen"
-        && !misc::within_bound(m_target_filter.hard_threshold, 0.0, 1.0))
-    {
-        error = true;
-        m_error_message.append(
-            "Error: Hard threshold must be between 0 and 1!\n");
-    }
     if (!m_extract_file.empty() && !m_exclude_file.empty())
     {
         error = true;
@@ -1677,13 +1677,30 @@ bool Commander::filter_check()
             "Error: Can only use --extract or --exclude but not both\n");
     }
 
-    if (!misc::within_bound(m_target_filter.info_score, 0.0, 1.0))
+    if (m_target.type == "bgen")
     {
-        error = true;
-        m_error_message.append(
-            "Error: INFO score threshold cannot be bigger than 1.0 "
-            "or smaller than 0.0\n");
+        if (!misc::within_bound(m_target_filter.info_score, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append(
+                "Error: INFO score threshold cannot be bigger than 1.0 "
+                "or smaller than 0.0\n");
+        }
+        if (!misc::within_bound(m_target_filter.hard_threshold, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Hard threshold must be between 0 and 1!\n");
+        }
+        if (!misc::within_bound(m_target_filter.dose_threshold, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Dosage threshold must be between 0 and 1!\n");
+        }
     }
+
+
     if (!misc::within_bound<double>(m_target_filter.geno, 0.0, 1.0))
     {
         error = true;
