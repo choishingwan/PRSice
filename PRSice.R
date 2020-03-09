@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.12"
+r.version <- "2.2.13"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -298,7 +298,7 @@ help_message <-
     --keep-ambig            Keep ambiguous SNPs. Only use this option\n
                             if you are certain that the base and target\n
                             has the same A1 and A2 alleles\n
-    --keep-ambig-as-is      Will not flip ambiguous SNPs when they are kept.\n
+    --flip-ambig            Force flipping of ambiguous SNPs when they are kept.\n
                             Will also set the --keep-ambig flag\n
     --id-delim              This parameter causes sample IDs to be parsed as\n
                             <FID><delimiter><IID>; the default delimiter\n
@@ -541,7 +541,7 @@ option_list <- list(
   make_option(c("--id-delim"), type = "character"), 
   make_option(c("--logit-perm"), action = "store_true", dest = "logit_perm"),
   make_option(c("--keep-ambig"), action = "store_true", dest = "keep_ambig"),
-  make_option(c("--keep-ambig-as-is"), action = "store_true", dest = "keep_ambig_as_is"),
+  make_option(c("--flip-ambig"), action = "store_true", dest = "flip_ambig"),
   make_option(c("--memory"), type = "character", dest="memory"),
   make_option(c("-o", "--out"), type = "character", default = "PRSice"),
   make_option(c("--perm"), type = "numeric"),
@@ -691,7 +691,7 @@ flags <-
         "ignore-fid",
         "index",
         "keep-ambig",
-        "keep-ambig-as-is",
+        "flip-ambig",
         "logit-perm",
         "no-clump",
         "no-default",
