@@ -77,7 +77,6 @@ int main(int argc, char* argv[])
             target_file =
                 &target_file->keep_nonfounder(commander.nonfounders())
                      .keep_ambig(commander.keep_ambig())
-                     .ambig_no_flip(commander.ambig_no_flip())
                      .intermediate(commander.use_inter())
                      .set_prs_instruction(commander.get_prs_instruction())
                      .set_weight();

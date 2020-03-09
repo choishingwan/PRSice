@@ -337,14 +337,7 @@ TEST(COMMAND_PARSING, KEEP_AMBIG)
     ASSERT_TRUE(set.parse_command_wrapper(command));
     ASSERT_TRUE(set.keep_ambig());
 }
-TEST(COMMAND_PARSING, KEEP_AMBIG_AS_IS)
-{
-    mockCommander set;
-    std::string command = "--keep-ambig-as-is";
-    ASSERT_FALSE(set.ambig_no_flip());
-    ASSERT_TRUE(set.parse_command_wrapper(command));
-    ASSERT_TRUE(set.ambig_no_flip());
-}
+
 TEST(COMMAND_PARSING, NON_CUMULATE)
 {
     mockCommander set;
@@ -1571,10 +1564,6 @@ bool intermediate_check(const std::string& command)
 TEST(COMMAND_VALIDATION, MISC_CHECK)
 {
     mockCommander commander;
-    // will also set keep ambig
-    ASSERT_TRUE(commander.parse_command_wrapper("--keep-ambig-as-is"));
-    ASSERT_TRUE(commander.misc_check_wrapper());
-    ASSERT_TRUE(commander.keep_ambig());
     // no negative thread is allowed
     ASSERT_FALSE(test_misc_check("--thread -10"));
     // can specify --logit-perm without --perm or --set-perm, but should update

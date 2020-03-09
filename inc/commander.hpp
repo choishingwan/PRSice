@@ -93,7 +93,6 @@ public:
     bool keep_ambig() const { return m_keep_ambig; }
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
-    bool ambig_no_flip() const { return m_ambig_no_flip; }
 
 protected:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -105,7 +104,6 @@ protected:
     std::string m_help_message;
     size_t m_memory = 1e10;
     int m_allow_inter = false;
-    int m_ambig_no_flip = false;
     int m_include_nonfounders = false;
     int m_keep_ambig = false;
     int m_print_all_scores = false;
