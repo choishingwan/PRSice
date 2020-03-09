@@ -166,9 +166,10 @@ protected:
                  const std::unordered_map<std::string, size_t>& ref_index,
                  std::string& missing);
     void reorganize_cov_name(const std::vector<std::string>& cov_header);
-    bool process_factor_cov(
-        const std::unordered_set<std::string>& included,
-        const std::unordered_map<std::string, size_t>& ref_index);
+    bool
+    process_factor_cov(const std::unordered_set<std::string>& included,
+                       const std::unordered_map<std::string, size_t>& ref_index,
+                       const std::unordered_set<std::string> ori_input);
     bool filter_check();
     bool misc_check();
     bool prset_check();

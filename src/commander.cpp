@@ -1579,13 +1579,12 @@ void Commander::reorganize_cov_name(const std::vector<std::string>& cov_header)
 }
 bool Commander::process_factor_cov(
     const std::unordered_set<std::string>& included,
-    const std::unordered_map<std::string, size_t>& ref_index)
+    const std::unordered_map<std::string, size_t>& ref_index,
+    const std::unordered_set<std::string> ori_input)
 {
     // now start to process the factor covariates
 
     std::vector<std::string> transformed_cov;
-    std::unordered_set<std::string> ori_input(m_pheno_info.cov_colname.begin(),
-                                              m_pheno_info.cov_colname.end());
     for (auto cov : m_pheno_info.factor_cov)
     {
         if (cov.empty()) continue;
@@ -1596,9 +1595,12 @@ bool Commander::process_factor_cov(
             if (included.find(trans) != included.end()
                 && ref != ref_index.end())
             { m_pheno_info.col_index_of_factor_cov.push_back(ref->second); }
-            else if (ori_input.find(cov) == ori_input.end())
+            else if (ori_input.find(trans) == ori_input.end())
             {
-                // only complain if untransform input isn't found in cov-col
+                // only complain if transform input isn't found in transformed
+                // --cov-col
+                // so if @PC[1.3.5] isn't found, and cov-col is @PC[1-10], then
+                // we still allow such input
                 m_error_message.append("Error: All factor covariates must be "
                                        "found in covariate list. "
                                        + trans
@@ -1620,6 +1622,7 @@ bool Commander::covariate_check()
     // first, transform all the covariates
     // the actual column name to be included (after parsing)
     std::unordered_set<std::string> included = get_cov_names();
+    std::unordered_set<std::string> ori_input = included;
     try
     {
         auto [cov_header, ref_index] = get_covariate_header();
@@ -1642,7 +1645,7 @@ bool Commander::covariate_check()
             m_error_message.append("Error: No valid Covariate!\n");
         }
         reorganize_cov_name(cov_header);
-        error |= !process_factor_cov(included, ref_index);
+        error |= !process_factor_cov(included, ref_index, ori_input);
     }
     catch (std::runtime_error&)
     {
