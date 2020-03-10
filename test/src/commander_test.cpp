@@ -456,7 +456,7 @@ TEST(COMMAND_PARSING, SET_BASE)
     ASSERT_STREQ(commander.get_base().file_name.c_str(), "BaseInfo");
     ASSERT_TRUE(commander.parse_command_wrapper("-b Basic"));
     ASSERT_STREQ(commander.get_base().file_name.c_str(), "Basic");
-    check_set_base_flag("--base-info", "INFO_FILTER", "INFO,0.9",
+    check_set_base_flag("--base-info", "INFO_FILTER", "INFO:0.9",
                         +BASE_INDEX::INFO);
     check_set_base_flag("--base-maf", "MAF_FILTER", "", +BASE_INDEX::MAF);
 }
@@ -1907,7 +1907,6 @@ test_base_check(const std::string& command,
     mockCommander commander;
     if (!command.empty()) commander.parse_command_wrapper(command);
     bool success = commander.base_column_check_wrapper(column_name);
-    if (!success) std::cerr << commander.get_error() << std::endl;
     return {success, commander.get_base(), commander.get_base_qc(),
             commander.get_base_name()};
 }
@@ -2089,9 +2088,112 @@ TEST(COMMAND_VALIDATION, BASE_CHECK)
     col = {"P", "CHR", "beta", "LOC", "A1", "A2", "SNP", "or"};
     std::tie(success, base, qc, name) = test_base_check("--base Base", col);
     ASSERT_FALSE(success);
-    // check the QC related flags (--base-info and --base-maf) esp with base
-    // maf, test case control
+    col = {"P", "CHR", "BETA", "BP", "A1", "A2", "SNP"};
+    std::tie(success, base, qc, name) =
+        test_base_check("--base /home/bin/Base.gz.summary", col);
+    ASSERT_TRUE(success);
+    ASSERT_STREQ(name.c_str(), "Base.gz");
 }
-TEST(COMMAND_VALIDATION, BASE_QC_CHECK) {}
+TEST(COMMAND_VALIDATION, BASE_QC_CHECK)
+{
+    std::vector<std::string> col = {"P",  "CHR", "BETA", "LOC",
+                                    "A1", "A2",  "SNP",  "INFO"};
+    // check default
+    auto [success, base, qc, name] = test_base_check("--base Base", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::INFO]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::INFO], 7);
+    ASSERT_DOUBLE_EQ(qc.info_score, 0.9);
+    // check invalid format
+    col.clear();
+    col = {"P", "CHR", "BETA", "INFO_Score", "LOC", "A1", "A2", "SNP"};
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-info INFO_Score,0.1", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-info INFO_Score:0.1,INFO", col);
+    ASSERT_FALSE(success);
+    // valid format
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-info INFO_Score:0.1", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::INFO]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::INFO], 3);
+    ASSERT_DOUBLE_EQ(qc.info_score, 0.1);
+    // check out bound
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-info INFO_Score:-0.1", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-info INFO_Score:1.1", col);
+    ASSERT_FALSE(success);
+    // check not found
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-info INFO:0.1", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::INFO]);
+    // now do MAF
+
+    col.clear();
+    col = {"P",  "CHR", "BETA", "INFO_Score", "LOC",
+           "A1", "A2",  "MAF",  "Cases",      "SNP"};
+    // there is no default
+    std::tie(success, base, qc, name) = test_base_check("--base Base", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF]);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF_CASE]);
+    // and if we don't specify, only do MAF using control
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:0.05", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::MAF]);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF_CASE]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::MAF], 7);
+    ASSERT_DOUBLE_EQ(qc.maf, 0.05);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:0.05,Cases:0.01", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::MAF]);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::MAF_CASE]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::MAF], 7);
+    ASSERT_DOUBLE_EQ(qc.maf, 0.05);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::MAF_CASE], 8);
+    ASSERT_DOUBLE_EQ(qc.maf_case, 0.01);
+    // will fail if either one of them are out of bound
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:-0.05,Cases:0.01", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:0.05,Cases:-0.01", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:1.05,Cases:0.01", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:0.05,Cases:1.01", col);
+    ASSERT_FALSE(success);
+    // will not fail if one of them are not found (although I do think we should
+    // fail this, only keeping this behaviour for Chris)
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf maf:0.05,Cases:0.01", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF]);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF_CASE]);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:0.05,maf_cases:0.01", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF]);
+    ASSERT_FALSE(base.has_column[+BASE_INDEX::MAF_CASE]);
+    // invalid format
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF,0.05:maf_cases,0.01", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --base-maf MAF:0.05:maf_cases,0.01", col);
+    ASSERT_FALSE(success);
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --base-maf MAF:0.05,maf_cases:0.01,Case:0.5", col);
+    ASSERT_FALSE(success);
+}
 
 #endif // COMMANDER_TEST_H
