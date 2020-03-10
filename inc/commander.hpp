@@ -715,6 +715,13 @@ protected:
                      const std::vector<std::string>& detail,
                      size_t& column_index, int& has_column, double& maf)
     {
+        if (detail.size() != 2)
+        {
+            throw std::runtime_error(
+                "Error: Invalid format of --base-maf. "
+                "Should be ColName:Threshold."
+                "or ColName:Threshold,ColName:Threshold.\n");
+        }
         size_t index = 0;
         bool found = index_check(detail[0], ref, index);
         has_column = found;
