@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
         Commander commander;
         try
         {
-            if (!commander.init(argc, argv, reporter))
+            if (!commander.process_command(argc, argv, reporter))
             {
                 return 0; // only require the usage information
             }
@@ -77,7 +77,6 @@ int main(int argc, char* argv[])
             target_file =
                 &target_file->keep_nonfounder(commander.nonfounders())
                      .keep_ambig(commander.keep_ambig())
-                     .ambig_no_flip(commander.ambig_no_flip())
                      .intermediate(commander.use_inter())
                      .set_prs_instruction(commander.get_prs_instruction())
                      .set_weight();

@@ -1133,7 +1133,7 @@ bool PRSice::run_prsice(
         ++prs_result_idx;
         first_run = false;
     }
-    if (m_quick_best)
+    if (m_quick_best && !m_prs_info.no_regress)
     {
         m_fast_best_output.col(static_cast<Eigen::Index>(region_index)) =
             Eigen::Map<Eigen::VectorXd>(

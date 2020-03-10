@@ -206,7 +206,6 @@ protected:
                         MISSING_SCORE missing)
             : m_sample_prs(sample_prs), m_sample_inclusion(sample_inclusion)
         {
-            m_ploidy = 2;
             m_miss_count = m_ploidy * (missing != MISSING_SCORE::SET_ZERO);
             // to account for the missingness, we need to calculate the mean of
             // the PRS before we can assign the missing value to the sample. As
@@ -303,12 +302,12 @@ protected:
             // if the byte is set, then we want this sample
             return IS_SET(m_sample_inclusion->data(), i);
         }
-        /*!
-         * \brief Another mandated function by bgen lib taht we don't use
-         */
-        void set_number_of_entries(std::size_t, std::size_t, genfile::OrderType,
+        void set_number_of_entries(std::size_t ploidy, std::size_t,
+                                   genfile::OrderType phased,
                                    genfile::ValueType)
         {
+            m_ploidy = ploidy;
+            m_phased = phased;
         }
 
         // Called once for each genotype (or haplotype) probability per sample.
@@ -323,6 +322,15 @@ protected:
             // adding up three times the SNP number, and to account for the
             // missingness (bgen v1.1), we will first store the sample PRS in
             // the double sum and only add it to the sample if it is not missing
+            if (m_phased == genfile::OrderType::ePerPhasedHaplotypePerAllele
+                && geno > 1)
+            {
+                switch (geno)
+                {
+                case 3: geno = 2; break;
+                default: geno = 0;
+                }
+            }
             switch (geno)
             {
             default: m_sum += m_homcom_weight * value; break;
@@ -404,6 +412,7 @@ protected:
         std::vector<uintptr_t>* m_sample_inclusion;
         std::vector<size_t> m_missing;
         misc::RunningStat rs;
+        genfile::OrderType m_phased = genfile::OrderType::ePerUnorderedGenotype;
         double m_stat = 0.0;
         double m_sum = 0.0;
         double m_sum_prob = 0.0;
@@ -438,6 +447,7 @@ protected:
             , m_hard_threshold(hard_threshold)
             , m_dose_threshold(dose_threshold)
         {
+            m_prob.resize(3);
         }
         void initialise(std::size_t, std::size_t)
         {
@@ -450,7 +460,6 @@ protected:
             m_homrar_ct = 0;
             m_het_ct = 0;
             m_missing_ct = 0;
-            m_prob.resize(3);
             // we also clean the running stat (not RS ID), so that we can go
             // through another round of calculation of mean and sd
             rs.clear();
@@ -485,14 +494,11 @@ protected:
             // consulting the flag on m_sample
             return IS_SET(m_sample->data(), m_sample_i);
         }
-        /*!
-         * \brief set_number_of_entries is yet another function required by
-         * bgen library that we don't use
-         *
-         */
-        void set_number_of_entries(std::size_t, std::size_t, genfile::OrderType,
+        void set_number_of_entries(std::size_t, std::size_t,
+                                   genfile::OrderType phased,
                                    genfile::ValueType)
         {
+            m_phased = phased;
         }
 
         // Called once for each genotype (or haplotype) probability per
@@ -523,6 +529,17 @@ protected:
             //                m_geno = (geno == 2) ? 3 : geno;
             //                m_hard_prob = value;
             //            }
+            // TODO: To account for situation where there are more than 3
+            // genotype (which shouldn't happen to be honest)
+            if (m_phased == genfile::OrderType::ePerPhasedHaplotypePerAllele
+                && geno > 1)
+            {
+                switch (geno)
+                {
+                case 3: geno = 2; break;
+                default: geno = 0;
+                }
+            }
             m_prob[geno] = value;
             // when we calculate the expected value, we want to multiply the
             // probability with our coding instead of just using byte
@@ -622,6 +639,7 @@ protected:
             homrar_ct = m_homrar_ct;
             missing_ct = m_missing_ct;
         }
+        virtual ~PLINK_generator() {}
 
     private:
         // is the sample inclusion vector, if bit is set, sample is required
@@ -642,6 +660,7 @@ protected:
         size_t m_homrar_ct = 0;
         size_t m_het_ct = 0;
         size_t m_missing_ct = 0;
+        genfile::OrderType m_phased = genfile::OrderType::ePerUnorderedGenotype;
         bool m_missing = false;
     };
 };

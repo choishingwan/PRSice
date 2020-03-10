@@ -42,14 +42,14 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.2.12";
-const std::string date = "2020-02-20";
+const std::string version = "2.2.13";
+const std::string date = "2020-03-10";
 class Commander
 {
 public:
     Commander();
     virtual ~Commander();
-    bool init(int argc, char* argv[], Reporter& reporter);
+    bool process_command(int argc, char* argv[], Reporter& reporter);
     std::string get_base_name() const
     {
         return misc::remove_extension<std::string>(
@@ -93,7 +93,6 @@ public:
     bool keep_ambig() const { return m_keep_ambig; }
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
-    bool ambig_no_flip() const { return m_ambig_no_flip; }
 
 protected:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -105,7 +104,6 @@ protected:
     std::string m_help_message;
     size_t m_memory = 1e10;
     int m_allow_inter = false;
-    int m_ambig_no_flip = false;
     int m_include_nonfounders = false;
     int m_keep_ambig = false;
     int m_print_all_scores = false;
@@ -114,7 +112,7 @@ protected:
     int m_user_no_default = false;
     bool m_provided_memory = false;
     bool m_set_delim = false;
-
+    bool m_ran_base_check = false;
     BaseFile m_base_info;
     CalculatePRS m_prs_info;
     Clumping m_clump_info;
@@ -145,14 +143,31 @@ protected:
      * \param reporter is the object to report all messages
      * \return true if we want to continue the program
      */
+
+    bool init(int argc, char* argv[], bool& early_termination,
+              Reporter& reporter);
     bool parse_command(int argc, char* argv[], const char* optString,
-                       const struct option longOpts[], Reporter& reporter);
-    void usage();
+                       const struct option longOpts[], bool& early_termination,
+                       Reporter& reporter);
+
     void set_help_message();
 
     bool clump_check();
     bool ref_check();
     bool covariate_check();
+    std::unordered_set<std::string> get_cov_names();
+    std::tuple<std::vector<std::string>,
+               std::unordered_map<std::string, size_t>>
+    get_covariate_header();
+    size_t
+    find_cov_idx(const std::unordered_set<std::string>& included,
+                 const std::unordered_map<std::string, size_t>& ref_index,
+                 std::string& missing);
+    void reorganize_cov_name(const std::vector<std::string>& cov_header);
+    bool
+    process_factor_cov(const std::unordered_set<std::string>& included,
+                       const std::unordered_map<std::string, size_t>& ref_index,
+                       const std::unordered_set<std::string> ori_input);
     bool filter_check();
     bool misc_check();
     bool prset_check();
@@ -164,28 +179,15 @@ protected:
     static std::vector<std::string>
     transform_covariate(const std::string& cov_in);
 
-
+    static size_t find_first_end(const std::string_view& cov, const size_t idx);
+    static std::vector<size_t> parse_range(const std::string_view& cov);
+    static std::vector<size_t> get_range(const std::string_view& cov,
+                                         const size_t start, const size_t end);
+    static void update_covariate_range(const std::vector<size_t>& range,
+                                       std::vector<std::string>& res);
     /////////////////////////////////////////////////
     /// REFACTORED FUNCTIONS
     /////////////////////////////////////////////////
-
-    int32_t maximum_thread()
-    {
-        int32_t max_threads = 1;
-#if defined(WIN32) || defined(_WIN32) \
-    || defined(__WIN32) && !defined(__CYGWIN__)
-        // max thread estimation using windows
-        SYSTEM_INFO sysinfo;
-        GetSystemInfo(&sysinfo);
-        max_threads = sysinfo.dwNumberOfProcessors;
-        int32_t known_procs = max_threads;
-#else
-        int32_t known_procs =
-            static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN));
-        max_threads = (known_procs == -1) ? 1 : known_procs;
-#endif
-        return max_threads;
-    }
 
     inline void set_string(const std::string& input, const std::string& c,
                            size_t base_index)
@@ -211,10 +213,15 @@ protected:
         target = input;
         target_boolean = true;
     }
+
     template <typename T>
     inline bool convert_to_numeric_vector(const std::vector<std::string>& token,
                                           std::vector<T>& target)
     {
+        if (target.empty())
+            target.reserve(token.size());
+        else
+            target.reserve(target.size() + token.size());
         try
         {
             for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
@@ -232,9 +239,7 @@ protected:
     {
         // should always have an input
         if (input.empty()) return false;
-        std::string comma = "";
-        if (m_parameter_log.find(c) != m_parameter_log.end()) { comma = ","; }
-        m_parameter_log[c].append(comma + input);
+        append_log(c, input);
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
@@ -272,6 +277,7 @@ protected:
         }
         throw std::runtime_error("Error: Undefined input");
     }
+
     size_t number_boolean(const std::string& input, bool& result)
     {
         size_t bool_length = 0;
@@ -287,8 +293,16 @@ protected:
         {
             if (bool_length != input.length())
             {
-                return misc::string_to_size_t(
+                // if the boolean string doesn't take up the whole of the input
+                // string
+                size_t num_repeat = misc::convert<size_t>(
                     input.substr(0, input.length() - bool_length).c_str());
+                if (static_cast<int>(num_repeat) < 0)
+                {
+                    throw std::runtime_error(
+                        "Error: Negative number of boolean required. ");
+                }
+                return num_repeat;
             }
             else
             {
@@ -300,6 +314,7 @@ protected:
             throw std::runtime_error("Error: None Numeric Pattern");
         }
     }
+    inline bool validate_command(Reporter& reporter);
     inline bool parse_binary_vector(const std::string& input,
                                     const std::string& c,
                                     std::vector<bool>& target)
@@ -321,7 +336,7 @@ protected:
             for (auto&& bin : token)
             {
                 // check if this is true or false, if, not, try parsing
-                std::transform(bin.begin(), bin.end(), bin.begin(), ::toupper);
+                misc::to_upper(bin);
                 try
                 {
                     bool value = false;
@@ -350,6 +365,7 @@ protected:
         return true;
     }
 
+    // return false when we can't extract the unit
     inline bool extract_unit(const std::string& input, double& value,
                              std::string& unit)
     {
@@ -368,14 +384,19 @@ protected:
             {
             }
         }
-        if (!valid) return false;
-        if (unit_length == 0) { unit = "b"; }
+        if (!valid)
+            return false;
+        else if (unit_length == 0)
+        {
+            unit = "";
+        }
         else
         {
             unit = input.substr(input.length() - unit_length);
         }
         return true;
     }
+
     inline size_t unit_power(const std::string& unit)
     {
         const std::unordered_map<std::string, size_t> unit_map = {
@@ -390,7 +411,7 @@ protected:
     {
         check_duplicate(c);
         std::string in = input;
-        std::transform(in.begin(), in.end(), in.begin(), ::tolower);
+        misc::to_lower(in);
         m_parameter_log[c] = in;
         const size_t weight = memory ? 1024 : 1000;
         double value;
@@ -400,18 +421,44 @@ protected:
             m_error_message.append("Error: Invalid input: " + in + "\n");
             return false;
         }
+        if (value <= 0)
+        {
+            m_error_message.append("Error: Non-zero positive number required. "
+                                   + misc::to_string(target)
+                                   + " provided, please check if you have "
+                                     "provided the correct input\n");
+            return false;
+        }
         size_t unit_power_level;
         try
         {
-            unit_power_level = unit_power(unit) + default_power;
+            // only use default when unit isn't provided
+            if (unit.empty()) { unit_power_level = default_power; }
+            else
+                unit_power_level = unit_power(unit);
         }
         catch (...)
         {
             m_error_message.append("Error: Invalid input: " + in + "\n");
             return false;
         }
-        value *= pow(weight, unit_power_level);
-        if (trunc(value) != value && value < 0)
+        double power = pow(weight, unit_power_level);
+        if (value > std::numeric_limits<size_t>::max()
+            || power > std::numeric_limits<size_t>::max()
+            || misc::overflow<double>(value, power))
+        {
+            m_error_message.append("Error: Value input is exceptionally large. "
+                                   "PRSice won't be able to handle this\n");
+            return false;
+        }
+        value *= power;
+        if (value > std::numeric_limits<size_t>::max())
+        {
+            m_error_message.append("Error: Value input is exceptionally large. "
+                                   "PRSice won't be able to handle this\n");
+            return false;
+        }
+        if (trunc(value) != value)
         {
             m_error_message.append("Error: Non-integer value obtained: "
                                    + misc::to_string(target) + "\n");
@@ -457,18 +504,21 @@ protected:
             return false;
         }
     }
-
-    inline void load_string_vector(const std::string& input,
-                                   const std::string& c,
-                                   std::vector<std::string>& target)
+    inline void append_log(const std::string& c, const std::string& input)
     {
-        if (input.empty()) return;
         if (m_parameter_log.find(c) == m_parameter_log.end())
         { m_parameter_log[c] = input; }
         else
         {
             m_parameter_log[c] = "," + input;
         }
+    }
+    inline void load_string_vector(const std::string& input,
+                                   const std::string& c,
+                                   std::vector<std::string>& target)
+    {
+        if (input.empty()) return;
+        append_log(c, input);
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
@@ -482,15 +532,14 @@ protected:
 
     inline bool set_memory(const std::string& input)
     {
-        bool error = parse_unit_value(input, "memory", 2, m_memory, true);
-        return !error;
+        return parse_unit_value(input, "memory", 2, m_memory, true);
     }
 
     inline bool set_missing(const std::string& in)
     {
         std::string input = in;
         check_duplicate("missing");
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+        misc::to_lower(input);
         switch (input.at(0))
         {
         case 'c':
@@ -520,7 +569,7 @@ protected:
     inline bool set_model(const std::string& in)
     {
         std::string input = in;
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+        misc::to_lower(input);
         check_duplicate("model");
         switch (input.at(0))
         {
@@ -550,7 +599,7 @@ protected:
     inline bool set_score(const std::string& in)
     {
         std::string input = in;
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
+        misc::to_lower(input);
         check_duplicate("score");
         if (input == "avg") { m_prs_info.scoring_method = SCORING::AVERAGE; }
         else if (input == "std")
@@ -580,7 +629,7 @@ protected:
                  bool no_default, bool case_sensitive = true,
                  bool print_error = true)
     {
-        if ((no_default && !static_cast<bool>(m_base_info.has_column[index]))
+        if ((no_default && !m_base_info.has_column[index])
             || m_base_info.column_name[index].empty())
         {
             m_base_info.has_column[index] = false;
@@ -592,6 +641,7 @@ protected:
         if (has_col) { m_base_info.column_index[index] = col_index; }
         else if (m_base_info.has_column[index] && print_error)
         {
+            // cannot find column but user has provided a column name
             m_error_message.append(warning + ": "
                                    + m_base_info.column_name[index]
                                    + " not found in base file\n");
@@ -605,50 +655,55 @@ protected:
     inline bool set_base_info_threshold(const std::vector<std::string>& ref)
     {
         const std::vector<std::string> info =
-            misc::split(m_base_info.column_name[+BASE_INDEX::INFO], ",");
+            misc::split(m_base_info.column_name[+BASE_INDEX::INFO], ":");
+        if (info.size() != 2)
+        {
+            m_error_message.append("Error: Invalid format of "
+                                   "--base-info. Should be "
+                                   "ColName:Threshold.\n");
+            return false;
+        }
         const bool has_input = m_base_info.has_column[+BASE_INDEX::INFO];
 
         size_t index;
+        // first, try and see if the header can be found in base
         const bool found = index_check(info[0], ref, index);
         if (found) m_base_info.column_index[+BASE_INDEX::INFO] = index;
         m_base_info.has_column[+BASE_INDEX::INFO] = found;
-        if (!found)
+        if (!has_input && !found)
         {
-            if (has_input)
+            // do nothing, because we can't find the default
+        }
+        else
+        {
+            if (!found)
             {
                 m_error_message.append("Warning: INFO field not found in base "
                                        "file, will ignore INFO filtering\n");
             }
-        }
-        else if (info.size() != 2) // assume default always valid
-        {
-            m_error_message.append("Error: Invalid format of "
-                                   "--base-info. Should be "
-                                   "ColName,Threshold.\n");
-            return false;
-        }
-        try
-        {
-            m_base_filter.info_score = misc::convert<double>(info[1]);
-            if (!misc::within_bound<double>(m_base_filter.info_score, 0.0, 1.0))
+            else
             {
-                if (has_input)
+                // we have found valid formatted info, now check if threshold is
+                // correct
+                try
                 {
-                    m_error_message.append("Error: Base INFO threshold "
-                                           "must be within 0 and 1!\n");
+                    m_base_filter.info_score = misc::convert<double>(info[1]);
+                    if (!misc::within_bound<double>(m_base_filter.info_score,
+                                                    0.0, 1.0))
+                    {
+                        m_error_message.append("Error: Base INFO threshold "
+                                               "must be within 0 and 1!\n");
+                        return false;
+                    }
+                }
+                catch (...)
+                {
+                    m_error_message.append(
+                        "Error: Invalid argument passed to --base-info: "
+                        + m_base_info.column_name[+BASE_INDEX::INFO]
+                        + "! Second argument must be numeric\n");
                     return false;
                 }
-            }
-        }
-        catch (...)
-        {
-            if (has_input)
-            {
-                m_error_message.append(
-                    "Error: Invalid argument passed to --base-info: "
-                    + m_base_info.column_name[+BASE_INDEX::INFO]
-                    + "! Second argument must be numeric\n");
-                return false;
             }
         }
         return true;
@@ -660,6 +715,13 @@ protected:
                      const std::vector<std::string>& detail,
                      size_t& column_index, int& has_column, double& maf)
     {
+        if (detail.size() != 2)
+        {
+            throw std::runtime_error(
+                "Error: Invalid format of --base-maf. "
+                "Should be ColName:Threshold."
+                "or ColName:Threshold,ColName:Threshold.\n");
+        }
         size_t index = 0;
         bool found = index_check(detail[0], ref, index);
         has_column = found;
@@ -669,7 +731,7 @@ protected:
             m_error_message.append(
                 "Warning: MAF field not found in base file. "
                 "Will not perform MAF filtering on the base file\n");
-            return true;
+            return false;
         }
         double cur_maf;
         try
@@ -677,18 +739,16 @@ protected:
             cur_maf = misc::convert<double>(detail[1]);
             if (!misc::within_bound<double>(cur_maf, 0.0, 1.0))
             {
-                m_error_message.append("Error: Base MAF threshold must "
-                                       "be within 0 and 1!\n");
-                return false;
+                throw std::runtime_error("Error: Base MAF threshold must "
+                                         "be within 0 and 1!\n");
             }
         }
         catch (...)
         {
-            m_error_message.append(
+            throw std::runtime_error(
                 "Error: Invalid argument passed to --base-maf: "
                 + m_base_info.column_name[+BASE_INDEX::MAF]
                 + "! Threshold must be numeric\n");
-            return false;
         }
         maf = cur_maf;
         return true;
@@ -698,35 +758,53 @@ protected:
     {
         const std::string maf_error =
             "Error: Invalid format of --base-maf. "
-            "Should be ColName,Threshold."
-            "or ColName,Threshold:ColName,Threshold.\n";
+            "Should be ColName:Threshold."
+            "or ColName:Threshold,ColName:Threshold.\n";
         std::vector<std::string> case_control =
-            misc::split(m_base_info.column_name[+BASE_INDEX::MAF], ":");
-        const bool print_error = m_base_info.has_column[+BASE_INDEX::MAF];
+            misc::split(m_base_info.column_name[+BASE_INDEX::MAF], ",");
+        const bool user_require_maf_filter =
+            m_base_info.has_column[+BASE_INDEX::MAF];
         // only process the maf filter if it is provided
-        if (!print_error) return true;
+        if (!user_require_maf_filter) return true;
         if (case_control.size() > 2)
         {
-            if (print_error) { m_error_message.append(maf_error); }
+            if (user_require_maf_filter) { m_error_message.append(maf_error); }
             return false;
         }
         std::vector<std::string> detail;
-        if (case_control.size() > 0)
+        // process the control filter threshold
+        detail = misc::split(case_control.front(), ":");
+        try
         {
-            detail = misc::split(case_control.front(), ",");
-            return process_maf(
+            // TODO: Still think the best course of action is to error out
+            // instead of silently dropping a filtering option
+            bool parse_control_ok = process_maf(
                 ref, detail, m_base_info.column_index[+BASE_INDEX::MAF],
                 m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
+            // if we can't parse the control, we will return true (say
+            // everything is ok) but will ignore MAF filtering
+            if (!parse_control_ok) return true;
+            if (case_control.size() == 2)
+            {
+                detail = misc::split(case_control.back(), ":");
+                bool parse_case_ok =
+                    process_maf(ref, detail,
+                                m_base_info.column_index[+BASE_INDEX::MAF_CASE],
+                                m_base_info.has_column[+BASE_INDEX::MAF_CASE],
+                                m_base_filter.maf_case);
+                // if we can't parse the case MAF filtering threshold, we will
+                // also disable the fitering of the control
+                if (!parse_case_ok)
+                    m_base_info.has_column[+BASE_INDEX::MAF] = false;
+                return true;
+            }
+            return true;
         }
-        if (case_control.size() == 2)
+        catch (const std::runtime_error& er)
         {
-            detail = misc::split(case_control.back(), ",");
-            return process_maf(ref, detail,
-                               m_base_info.column_index[+BASE_INDEX::MAF_CASE],
-                               m_base_info.has_column[+BASE_INDEX::MAF_CASE],
-                               m_base_filter.maf_case);
+            m_error_message.append(er.what());
+            return false;
         }
-        return true;
     }
     /*!
      * \brief Get the column index based on file header and the input string
@@ -743,10 +821,7 @@ protected:
         for (size_t i = 0; i < ref.size(); ++i)
         {
             tmp = ref[i];
-            if (!case_sensitive)
-            {
-                std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::toupper);
-            }
+            if (!case_sensitive) { misc::to_upper(tmp); }
             if (target == tmp)
             {
                 index = i;
@@ -758,8 +833,28 @@ protected:
 
     bool get_statistic_column(const std::vector<std::string>& column_names);
     bool base_check();
+    bool base_column_check(std::vector<std::string>& column_names);
     bool get_statistic_flag();
     std::string get_program_header(const std::string& name);
+
+
+    int32_t maximum_thread()
+    {
+        int32_t max_threads = 1;
+#if defined(WIN32) || defined(_WIN32) \
+    || defined(__WIN32) && !defined(__CYGWIN__)
+        // max thread estimation using windows
+        SYSTEM_INFO sysinfo;
+        GetSystemInfo(&sysinfo);
+        max_threads = sysinfo.dwNumberOfProcessors;
+        int32_t known_procs = max_threads;
+#else
+        int32_t known_procs =
+            static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN));
+        max_threads = (known_procs == -1) ? 1 : known_procs;
+#endif
+        return max_threads;
+    }
 };
 
 #endif // COMMANDER_H

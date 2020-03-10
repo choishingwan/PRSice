@@ -28,6 +28,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #if defined __APPLE__
@@ -159,9 +160,10 @@ inline bool to_bool(const std::string& input)
 }
 
 template <typename T>
-inline bool within_bound(const T &input, const T& low_bound, const T &up_bound){
+inline bool within_bound(const T& input, const T& low_bound, const T& up_bound)
+{
     assert(low_bound <= up_bound);
-    return !(input < low_bound && input > up_bound);
+    return !(input < low_bound || input > up_bound);
 }
 
 // TODO: Delete this, doesn't seems to give robust answer
@@ -297,10 +299,27 @@ inline std::vector<std::string> split(const std::string& seq,
     return result;
 }
 
+
+inline std::vector<std::string_view> split(std::string_view str,
+                                           std::string_view delims = " ")
+{
+    std::vector<std::string_view> output;
+    // output.reserve(str.size() / 2);
+    for (auto first = str.data(), second = str.data(),
+              last = first + str.size();
+         second != last && first != last; first = second + 1)
+    {
+        second = std::find_first_of(first, last, std::cbegin(delims),
+                                    std::cend(delims));
+        if (first != second) output.emplace_back(first, second - first);
+    }
+    return output;
+}
+
 inline void split(std::vector<std::string>& result, const std::string& seq,
                   const std::string& separators = "\t ")
 {
-    std::size_t prev = 0, pos, idx= 0;
+    std::size_t prev = 0, pos, idx = 0;
     const size_t init_size = result.size();
     // assuming we have the same size
     // result.clear();
@@ -328,10 +347,9 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
         }
         ++idx;
     }
-    if(idx < init_size){
-        result.resize(idx);
-    }
+    if (idx < init_size) { result.resize(idx); }
 }
+
 template <typename T>
 inline T convert(const std::string& str)
 {
@@ -343,6 +361,7 @@ inline T convert(const std::string& str)
     { throw std::runtime_error("Unable to convert the input"); }
     return obj;
 }
+
 template <typename T>
 inline std::string to_string(T value)
 {
@@ -350,6 +369,35 @@ inline std::string to_string(T value)
     out << value;
     return out.str();
 }
+
+// NOTE: Didn't work for non-ASCII characters
+inline void to_upper(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
+}
+inline void to_lower(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+inline void to_upper(const std::string& input, std::string& out)
+{
+    out.resize(input.size());
+    std::transform(input.begin(), input.end(), out.begin(), ::toupper);
+}
+inline void to_lower(const std::string& input, std::string& out)
+{
+    out.resize(input.size());
+    std::transform(input.begin(), input.end(), out.begin(), ::tolower);
+}
+template <class T>
+inline bool overflow(const T a, const T b)
+{
+    if (a == 0 || b == 0) return false;
+    T result = a * b;
+    return !(a == result / b);
+}
+
+
 // trim functions from https://stackoverflow.com/a/217605
 // trim from start (in place)
 inline void ltrim(std::string& s)
@@ -1100,11 +1148,18 @@ inline size_t string_to_size_t(const char* p)
 // from https://stackoverflow.com/a/874160
 inline bool hasEnding(const std::string& fullString, const std::string& ending)
 {
-    if (fullString.length() >= ending.length())
+    if (fullString.empty())
+        throw std::runtime_error(
+            "Error: Cannot look for ending of an empty string");
+    else if (ending.empty())
+        throw std::runtime_error(
+            "Error: Undefined behaviour. Cannot look for empty ending in "
+            "string");
+    else if (fullString.length() >= ending.length())
     {
-        return (0
-                == fullString.compare(fullString.length() - ending.length(),
-                                      ending.length(), ending));
+        return (fullString.compare(fullString.length() - ending.length(),
+                                   ending.length(), ending)
+                == 0);
     }
     else
     {
