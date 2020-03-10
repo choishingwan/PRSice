@@ -1920,6 +1920,7 @@ test_base_check(const std::string& command,
     mockCommander commander;
     if (!command.empty()) commander.parse_command_wrapper(command);
     bool success = commander.base_column_check_wrapper(column_name);
+    if (!success) std::cerr << commander.get_error() << std::endl;
     return {success, commander.get_base(), commander.get_base_qc(),
             commander.get_base_name()};
 }
@@ -1970,13 +1971,140 @@ TEST(COMMAND_VALIDATION, BASE_CHECK)
     std::tie(success, base, qc, name) = test_base_check(
         "--base Base --index --snp SNP --pvalue P --stat BETA --a1 A1", col);
     ASSERT_FALSE(success);
+    // invalid because we can't guess beta or or
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --index --snp 1 --pvalue 2 --stat 3 --a1 4 ", col);
+    ASSERT_FALSE(success);
+    // valid index syntex
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --index --snp 1 --pvalue 2 --stat 3 --a1 4 --beta", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::RS]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::RS], 1);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::P]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::P], 2);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::STAT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::STAT], 3);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::EFFECT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::EFFECT], 4);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::MAX], 4);
+    // negative index
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --index --snp 1 --pvalue -2 --stat 3 --a1 4", col);
+    ASSERT_FALSE(success);
+    // multiple beta or
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --beta --or", col);
+    ASSERT_FALSE(success);
+    // now use non-default names to test if the has_column and column_index is
+    // set correctly
+    col.clear();
+    col = {"pvalue", "z-score", "coordinate", "effect", "non-effect",
+           "empty",  "pad",     "check",      "rsid",   "chrom"};
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --stat z-score --pvalue pvalue --a1 effect --a2 "
+        "non-effect --snp rsid --chr chrom --bp coordinate --beta",
+        col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::STAT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::STAT], 1);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::P]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::P], 0);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::EFFECT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::EFFECT], 3);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::NONEFFECT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::NONEFFECT], 4);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::RS]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::RS], 8);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::CHR]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::CHR], 9);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::BP]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::BP], 2);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::MAX], 9);
+    // fail because we won't be able to determine beta or OR
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --stat z-score --pvalue pvalue --a1 effect --a2 "
+        "non-effect --snp rsid --chr chrom --bp coordinate",
+        col);
+    ASSERT_FALSE(success);
+    // fail, because stat not found
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --stat OR --pvalue pvalue --a1 effect --a2 "
+        "non-effect --snp rsid --chr chrom --bp coordinate --beta",
+        col);
+    ASSERT_FALSE(success);
+    // fail, because pvalue not found
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --stat z-score --pvalue P-value --a1 effect --a2 "
+        "non-effect --snp rsid --chr chrom --bp coordinate --beta",
+        col);
+    ASSERT_FALSE(success);
+    // fail because A1 not found
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --stat z-score --pvalue pvalue --a1 A1 --a2 "
+        "non-effect --snp rsid --chr chrom --bp coordinate --beta",
+        col);
+    ASSERT_FALSE(success);
+    // fail because SNP not found
+    std::tie(success, base, qc, name) = test_base_check(
+        "--base Base --stat z-score --pvalue pvalue --a1 effect --a2 "
+        "non-effect --snp SNP --chr chrom --bp coordinate --beta",
+        col);
+    ASSERT_FALSE(success);
 
-    // check negative index
-    // check index work with correct input (set has_column and column_index)
-    // check has_column and column_index is correctly set each time
     // check different way of determining --stat and --beta / --or
-    // check situation where we have multiple --beta or --or
-    // check that we correctly error out when required columns are not found
+    col.clear();
+    col = {"P", "or", "CHR", "LOC", "A1", "A2", "SNP"};
+    std::tie(success, base, qc, name) = test_base_check("--base Base", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.is_or);
+    ASSERT_FALSE(base.is_beta);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::STAT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::STAT], 1);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --stat or", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.is_or);
+    ASSERT_FALSE(base.is_beta);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --or", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::STAT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::STAT], 1);
+    // this should fail as we can't find an beta column
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --beta", col);
+    ASSERT_FALSE(success);
+    col.clear();
+    col = {"P", "CHR", "beta", "LOC", "A1", "A2", "SNP"};
+    std::tie(success, base, qc, name) = test_base_check("--base Base", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.is_or);
+    ASSERT_TRUE(base.is_beta);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::STAT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::STAT], 2);
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --stat beta", col);
+    ASSERT_TRUE(success);
+    ASSERT_FALSE(base.is_or);
+    ASSERT_TRUE(base.is_beta);
+    // check stat column guessing
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --beta", col);
+    ASSERT_TRUE(success);
+    ASSERT_TRUE(base.has_column[+BASE_INDEX::STAT]);
+    ASSERT_EQ(base.column_index[+BASE_INDEX::STAT], 2);
+    // fail because there isn't an or column
+    std::tie(success, base, qc, name) =
+        test_base_check("--base Base --or", col);
+    ASSERT_FALSE(success);
+    // fail because file contain both col.clear();
+    col = {"P", "CHR", "beta", "LOC", "A1", "A2", "SNP", "or"};
+    std::tie(success, base, qc, name) = test_base_check("--base Base", col);
+    ASSERT_FALSE(success);
+    // check the QC related flags (--base-info and --base-maf) esp with base
+    // maf, test case control
 }
+TEST(COMMAND_VALIDATION, BASE_QC_CHECK) {}
 
 #endif // COMMANDER_TEST_H
