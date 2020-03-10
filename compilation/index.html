@@ -191,7 +191,7 @@
           <div role="main">
             <div class="section">
               
-                <h1 id="introduction">Introduction <a href="https://travis-ci.org/choishingwan/PRSice"><img alt="Build Status" src="https://travis-ci.org/choishingwan/PRSice.svg?branch=master" /></a><a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
+                <h1 id="introduction">Introduction <a href="https://travis-ci.org/choishingwan/PRSice"><img alt="Build Status" src="https://travis-ci.org/choishingwan/PRSice.svg?branch=master" /></a><a href="https://doi.org/10.5281/zenodo.3703335"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg" /></a><a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h1>
 <p>Here is the guideline for anyone who might want to compile PRSice from source. </p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -210,7 +210,7 @@ Then the PRSice executable will be located within PRSice/bin</p>
 <p>If you don't have git installed, you can still do
 <div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.8 &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.2.8
+cd PRSice-2.2.13
 mkdir build
 cd build
 cmake ../
@@ -221,17 +221,18 @@ make
 <p>The above procedure was not tested on Windows</p>
 </div>
 <h1 id="without-cmake">Without CMake<a class="headerlink" href="#without-cmake" title="Permanent link">&para;</a></h1>
-<p>Without CMake, you can simply do the following
+<p>Without CMake, you will need to first download the <a href="https://gitlab.com/libeigen/eigen">eigen library</a></p>
+<p>You can then do the following
 <div class="codehilite"><pre><span></span>git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
-g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+g++ -std=c++17 -O3 -DNDEBUG -march=native -isystem lib -isystem <span class="cp">${</span><span class="n">PATH_TO_EIGEN</span><span class="cp">}</span> -I inc src/*.cpp -lpthread -lz -o PRSice
 </pre></div>
 Then PRSice will be located in the current directory</p>
 <p>Alternatively, if you don't have git installed, you can still do
-<div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.8 &gt; PRSice.tar.gz
+<div class="codehilite"><pre><span></span>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.2.13 &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
-cd PRSice-2.2.8.beta
-g++ -std=c++11 -O3 -DNDEBUG -march=native -isystem lib -I inc src/*.cpp -lpthread -lz -o PRSice
+cd PRSice-2.2.13
+g++ -std=c++17 -O3 -DNDEBUG -march=native -isystem lib -isystem <span class="cp">${</span><span class="n">PATH_TO_EIGEN</span><span class="cp">}</span>  -I inc src/*.cpp -lpthread -lz -o PRSice
 </pre></div></p>
 <h1 id="intel-mkl">Intel MKL<a class="headerlink" href="#intel-mkl" title="Permanent link">&para;</a></h1>
 <p>If you know how to setup the Intel <span class="arithmatex">\(\circledR\)</span> MKL library, you can compile PRSice with it to speed up the processing speed. You can use <a href="https://software.intel.com/en-us/articles/intel-mkl-link-line-advisor/">this</a> to help you with the linking.</p>
