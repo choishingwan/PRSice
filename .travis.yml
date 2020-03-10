@@ -25,6 +25,8 @@ before_install:
     - export CMAKE_OPTIONS=${CMAKE_OPTIONS}" "${ENV_CMAKE_OPTIONS}
     - export CXX_FLAGS=${CXX_FLAGS}" "${ENV_CXX_FLAGS}
     #- sudo pip install --user lcov
+    # Try to download test data
+    wget https://www.dropbox.com/s/p94isegg18z3wuo/Toy_Data.zip?dl=1
 
 install:
     - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
@@ -41,14 +43,15 @@ addons:
     packages:
       - cmake-data
       - cmake
-      - cppcheck
 
 script:
+  - unzip Toy_Data.zip
   - mkdir build
   - cd build
-  - cmake -DCODE_COVERAGE=ON -DBUILD_TESTING=ON ../
+  - cmake -DCODE_COVERAGE=ON -DBUILD_TESTING=ON  -DCMAKE_CXX_FLAGS=-pg -DCMAKE_EXE_LINKER_FLAGS=-pg -DCMAKE_SHARED_LINKER_FLAGS=-pg  ../
   - make
-  - cppcheck --quiet --error-exitcode=1
+  - gprof ../bin/PRSice --base ../TOY_BASE_GWAS.assoc --target ../TOY_TARGET_DATA > gprof.log
+  - head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   #- ../bin/runUnitTests ../test/data
 after_success:
