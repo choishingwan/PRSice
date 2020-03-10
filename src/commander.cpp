@@ -1726,6 +1726,15 @@ bool Commander::misc_check()
         m_error_message.append(
             "Error: Number of thread must be larger than 1\n");
     }
+    if (m_keep_ambig)
+    {
+        m_error_message.append(
+            "Warning: By selecting --keep-ambig, PRSice assume the base and "
+            "target are reporting alleles on the same strand and will "
+            "therefore only perform dosage flip for the ambiguous SNPs. If you "
+            "are unsure of what the strand is, then you should not select the "
+            "--keep-ambig option\n");
+    }
     if (!m_perm_info.run_perm && !m_perm_info.run_set_perm
         && m_perm_info.logit_perm)
     {
