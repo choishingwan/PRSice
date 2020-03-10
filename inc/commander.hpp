@@ -91,7 +91,6 @@ public:
     std::string exclude_file() const { return m_exclude_file; }
     std::string extract_file() const { return m_extract_file; }
     bool keep_ambig() const { return m_keep_ambig; }
-    bool force_flip_ambig() const { return m_force_ambig_flip; }
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
 
@@ -107,7 +106,6 @@ protected:
     int m_allow_inter = false;
     int m_include_nonfounders = false;
     int m_keep_ambig = false;
-    int m_force_ambig_flip = false;
     int m_print_all_scores = false;
     int m_print_snp = false;
     int m_ultra_aggressive = false;

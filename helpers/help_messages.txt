@@ -259,8 +259,6 @@ m_help_message =
        "    --keep-ambig            Keep ambiguous SNPs. Only use this option\n"
        "                            if you are certain that the base and target\n"
        "                            has the same A1 and A2 alleles\n"
-       "    --flip-ambig            Force flipping of ambiguous SNPs when they are kept.\n"
-       "                            Will also set the --keep-ambig flag\n"
        "    --logit-perm            When performing permutation, still use logistic\n"
        "                            regression instead of linear regression. This\n"
        "                            will substantially slow down PRSice\n"
