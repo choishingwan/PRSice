@@ -31,11 +31,11 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 8. Results plotted in several formats (bar plots, high-res plots, quantile plots)
 9. PRSet: function for calculating PRS across user-defined pathways / gene sets
 
-# Executable downloads
+# Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.12](https://github.com/choishingwan/PRSice/releases/download/2.2.12/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.12](https://github.com/choishingwan/PRSice/releases/download/2.2.12/PRSice_mac.zip) |
+| Linux 64-bit | [v2.2.13](https://github.com/choishingwan/PRSice/releases/download/2.2.13/PRSice_linux.zip) |
+| OS X 64-bit | [v2.2.13](https://github.com/choishingwan/PRSice/releases/download/2.2.13/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
@@ -48,12 +48,6 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 
     PRSet are currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
 
-!!! Caution
-	If you are performing PRSet analysis, or are planning to use the `--perm` or `--set-perm` function, please use the latest version as bugs related to these features have recently been fixed.
-
-	If you are expereiencing problem with "Unable to convert the input" error, that's likely due to NA in your covariate file. This problem is now fixed. 
-
-	If you are using either `--score`, `--model` or `--missing` parameter, please use version 2.2.12+ as 2.2.10 has a bug which cause PRsice to ignore these parameters
 
 # R Packages Requirements
 
