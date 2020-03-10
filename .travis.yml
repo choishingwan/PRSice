@@ -1,13 +1,9 @@
 language: cpp
-
+compiler: gcc
 branches:
   only:
   - master
-  - beta_testing
-
-compiler:
-  - gcc
-
+  
 sudo: false
 
 matrix:
@@ -20,11 +16,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-7
-      env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
-
-    - os: osx
-      osx_image: xcode8
       env:
         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
 
@@ -50,12 +41,14 @@ addons:
     packages:
       - cmake-data
       - cmake
+      - cppcheck
 
 script:
   - mkdir build
   - cd build
-  - cmake -DCODE_COVERAGE=OFF -DBUILD_TESTING=OFF ../
+  - cmake -DCODE_COVERAGE=ON -DBUILD_TESTING=ON ../
   - make
+  - cppcheck --quiet --error-exitcode=1
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   #- ../bin/runUnitTests ../test/data
 after_success:
