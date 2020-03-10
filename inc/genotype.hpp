@@ -428,11 +428,6 @@ public:
         m_keep_ambig = keep;
         return *this;
     }
-    Genotype& ambig_no_flip(bool keep)
-    {
-        m_ambig_no_flip = keep;
-        return *this;
-    }
     Genotype& reference()
     {
         m_is_ref = true;
@@ -555,7 +550,6 @@ protected:
     uint32_t m_num_female = 0;
     uint32_t m_num_ambig_sex = 0;
     uint32_t m_num_non_founder = 0;
-    bool m_ambig_no_flip = false;
     bool m_genotype_stored = false;
     bool m_use_proxy = false;
     bool m_has_prs_instruction = false;

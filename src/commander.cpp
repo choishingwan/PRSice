@@ -16,13 +16,37 @@
 
 #include "commander.hpp"
 
-Commander::Commander() { set_help_message(); }
-
-bool Commander::init(int argc, char* argv[], Reporter& reporter)
+Commander::Commander()
 {
+    set_help_message();
+    m_reference.is_ref = true;
+}
+
+bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
+{
+    bool early_termination = false;
+    bool error = init(argc, argv, early_termination, reporter);
+    if (early_termination) return false;
+    error |= validate_command(reporter);
+    std::string message = get_program_header(argv[0]);
+    for (auto&& com : m_parameter_log)
+    { message.append(" \\\n    --" + com.first + " " + com.second); }
+    message.append("\n");
+    reporter.report(message, false);
+    if (error) throw std::runtime_error(m_error_message);
+    if (!m_error_message.empty()) reporter.report(m_error_message);
+    return true;
+}
+bool Commander::init(int argc, char* argv[], bool& early_termination,
+                     Reporter& reporter)
+{
+    // initialize get_opt. To be honest, with PRSice usage, this shouldn't be
+    // required, but then it is required for our unit test where we repeatedly
+    // test the get_opt
+    optind = 0;
     if (argc <= 1)
     {
-        usage();
+        reporter.report(m_help_message);
         throw std::runtime_error("Please provide the required parameters");
     }
     const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
@@ -56,12 +80,11 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"all-score", no_argument, &m_print_all_scores, 1},
         {"beta", no_argument, &m_base_info.is_beta, 1},
         {"fastscore", no_argument, &m_p_thresholds.fastscore, 1},
-        {"full-back", required_argument, &m_prset.full_as_background, 1},
+        {"full-back", no_argument, &m_prset.full_as_background, 1},
         {"hard", no_argument, &m_target.hard_coded, 1},
         {"ignore-fid", no_argument, &m_pheno_info.ignore_fid, 1},
         {"index", no_argument, &m_base_info.is_index, 1},
         {"keep-ambig", no_argument, &m_keep_ambig, 1},
-        {"keep-ambig-as-is", no_argument, &m_ambig_no_flip, 1},
         {"logit-perm", no_argument, &m_perm_info.logit_perm, 1},
         {"no-clump", no_argument, &m_clump_info.no_clump, 1},
         {"non-cumulate", no_argument, &m_prs_info.non_cumulate, 1},
@@ -76,6 +99,8 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         // long flags, need to work on them
         {"A1", required_argument, nullptr, 0},
         {"A2", required_argument, nullptr, 0},
+        {"a1", required_argument, nullptr, 0},
+        {"a2", required_argument, nullptr, 0},
         {"background", required_argument, nullptr, 0},
         {"bar-levels", required_argument, nullptr, 0},
         {"base-info", required_argument, nullptr, 0},
@@ -124,12 +149,13 @@ bool Commander::init(int argc, char* argv[], Reporter& reporter)
         {"wind-3", required_argument, nullptr, 0},
         {"x-range", required_argument, nullptr, 0},
         {nullptr, 0, nullptr, 0}};
-    return parse_command(argc, argv, optString, longOpts, reporter);
+    return parse_command(argc, argv, optString, longOpts, early_termination,
+                         reporter);
 }
 
 bool Commander::parse_command(int argc, char* argv[], const char* optString,
                               const struct option longOpts[],
-                              Reporter& reporter)
+                              bool& early_termination, Reporter& reporter)
 {
     int32_t max_threads = maximum_thread();
     int longIndex = 0;
@@ -146,9 +172,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             command = longOpts[longIndex].name;
             if (longOpts[longIndex].flag != nullptr) break;
             // reorganize all long ops according to alphabetical order
-            else if (command == "A1")
+            else if (command == "A1" || command == "a1")
                 set_string(optarg, command, +BASE_INDEX::EFFECT);
-            else if (command == "A2")
+            else if (command == "A2" || command == "a2")
                 set_string(optarg, command, +BASE_INDEX::NONEFFECT);
             else if (command == "background")
                 set_string(optarg, command, m_prset.background);
@@ -171,7 +197,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, command, +BASE_INDEX::CHR);
             else if (command == "clump-kb")
             {
-                error |= !parse_unit_value(optarg, command, 2,
+                error |= !parse_unit_value(optarg, command, 1,
                                            m_clump_info.distance);
                 m_clump_info.provided_distance = true;
             }
@@ -352,17 +378,46 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                           m_p_thresholds.set_threshold);
             break;
         case 'h':
-        case '?': usage(); return false;
+            reporter.report(m_help_message);
+            early_termination = true;
+            return true;
         case 'v':
             std::cerr << version << " (" << date << ") " << std::endl;
-            return false;
+            early_termination = true;
+            return true;
+        case '?':
         default:
-            throw "Error: Undefined operator, please use --help for more "
+            throw "Error: Undefined operator, please use "
+                  "--help for more "
                   "information!";
         }
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
-    error |= !base_check();
+    if (m_allow_inter) m_parameter_log["allow-inter"] = "";
+    if (m_p_thresholds.fastscore) m_parameter_log["fastscore"] = "";
+    if (m_pheno_info.ignore_fid) m_parameter_log["ignore-fid"] = "";
+    if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
+    if (m_base_info.is_index) m_parameter_log["index"] = "";
+    if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
+    if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
+    if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
+    if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
+    if (m_prs_info.no_regress) m_parameter_log["no-regress"] = "";
+    if (m_prs_info.non_cumulate) m_parameter_log["non-cumulate"] = "";
+    if (m_print_all_scores) m_parameter_log["all-score"] = "";
+    if (m_print_snp) m_parameter_log["print-snp"] = "";
+    if (m_base_info.is_beta) m_parameter_log["beta"] = "";
+    if (m_base_info.is_or) m_parameter_log["or"] = "";
+    if (m_target.hard_coded) m_parameter_log["hard"] = "";
+    if (m_ultra_aggressive) m_parameter_log["ultra"] = "";
+    if (m_prs_info.use_ref_maf) m_parameter_log["use-ref-maf"] = "";
+    if (m_user_no_default) m_parameter_log["no-default"] = "";
+    return error;
+}
+
+bool Commander::validate_command(Reporter& reporter)
+{
+    bool error = !base_check();
     error |= !clump_check();
     error |= !covariate_check();
     error |= !filter_check();
@@ -388,36 +443,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             reporter.report(error_reason
                             + ". Maybe the path to file does not exists?");
         else
-            return false;
+            return true;
     }
-    if (m_allow_inter) m_parameter_log["allow-inter"] = "";
-    if (m_p_thresholds.fastscore) m_parameter_log["fastscore"] = "";
-    if (m_pheno_info.ignore_fid) m_parameter_log["ignore-fid"] = "";
-    if (m_include_nonfounders) m_parameter_log["nonfounders"] = "";
-    if (m_base_info.is_index) m_parameter_log["index"] = "";
-    if (m_keep_ambig) m_parameter_log["keep-ambig"] = "";
-    if (m_perm_info.logit_perm) m_parameter_log["logit-perm"] = "";
-    if (m_clump_info.no_clump) m_parameter_log["no-clump"] = "";
-    if (m_p_thresholds.no_full) m_parameter_log["no-full"] = "";
-    if (m_prs_info.no_regress) m_parameter_log["no-regress"] = "";
-    if (m_prs_info.non_cumulate) m_parameter_log["non-cumulate"] = "";
-    if (m_print_all_scores) m_parameter_log["all-score"] = "";
-    if (m_print_snp) m_parameter_log["print-snp"] = "";
-    if (m_base_info.is_beta) m_parameter_log["beta"] = "";
-    if (m_base_info.is_or) m_parameter_log["or"] = "";
-    if (m_target.hard_coded) m_parameter_log["hard"] = "";
-    if (m_ultra_aggressive) m_parameter_log["ultra"] = "";
-    if (m_prs_info.use_ref_maf) m_parameter_log["use-ref-maf"] = "";
-    if (m_user_no_default) m_parameter_log["no-default"] = "";
-    std::string message = get_program_header(argv[0]);
-    for (auto&& com : m_parameter_log)
-    { message.append(" \\\n    --" + com.first + " " + com.second); }
-    message.append("\n");
-    reporter.report(message, false);
-
-    if (!m_error_message.empty()) reporter.report(m_error_message);
-    if (error) throw std::runtime_error(m_error_message);
-    return true;
+    return error;
 }
 
 std::string Commander::get_program_header(const std::string& name)
@@ -429,7 +457,7 @@ std::string Commander::get_program_header(const std::string& name)
     char buffer[80];
     timeinfo = localtime(&start_time);
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);
-    std::string message = "\nPRSice " + version + " (" + date + ") \n";
+    std::string message = "\n\nPRSice " + version + " (" + date + ") \n";
     message.append("https://github.com/choishingwan/PRSice\n");
     message.append("(C) 2016-2020 Shing Wan (Sam) Choi and Paul F. O'Reilly\n");
     message.append("GNU General Public License v3\n\n");
@@ -457,31 +485,31 @@ void Commander::set_help_message()
         "usage: PRSice [options] <-b base_file> <-t target_file>\n"
         // Base file
         "\nBase File:\n"
-        "    --A1                    Column header containing allele 1 "
+        "    --a1                    Column header containing allele 1 "
         "(effective allele)\n"
         "                            Default: A1\n"
-        "    --A2                    Column header containing allele 2 "
+        "    --a2                    Column header containing allele 2 "
         "(non-effective allele)\n"
         "                            Default: A2\n"
         "    --base          | -b    Base association file\n"
         "    --base-info             Base INFO score filtering. Format should "
         "be\n"
-        "                            <Column name>,<Threshold>. SNPs with info "
+        "                            <Column name>:<Threshold>. SNPs with info "
         "\n"
         "                            score less than <Threshold> will be "
         "ignored\n"
         "                            Column name default: INFO\n"
         "                            Threshold default: 0.9\n"
         "    --base-maf             Base MAF filtering. Format should be\n"
-        "                            <Column name>,<Threshold>. SNPs with maf\n"
+        "                            <Column name>:<Threshold>. SNPs with maf\n"
         "                            less than <Threshold> will be ignored. "
         "An\n"
         "                            additional column can also be added "
         "(e.g.\n"
         "                            also filter MAF for cases), using the\n"
         "                            following format:\n"
-        "                            <Column name>,<Threshold>:<Column "
-        "name>,<Threshold>\n"
+        "                            <Column name>:<Threshold>,<Column "
+        "name>:<Threshold>\n"
         "    --beta                  Whether the test statistic is in the form "
         "of \n"
         "                            BETA or OR. If set, test statistic is "
@@ -891,8 +919,6 @@ void Commander::set_help_message()
           "                            if you are certain that the base and "
           "target\n"
           "                            has the same A1 and A2 alleles\n"
-          "    --keep-ambig-as-is      Will not flip ambiguous SNPs when they "
-          "are kept.\n"
           "                            Will also set the --keep-ambig flag\n"
           "    --logit-perm            When performing permutation, still use "
           "logistic\n"
@@ -949,10 +975,6 @@ void Commander::set_help_message()
           "    --help          | -h    Display this help message\n";
 }
 
-// Print the help message
-void Commander::usage() { fprintf(stderr, "%s\n", m_help_message.c_str()); }
-
-
 std::vector<std::string> get_base_header(const std::string& file)
 {
     if (file.empty())
@@ -993,9 +1015,11 @@ bool Commander::get_statistic_column(
     const std::vector<std::string>& column_names)
 {
     bool has_col;
+    // don't allow both OR and BETA to be set
     if (m_base_info.is_or && m_base_info.is_beta) return false;
     if (m_base_info.is_or || m_base_info.is_beta)
     {
+        // guess default based on --or and --beta
         const std::string target = m_base_info.is_or ? "OR" : "BETA";
         m_base_info.column_name[+BASE_INDEX::STAT] = target;
         has_col = in_file(column_names, +BASE_INDEX::STAT, "Error",
@@ -1037,11 +1061,12 @@ bool Commander::get_statistic_column(
         }
     }
 }
+
 bool Commander::get_statistic_flag()
 {
     std::string stat_temp = m_base_info.column_name[+BASE_INDEX::STAT];
-    std::transform(stat_temp.begin(), stat_temp.end(), stat_temp.begin(),
-                   ::toupper);
+    // guess flag based on stat provided
+    misc::to_upper(stat_temp);
     if (stat_temp == "OR")
     {
         m_base_info.is_or = true;
@@ -1061,11 +1086,19 @@ bool Commander::get_statistic_flag()
     }
     return true;
 }
+
 bool Commander::base_check()
 {
-    bool error = false;
+    m_ran_base_check = true;
     std::vector<std::string> column_names =
         get_base_header(m_base_info.file_name);
+    return base_column_check(column_names);
+}
+
+bool Commander::base_column_check(std::vector<std::string>& column_names)
+{
+
+    bool error = false;
     for (auto&& c : column_names) { misc::trim(c); }
     if (m_base_info.is_index)
     {
@@ -1113,8 +1146,11 @@ bool Commander::base_check()
     if (!m_user_no_default && !has_col)
     { error |= !get_statistic_column(column_names); }
     // Statistic is ok, but beta and or not provided
+    // use has_column vector instead of has_col as get_statistic_column might
+    // have found the state column?
     if (m_base_info.has_column[+BASE_INDEX::STAT])
     {
+        // flag not provided, need to guess
         if (!(m_base_info.is_or || m_base_info.is_beta))
         { error |= !get_statistic_flag(); }
     }
@@ -1127,7 +1163,6 @@ bool Commander::clump_check()
 {
     bool error = false;
     if (m_clump_info.no_clump) return true;
-
     if (m_clump_info.use_proxy
         && !misc::within_bound<double>(m_clump_info.proxy, 0.0, 1.0))
     {
@@ -1179,7 +1214,7 @@ bool Commander::ref_check()
                 "Error: Unsupported LD format: " + m_reference.type + "\n");
         }
     }
-    if (m_ref_filter.geno < 0 || m_ref_filter.geno > 1)
+    if (!misc::within_bound<double>(m_ref_filter.geno, 0.0, 1.0))
     {
         error = true;
         m_error_message.append("Error: LD genotype missingness threshold "
@@ -1204,6 +1239,12 @@ bool Commander::ref_check()
             m_error_message.append("Error: LD hard threshold must be larger "
                                    "than 0 and smaller than 1!\n");
         }
+        if (!misc::within_bound<double>(m_ref_filter.dose_threshold, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append("Error: LD dosage threshold must be larger "
+                                   "than 0 and smaller than 1!\n");
+        }
         else if (!m_reference.file_name.empty()
                  || m_reference.file_name.empty())
         {
@@ -1219,6 +1260,12 @@ bool Commander::ref_check()
             m_parameter_log["dose-thres"] =
                 std::to_string(m_target_filter.dose_threshold);
         }
+        if (!misc::within_bound<double>(m_ref_filter.info_score, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append("Error: LD INFO score threshold must be "
+                                   "larger than 0 and smaller than 1!\n");
+        }
     }
     if (!misc::within_bound<double>(m_ref_filter.maf, 0.0, 1.0))
     {
@@ -1226,14 +1273,142 @@ bool Commander::ref_check()
         m_error_message.append("Error: LD MAF threshold must be larger than "
                                "0 and smaller than 1!\n");
     }
-    if (!misc::within_bound<double>(m_ref_filter.info_score, 0.0, 1.0))
-    {
-        error = true;
-        m_error_message.append("Error: LD INFO score threshold must be "
-                               "larger than 0 and smaller than 1!\n");
-    }
     return !error;
 }
+
+size_t Commander::find_first_end(const std::string_view& cov, const size_t idx)
+{
+    if (cov.at(idx) != '[')
+    {
+        throw std::runtime_error(
+            "Error: Invalid format. Expect string to start with [");
+    }
+    for (size_t i = idx + 1; i < cov.length(); ++i)
+    {
+        if (cov.at(i) == ']') return i;
+        if (cov.at(i) == '[')
+            throw std::runtime_error(
+                "Error: Invalid format, we don't allow embedded range");
+    }
+    throw std::runtime_error(
+        "Error: Invalid format, [ must accompany with a ]");
+}
+std::vector<size_t> Commander::parse_range(const std::string_view& cov)
+{
+    std::vector<size_t> res;
+    if (cov.at(0) == '-' || cov.find("--") != std::string::npos)
+    { throw std::runtime_error("Error: Do not accept negative ranges"); }
+    std::vector<std::string_view> token = misc::split(cov, "-");
+    // from_chars will be faster, but less robust (1.5 will be converted to 1)
+    if (token.size() == 1) { res = {misc::convert<size_t>(std::string(cov))}; }
+    else
+    {
+        size_t start, end;
+        start = misc::convert<size_t>(std::string(token.front()));
+        end = misc::convert<size_t>(std::string(token.back()));
+        if (start > end) { std::swap(start, end); }
+        res.resize(end - start + 1, start);
+        std::iota(res.begin(), res.end(), start);
+    }
+    return res;
+}
+std::vector<size_t> Commander::get_range(const std::string_view& cov,
+                                         const size_t start, const size_t end)
+{
+    // need to remove []
+    if (end >= cov.length() || start >= end)
+    { throw std::runtime_error("Error: Wrong start and end format"); }
+    if (!(cov.at(start) == '[' && cov.at(end) == ']'))
+    {
+        throw std::runtime_error("Error: Invalid input. Expect something "
+                                 "starts with [ and end with ]");
+    }
+    std::vector<std::string_view> token =
+        misc::split(cov.substr(start + 1, end - start - 1), ".");
+    std::vector<size_t> results, tmp;
+    for (auto&& value : token)
+    {
+        // now try to account for -
+        tmp = parse_range(value);
+        results.insert(results.end(), tmp.begin(), tmp.end());
+    }
+    std::sort(results.begin(), results.end());
+    results.erase(std::unique(results.begin(), results.end()), results.end());
+    return results;
+}
+
+void Commander::update_covariate_range(const std::vector<size_t>& range,
+                                       std::vector<std::string>& res)
+{
+    if (range.empty())
+    {
+        throw std::runtime_error(
+            "Error: Invalid input. Something is wrong with Sam");
+    }
+    if (res.empty())
+    {
+        res.reserve(range.size());
+        for (auto&& value : range) { res.push_back(std::to_string(value)); }
+    }
+    else
+    {
+        // there are content in res, so we will duplicate it w.r.t number in
+        // range
+        std::vector<std::string> tmp;
+        tmp.reserve(res.size() * range.size());
+        for (auto&& r : res)
+        {
+            for (auto&& value : range)
+            { tmp.push_back(r + std::to_string(value)); }
+        }
+        res.clear();
+        res = tmp;
+    }
+}
+
+std::vector<std::string>
+Commander::transform_covariate(const std::string& cov_in)
+{
+    // do not allow embedded range
+    if (cov_in.empty() || cov_in.at(0) != '@')
+    { return std::vector<std::string> {cov_in}; }
+    // remove first @
+    std::string cov = cov_in;
+    cov.erase(0, 1);
+    std::vector<std::string> result;
+    std::vector<size_t> range;
+    std::size_t prev = 0, pos;
+    while ((pos = cov.find_first_of("[", prev)) != std::string::npos)
+    {
+        if (pos > prev)
+        {
+            std::string_view substring = cov.substr(prev, pos - prev);
+            if (result.empty())
+                result.emplace_back(substring);
+            else
+            {
+                for (size_t i = 0; i < result.size(); ++i)
+                { result[i] = result[i].append(substring); }
+            }
+            size_t end = find_first_end(cov, pos);
+            update_covariate_range(get_range(cov, pos, end), result);
+            pos = end;
+        }
+        prev = pos + 1;
+    }
+    if (prev < cov.length())
+    {
+        if (result.empty())
+            result.emplace_back(cov.substr(prev, std::string::npos));
+        else
+        {
+            std::string_view substring = cov.substr(prev, std::string::npos);
+            for (auto&& c : result) { c.append(substring); }
+        }
+    }
+    return result;
+}
+/*
 std::vector<std::string>
 Commander::transform_covariate(const std::string& cov_in)
 {
@@ -1247,7 +1422,7 @@ Commander::transform_covariate(const std::string& cov_in)
     std::vector<std::string> range;
     std::string cov = cov_in;
     std::string prefix, suffix;
-    // simplify to reasonable use cases
+    // Remove the first @
     cov.erase(0, 1);
     // find the start of range by identifying [
     open = misc::split(cov, "[");
@@ -1315,12 +1490,10 @@ Commander::transform_covariate(const std::string& cov_in)
         }
     }
     return final_covariates;
-}
+}*/
 
-bool Commander::covariate_check()
+std::unordered_set<std::string> Commander::get_cov_names()
 {
-    // it is valid to have empty covariate file
-    if (m_pheno_info.cov_file.empty()) return true;
     // first, transform all the covariates
     // the actual column name to be included (after parsing)
     std::unordered_set<std::string> included;
@@ -1335,15 +1508,18 @@ bool Commander::covariate_check()
         transformed_cov = transform_covariate(cov);
         for (auto&& trans : transformed_cov) { included.insert(trans); }
     }
-    bool error = false;
-    // now try to read the header of the covariate file
+    return included;
+}
+std::tuple<std::vector<std::string>, std::unordered_map<std::string, size_t>>
+Commander::get_covariate_header()
+{
     std::ifstream cov_file;
     cov_file.open(m_pheno_info.cov_file.c_str());
     if (!cov_file.is_open())
     {
         m_error_message.append("Error: Cannot open covariate file: "
                                + m_pheno_info.cov_file + "\n");
-        return false;
+        throw std::runtime_error("Cannot open");
     }
     std::string line;
     std::getline(cov_file, line);
@@ -1353,85 +1529,124 @@ bool Commander::covariate_check()
     {
         m_error_message.append(
             "Error: First line of covariate file is empty!\n");
-        return false;
+        throw std::runtime_error("Empty line");
     }
-    const std::vector<std::string> cov_header = misc::split(line);
-    std::string missing = "";
     std::unordered_map<std::string, size_t> ref_index;
-    // now get the index for each column name in the covariate file
+    auto cov_header = misc::split(line);
     for (size_t i = 0; i < cov_header.size(); ++i)
     { ref_index[cov_header[i]] = i; }
-    // when user provide a covariate file but not the covariate name, we
-    // will just read in every covariates
-    if (m_pheno_info.cov_colname.size() == 0)
-    {
-        for (size_t i = (1 + !m_pheno_info.ignore_fid); i < cov_header.size();
-             ++i)
-        { included.insert(cov_header[i]); }
-    }
-    size_t valid_cov = 0;
+    return {cov_header, ref_index};
+}
+size_t Commander::find_cov_idx(
+    const std::unordered_set<std::string>& included,
+    const std::unordered_map<std::string, size_t>& ref_index,
+    std::string& missing)
+{
+    missing = "";
     m_pheno_info.col_index_of_cov.clear();
+    size_t valid_cov = 0;
+    std::string comma = "";
     for (auto&& cov : included)
     {
         // now for each covariate found in the covariate file, we add their
         // index to the storage
-        if (ref_index.find(cov) != ref_index.end())
+        auto idx = ref_index.find(cov);
+        if (idx != ref_index.end())
         {
-            m_pheno_info.col_index_of_cov.push_back(ref_index[cov]);
+            m_pheno_info.col_index_of_cov.push_back(idx->second);
             ++valid_cov;
-        }
-        else if (missing.empty())
-        {
-            missing = cov;
         }
         else
         {
-            missing.append("," + cov);
+            missing.append(comma + cov);
+            comma = ",";
         }
     }
-    if (!missing.empty())
-    {
-        m_error_message.append("Warning: Covariate(s) missing from file: "
-                               + missing + ". Header of file is: " + line
-                               + "\n");
-    }
-    if (valid_cov == 0)
-    {
-        error = true;
-        m_error_message.append("Error: No valid Covariate!\n");
-    }
-    // we will now push back the covariate name according to the order they
-    // appeared in the file
+    return valid_cov;
+}
+
+void Commander::reorganize_cov_name(const std::vector<std::string>& cov_header)
+{
     m_pheno_info.cov_colname.clear();
     std::sort(m_pheno_info.col_index_of_cov.begin(),
               m_pheno_info.col_index_of_cov.end());
     for (auto&& c : m_pheno_info.col_index_of_cov)
     { m_pheno_info.cov_colname.push_back(cov_header[c]); }
+}
+bool Commander::process_factor_cov(
+    const std::unordered_set<std::string>& included,
+    const std::unordered_map<std::string, size_t>& ref_index,
+    const std::unordered_set<std::string> ori_input)
+{
     // now start to process the factor covariates
+
+    std::vector<std::string> transformed_cov;
     for (auto cov : m_pheno_info.factor_cov)
     {
         if (cov.empty()) continue;
         transformed_cov = transform_covariate(cov);
         for (auto&& trans : transformed_cov)
         {
-            if (included.find(trans) != included.end())
+            auto&& ref = ref_index.find(trans);
+            if (included.find(trans) != included.end()
+                && ref != ref_index.end())
+            { m_pheno_info.col_index_of_factor_cov.push_back(ref->second); }
+            else if (ori_input.find(trans) == ori_input.end())
             {
-                m_pheno_info.col_index_of_factor_cov.push_back(
-                    ref_index[trans]);
-            }
-            else if (ori_input.find(cov) == ori_input.end())
-            {
-                // only complain if untransform input isn't found in cov-col
-                error = true;
+                // only complain if transform input isn't found in transformed
+                // --cov-col
+                // so if @PC[1.3.5] isn't found, and cov-col is @PC[1-10], then
+                // we still allow such input
                 m_error_message.append("Error: All factor covariates must be "
                                        "found in covariate list. "
                                        + trans
                                        + " not found in covariate list");
+                return false;
             }
         }
     }
     std::sort(m_pheno_info.col_index_of_factor_cov.begin(),
               m_pheno_info.col_index_of_factor_cov.end());
+    return true;
+}
+bool Commander::covariate_check()
+{
+    // it is valid to have empty covariate file
+    if (m_pheno_info.cov_file.empty()) return true;
+    bool error = false;
+    // now try to read the header of the covariate file
+    // first, transform all the covariates
+    // the actual column name to be included (after parsing)
+    std::unordered_set<std::string> included = get_cov_names();
+    std::unordered_set<std::string> ori_input = included;
+    try
+    {
+        auto [cov_header, ref_index] = get_covariate_header();
+        if (m_pheno_info.cov_colname.size() == 0)
+        {
+            for (size_t i = (1 + !m_pheno_info.ignore_fid);
+                 i < cov_header.size(); ++i)
+            { included.insert(cov_header[i]); }
+        }
+        std::string missing;
+        size_t valid_cov = find_cov_idx(included, ref_index, missing);
+        if (!missing.empty())
+        {
+            m_error_message.append(
+                "Warning: Covariate(s) missing from file: " + missing + ".\n");
+        }
+        if (valid_cov == 0)
+        {
+            error = true;
+            m_error_message.append("Error: No valid Covariate!\n");
+        }
+        reorganize_cov_name(cov_header);
+        error |= !process_factor_cov(included, ref_index, ori_input);
+    }
+    catch (std::runtime_error&)
+    {
+        return false;
+    }
     return !error;
 }
 
@@ -1454,13 +1669,6 @@ bool Commander::filter_check()
                 "imputation input.\n");
         }
     }
-    if (m_target.type == "bgen"
-        && !misc::within_bound(m_target_filter.hard_threshold, 0.0, 1.0))
-    {
-        error = true;
-        m_error_message.append(
-            "Error: Hard threshold must be between 0 and 1!\n");
-    }
     if (!m_extract_file.empty() && !m_exclude_file.empty())
     {
         error = true;
@@ -1468,13 +1676,30 @@ bool Commander::filter_check()
             "Error: Can only use --extract or --exclude but not both\n");
     }
 
-    if (!misc::within_bound(m_target_filter.info_score, 0.0, 1.0))
+    if (m_target.type == "bgen")
     {
-        error = true;
-        m_error_message.append(
-            "Error: INFO score threshold cannot be bigger than 1.0 "
-            "or smaller than 0.0\n");
+        if (!misc::within_bound(m_target_filter.info_score, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append(
+                "Error: INFO score threshold cannot be bigger than 1.0 "
+                "or smaller than 0.0\n");
+        }
+        if (!misc::within_bound(m_target_filter.hard_threshold, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Hard threshold must be between 0 and 1!\n");
+        }
+        if (!misc::within_bound(m_target_filter.dose_threshold, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Dosage threshold must be between 0 and 1!\n");
+        }
     }
+
+
     if (!misc::within_bound<double>(m_target_filter.geno, 0.0, 1.0))
     {
         error = true;
@@ -1501,6 +1726,15 @@ bool Commander::misc_check()
         m_error_message.append(
             "Error: Number of thread must be larger than 1\n");
     }
+    if (m_keep_ambig)
+    {
+        m_error_message.append(
+            "Warning: By selecting --keep-ambig, PRSice assume the base and "
+            "target are reporting alleles on the same strand and will "
+            "therefore only perform dosage flip for the ambiguous SNPs. If you "
+            "are unsure of what the strand is, then you should not select the "
+            "--keep-ambig option\n");
+    }
     if (!m_perm_info.run_perm && !m_perm_info.run_set_perm
         && m_perm_info.logit_perm)
     {
@@ -1514,7 +1748,7 @@ bool Commander::misc_check()
     // of thread used
     m_parameter_log["thread"] = std::to_string(m_prs_info.thread);
     m_parameter_log["out"] = m_out_prefix;
-    bool use_reference =
+    const bool use_reference =
         !(m_reference.file_list.empty() && m_reference.file_name.empty());
     if (m_prs_info.use_ref_maf && !use_reference)
     {
@@ -1527,10 +1761,15 @@ bool Commander::misc_check()
     }
     if (m_allow_inter)
     {
-        if ((m_target.type != "bgen" && m_reference.type != "bgen")
+        if ((m_target.type != "bgen"
+             && m_reference.type != "bgen") // none are bgen
             || (use_reference && m_reference.type != "bgen"
-                && !m_target.hard_coded)
-            || (!use_reference && m_target.type != "bgen"))
+                && !m_target.hard_coded) // reference file isn't bgen and not
+                                         // require hard coding PRS
+            || (!use_reference
+                && m_target.type != "bgen") // Doesn't have a reference file and
+                                            // target isn't bgen either
+        )
         {
             m_allow_inter = false;
             m_error_message.append(
@@ -1551,7 +1790,6 @@ bool Commander::misc_check()
                                "hard-coded bgen file. Will disable it\n");
         m_ultra_aggressive = false;
     }
-    if (m_ambig_no_flip) m_keep_ambig = true;
     return !error;
 }
 
@@ -1568,10 +1806,7 @@ bool Commander::prset_check()
 
     if (m_prset.feature.empty() && !m_prset.gtf.empty())
     {
-        m_prset.feature.push_back("exon");
-        m_prset.feature.push_back("gene");
-        m_prset.feature.push_back("protein_coding");
-        m_prset.feature.push_back("CDS");
+        m_prset.feature = {"exon", "gene", "protein_coding", "CDS"};
         m_parameter_log["feature"] = "exon,gene,protein_coding,CDS";
     }
     if (m_perm_info.run_perm && m_perm_info.run_set_perm)
@@ -1641,6 +1876,22 @@ bool Commander::prsice_check()
         std::unique(m_p_thresholds.bar_levels.begin(),
                     m_p_thresholds.bar_levels.end()),
         m_p_thresholds.bar_levels.end());
+    // now check if there are any negative / out bound in bar level
+    auto max_threshold = *max_element(m_p_thresholds.bar_levels.begin(),
+                                      m_p_thresholds.bar_levels.end());
+    auto min_threshold = *min_element(m_p_thresholds.bar_levels.begin(),
+                                      m_p_thresholds.bar_levels.end());
+    if (max_threshold > 1.0)
+    {
+        error = true;
+        m_error_message.append("Error: Cannot have p-value level > 1\n");
+    }
+    if (min_threshold < 0.0)
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Cannot have p-value level less than 0\n");
+    }
     std::string bar_message = "";
     for (auto&& b : m_p_thresholds.bar_levels)
     {
@@ -1670,6 +1921,11 @@ bool Commander::prsice_check()
             error = true;
             m_error_message.append(
                 "Error: Invalid p-value threshold boundary!\n");
+        }
+        if (!misc::within_bound(m_p_thresholds.inter, 0.0, 1.0))
+        {
+            error = true;
+            m_error_message.append("Error: Invalid p-value step-size!\n");
         }
         m_parameter_log["interval"] = misc::to_string(m_p_thresholds.inter);
         m_parameter_log["lower"] = misc::to_string(m_p_thresholds.lower);
@@ -1731,29 +1987,55 @@ bool Commander::target_check()
 
 bool Commander::pheno_check()
 {
+    assert(m_ran_base_check);
     // pheno check must be performed after base check
     bool error = false;
-    if (m_pheno_info.pheno_col.size() != 0 && m_pheno_info.pheno_file.empty())
+    if (!m_pheno_info.pheno_col.empty() && m_pheno_info.pheno_file.empty())
     {
         error = true;
         m_error_message.append("Error: You must provide a phenotype file for "
                                "multiple phenotype analysis");
+        return !error;
+    }
+    // check for duplicates
+    if (!m_pheno_info.pheno_col.empty())
+    {
+        std::unordered_set<std::string> phenos(m_pheno_info.pheno_col.begin(),
+                                               m_pheno_info.pheno_col.end());
+        if (phenos.size() != m_pheno_info.pheno_col.size())
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Duplicated phenotype column detected. Please make sure "
+                "you have provided the correct input\n");
+            return !error;
+        }
     }
     if (m_pheno_info.binary.empty())
     {
         // add the default
+        const size_t repeat =
+            m_pheno_info.pheno_col.empty() ? 1 : m_pheno_info.pheno_col.size();
         if (m_base_info.is_beta)
         {
             m_parameter_log["binary-target"] = "F";
-            m_pheno_info.binary.push_back(false);
+            if (repeat > 1)
+            {
+                m_parameter_log["binary-target"] = std::to_string(repeat) + "F";
+            }
+            m_pheno_info.binary.resize(repeat, false);
         }
         else
         {
             m_parameter_log["binary-target"] = "T";
-            m_pheno_info.binary.push_back(true);
+            if (repeat > 1)
+            {
+                m_parameter_log["binary-target"] = std::to_string(repeat) + "T";
+            }
+            m_pheno_info.binary.resize(repeat, true);
         }
     }
-    // now check if the bar-level is sensible
+    // now check if binary-target is sensible
     if (m_pheno_info.pheno_col.size() != m_pheno_info.binary.size())
     {
         if (m_pheno_info.pheno_col.empty() && m_pheno_info.binary.size() == 1)

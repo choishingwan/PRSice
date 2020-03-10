@@ -30,6 +30,7 @@ void split(std::vector<std::string>& result, const char* str, char c = ' ')
 
 void Reporter::report(const std::string& input, bool wrap)
 {
+    if (m_unit_test) return;
     // split by new line
     std::vector<std::string> paragraph;
     std::vector<std::string> line;

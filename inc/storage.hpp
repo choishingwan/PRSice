@@ -68,7 +68,7 @@ struct BaseFile
     std::vector<size_t> column_index =
         std::vector<size_t>(+BASE_INDEX::MAX + 1, 0);
     std::vector<std::string> column_name = {
-        "CHR", "A2", "BP", "SE", "INFO,0.9", "", "", "A1", "SNP", "P", ""};
+        "CHR", "A2", "BP", "SE", "INFO:0.9", "", "", "A1", "SNP", "P", ""};
     // use int as vector<bool> is abnormal
     std::vector<int> has_column = std::vector<int>(+BASE_INDEX::MAX + 1, false);
     std::string file_name;
@@ -189,7 +189,7 @@ struct QCFiltering
 struct Clumping
 {
     double r2 = 0.1;
-    double proxy = -1;
+    double proxy = 0.0;
     double pvalue = 1;
     size_t distance = 250000;
     int no_clump = false;

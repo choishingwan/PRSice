@@ -487,7 +487,11 @@ void BinaryPlink::gen_snp_vector(
                     byte_pos = static_cast<std::streampos>(
                         bed_offset
                         + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
-                    if (flipping && ambig && m_ambig_no_flip) flipping = false;
+                    if (ambig)
+                    {
+                        flipping = (bim_token[+BIM::A1]
+                                    != m_existed_snps[base_idx->second].ref());
+                    }
                     genotype->m_existed_snps[base_idx->second].add_snp_info(
                         idx, byte_pos, chr_num, loc, bim_token[+BIM::A1],
                         bim_token[+BIM::A2], flipping, m_is_ref);
