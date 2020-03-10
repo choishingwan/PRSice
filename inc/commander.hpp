@@ -656,6 +656,13 @@ protected:
     {
         const std::vector<std::string> info =
             misc::split(m_base_info.column_name[+BASE_INDEX::INFO], ":");
+        if (info.size() != 2)
+        {
+            m_error_message.append("Error: Invalid format of "
+                                   "--base-info. Should be "
+                                   "ColName:Threshold.\n");
+            return false;
+        }
         const bool has_input = m_base_info.has_column[+BASE_INDEX::INFO];
 
         size_t index;
@@ -673,14 +680,6 @@ protected:
             {
                 m_error_message.append("Warning: INFO field not found in base "
                                        "file, will ignore INFO filtering\n");
-            }
-            else if (info.size() != 2)
-            {
-                // invalid format
-                m_error_message.append("Error: Invalid format of "
-                                       "--base-info. Should be "
-                                       "ColName,Threshold.\n");
-                return false;
             }
             else
             {
@@ -725,7 +724,7 @@ protected:
             m_error_message.append(
                 "Warning: MAF field not found in base file. "
                 "Will not perform MAF filtering on the base file\n");
-            return true;
+            return false;
         }
         double cur_maf;
         try
@@ -733,18 +732,16 @@ protected:
             cur_maf = misc::convert<double>(detail[1]);
             if (!misc::within_bound<double>(cur_maf, 0.0, 1.0))
             {
-                m_error_message.append("Error: Base MAF threshold must "
-                                       "be within 0 and 1!\n");
-                return false;
+                throw std::runtime_error("Error: Base MAF threshold must "
+                                         "be within 0 and 1!\n");
             }
         }
         catch (...)
         {
-            m_error_message.append(
+            throw std::runtime_error(
                 "Error: Invalid argument passed to --base-maf: "
                 + m_base_info.column_name[+BASE_INDEX::MAF]
                 + "! Threshold must be numeric\n");
-            return false;
         }
         maf = cur_maf;
         return true;
@@ -754,7 +751,7 @@ protected:
     {
         const std::string maf_error =
             "Error: Invalid format of --base-maf. "
-            "Should be ColName,Threshold."
+            "Should be ColName:Threshold."
             "or ColName:Threshold,ColName:Threshold.\n";
         std::vector<std::string> case_control =
             misc::split(m_base_info.column_name[+BASE_INDEX::MAF], ",");
@@ -770,19 +767,37 @@ protected:
         std::vector<std::string> detail;
         // process the control filter threshold
         detail = misc::split(case_control.front(), ":");
-        bool parse_control_ok = process_maf(
-            ref, detail, m_base_info.column_index[+BASE_INDEX::MAF],
-            m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
-        if (!parse_control_ok) return false;
-        if (case_control.size() == 2)
+        try
         {
-            detail = misc::split(case_control.back(), ":");
-            return process_maf(ref, detail,
-                               m_base_info.column_index[+BASE_INDEX::MAF_CASE],
-                               m_base_info.has_column[+BASE_INDEX::MAF_CASE],
-                               m_base_filter.maf_case);
+            // TODO: Still think the best course of action is to error out
+            // instead of silently dropping a filtering option
+            bool parse_control_ok = process_maf(
+                ref, detail, m_base_info.column_index[+BASE_INDEX::MAF],
+                m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
+            // if we can't parse the control, we will return true (say
+            // everything is ok) but will ignore MAF filtering
+            if (!parse_control_ok) return true;
+            if (case_control.size() == 2)
+            {
+                detail = misc::split(case_control.back(), ":");
+                bool parse_case_ok =
+                    process_maf(ref, detail,
+                                m_base_info.column_index[+BASE_INDEX::MAF_CASE],
+                                m_base_info.has_column[+BASE_INDEX::MAF_CASE],
+                                m_base_filter.maf_case);
+                // if we can't parse the case MAF filtering threshold, we will
+                // also disable the fitering of the control
+                if (!parse_case_ok)
+                    m_base_info.has_column[+BASE_INDEX::MAF] = false;
+                return true;
+            }
+            return true;
         }
-        return true;
+        catch (const std::runtime_error& er)
+        {
+            m_error_message.append(er.what());
+            return false;
+        }
     }
     /*!
      * \brief Get the column index based on file header and the input string
