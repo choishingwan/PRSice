@@ -47,7 +47,7 @@ script:
   - cd build
   - cmake -DCODE_COVERAGE=ON -DBUILD_TESTING=ON  -DCMAKE_CXX_FLAGS=-pg -DCMAKE_EXE_LINKER_FLAGS=-pg -DCMAKE_SHARED_LINKER_FLAGS=-pg  ../
   - make
-  - wget https://www.dropbox.com/s/p94isegg18z3wuo/Toy_Data.zip?dl=1
+  - wget -O Toy_Data.zip https://www.dropbox.com/s/p94isegg18z3wuo/Toy_Data.zip?dl=1
   - unzip Toy_Data.zip
   - ../bin/PRSice --base ../TOY_BASE_GWAS.assoc --target ../TOY_TARGET_DATA
   - gprof ../bin/PRSice > gprof.log
