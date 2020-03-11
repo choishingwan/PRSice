@@ -49,7 +49,7 @@ script:
   - make
   - wget -O Toy_Data.zip https://www.dropbox.com/s/p94isegg18z3wuo/Toy_Data.zip?dl=1
   - unzip Toy_Data.zip
-  - ../bin/PRSice --base TOY_BASE_GWAS.assoc --target TOY_TARGET_DATA
+  - ../bin/PRSice --base TOY_BASE_GWAS.assoc --target TOY_TARGET_DATA --gtf Homo_sapiens.GRCh38.86.gtf.gz --msigdb c2.all.v6.2.symbols.gmt --set-perm 100
   - gprof ../bin/PRSice > gprof.log
   - head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
