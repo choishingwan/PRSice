@@ -919,7 +919,7 @@ protected:
                 ukk = (ulii >> ujj) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
                 if (uii + (ujj / 2) >= m_sample_ct) { break; }
-                auto&& sample_prs = prs_list[uii + (ujj / 2)];
+                auto& sample_prs = prs_list[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
                 (this->*load_prs)(sample_prs, ukk, ploidy, homcom, het, homrar,
                                   miss_score, miss_count);
