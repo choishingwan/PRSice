@@ -129,11 +129,11 @@ protected:
         }
         try
         {
-            end = misc::Convertor::convert<size_t>(end_str.c_str());
+            end = misc::Convertor::convert<size_t>(end_str);
         }
         catch (...)
         {
-            throw std::runtime_error("end");
+            throw std::runtime_error("end ");
         }
         if (start > end)
         {

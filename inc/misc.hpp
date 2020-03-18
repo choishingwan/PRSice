@@ -356,19 +356,18 @@ public:
     template <typename T>
     static T convert(const std::string& str)
     {
+        iss.clear();
         iss.str(str);
         T obj;
         iss >> obj;
         if (!iss.eof() || iss.fail())
-        {
-            iss.clear();
-            throw std::runtime_error("Unable to convert the input");
-        }
+        { throw std::runtime_error("Unable to convert the input"); }
         return obj;
     }
 
+
 private:
-    inline static std::istringstream iss;
+    static std::istringstream iss;
 };
 
 template <typename T>
