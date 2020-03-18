@@ -832,12 +832,72 @@ protected:
         }
         return -1;
     }
-    void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,
-                  const size_t ploidy, const double stat,
-                  const double adj_score, const double miss_score,
-                  const size_t miss_count, const double homcom_weight,
-                  const double het_weight, const double homrar_weight,
-                  const bool not_first)
+
+    void update_sample_prs(PRS& sample_prs, const uint32_t geno,
+                           const size_t ploidy, const double stat,
+                           const double adj_score, const double miss_score,
+                           const size_t miss_count, const double homcom_weight,
+                           const double het_weight, const double homrar_weight)
+    {
+        switch (geno)
+        {
+        default:
+            // true = 1, false = 0
+            sample_prs.num_snp += ploidy;
+            sample_prs.prs += homcom_weight * stat - adj_score;
+            break;
+        case 1:
+            sample_prs.num_snp += ploidy;
+            sample_prs.prs += het_weight * stat - adj_score;
+            break;
+        case 3:
+            sample_prs.num_snp += ploidy;
+            sample_prs.prs += homrar_weight * stat - adj_score;
+            break;
+        case 2:
+            // handle missing sample
+            sample_prs.num_snp += miss_count;
+            sample_prs.prs += miss_score;
+            break;
+        }
+    }
+    void initialize_sample_prs(PRS& sample_prs, const uint32_t geno,
+                               const size_t ploidy, const double stat,
+                               const double adj_score, const double miss_score,
+                               const size_t miss_count,
+                               const double homcom_weight,
+                               const double het_weight,
+                               const double homrar_weight)
+    {
+        switch (geno)
+        {
+        default:
+            // true = 1, false = 0
+            sample_prs.num_snp = ploidy;
+            sample_prs.prs = homcom_weight * stat - adj_score;
+            break;
+        case 1:
+            sample_prs.num_snp = ploidy;
+            sample_prs.prs = het_weight * stat - adj_score;
+            break;
+        case 3:
+            sample_prs.num_snp = ploidy;
+            sample_prs.prs = homrar_weight * stat - adj_score;
+            break;
+        case 2:
+            // handle missing sample
+            sample_prs.num_snp = miss_count;
+            sample_prs.prs = miss_score;
+            break;
+        }
+    }
+    template <class T>
+    void process_sample_prs(std::vector<uintptr_t>& genotype,
+                            std::vector<PRS>& prs_list, const size_t ploidy,
+                            const double stat, const double adj_score,
+                            const double miss_score, const size_t miss_count,
+                            const double homcom_weight, const double het_weight,
+                            const double homrar_weight, T load_prs)
     {
         uintptr_t* lbptr = genotype.data();
         uintptr_t ulii;
@@ -867,62 +927,41 @@ protected:
                 if (uii + (ujj / 2) >= m_sample_ct) { break; }
                 auto&& sample_prs = prs_list[uii + (ujj / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
-                if (not_first)
-                {
-                    switch (ukk)
-                    {
-                    default:
-                        // true = 1, false = 0
-                        sample_prs.num_snp += ploidy;
-                        sample_prs.prs += homcom_weight * stat - adj_score;
-                        break;
-                    case 1:
-                        sample_prs.num_snp += ploidy;
-                        sample_prs.prs += het_weight * stat - adj_score;
-                        break;
-                    case 3:
-                        sample_prs.num_snp += ploidy;
-                        sample_prs.prs += homrar_weight * stat - adj_score;
-                        break;
-                    case 2:
-                        // handle missing sample
-                        sample_prs.num_snp += miss_count;
-                        sample_prs.prs += miss_score;
-                        break;
-                    }
-                }
-                else
-                {
-                    switch (ukk)
-                    {
-                    default:
-                        // true = 1, false = 0
-                        sample_prs.num_snp = ploidy;
-                        sample_prs.prs = homcom_weight * stat - adj_score;
-                        break;
-                    case 1:
-                        sample_prs.num_snp = ploidy;
-                        sample_prs.prs = het_weight * stat - adj_score;
-                        break;
-                    case 3:
-                        sample_prs.num_snp = ploidy;
-                        sample_prs.prs = homrar_weight * stat - adj_score;
-                        break;
-                    case 2:
-                        // handle missing sample
-                        sample_prs.num_snp = miss_count;
-                        sample_prs.prs = miss_score;
-                        break;
-                    }
-                }
+                (this->*load_prs)(sample_prs, ukk, ploidy, stat, adj_score,
+                                  miss_score, miss_count, homcom_weight,
+                                  het_weight, homrar_weight);
                 // ulii &= ~((3 * ONELU) << ujj);
-                // as each sample is represented by two byte, we will add 2 to
-                // the index
+                // as each sample is represented by two byte, we will add 2
+                // to the index
                 ujj += 2;
             }
             // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
+    }
+
+
+    void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,
+                  const size_t ploidy, const double stat,
+                  const double adj_score, const double miss_score,
+                  const size_t miss_count, const double homcom_weight,
+                  const double het_weight, const double homrar_weight,
+                  const bool not_first)
+    {
+        if (not_first)
+        {
+            process_sample_prs(genotype, prs_list, ploidy, stat, adj_score,
+                               miss_score, miss_count, homcom_weight,
+                               het_weight, homrar_weight,
+                               &Genotype::update_sample_prs);
+        }
+        else
+        {
+            process_sample_prs(genotype, prs_list, ploidy, stat, adj_score,
+                               miss_score, miss_count, homcom_weight,
+                               het_weight, homrar_weight,
+                               &Genotype::initialize_sample_prs);
+        }
     }
 
     /*!
