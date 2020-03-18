@@ -29,7 +29,7 @@ void PRSice::produce_null_prs(
     size_t processed = 0;
     size_t prev_size = 0;
     // we seed the random number generator
-    std::mt19937 g(m_seed);
+    std::mt19937 g(m_perm_info.seed);
     bool first_run = true;
     while (processed < m_perm_info.num_permutation)
     {
@@ -174,6 +174,7 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
     bool first_run = true;
     std::mt19937 g(seed);
     size_t processed = 0;
+
     while (processed < num_perm)
     {
         fisher_yates(background, g, max_size);
@@ -409,7 +410,7 @@ void PRSice::run_competitive(
             std::thread observer(&PRSice::observe_set_perm, this,
                                  std::ref(progress_observer), num_thread);
             std::vector<std::thread> subjects;
-            std::mt19937 rand_gen {m_seed};
+            std::mt19937 rand_gen {m_perm_info.seed};
             std::uniform_int_distribution<unsigned int> dis(
                 std::numeric_limits<unsigned int>::min(),
                 std::numeric_limits<unsigned int>::max());
@@ -420,7 +421,7 @@ void PRSice::run_competitive(
                 % static_cast<size_t>(num_thread));
             for (int i_thread = 0; i_thread < num_thread; ++i_thread)
             {
-                std::random_device::result_type seed = dis(rand_gen);
+                auto seed = dis(rand_gen);
                 subjects.push_back(std::thread(
                     &PRSice::subject_set_perm<Thread_Queue<size_t>>, this,
                     std::ref(progress_observer), std::ref(target),
@@ -442,7 +443,7 @@ void PRSice::run_competitive(
         dummy_reporter<size_t> dummy(*this);
         subject_set_perm(dummy, target,
                          std::vector<size_t>(bk_start_idx, bk_end_idx),
-                         set_index, set_perm_res, obs_t_value, m_seed,
+                         set_index, set_perm_res, obs_t_value, m_perm_info.seed,
                          decomposed, m_perm_info.num_permutation, is_binary);
         ran_perm = m_perm_info.num_permutation;
     }
