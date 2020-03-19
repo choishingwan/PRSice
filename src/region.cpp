@@ -137,10 +137,8 @@ size_t Region::generate_regions(const size_t max_chr)
 
     // we can now utilize the last field of cgranges as the index of gene
     // set of interest
-    m_region_name.push_back("Base");
-    m_region_name.push_back("Background");
-    m_processed_sets.insert("Base");
-    m_processed_sets.insert("Background");
+    m_region_name = {"Base", "Background"};
+    m_processed_sets = {"Base", "Background"};
 
     // don't want to output gene set info if we are not working on gene sets
     // technically, if only gtf is provided, we should also have an early
@@ -174,10 +172,8 @@ size_t Region::generate_regions(const size_t max_chr)
     // the SNP sets information are stored within snp_in_sets
     if (!m_msigdb.empty() && m_gtf.empty())
     {
-        std::string error_message =
-            "Error: MSigDB input requires a complementary"
-            "GTF file!\n";
-        throw std::runtime_error(error_message);
+        throw std::runtime_error("Error: MSigDB input requires a complementary"
+                                 "GTF file!\n");
     }
     std::unordered_map<std::string, std::vector<size_t>> msigdb_list;
     for (auto&& msig : m_msigdb)
@@ -241,29 +237,27 @@ void Region::load_background(
     std::string user_type, file_name;
     if (!get_set_name(m_background, file_name, user_type))
     {
-        std::string error =
-            "Error: Format of --background should be <File Name>:<File Type>";
-        throw std::runtime_error(error);
+        throw std::runtime_error(
+            "Error: Format of --background should be <File Name>:<File Type>");
     }
     // check if we know the format
     auto&& type = file_type.find(user_type);
     if (type == file_type.end())
     {
-        std::string error = "Error: Undefined file type. Supported formats are "
-                            "bed, gene, range or snp";
-        throw std::runtime_error(error);
+        throw std::runtime_error(
+            "Error: Undefined file type. Supported formats are "
+            "bed, gene, range or snp");
     }
     // open the file
     std::ifstream input;
     input.open(file_name.c_str());
     if (!input.is_open())
     {
-        std::string error_message =
-            "Error: Cannot open background file: " + file_name + " to read\n";
-        throw std::runtime_error(error_message);
+        throw std::runtime_error(
+            "Error: Cannot open background file: " + file_name + " to read\n");
     }
     std::string line;
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
     bool is_header = false;
     size_t column_size = 0;
     if (type->second == 0 || type->second == 1)
@@ -276,11 +270,12 @@ void Region::load_background(
             num_line++;
             misc::trim(line);
             if (line.empty()) continue;
-            token = misc::split(line);
+            token = misc::tokenize(line);
             is_bed_line(token, column_size, is_header);
             if (is_header) continue;
 
-            int32_t chr_code = get_chrom_code_raw(token[0].c_str());
+            int32_t chr_code =
+                get_chrom_code_raw(std::string(token[0]).c_str());
             if (chr_code < 0 || chr_code >= MAX_POSSIBLE_CHROM) continue;
             size_t chr = static_cast<size_t>(chr_code);
             if (chr > max_chr) continue;
@@ -341,8 +336,11 @@ void Region::load_background(
             if (line.empty()) continue;
             // this allow flexibility for both Gene Gene Gene and
             // Gene\nGene\n format
-            token = misc::split(line);
-            for (auto&& g : token) { msigdb_list[g].push_back(1); }
+            token = misc::tokenize(line);
+            // we need to cast the view to string when use as key or it will
+            // cause problem (string_view is a reference to the line, which will
+            // go out of scope
+            for (auto&& g : token) { msigdb_list[std::string(g)].push_back(1); }
         }
     }
     else
@@ -353,8 +351,9 @@ void Region::load_background(
         {
             misc::trim(line);
             if (line.empty()) continue;
-            token = misc::split(line);
-            for (auto& s : token) { m_snp_in_sets[s].push_back(1); }
+            token = misc::tokenize(line);
+            for (auto& s : token)
+            { m_snp_in_sets[std::string(s)].push_back(1); }
         }
     }
     input.close();
@@ -369,7 +368,7 @@ void Region::load_gtf(
     // background
     const bool provided_background = !m_background.empty();
     if (msigdb_list.empty() && m_genome_wide_background) return;
-    bool gz_input = misc::is_gz_file(m_gtf);
+    const bool gz_input = misc::is_gz_file(m_gtf);
     // we want to allow gz file input (as GTF file can be big)
     GZSTREAM_NAMESPACE::igzstream gz_gtf_file;
     std::ifstream gtf_file;
@@ -378,19 +377,14 @@ void Region::load_gtf(
         gz_gtf_file.open(m_gtf.c_str());
         if (!gz_gtf_file.good())
         {
-            std::string error_message =
-                "Error: Cannot open GTF (gz) to read!\n";
-            throw std::runtime_error(error_message);
+            throw std::runtime_error("Error: Cannot open GTF (gz) to read!\n");
         }
     }
     else
     {
         gtf_file.open(m_gtf.c_str());
         if (!gtf_file.is_open())
-        {
-            std::string error_message = "Cannot open gtf file: " + m_gtf;
-            throw std::runtime_error(error_message);
-        }
+        { throw std::runtime_error("Cannot open gtf file: " + m_gtf); }
     }
     std::istream* stream;
     if (gz_input) { stream = &(gz_gtf_file); }
@@ -398,7 +392,7 @@ void Region::load_gtf(
     {
         stream = &(gtf_file);
     }
-    std::vector<std::string> token(9), attribute, extract;
+    std::vector<std::string_view> token(9), attribute, extract;
     std::string chr_str, name, id, line;
     int chr_code;
     size_t chr, start, end;
@@ -413,7 +407,7 @@ void Region::load_gtf(
         // skip headers
         if (line.empty() || line[0] == '#') continue;
         ++num_line;
-        misc::split(token, line, "\t");
+        token = misc::tokenize(line, "\t");
         if (token.size() != +GTF::MAX)
         {
             std::string error_message = "Error: Malformed GTF file! GTF should "
@@ -423,7 +417,8 @@ void Region::load_gtf(
         else if (in_feature(token[+GTF::FEATURE], m_feature))
         {
             // convert chr string into consistent chr_coding
-            chr_code = get_chrom_code_raw(token[+GTF::CHR].c_str());
+            chr_code =
+                get_chrom_code_raw(std::string(token[+GTF::CHR]).c_str());
             chr = static_cast<size_t>(chr_code);
             if (chr_code < 0 || chr_code >= MAX_POSSIBLE_CHROM || chr > max_chr)
             {
@@ -438,11 +433,10 @@ void Region::load_gtf(
             }
             catch (const std::runtime_error& e)
             {
-                std::string error =
+                throw std::runtime_error(
                     "Error: Cannot Invalid " + std::string(e.what())
                     + " coordinate! (line: " + misc::to_string(num_line)
-                    + "). Will ignore the gtf file";
-                throw std::runtime_error(error);
+                    + "). Will ignore the gtf file");
             }
             catch (const std::logic_error& e)
             {
@@ -454,10 +448,10 @@ void Region::load_gtf(
             if (id.empty())
             {
                 // lack ID, but mandate
-                std::string message = "Error: GTF file should contain the "
-                                      "gene_id field. Please check if you have "
-                                      "the correct file\n";
-                throw std::runtime_error(message);
+                throw std::runtime_error(
+                    "Error: GTF file should contain the "
+                    "gene_id field. Please check if you have "
+                    "the correct file\n");
             }
             // add padding
             extend_region(start, end, token[+GTF::STRAND]);
@@ -491,7 +485,6 @@ void Region::load_gtf(
             ++exclude_feature;
         }
     }
-    std::string message = "";
     if (!num_line)
     { throw std::runtime_error("Error: Empty GTF file detected!\n"); }
     if (exclude_feature + chr_exclude >= num_line)
@@ -499,6 +492,7 @@ void Region::load_gtf(
         throw std::runtime_error("Error: No GTF entry remain after filter by "
                                  "feature and chromosome!\n");
     }
+    std::string message = "";
     if (exclude_feature > 0)
     {
         std::string entry = (exclude_feature == 1) ? "entry" : "entries";
@@ -528,11 +522,11 @@ void Region::load_snp_sets(const std::string& snp_file, size_t& set_idx)
                                  + "\n");
     }
     bool is_set_file = false;
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
     while (std::getline(input, line))
     {
         misc::trim(line);
-        token = misc::split(line);
+        token = misc::tokenize(line);
         is_set_file = (token.size() > 1);
         break;
     }
@@ -555,19 +549,22 @@ void Region::load_snp_sets(const std::string& snp_file, size_t& set_idx)
     {
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
+        token = misc::tokenize(line);
         if (is_set_file)
         {
             if (!duplicated_set(token[0]))
             {
+                // TODO: Need better way of handling this as this will become
+                // ridiculously memory intensive when someone use a large SNP
+                // set or provide a lot of SNP sets
                 for (auto&& snp : token)
-                { m_snp_in_sets[snp].push_back(set_idx); }
+                { m_snp_in_sets[std::string(snp)].push_back(set_idx); }
                 ++set_idx;
             }
         }
         else
         {
-            m_snp_in_sets[token[0]].push_back(set_idx);
+            m_snp_in_sets[std::string(token[0])].push_back(set_idx);
         }
     }
     input.close();
@@ -601,12 +598,12 @@ bool Region::load_bed_regions(const std::string& bed_file, const size_t set_idx,
     input.open(file_name.c_str());
     if (!input.is_open())
     {
-        std::string error = "Error: Cannot open bed file: " + file_name + "\n";
-        throw std::runtime_error(error);
+        throw std::runtime_error("Error: Cannot open bed file: " + file_name
+                                 + "\n");
     }
 
     // now read in the file
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
     bool is_header = false;
     size_t num_line = 0, column_size = 0;
     while (std::getline(input, line))
@@ -614,7 +611,7 @@ bool Region::load_bed_regions(const std::string& bed_file, const size_t set_idx,
         is_header = false;
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
+        token = misc::tokenize(line);
         try
         {
             is_bed_line(token, column_size, is_header);
@@ -628,7 +625,7 @@ bool Region::load_bed_regions(const std::string& bed_file, const size_t set_idx,
         if (is_header) continue; // skip header
 
         // skip all check later
-        chr_code = get_chrom_code_raw(token[0].c_str());
+        chr_code = get_chrom_code_raw(std::string(token[+BED::CHR]).c_str());
         if (chr_code < 0 || chr_code >= MAX_POSSIBLE_CHROM) continue;
         size_t chr = static_cast<size_t>(chr_code);
         if (chr > max_chr) continue;
@@ -640,12 +637,11 @@ bool Region::load_bed_regions(const std::string& bed_file, const size_t set_idx,
             // information, we will issue a warning and assume positive
             // strand. Though for this situation, it might be better for
             // user to use the same padding for 3' and 5'
-            std::string message = "Warning: You bed file does not contain "
-                                  "strand information, we will assume all "
-                                  "regions are on the positive strand, "
-                                  "e.g. start coordinates always on the 5' "
-                                  "end";
-            m_reporter->report(message);
+            m_reporter->report("Warning: You bed file does not contain "
+                               "strand information, we will assume all "
+                               "regions are on the positive strand, "
+                               "e.g. start coordinates always on the 5' "
+                               "end");
             m_printed_bed_strand_warning = true;
         }
         size_t start = 0, end = 0;
@@ -690,28 +686,26 @@ void Region::load_msigdb(
     input.open(msig.c_str());
     if (!input.is_open())
     {
-        std::string error = "Error: Cannot open MSigDB file: " + msig + "\n";
-        throw std::runtime_error(error);
+        throw std::runtime_error("Error: Cannot open MSigDB file: " + msig
+                                 + "\n");
     }
     std::string line;
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
     while (std::getline(input, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
+        token = misc::tokenize(line);
         if (token.size() < 2)
         {
-            std::string message =
+            throw std::runtime_error(
                 "Error: Each line of MSigDB require at least 2 information: "
-                + msig + "\n";
-            message.append(line);
-            throw std::runtime_error(message);
+                + msig + "\n" + line);
         }
         if (!duplicated_set(token[0]))
         {
             for (size_t i = 1; i < token.size(); ++i)
-            { msigdb_list[token[i]].push_back(set_idx); }
+            { msigdb_list[std::string(token[i])].push_back(set_idx); }
             ++set_idx;
         }
     }

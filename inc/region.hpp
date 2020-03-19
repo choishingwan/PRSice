@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <string>
+#include <string_view>
 #include <sys/stat.h>
 #include <tuple>
 #include <unordered_map>
@@ -85,7 +86,7 @@ protected:
         const size_t max_chr,
         std::unordered_map<std::string, std::vector<size_t>>& msigdb_list);
 
-    void extend_region(size_t& start, size_t& end, const std::string& strand)
+    void extend_region(size_t& start, size_t& end, std::string_view strand)
     {
         if (strand == "-")
         {
@@ -105,11 +106,10 @@ protected:
         }
         else
         {
-            std::string error = "Error: Undefined strand "
-                                "information. Possibly a malform "
-                                "file: "
-                                + strand;
-            throw std::runtime_error(error);
+            throw std::runtime_error("Error: Undefined strand "
+                                     "information. Possibly a malform "
+                                     "file: "
+                                     + std::string(strand));
         }
     }
     static void start_end(std::string_view start_str, std::string_view end_str,
@@ -159,6 +159,10 @@ protected:
     void load_gtf(
         const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
         const size_t max_chr);
+    bool duplicated_set(std::string_view set_name)
+    {
+        return duplicated_set(std::string(set_name));
+    }
     bool duplicated_set(const std::string& set_name)
     {
         if (m_processed_sets.find(set_name) != m_processed_sets.end())
@@ -248,26 +252,31 @@ protected:
         }
     }
 
+    bool in_feature(const std::string_view& in,
+                    const std::vector<std::string>& feature)
+    {
+        return std::any_of(feature.begin(), feature.end(),
+                           [&](const std::string& elem) { return elem == in; });
+    }
     bool in_feature(const std::string& in,
                     const std::vector<std::string>& feature)
     {
         return std::find(feature.begin(), feature.end(), in) != feature.end();
     }
 
-    bool find_gene_info(const std::string& substr,
-                        std::vector<std::string>& token, std::string& gene_id,
+    bool find_gene_info(std::string_view substr, std::string& gene_id,
                         std::string& gene_name, bool& found_id,
                         bool& found_name)
     {
         if (substr.rfind("gene_id", 0) == 0)
         {
-            token = misc::split(substr, " ");
+            auto token = misc::tokenize(substr, " ");
             if (token.size() != 2)
             {
                 throw std::runtime_error("Error: Malformed attribute value: "
-                                         + substr);
+                                         + std::string(substr));
             }
-            gene_id = token.back();
+            gene_id = std::string(token.back());
             gene_id.erase(std::remove(gene_id.begin(), gene_id.end(), '\"'),
                           gene_id.end());
             if (found_name) return true;
@@ -275,13 +284,13 @@ protected:
         }
         else if (substr.rfind("gene_name", 0) == 0)
         {
-            token = misc::split(substr, " ");
+            auto token = misc::tokenize(substr, " ");
             if (token.size() != 2)
             {
                 throw std::runtime_error("Error: Malformed attribute value: "
-                                         + substr);
+                                         + std::string(substr));
             }
-            gene_name = token.back();
+            gene_name = std::string(token.back());
             gene_name.erase(
                 std::remove(gene_name.begin(), gene_name.end(), '\"'),
                 gene_name.end());
@@ -291,36 +300,19 @@ protected:
         return false;
     }
 
-    bool parse_attribute(const std::string& attribute_str, std::string& gene_id,
+    bool parse_attribute(std::string_view attribute_str, std::string& gene_id,
                          std::string& gene_name)
     {
         assert(!attribute_str.empty());
         gene_id = "";
         gene_name = "";
-        std::size_t prev = 0, pos;
-        const std::string separators = ";";
-        std::string substr;
-        std::vector<std::string> token;
+        std::vector<std::string_view> token;
         bool found_id = false, found_name = false;
-        while ((pos = attribute_str.find_first_of(separators, prev))
-               != std::string::npos)
+        token = misc::tokenize(attribute_str, ";");
+        for (auto&& item : token)
         {
-            if (pos > prev)
-            {
-                substr = attribute_str.substr(prev, pos - prev);
-                misc::trim(substr);
-                if (find_gene_info(substr, token, gene_id, gene_name, found_id,
-                                   found_name))
-                { return true; }
-            }
-            prev = pos + 1;
-        }
-        if (prev < attribute_str.length())
-        {
-            substr = attribute_str.substr(prev, std::string::npos);
-            misc::trim(substr);
-            if (find_gene_info(substr, token, gene_id, gene_name, found_id,
-                               found_name))
+            // only return true when both gene_name and gene_id are found
+            if (find_gene_info(item, gene_id, gene_name, found_id, found_name))
             { return true; }
         }
         return false;
