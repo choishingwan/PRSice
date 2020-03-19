@@ -112,6 +112,12 @@ protected:
             throw std::runtime_error(error);
         }
     }
+    static void start_end(std::string_view start_str, std::string_view end_str,
+                          const size_t pad, size_t& start, size_t& end)
+    {
+        start_end(std::string(start_str), std::string(end_str), pad, start,
+                  end);
+    }
 
     static void start_end(const std::string& start_str,
                           const std::string& end_str, const size_t pad,
@@ -182,23 +188,24 @@ protected:
         return token.size() == 2;
     }
     static void read_bed(const std::string& bed);
-    static void read_bed(const std::string& bed,
+    static void read_bed(std::string_view bed,
                          std::vector<IITree<size_t, size_t>>& m_gene_sets);
     static bool valid_chr(const std::string& input)
     {
         std::string chr = input;
-        std::transform(chr.begin(), chr.end(), chr.begin(), ::toupper);
+        misc::to_upper(chr);
         if (chr.rfind("CHR") != 0)
         {
             if (!misc::isNumeric(chr)) { return false; }
         }
         return true;
     }
-    static bool valid_strand(const std::string& input)
+
+    static bool valid_strand(std::string_view input)
     {
         return !(input != "." && input != "+" && input != "-");
     }
-    static void is_bed_line(const std::vector<std::string>& bed_line,
+    static void is_bed_line(const std::vector<std::string_view>& bed_line,
                             size_t& column_size, bool& is_header)
     {
         if (bed_line.front() == "track" || bed_line.front() == "browser")
@@ -223,7 +230,7 @@ protected:
                   "column and previous line has "
                 + std::to_string(column_size) + "\n");
         }
-        if (!valid_chr(bed_line.front()))
+        if (!valid_chr(std::string(bed_line.front())))
         {
             throw std::runtime_error(
                 "Error: Invalid file format. First field "
@@ -231,10 +238,11 @@ protected:
         }
         if (bed_line.size() > 5)
         {
-            if (!valid_strand(bed_line[5]))
+            if (!valid_strand(bed_line[+BED::STRAND]))
             {
                 throw std::runtime_error(
-                    "Error: Undefined strand information: " + bed_line[5]
+                    "Error: Undefined strand information: "
+                    + std::string(bed_line[+BED::STRAND])
                     + "\nValid strand characters are '.', '+' and '-'\n");
             }
         }

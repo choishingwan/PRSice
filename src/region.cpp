@@ -23,15 +23,15 @@
 // e.g. bound with chr1:1-10 will remove any SNPs on chr1 with coordinate
 // from 1 to 10
 
-void Region::read_bed(const std::string& bed,
+void Region::read_bed(std::string_view bed,
                       std::vector<IITree<size_t, size_t>>& cr)
 {
     std::ifstream input_file;
     input_file.open(bed);
-    std::vector<std::string> range, boundary;
+    std::vector<std::string_view> range, boundary;
     if (!input_file.is_open())
     {
-        throw std::runtime_error("Error: " + bed
+        throw std::runtime_error("Error: " + std::string(bed)
                                  + " cannot be open. Please check you "
                                    "have the correct input");
     }
@@ -43,7 +43,7 @@ void Region::read_bed(const std::string& bed,
     {
         misc::trim(line);
         is_header = false;
-        boundary = misc::split(line);
+        boundary = misc::tokenize(line);
         try
         {
             is_bed_line(boundary, column_size, is_header);
@@ -60,7 +60,7 @@ void Region::read_bed(const std::string& bed,
         start_end(boundary[+BED::START], boundary[+BED::END], true, low_bound,
                   upper_bound);
         ++upper_bound;
-        int chr = get_chrom_code_raw(boundary[0].c_str());
+        int chr = get_chrom_code_raw(std::string(boundary[+BED::CHR]).c_str());
         if (chr >= 0 && chr < MAX_POSSIBLE_CHROM)
         {
             // ignore any chromosome that we failed to parse (chr < 0)
@@ -78,13 +78,13 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
 {
     // do nothing when no exclusion is required.
     if (exclusion_range.empty()) return;
-    std::vector<std::string> exclude_regions =
-        misc::split(exclusion_range, ",");
+    std::vector<std::string_view> exclude_regions =
+        misc::tokenize(exclusion_range, ",");
     // file input is represented by the lack of :
-    std::vector<std::string> range, boundary;
+    std::vector<std::string_view> range, boundary;
     for (auto&& region : exclude_regions)
     {
-        range = misc::split(region, ":");
+        range = misc::tokenize(region, ":");
         if (range.size() == 1)
         {
             // bed file input
@@ -92,8 +92,8 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
         }
         else if (range.size() == 2)
         {
-            int chr = get_chrom_code_raw(range[0].c_str());
-            boundary = misc::split(range[1], "-");
+            int chr = get_chrom_code_raw(std::string(range[0]).c_str());
+            boundary = misc::tokenize(range[1], "-");
             if (boundary.size() > 2)
             {
                 throw std::runtime_error(
@@ -118,10 +118,9 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
         }
         else
         {
-            std::string message =
+            throw std::runtime_error(
                 "Error: Invalid exclusion range format. "
-                "Should be chr:start, chr:start-end or a bed file\n";
-            throw std::runtime_error(message);
+                "Should be chr:start, chr:start-end or a bed file\n");
         }
     }
     // also index the tree
