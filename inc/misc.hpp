@@ -300,7 +300,7 @@ inline std::vector<std::string> split(const std::string& seq,
 }
 
 inline std::vector<std::string_view> tokenize(std::string_view str,
-                                              std::string delims = " ")
+                                              std::string delims = "\t ")
 {
     std::vector<std::string_view> output;
     // output.reserve(str.size() / 2);

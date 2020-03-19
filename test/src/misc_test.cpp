@@ -44,8 +44,7 @@ TEST(HAS_ENDING, CHECK_VALIDITY)
 TEST(SPLIT, STRING_VIEW_FORMAT)
 {
     std::string input = "test,the,splitter,and,make,sure-it,works well";
-    std::vector<std::string_view> token =
-        misc::split(input, std::string_view(","));
+    std::vector<std::string_view> token = misc::tokenize(input, ",");
     ASSERT_EQ(token.size(), 7);
     ASSERT_EQ(token[0], "test");
     ASSERT_EQ(token[1], "the");
@@ -54,6 +53,13 @@ TEST(SPLIT, STRING_VIEW_FORMAT)
     ASSERT_EQ(token[4], "make");
     ASSERT_EQ(token[5], "sure-it");
     ASSERT_EQ(token[6], "works well");
+    input = "sure-it\tworks well ok";
+    token = misc::tokenize(input);
+    ASSERT_EQ(token.size(), 4);
+    ASSERT_EQ(token[0], "sure-it");
+    ASSERT_EQ(token[1], "works");
+    ASSERT_EQ(token[2], "well");
+    ASSERT_EQ(token[3], "ok");
 }
 TEST(OVERFLOW_CHECK, OVERFLOW_CHECK)
 {
