@@ -1441,7 +1441,7 @@ void PRSice::run_null_perm_no_thread(
     // reset the seed for each new threshold such that we will always
     // generate the same phenotpe for each threhsold without us needing to
     // regenerate the PRS
-    std::mt19937 rand_gen {m_seed};
+    std::mt19937 rand_gen {m_perm_info.seed};
     // we want to count the number of samples included in the analysis
     const Eigen::Index num_regress_sample = m_phenotype.rows();
     const Eigen::Index p = m_independent_variables.cols();
@@ -1528,7 +1528,7 @@ void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
     // we need to reset the seed for each threshold so that the phenotype
     // generated should always be the same for each threshold. This help us
     // avoid needing to repeat reading in the PRS for each permutation
-    std::mt19937 rand_gen {m_seed};
+    std::mt19937 rand_gen {m_perm_info.seed};
     Eigen::setNbThreads(1);
     const Eigen::Index num_regress_sample = m_phenotype.rows();
     // this matrix is use for storing the shuffle information

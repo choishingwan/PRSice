@@ -5541,8 +5541,9 @@ TEST(REGION_BACKGROUND, SKIP_CHR)
         gene_sets = region.get_gene_sets();
         snp_in_sets = region.get_snp_sets();
     }
-    catch (...)
+    catch (const std::runtime_error& er)
     {
+        std::cerr << er.what() << std::endl;
         FAIL();
     }
     // we should have the 3 sets, the base, the bed and the background

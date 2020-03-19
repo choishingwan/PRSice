@@ -121,7 +121,7 @@ protected:
         {
             // That's because bed is 0 based and range format is 1
             // based. and type for bed is 1 and type for range is 0
-            start = misc::string_to_size_t(start_str.c_str()) + pad;
+            start = misc::Convertor::convert<size_t>(start_str) + pad;
         }
         catch (...)
         {
@@ -129,11 +129,11 @@ protected:
         }
         try
         {
-            end = misc::string_to_size_t(end_str.c_str());
+            end = misc::Convertor::convert<size_t>(end_str);
         }
         catch (...)
         {
-            throw std::runtime_error("end");
+            throw std::runtime_error("end ");
         }
         if (start > end)
         {

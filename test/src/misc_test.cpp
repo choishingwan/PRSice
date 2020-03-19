@@ -214,4 +214,21 @@ TEST(UTILITY, IS_GZ_FILE)
     ASSERT_FALSE(misc::is_gz_file("DEBUG.gz"));
     std::remove("DEBUG.gz");
 }
+
+TEST(CONVERTOR, CONVERTOR)
+{
+    size_t res = misc::Convertor::convert<size_t>("10000");
+    ASSERT_EQ(res, 10000);
+    double res_db = misc::Convertor::convert<double>("0.05");
+    ASSERT_DOUBLE_EQ(res_db, 0.05);
+    try
+    {
+        res = misc::Convertor::convert<size_t>("-10000");
+        FAIL();
+    }
+    catch (const std::runtime_error&)
+    {
+        SUCCEED();
+    }
+}
 #endif // MISC_TEST_HPP

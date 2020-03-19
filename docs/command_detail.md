@@ -675,14 +675,12 @@ This page contains all command available in PRSice.
     
 - `--keep-ambig`
 
-    Keep ambiguous SNPs. Only use this option
-    whe base and target has the same A1 and A2 alleles
-
-- `--keep-ambig-as-is`
-
-    Keep ambiguous SNPs and do not perform flipping on the 
-    *ambiguous* SNPs. This will allow user to better handle
-    the ambiguous SNPs according to their liking.
+    Keep ambiguous SNPs. PRSice will only perform dosage flipping but
+    not strand flipping on ambiguous SNPs. e.g. If your base data contain 
+    A/T, with effective allele being A, and your target data is T/A with dosage
+    of T, then PRSice will change the dosage in target to A/T with dosage of A. 
+    Only use this option when you are certain your base and target are on
+    the same strand. 
 
 - `--logit-perm`
 

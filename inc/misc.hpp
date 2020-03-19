@@ -350,6 +350,26 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
     if (idx < init_size) { result.resize(idx); }
 }
 
+class Convertor
+{
+public:
+    template <typename T>
+    static T convert(const std::string& str)
+    {
+        iss.clear();
+        iss.str(str);
+        T obj;
+        iss >> obj;
+        if (!iss.eof() || iss.fail())
+        { throw std::runtime_error("Unable to convert the input"); }
+        return obj;
+    }
+
+
+private:
+    static std::istringstream iss;
+};
+
 template <typename T>
 inline T convert(const std::string& str)
 {

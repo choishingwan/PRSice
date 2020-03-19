@@ -318,7 +318,6 @@ private:
     double m_null_p = 1.0;
     double m_null_se = 0.0;
     double m_null_coeff = 0.0;
-    std::random_device::result_type m_seed = 0;
     size_t m_total_process = 0;
     uint32_t m_num_snp_included = 0;
     uint32_t m_analysis_done = 0;

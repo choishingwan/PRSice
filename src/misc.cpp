@@ -19,6 +19,26 @@
 
 namespace misc
 {
+std::istringstream Convertor::iss;
+
+template <>
+size_t Convertor::convert<size_t>(const std::string& str)
+{
+    iss.clear();
+    iss.str(str);
+    size_t obj;
+    iss >> obj;
+    if (!iss.eof() || iss.fail())
+    { throw std::runtime_error("Unable to convert the input"); }
+    else if (static_cast<int>(obj) < 0)
+    {
+        throw std::runtime_error(
+            "Error: Negative input for a positive variable");
+    }
+    return obj;
+}
+
+
 double dnorm(double x, double mu, double sigma, bool log)
 {
 #ifdef IEEE_754
