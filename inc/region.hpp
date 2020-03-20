@@ -268,7 +268,7 @@ protected:
                         std::string& gene_name, bool& found_id,
                         bool& found_name)
     {
-        if (substr.rfind("gene_id", 0) == 0)
+        if (substr.rfind("gene_id", 0) == 0 || substr.rfind(" gene_id", 0) == 0)
         {
             auto token = misc::tokenize(substr, " ");
             if (token.size() != 2)
@@ -282,7 +282,8 @@ protected:
             if (found_name) return true;
             found_id = true;
         }
-        else if (substr.rfind("gene_name", 0) == 0)
+        else if (substr.rfind("gene_name", 0) == 0
+                 || substr.rfind(" gene_name", 0) == 0)
         {
             auto token = misc::tokenize(substr, " ");
             if (token.size() != 2)
