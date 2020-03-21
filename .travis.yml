@@ -3,7 +3,7 @@ compiler: gcc
 branches:
   only:
   - master
-  
+  - built-test
 sudo: false
 
 matrix:

@@ -268,7 +268,7 @@ public:
 
     double mean() const { return M1; }
 
-    double var() const { return M2 / ((double) n - 1.0); }
+    double var() const { return M2 / (static_cast<double>(n) - 1.0); }
 
     double sd() const { return sqrt(var()); }
 
@@ -299,9 +299,24 @@ inline std::vector<std::string> split(const std::string& seq,
     return result;
 }
 
+inline std::vector<std::string_view> tokenize(std::string_view str,
+                                              std::string delims = "\t ")
+{
+    std::vector<std::string_view> output;
+    // output.reserve(str.size() / 2);
+    for (auto first = str.data(), second = str.data(),
+              last = first + str.size();
+         second != last && first != last; first = second + 1)
+    {
+        second = std::find_first_of(first, last, std::cbegin(delims),
+                                    std::cend(delims));
+        if (first != second) output.emplace_back(first, second - first);
+    }
+    return output;
+}
 
 inline std::vector<std::string_view> split(std::string_view str,
-                                           std::string_view delims = " ")
+                                           std::string delims = " ")
 {
     std::vector<std::string_view> output;
     // output.reserve(str.size() / 2);
