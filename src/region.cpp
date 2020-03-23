@@ -27,7 +27,7 @@ void Region::read_bed(std::string_view bed,
                       std::vector<IITree<size_t, size_t>>& cr)
 {
     std::ifstream input_file;
-    input_file.open(bed);
+    input_file.open(std::string(bed));
     std::vector<std::string_view> range, boundary;
     if (!input_file.is_open())
     {
