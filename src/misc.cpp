@@ -33,7 +33,9 @@ size_t Convertor::convert<size_t>(const std::string& str)
     else if (static_cast<int>(obj) < 0)
     {
         throw std::runtime_error(
-            "Error: Negative input for a positive variable");
+            "Error: Negative input for a positive "
+            "variable, or you have a very large integer, e.g. larger than "
+            + std::to_string(std::numeric_limits<int>::max()));
     }
     return obj;
 }

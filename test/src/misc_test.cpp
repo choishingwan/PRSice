@@ -237,4 +237,15 @@ TEST(CONVERTOR, CONVERTOR)
         SUCCEED();
     }
 }
+TEST(TRIM, STRING_VIEW)
+{
+    std::string ref = " testing \n";
+    std::string_view s = ref;
+    std::string_view t = ref;
+    s = misc::trimmed(s);
+    ASSERT_EQ(s, "testing");
+    ASSERT_STREQ(ref.c_str(), " testing \n");
+    misc::trim(t);
+    ASSERT_EQ(t, "testing");
+}
 #endif // MISC_TEST_HPP

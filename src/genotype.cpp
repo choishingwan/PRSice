@@ -162,8 +162,6 @@ void Genotype::add_flags(
     const size_t required_size = BITCT_TO_WORDCT(num_sets);
     size_t chr, bp;
     std::vector<uintptr_t> flag(required_size, 0);
-    std::unordered_map<std::string, std::vector<size_t>>::const_iterator
-        snp_idx;
     for (size_t i = 0; i < num_snps; ++i)
     {
         auto&& snp = m_existed_snps[i];
@@ -201,7 +199,7 @@ void Genotype::read_base(
             ? (threshold_info.fastscore ? threshold_info.bar_levels.back()
                                         : threshold_info.upper)
             : 1.0;
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
     std::string line;
     GZSTREAM_NAMESPACE::igzstream gz_snp_file;
     std::ifstream snp_file;
@@ -295,7 +293,7 @@ void Genotype::read_base(
         misc::trim(line);
         if (line.empty()) continue;
         ++num_line_in_base;
-        token = misc::split(line);
+        token = misc::tokenize(line);
         for (auto&& t : token) { misc::trim(t); }
         if (token.size() <= max_index)
         {
@@ -320,7 +318,8 @@ void Genotype::read_base(
         {
             throw std::runtime_error(
                 "Error: Invalid loci for " + rs_id + ": "
-                + token[base_file.column_index[+BASE_INDEX::BP]] + "\n");
+                + std::string(token[base_file.column_index[+BASE_INDEX::BP]])
+                + "\n");
         }
         if (base_file.has_column[+BASE_INDEX::BP]
             && base_file.has_column[+BASE_INDEX::CHR])
@@ -566,7 +565,7 @@ size_t Genotype::get_rs_column(const std::string& input)
         size_t rs_index = 0;
         for (auto&& name : token)
         {
-            std::transform(name.begin(), name.end(), name.begin(), ::toupper);
+            misc::to_upper(name);
             if (name == "SNP" || name == "RS" || name == "RS_ID"
                 || name == "RS.ID" || name == "RSID" || name == "VARIANT.ID"
                 || name == "VARIANT_ID")
@@ -602,6 +601,7 @@ size_t Genotype::get_rs_column(const std::string& input)
         return 0;
     }
 }
+
 std::unordered_set<std::string>
 Genotype::load_snp_list(const std::string& input)
 {
@@ -615,20 +615,19 @@ Genotype::load_snp_list(const std::string& input)
         throw std::runtime_error(error_message);
     }
     std::string line;
-    // we will return the "result" variable
-    std::unordered_set<std::string> result;
     std::getline(in, line);
     in.clear();
     in.seekg(0, std::ios::beg);
     misc::trim(line);
     size_t rs_index = get_rs_column(line);
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
+    std::unordered_set<std::string> result;
     while (std::getline(in, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
-        result.insert(token[rs_index]);
+        token = misc::tokenize(line);
+        result.insert(std::string(token[rs_index]));
     }
     return result;
 }
@@ -640,20 +639,20 @@ std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
     in.open(input.c_str());
     if (!in.is_open())
     {
-        std::string error_message =
-            "Error: Cannot open keep / remove file: " + input;
-        throw std::runtime_error(error_message);
+        throw std::runtime_error("Error: Cannot open keep / remove file: "
+                                 + input);
     }
     // read in the file
     std::string line;
     // now go through the sample file. We require the FID (if any) and IID  must
     // be the first 1/2 column of the file
+    std::vector<std::string> token;
     std::unordered_set<std::string> result;
     while (std::getline(in, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
-        std::vector<std::string> token = misc::split(line);
+        token = misc::split(line);
         if (ignore_fid) { result.insert(token[0]); }
         else
         {
@@ -668,7 +667,9 @@ std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
     return result;
 }
 
-// return true if  we need to work on it
+// return true if chr code is ok
+// TODO: Might want to change it to something not rely on PLINK as this
+// shouldn't be too difficult anyway
 bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
                               bool& chr_error, std::string& error_message)
 {
@@ -701,11 +702,7 @@ void Genotype::load_samples(bool verbose)
         m_remove_sample = false;
         m_sample_selection_list = load_ref(m_keep_file, m_ignore_fid);
     }
-    if (!m_is_ref)
-    {
-        // m_sample_names = gen_sample_vector();
-        m_sample_id = gen_sample_vector();
-    }
+    if (!m_is_ref) { m_sample_id = gen_sample_vector(); }
     else
     {
         // don't bother loading up the sample vector as it should
@@ -1470,7 +1467,7 @@ void Genotype::build_membership_matrix(
 void Genotype::standardize_prs()
 {
     misc::RunningStat rs;
-    size_t num_prs = m_prs_info.size();
+    const size_t num_prs = m_prs_info.size();
     for (size_t i = 0; i < num_prs; ++i)
     {
         if (!IS_SET(m_sample_include, i) || IS_SET(m_exclude_from_std, i))
