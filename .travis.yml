@@ -1,5 +1,10 @@
 language: cpp
 compiler: gcc
+branches:
+  only:
+  - master
+  - built-test
+
 sudo: false
 
 matrix:
@@ -48,8 +53,8 @@ script:
   - unzip Toy_Data.zip
   - ../bin/PRSice --base TOY_BASE_GWAS.assoc --target TOY_TARGET_DATA --gtf Homo_sapiens.GRCh38.86.gtf.gz --msigdb c2.all.v6.2.symbols.gmt --set-perm 100
   - gprof ../bin/PRSice > gprof.log
-  #- wget -O Test.zip https://www.dropbox.com/s/zuae45ybs96d2uk/Test.zip?dl=1
-  #- unzip Test.zip
+  - wget -O Test.zip https://www.dropbox.com/s/zuae45ybs96d2uk/Test.zip?dl=1
+  - unzip Test.zip
   #- ../bin/runUnitTests .
   - head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
