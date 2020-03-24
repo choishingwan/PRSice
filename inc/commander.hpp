@@ -42,8 +42,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.2.13";
-const std::string date = "2020-03-10";
+const std::string version = "2.2.14";
+const std::string date = "2020-03-24";
 class Commander
 {
 public:
