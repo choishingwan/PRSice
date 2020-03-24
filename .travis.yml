@@ -25,8 +25,8 @@ before_install:
   # Combine global build options with OS/compiler-dependent options
   - export CMAKE_OPTIONS=${CMAKE_OPTIONS}" "${ENV_CMAKE_OPTIONS}
   - export CXX_FLAGS=${CXX_FLAGS}" "${ENV_CXX_FLAGS}
-  #- sudo pip install --user lcov
-  #- pip install --user cpp-coveralls
+  
+  
     
 install:
   - if [ "$CXX" = "clang++" ] && [ "$TRAVIS_OS_NAME" = "linux" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
@@ -34,7 +34,7 @@ install:
   - echo ${CXX}
   - ${CXX} --version
   - ${CXX} -v
-  - sudo pip install --user cpp-coveralls
+  - pip install --user cpp-coveralls
 
 addons:
   apt:
@@ -55,7 +55,7 @@ script:
   - gprof ../bin/PRSice > gprof.log
   - wget -O Test.zip https://www.dropbox.com/s/zuae45ybs96d2uk/Test.zip?dl=1
   - unzip Test.zip
-  #- ../bin/runUnitTests .
+  - ../bin/runUnitTests .
   - head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   
