@@ -20,40 +20,11 @@
 BinaryPlink::BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
                          const std::string& delim, Reporter* reporter)
 {
-    m_ignore_fid = pheno.ignore_fid;
-    m_keep_file = geno.keep;
-    m_remove_file = geno.remove;
-    m_delim = delim;
-    m_reporter = reporter;
-    init_chr(geno.num_autosome);
-    std::string message = "Initializing Genotype ";
-    const bool use_list = !geno.file_list.empty();
-    std::string file_name = use_list ? geno.file_list : geno.file_name;
-    std::vector<std::string> token;
-    token = misc::split(file_name, ",");
-    const bool external_sample = (token.size() == 2);
-    if (token.size() > 2)
-    { throw std::runtime_error("Error: Undefine user input: " + file_name); }
-    if (external_sample) { m_sample_file = token[1]; }
-    if (use_list)
-    {
-        m_genotype_file_names = load_genotype_prefix(token[0]);
-        message.append("info from file: " + token[0] + " (bed)\n");
-    }
-    else
-    {
-        m_genotype_file_names = set_genotype_files(token[0]);
-        message.append("file: " + token[0] + " (bed)\n");
-    }
-    if (external_sample)
-    { message.append("With external fam file: " + m_sample_file + "\n"); }
-    else
-    {
-        m_sample_file = m_genotype_file_names.front() + ".fam";
-    }
+    const std::string message = initialize(geno, pheno, delim, "bed", reporter);
+    if (m_sample_file.empty())
+    { m_sample_file = m_genotype_file_names.front() + ".fam"; }
     m_reporter->report(message);
 }
-
 
 std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 {

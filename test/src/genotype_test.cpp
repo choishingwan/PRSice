@@ -4,10 +4,178 @@
 #include "gtest/gtest.h"
 class GENOTYPE_BASIC : public Genotype, public ::testing::Test
 {
+public:
+    void cleanup()
+    {
+        m_keep_file = "";
+        m_sample_file = "";
+        m_remove_file = "";
+        m_genotype_file_names.clear();
+        m_delim = "";
+        m_ignore_fid = false;
+    }
 };
 // This should be the simplest of the three genotype class. Test anything that
 // doesn't require binaryplink and binarygen
 // set_genotype_files
+
+TEST_F(GENOTYPE_BASIC, CHR_CONVERT)
+{
+    ASSERT_FALSE(chr_prefix("1"));
+    ASSERT_TRUE(chr_prefix("chr1"));
+    auto chr = get_chrom_code("1");
+    ASSERT_EQ(chr, 1);
+    chr = get_chrom_code("chr10");
+    ASSERT_EQ(chr, 10);
+    chr = get_chrom_code("CHRX");
+    ASSERT_EQ(chr, CHROM_X);
+    chr = get_chrom_code("M");
+    ASSERT_EQ(chr, CHROM_MT);
+    chr = get_chrom_code("Y");
+    ASSERT_EQ(chr, CHROM_Y);
+    chr = get_chrom_code("XY");
+    ASSERT_EQ(chr, CHROM_XY);
+    chr = get_chrom_code("mt");
+    ASSERT_EQ(chr, CHROM_MT);
+    chr = get_chrom_code("CHR Happy");
+    ASSERT_EQ(chr, -1);
+    chr = get_chrom_code("0X");
+    ASSERT_EQ(chr, CHROM_X);
+    chr = get_chrom_code("0Y");
+    ASSERT_EQ(chr, CHROM_Y);
+    chr = get_chrom_code("0M");
+    ASSERT_EQ(chr, CHROM_MT);
+    // TODO: Add more crazy chromosome use cases
+}
+
+TEST_F(GENOTYPE_BASIC, INITIALIZE)
+{
+    GenoFile geno;
+    geno.num_autosome = 22;
+    Phenotype pheno;
+    pheno.ignore_fid = false;
+    std::string delim = " ";
+    std::string type = "bed";
+    Reporter reporter(std::string("LOG"), 60, true);
+    // need to check the following
+    // m_genotype_file_name is set
+    // m_sample_file is set when external file is provided and empty if not
+    // m_keep_file, m_remove_file and m_delim should be set
+    // there should be no error check
+    // Normal input
+    geno.file_name = "Genotype";
+    initialize(geno, pheno, delim, type, &reporter);
+    ASSERT_STREQ(delim.c_str(), m_delim.c_str());
+    ASSERT_EQ(m_genotype_file_names.size(), 1);
+    ASSERT_STREQ(geno.file_name.c_str(), m_genotype_file_names.front().c_str());
+    ASSERT_TRUE(m_keep_file.empty());
+    ASSERT_TRUE(m_remove_file.empty());
+    ASSERT_TRUE(m_sample_file.empty());
+    ASSERT_FALSE(m_ignore_fid);
+    cleanup();
+    // now with external sample_file
+    geno.file_name = "Genotype,External";
+    delim = "\t";
+    pheno.ignore_fid = true;
+    initialize(geno, pheno, delim, type, &reporter);
+    ASSERT_STREQ(delim.c_str(), m_delim.c_str());
+    ASSERT_EQ(m_genotype_file_names.size(), 1);
+    ASSERT_STREQ("Genotype", m_genotype_file_names.front().c_str());
+    ASSERT_TRUE(m_keep_file.empty());
+    ASSERT_TRUE(m_remove_file.empty());
+    ASSERT_TRUE(m_ignore_fid);
+    ASSERT_STREQ(m_sample_file.c_str(), "External");
+    // now check replacement
+    cleanup();
+    geno.file_name = "chr#_geno";
+    geno.keep = "Hi";
+    initialize(geno, pheno, delim, type, &reporter);
+    ASSERT_EQ(m_genotype_file_names.size(), geno.num_autosome);
+    for (size_t i = 0; i < geno.num_autosome; ++i)
+    {
+        std::string cur_file = "chr" + std::to_string(i + 1) + "_geno";
+        ASSERT_STREQ(m_genotype_file_names[i].c_str(), cur_file.c_str());
+    }
+    ASSERT_STREQ(m_keep_file.c_str(), "Hi");
+    ASSERT_TRUE(m_remove_file.empty());
+    ASSERT_TRUE(m_sample_file.empty());
+    cleanup();
+    // invalid format
+    geno.file_name = "chr,x,y";
+    try
+    {
+        initialize(geno, pheno, delim, type, &reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    cleanup();
+    geno.file_name = "chr#_geno,Sample";
+    geno.keep = "Hi";
+    geno.num_autosome = 30;
+    initialize(geno, pheno, delim, type, &reporter);
+    ASSERT_EQ(m_genotype_file_names.size(), geno.num_autosome);
+    for (size_t i = 0; i < geno.num_autosome; ++i)
+    {
+        std::string cur_file = "chr" + std::to_string(i + 1) + "_geno";
+        ASSERT_STREQ(m_genotype_file_names[i].c_str(), cur_file.c_str());
+    }
+    ASSERT_STREQ(m_keep_file.c_str(), "Hi");
+    ASSERT_TRUE(m_remove_file.empty());
+    ASSERT_STREQ(m_sample_file.c_str(), "Sample");
+    // finally, with list
+    cleanup();
+    // we need a dummy file
+    std::ofstream dummy("DUMMY");
+    std::vector<std::string> expected = {"A", "B", "C D", "E F G", "H#I"};
+    for (auto& d : expected) { dummy << d << std::endl; }
+    dummy.close();
+    geno.file_list = "DUMMY";
+    geno.file_name = "";
+    initialize(geno, pheno, delim, type, &reporter);
+    ASSERT_EQ(m_genotype_file_names.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_STREQ(m_genotype_file_names[i].c_str(), expected[i].c_str()); }
+    ASSERT_TRUE(m_sample_file.empty());
+    // now try with external sample
+    cleanup();
+    geno.file_list = "DUMMY,sample";
+    initialize(geno, pheno, delim, type, &reporter);
+    ASSERT_EQ(m_genotype_file_names.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_STREQ(m_genotype_file_names[i].c_str(), expected[i].c_str()); }
+    ASSERT_FALSE(m_sample_file.empty());
+    ASSERT_STREQ(m_sample_file.c_str(), "sample");
+
+    // invalid file input
+    cleanup();
+    geno.file_list = "DUMMY,B,C";
+    try
+    {
+        initialize(geno, pheno, delim, type, &reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    cleanup();
+    std::remove("DUMMY");
+    cleanup();
+    // should fail here when the file is not found
+    try
+    {
+        initialize(geno, pheno, delim, type, &reporter);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
+
 TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITHOUT_HASH)
 {
     std::string name = "Test";
@@ -15,6 +183,7 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITHOUT_HASH)
     ASSERT_STREQ(m_genotype_file_names.front().c_str(), name.c_str());
     ASSERT_EQ(m_genotype_file_names.size(), 1);
 }
+
 TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_WITH_HASH)
 {
     std::string name = "chr#test";
@@ -44,6 +213,62 @@ TEST_F(GENOTYPE_BASIC, SET_FILE_NAME_MULTI_HASH)
     }
 }
 
+
+TEST_F(GENOTYPE_BASIC, GET_RS_COLUMN)
+{
+    Reporter reporter(std::string("LOG"), 60, true);
+    m_reporter = &reporter;
+    // simplest format
+    std::string input = "rs1234";
+    auto result = get_rs_column(input);
+    ASSERT_EQ(result, 0);
+    // might want to test the rest, RS.ID RS_ID, RSID, SNP.ID, SNP_ID,
+    // Variant_ID, Variant.ID
+    input = "A B CHR snp Weight P A1";
+    // read from header
+    result = get_rs_column(input);
+    ASSERT_EQ(result, 3);
+    input = "1 rs1234 123 0 A T";
+    // this should be bim file
+    result = get_rs_column(input);
+    ASSERT_EQ(result, 1);
+    input = "rs1234 A BC T A D E T";
+    // no idea what this is, will take first column
+    result = get_rs_column(input);
+    ASSERT_EQ(result, 0);
+}
+TEST_F(GENOTYPE_BASIC, LOAD_SNP_LIST)
+{
+    Reporter reporter("LOG", 60, true);
+    m_reporter = &reporter;
+    std::vector<std::string> expected = {"rs1234", "rs76591", "rs139486"};
+    std::ofstream dummy("DUMMY");
+    for (auto& e : expected) { dummy << e << std::endl; }
+    auto res = load_snp_list("DUMMY");
+    ASSERT_EQ(res.size(), expected.size());
+    for (auto& e : expected) { ASSERT_FALSE(res.find(e) == res.end()); }
+    dummy.close();
+    std::remove("DUMMY");
+    // now different format, just in case the idx is correct (use bim)
+    dummy.open("DUMMY");
+    for (auto& e : expected) { dummy << "1 " << e << " 3 4 5 6" << std::endl; }
+    dummy.close();
+    res = load_snp_list("DUMMY");
+
+    ASSERT_EQ(res.size(), expected.size());
+    for (auto& e : expected) { ASSERT_FALSE(res.find(e) == res.end()); }
+    std::remove("DUMMY");
+    // should fail if file not found
+    try
+    {
+        res = load_snp_list("DUMMY");
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+}
 
 // init_chr
 // chr_code_check

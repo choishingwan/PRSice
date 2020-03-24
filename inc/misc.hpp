@@ -414,6 +414,7 @@ inline void to_lower(std::string& str)
 {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 }
+
 inline void to_upper(const std::string& input, std::string& out)
 {
     out.resize(input.size());
@@ -435,11 +436,54 @@ inline bool overflow(const T a, const T b)
 
 // trim functions from https://stackoverflow.com/a/217605
 // trim from start (in place)
+inline std::string_view ltrimmed(std::string_view s)
+{
+    s.remove_prefix(std::distance(
+        s.cbegin(), std::find_if(s.cbegin(), s.cend(),
+                                 [](int ch) { return std::isgraph(ch); })));
+
+    return s;
+}
+
+inline std::string_view rtrimmed(std::string_view s)
+{
+    s.remove_suffix(std::distance(
+        s.crbegin(), std::find_if(s.crbegin(), s.crend(),
+                                  [](int ch) { return std::isgraph(ch); })));
+    return s;
+}
+
+inline std::string_view trimmed(std::string_view s)
+{
+    return ltrimmed(rtrimmed(s));
+}
+inline void ltrim(std::string_view& s)
+{
+    s.remove_prefix(std::distance(
+        s.cbegin(), std::find_if(s.cbegin(), s.cend(),
+                                 [](int ch) { return std::isgraph(ch); })));
+}
+
+inline void rtrim(std::string_view& s)
+{
+    s.remove_suffix(std::distance(
+        s.crbegin(), std::find_if(s.crbegin(), s.crend(),
+                                  [](int ch) { return std::isgraph(ch); })));
+}
+
+inline void trim(std::string_view& s)
+{
+    rtrim(s);
+    ltrim(s);
+}
+
+
 inline void ltrim(std::string& s)
 {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(),
                                     [](int ch) { return std::isgraph(ch); }));
 };
+
 // trim from end (in place)
 inline void rtrim(std::string& s)
 {

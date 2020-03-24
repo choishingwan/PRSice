@@ -368,7 +368,16 @@ void Region::load_gtf(
     // background
     const bool provided_background = !m_background.empty();
     if (msigdb_list.empty() && m_genome_wide_background) return;
-    const bool gz_input = misc::is_gz_file(m_gtf);
+    bool gz_input = false;
+    try
+    {
+        gz_input = misc::is_gz_file(m_gtf);
+    }
+    catch (const std::runtime_error& er)
+    {
+        throw std::runtime_error(er.what());
+    }
+    misc::is_gz_file(m_gtf);
     // we want to allow gz file input (as GTF file can be big)
     GZSTREAM_NAMESPACE::igzstream gz_gtf_file;
     std::ifstream gtf_file;

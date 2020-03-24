@@ -138,10 +138,60 @@ public:
         return true;
     }
 
+    bool chr_prefix(std::string_view str)
+    {
+        if (str.length() <= 3) { return false; }
+        return ((str[0] & 0xdf) == 'C' && (str[1] & 0xdf) == 'H'
+                && (str[2] & 0xdf) == 'R');
+    }
+    int32_t get_chrom_code(std::string_view str)
+    {
+        if (chr_prefix(str)) { str.remove_prefix(3); }
+        if (str.length() == 0) return -1;
+        if ((str[0] & 0xdf) == 'X')
+        {
+            if (str.length() == 2 && (str[1] & 0xdf) == 'Y')
+                return CHROM_XY;
+            else if (str.length() == 1)
+                return CHROM_X;
+        }
+        else if (str.length() == 1 && (str[0] & 0xdf) == 'Y')
+        {
+            return CHROM_Y;
+        }
+        else if ((str[0] & 0xdf) == 'M')
+        {
+            if (str.length() == 1
+                || (str.length() == 2 && (str[1] & 0xdf) == 'T'))
+                return CHROM_MT;
+        }
+        else if (str[0] == '0')
+        {
+            if (str.length() == 2)
+            {
+                switch (str[1] & 0xdf)
+                {
+                case 'X': return CHROM_X;
+                case 'Y': return CHROM_Y;
+                case 'M': return CHROM_MT;
+                }
+            }
+        }
+        try
+        {
+            return misc::Convertor::convert<int32_t>(std::string(str));
+        }
+        catch (const std::runtime_error&)
+        {
+            return -1;
+        }
+    }
+
+
     std::string
     print_duplicated_snps(const std::unordered_set<std::string>& snp_name,
                           const std::string& out_prefix);
-    bool base_filter_by_value(const std::vector<std::string>& token,
+    bool base_filter_by_value(const std::vector<std::string_view>& token,
                               const BaseFile& base_file,
                               const double& threshold, size_t index)
     {
@@ -149,8 +199,8 @@ public:
         double value = 1;
         try
         {
-            value = misc::convert<double>(
-                token[base_file.column_index[index]].c_str());
+            value = misc::Convertor::convert<double>(
+                std::string(token[base_file.column_index[index]]).c_str());
         }
         catch (...)
         {
@@ -159,29 +209,29 @@ public:
         if (value < threshold) return true;
         return false;
     }
-    int parse_chr(const std::vector<std::string>& token,
+    int parse_chr(const std::vector<std::string_view>& token,
                   const BaseFile& base_file, size_t index, size_t& chr)
     {
         chr = ~size_t(0);
         if (!base_file.has_column[index]) return 0;
-        int32_t chr_code = -1;
-        chr_code =
-            get_chrom_code_raw(token[base_file.column_index[index]].c_str());
+        int32_t chr_code = get_chrom_code(token[base_file.column_index[index]]);
         if (chr_code < 0) { return 1; }
         if (chr_code > MAX_POSSIBLE_CHROM
             || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
         { return 2; }
+        chr = static_cast<size_t>(chr_code);
         return 0;
     }
-    bool parse_loc(const std::vector<std::string>& token,
+
+    bool parse_loc(const std::vector<std::string_view>& token,
                    const BaseFile& base_file, size_t index, size_t& loc)
     {
         loc = ~size_t(0);
         if (!base_file.has_column[index]) return true;
         try
         {
-            loc = misc::string_to_size_t(
-                token[base_file.column_index[index]].c_str());
+            loc = misc::Convertor::convert<size_t>(
+                std::string(token[base_file.column_index[index]]).c_str());
         }
         catch (...)
         {
@@ -192,9 +242,9 @@ public:
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
     void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
-     * \brief Before each run of PRSice, we need to reset the in regression flag
-     * to false and propagate it later on to indicate if the sample is used in
-     * the regression model
+     * \brief Before each run of PRSice, we need to reset the in regression
+     * flag to false and propagate it later on to indicate if the sample is
+     * used in the regression model
      */
     void reset_in_regression_flag()
     {
@@ -230,8 +280,8 @@ public:
     }
 
     /*!
-     * \brief Funtion return whether sample is founder (whether sample should be
-     * included in regression)
+     * \brief Funtion return whether sample is founder (whether sample
+     * should be included in regression)
      *
      * \param i is the sample index
      * \return true if sample is to be included
@@ -281,8 +331,8 @@ public:
      */
     std::string iid(size_t i) const { return m_sample_id.at(i).IID; }
     /*!
-     * \brief This function will calculate the required PRS for the i th sample
-     * \param score_type is the type of score user want to calculate
+     * \brief This function will calculate the required PRS for the i th
+     * sample \param score_type is the type of score user want to calculate
      * \param i is the sample index
      * \return the PRS
      */
@@ -317,9 +367,9 @@ public:
      * \brief Function for calculating the PRS from the null set
      * \param set_size is the size of the set
      * \param prev_size is the amount of SNPs we have already processed
-     * \param background_list is the vector containing the permuted background
-     * index
-     * \param first_run is a boolean representing if we need to reset the PRS to
+     * \param background_list is the vector containing the permuted
+     * background index \param first_run is a boolean representing if we
+     * need to reset the PRS to
      * 0
      * \param require_standardize is a boolean representing if we need to
      * calculate the mean and SD
@@ -390,8 +440,9 @@ public:
         std::fill(flag.begin(), flag.end(), 0);
         SET_BIT(0, flag.data());
         if (genome_wide_background) { SET_BIT(1, flag.data()); }
-        // because the chromosome number is undefined. It will not be presented
-        // in any of the region (we filter out any region with undefined chr)
+        // because the chromosome number is undefined. It will not be
+        // presented in any of the region (we filter out any region with
+        // undefined chr)
         if (!gene_sets.empty())
         {
             std::vector<size_t> out;
@@ -567,40 +618,81 @@ protected:
     Reporter* m_reporter;
     CalculatePRS m_prs_calculation;
 
+    std::string initialize(const GenoFile& geno, const Phenotype& pheno,
+                           const std::string& delim, const std::string& type,
+                           Reporter* reporter)
+    {
+        m_sample_file = "";
+        m_ignore_fid = pheno.ignore_fid;
+        m_keep_file = geno.keep;
+        m_remove_file = geno.remove;
+        m_delim = delim;
+        m_reporter = reporter;
+        init_chr(geno.num_autosome);
+        const bool use_list = !(geno.file_list.empty());
+        const std::string file_name =
+            use_list ? geno.file_list : geno.file_name;
+        std::vector<std::string> token = misc::split(file_name, ",");
+        const bool external_sample = (token.size() == 2);
+        if (token.size() > 2)
+        {
+            throw std::runtime_error("Error: Undefine user input: "
+                                     + file_name);
+        }
+        std::string message = "Initializing Genotype ";
+        if (use_list)
+        {
+            m_genotype_file_names = load_genotype_prefix(token[0]);
+            message.append("info from file: " + token[0] + " (" + type + ")\n");
+        }
+        else
+        {
+            m_genotype_file_names = set_genotype_files(token[0]);
+            message.append("file: " + token[0] + " (" + type + ")\n");
+        }
+        if (external_sample)
+        {
+            m_sample_file = token[1];
+            message.append("With external fam file: " + m_sample_file + "\n");
+        }
+        return message;
+    }
+
+
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const std::string& rs,
                         const std::string& a1, const std::string& a2,
                         const size_t chr_num, const size_t loc);
 
-    int parse_rs_id(const std::vector<std::string>& token,
+    int parse_rs_id(const std::vector<std::string_view>& token,
                     const std::unordered_set<std::string>& dup_index,
                     const BaseFile& base_file, std::string& rs_id)
     {
         rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
         if (dup_index.find(rs_id) != dup_index.end()) { return 1; }
-
         auto&& selection = m_snp_selection_list.find(rs_id);
         if ((!m_exclude_snp && selection == m_snp_selection_list.end())
             || (m_exclude_snp && selection != m_snp_selection_list.end()))
         { return 2; }
         return 0;
     }
-    void parse_allele(const std::vector<std::string>& token,
+
+    void parse_allele(const std::vector<std::string_view>& token,
                       const BaseFile& base_file, size_t index,
                       std::string& allele)
     {
         allele = (base_file.has_column[index])
                      ? token[base_file.column_index[index]]
                      : "";
-        std::transform(allele.begin(), allele.end(), allele.begin(), ::toupper);
+        misc::to_upper(allele);
     }
-    int parse_pvalue(const std::string& p_value_str, const double max_threshold,
-                     double& pvalue)
+    int parse_pvalue(const std::string_view& p_value_str,
+                     const double max_threshold, double& pvalue)
     {
         try
         {
-            pvalue = misc::convert<double>(p_value_str);
+            pvalue = misc::Convertor::convert<double>(std::string(p_value_str));
         }
         catch (...)
         {
@@ -610,12 +702,12 @@ protected:
         if (pvalue > max_threshold) { return 2; }
         return 0;
     }
-    int parse_stat(const std::string& stat_str, const bool odd_ratio,
+    int parse_stat(const std::string_view& stat_str, const bool odd_ratio,
                    double& stat)
     {
         try
         {
-            stat = misc::convert<double>(stat_str);
+            stat = misc::Convertor::convert<double>(std::string(stat_str));
             if (odd_ratio && misc::logically_equal(stat, 0.0)) { return 1; }
             else if (odd_ratio && stat < 0.0)
                 return 2;
@@ -663,8 +755,8 @@ protected:
                 division = (pvalue - thresolding.lower) / thresolding.inter;
                 if (division > std::numeric_limits<unsigned long long>::max())
                 {
-                    throw std::runtime_error(
-                        "Error: Number of threshold required are too large");
+                    throw std::runtime_error("Error: Number of threshold "
+                                             "required are too large");
                 }
                 category = static_cast<unsigned long long>(std::ceil(division));
             }
@@ -705,19 +797,18 @@ protected:
      */
     std::vector<std::string> set_genotype_files(const std::string& prefix);
     /*!
-     * \brief Read in the genotype list file and add the genotype file names to
-     *        the vector
-     * \param file_name is the name of the list file
-     * \return a vector of string containing names of all genotype files
+     * \brief Read in the genotype list file and add the genotype file names
+     * to the vector \param file_name is the name of the list file \return a
+     * vector of string containing names of all genotype files
      */
     std::vector<std::string> load_genotype_prefix(const std::string& file_name);
     /*!
-     * \brief Initialize vector related to chromosome information e.g.haplotype.
-     *        Currently not really useful except for setting the max_code which
-     *        is later used to transform chromosome strings to chromosome code
-     * \param num_auto is the number of autosome, we fix it to 22 for human
-     * \param no_x indicate if chrX is missing for this organism
-     * \param no_y indicate if chrY is missing for this organism
+     * \brief Initialize vector related to chromosome information
+     * e.g.haplotype. Currently not really useful except for setting the
+     * max_code which is later used to transform chromosome strings to
+     * chromosome code \param num_auto is the number of autosome, we fix it
+     * to 22 for human \param no_x indicate if chrX is missing for this
+     * organism \param no_y indicate if chrY is missing for this organism
      * \param no_xy indicate if chrXY is missing for this organism
      * \param no_mt indicate if chrMT is missing for this organism
      */
@@ -727,19 +818,18 @@ protected:
      * \brief For a given error code, check if this chromsome should be kept
      * \param chr_code is the chromosome code
      * \param sex_error indicate if the error is related to sex chromosome
-     * \param chr_error indicate if the error is related to chromosome number
-     * too big
-     * \param error_message contain the error message
-     * \return true if we want to skip this chromosome
+     * \param chr_error indicate if the error is related to chromosome
+     * number too big \param error_message contain the error message \return
+     * true if we want to skip this chromosome
      */
     bool chr_code_check(int32_t chr_code, bool& sex_error, bool& chr_error,
                         std::string& error_message);
     /*!
-     * \brief Function to read in the sample. Any subclass must implement this
-     * function. They \b must initialize the \b m_sample_info \b m_founder_info
-     * \b m_founder_ct \b m_sample_ct \b m_prs_info \b m_in_regression and \b
-     * m_tmp_genotype (optional)
-     * \return vector containing the sample information
+     * \brief Function to read in the sample. Any subclass must implement
+     * this function. They \b must initialize the \b m_sample_info \b
+     * m_founder_info \b m_founder_ct \b m_sample_ct \b m_prs_info \b
+     * m_in_regression and \b m_tmp_genotype (optional) \return vector
+     * containing the sample information
      */
     virtual std::vector<Sample_ID> gen_sample_vector()
     {
@@ -788,8 +878,8 @@ protected:
     {
         assert(window_data_ptr != nullptr);
         // is_x is used in PLINK to indicate if the genotype is from the X
-        // chromsome, as PRSice ignore any sex chromosome, we can set it as a
-        // constant false
+        // chromsome, as PRSice ignore any sex chromosome, we can set it as
+        // a constant false
         const bool is_x = false;
         uint32_t counts[18];
         double freq11;
@@ -862,7 +952,8 @@ protected:
         ulii = 0;
         do
         {
-            // ulii contain the numeric representation of the current genotype
+            // ulii contain the numeric representation of the current
+            // genotype
             ulii = ~(*lbptr++);
             if (uii + BITCT2 > m_unfiltered_sample_ct)
             {
@@ -918,11 +1009,11 @@ protected:
 
     /*!
      * \brief Function to read in the genotype in PLINK binary format. Any
-     * subclass must implement this function to assist the processing of their
-     * specific file type. The first argument is the genotype vector use to
-     * store the PLINK binary whereas the second parameter is the streampos,
-     * allowing us to seekg to the specific location of the file as indicate in
-     * the thrid parameter
+     * subclass must implement this function to assist the processing of
+     * their specific file type. The first argument is the genotype vector
+     * use to store the PLINK binary whereas the second parameter is the
+     * streampos, allowing us to seekg to the specific location of the file
+     * as indicate in the thrid parameter
      */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
                                       const std::streampos /*byte_pos*/,

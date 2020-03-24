@@ -19,49 +19,19 @@
 BinaryGen::BinaryGen(const GenoFile& geno, const Phenotype& pheno,
                      const std::string& delim, Reporter* reporter)
 {
-    m_ignore_fid = pheno.ignore_fid;
-    m_keep_file = geno.keep;
-    m_remove_file = geno.remove;
-    m_delim = delim;
+    m_sample_file = "";
     m_hard_coded = geno.hard_coded;
-    m_reporter = reporter;
-    init_chr(geno.num_autosome);
-    std::string message = "Initializing Genotype";
-    std::string file_name = geno.file_name;
-    const bool is_list = !(geno.file_list.empty());
-    std::vector<std::string> token;
-    if (!is_list) { token = misc::split(file_name, ","); }
-    else
-    {
-        file_name = geno.file_list;
-        token = misc::split(file_name, ",");
-    }
-    const bool external_sample = (token.size() == 2);
-    if (external_sample) { m_sample_file = token[1]; }
-    file_name = token.front();
-    if (is_list)
-    {
-        message.append(" info from file " + file_name + " (bgen)\n");
-
-        m_genotype_file_names = load_genotype_prefix(file_name);
-    }
-    else
-    {
-        message.append(" file: " + file_name + " (bgen)\n");
-        m_genotype_file_names = set_genotype_files(file_name);
-    }
-    if (external_sample)
-    { message.append("With external sample file: " + m_sample_file + "\n"); }
-    else if (pheno.pheno_file.empty())
+    const std::string message =
+        initialize(geno, pheno, delim, "bgen", reporter);
+    if (m_sample_file.empty() && pheno.pheno_file.empty())
     {
         throw std::runtime_error("Error: You must provide a phenotype "
                                  "file for bgen format!\n");
     }
-    else
+    else if (m_sample_file.empty())
     {
         m_sample_file = pheno.pheno_file;
     }
-    m_has_external_sample = true;
     m_reporter->report(message);
 }
 
@@ -76,7 +46,7 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
     if (m_is_ref)
     {
         if ((!m_keep_file.empty() || !m_remove_file.empty())
-            && (!m_has_external_sample))
+            && (m_sample_file.empty()))
         {
             throw std::runtime_error("Error: Cannot perform sample "
                                      "filtering on the LD reference "
