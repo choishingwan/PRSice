@@ -227,6 +227,7 @@ void Genotype::read_base(
     size_t num_maf_filter = 0;
     std::streampos file_length = 0;
     unsigned long long category = 0;
+
     bool gz_input = false;
     try
     {
@@ -236,7 +237,7 @@ void Genotype::read_base(
     {
         throw std::runtime_error(e.what());
     }
-
+    std::istream* stream;
     if (gz_input)
     {
         gz_snp_file.open(base_file.file_name.c_str());
@@ -246,18 +247,16 @@ void Genotype::read_base(
                                      + base_file.file_name
                                      + " (gz) to read!\n");
         }
+
+        message.append("GZ file detected.");
         if (!base_file.is_index)
         {
             std::getline(gz_snp_file, line);
-            message.append("GZ file detected. Header of file is:\n" + line
-                           + "\n\n");
-        }
-        else
-        {
-            message.append("GZ file detected.");
+            message.append(" Header of file is:\n" + line + "\n\n");
         }
         m_reporter->report("Due to library restrictions, we cannot display "
                            "progress bar for gz");
+        stream = &(gz_snp_file);
     }
     else
     {
@@ -274,11 +273,11 @@ void Genotype::read_base(
         // if the input is index, we will keep the header, otherwise, we
         // will remove the header
         if (!base_file.is_index) std::getline(snp_file, line);
+        stream = &(snp_file);
     }
     double prev_progress = 0.0;
     std::unordered_set<std::string> dup_index;
-    while ((gz_input && std::getline(gz_snp_file, line))
-           || (!gz_input && std::getline(snp_file, line)))
+    while (std::getline(*stream, line))
     {
         if (!gz_input)
         {
@@ -297,9 +296,8 @@ void Genotype::read_base(
         for (auto&& t : token) { misc::trim(t); }
         if (token.size() <= max_index)
         {
-            std::string error_message = line;
-            error_message.append("\nMore index than column in data\n");
-            throw std::runtime_error(error_message);
+            throw std::runtime_error(line
+                                     + "\nMore index than column in data\n");
         }
         switch (parse_rs_id(token, dup_index, base_file, rs_id))
         {
@@ -386,10 +384,6 @@ void Genotype::read_base(
         m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
                                         stat, pvalue, category, pthres));
     }
-    if (gz_input)
-        gz_snp_file.close();
-    else
-        snp_file.close();
 
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     message.append(std::to_string(num_line_in_base)
@@ -610,9 +604,8 @@ Genotype::load_snp_list(const std::string& input)
     in.open(input.c_str());
     if (!in.is_open())
     {
-        std::string error_message =
-            "Error: Cannot open extract / exclude file: " + input;
-        throw std::runtime_error(error_message);
+        throw std::runtime_error("Error: Cannot open extract / exclude file: "
+                                 + input);
     }
     std::string line;
     std::getline(in, line);

@@ -410,19 +410,11 @@ inline void to_upper(std::string& str)
 {
     std::transform(str.begin(), str.end(), str.begin(), ::toupper);
 }
-inline void to_upper(std::string_view& str)
-{
-    std::transform(str.begin(), str.end(), str.begin(), ::toupper);
-}
 inline void to_lower(std::string& str)
 {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
 }
 
-inline void to_lower(std::string_view& str)
-{
-    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
-}
 inline void to_upper(const std::string& input, std::string& out)
 {
     out.resize(input.size());

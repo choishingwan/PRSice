@@ -24,3 +24,7 @@ zlib*
 *.user*
 
 build_test/
+
+coverage/
+
+Release/
