@@ -138,23 +138,44 @@ public:
         return true;
     }
 
-
+    bool chr_prefix(std::string_view str)
+    {
+        if (str.length() <= 3) { return false; }
+        return ((str[0] & 0xdf) == 'C' && (str[1] & 0xdf) == 'H'
+                && (str[2] & 0xdf) == 'R');
+    }
     int32_t get_chrom_code(std::string_view str)
     {
-        misc::to_lower(str);
-        if (str.rfind("chr", 0) == 0) { str.remove_prefix(3); }
-        if (str == "X") { return CHROM_X; }
-        else if (str == "Y")
+        if (chr_prefix(str)) { str.remove_prefix(3); }
+        if (str.length() == 0) return -1;
+        if ((str[0] & 0xdf) == 'X')
+        {
+            if (str.length() == 2 && (str[1] & 0xdf) == 'Y')
+                return CHROM_XY;
+            else if (str.length() == 1)
+                return CHROM_X;
+        }
+        else if (str.length() == 1 && (str[0] & 0xdf) == 'Y')
         {
             return CHROM_Y;
         }
-        else if (str == "XY")
+        else if ((str[0] & 0xdf) == 'M')
         {
-            return CHROM_XY;
+            if (str.length() == 1
+                || (str.length() == 2 && (str[1] & 0xdf) == 'T'))
+                return CHROM_MT;
         }
-        else if (str == "MT" || str == "M")
+        else if (str[0] == '0')
         {
-            return CHROM_MT;
+            if (str.length() == 2)
+            {
+                switch (str[1] & 0xdf)
+                {
+                case 'X': return CHROM_X;
+                case 'Y': return CHROM_Y;
+                case 'M': return CHROM_MT;
+                }
+            }
         }
         try
         {
