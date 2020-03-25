@@ -224,7 +224,8 @@ protected:
             target.reserve(target.size() + token.size());
         try
         {
-            for (auto&& bar : token) target.push_back(misc::convert<T>(bar));
+            for (auto&& bar : token)
+                target.push_back(misc::Convertor::convert<T>(bar));
         }
         catch (...)
         {

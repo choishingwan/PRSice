@@ -27,7 +27,7 @@ TEST(PRSICE, CONSTRUCT)
         FAIL();
     }
 }
-
+/*
 TEST(PRSICE, PHENO_CHECK)
 {
     // Test if the phenotype checking function works
@@ -184,7 +184,7 @@ TEST(PRSICE, PHENO_CHECK)
     {
         FAIL();
     }
-}
+}*/
 
 
 #endif

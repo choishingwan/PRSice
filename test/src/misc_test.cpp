@@ -236,6 +236,15 @@ TEST(CONVERTOR, CONVERTOR)
     {
         SUCCEED();
     }
+    try
+    {
+        res = misc::Convertor::convert<double>("1e-400");
+        FAIL();
+    }
+    catch (const std::runtime_error&)
+    {
+        SUCCEED();
+    }
 }
 TEST(TRIM, STRING_VIEW)
 {

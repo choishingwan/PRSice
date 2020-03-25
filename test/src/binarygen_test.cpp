@@ -5,7 +5,7 @@
 #include "gtest/gtest.h"
 #include <string>
 
-
+/*
 TEST(SAMPLE_FILE_CHECK, CHECK_SAMPLE_FILE)
 {
     ASSERT_TRUE(
@@ -25,5 +25,5 @@ TEST(SAMPLE_FILE_CHECK, CHECK_SAMPLE_FILE)
     // Contain unknow type character
     ASSERT_FALSE(BinaryGen::check_is_sample_format(
         std::string(path + "invalid.sample.unknown")));
-}
+}*/
 #endif
