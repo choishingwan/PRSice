@@ -59,5 +59,5 @@ script:
   - head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   
-#after_success:
-  #- coveralls --exclude lib --exclude tests --gcov-options '\-lp'
+after_success:
+  - coveralls --exclude lib --exclude tests --gcov-options '\-lp'
