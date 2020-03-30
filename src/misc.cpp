@@ -47,7 +47,9 @@ double Convertor::convert<double>(const std::string& str)
     iss.str(str);
     double obj;
     iss >> obj;
-    if (!iss.eof() || iss.fail() || std::fpclassify(obj) != FP_NORMAL)
+    if (!iss.eof() || iss.fail()
+        || (std::fpclassify(obj) != FP_NORMAL
+            && std::fpclassify(obj) != FP_ZERO))
     { throw std::runtime_error("Unable to convert the input"); }
     return obj;
 }

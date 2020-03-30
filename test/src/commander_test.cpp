@@ -214,6 +214,7 @@ void check_bar_threshold(const std::string& command,
     if (expect_fail) { ASSERT_FALSE(commander.parse_command_wrapper(command)); }
     else
     {
+        std::cerr << command << std::endl;
         ASSERT_TRUE(commander.parse_command_wrapper(command));
         auto res = commander.get_p_threshold();
         ASSERT_EQ(expected.size(), res.bar_levels.size());
