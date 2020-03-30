@@ -53,10 +53,10 @@ script:
   #- unzip Toy_Data.zip
   #- ../bin/PRSice --base TOY_BASE_GWAS.assoc --target TOY_TARGET_DATA --gtf Homo_sapiens.GRCh38.86.gtf.gz --msigdb c2.all.v6.2.symbols.gmt --set-perm 100
   #- gprof ../bin/PRSice > gprof.log
-  - cd ../
   - wget -O Test.zip https://www.dropbox.com/s/zuae45ybs96d2uk/Test.zip?dl=1
   - unzip -o Test.zip
-  - ./bin/runUnitTests .
+  - ../bin/runUnitTests .
   #- head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
-  - coveralls --build-root build --gcov-options '\-lp' -e tests -e lib -e build 
+  - cd ../
+  - coveralls --build-root build --gcov-options '\-lp' -e test -e lib -e build/googletest-src -e build/CMakeFiles 
