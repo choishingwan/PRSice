@@ -58,6 +58,5 @@ script:
   - ../bin/runUnitTests .
   #- head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
-  
-after_success:
-  - coveralls --exclude lib --exclude tests --exclude-pattern '+/.+_test\.cpp' --exclude-pattern '.+/CMakeFiles/' --gcov-options '\-lp' --root ../ --build-root ./
+  - cd ../
+  - coveralls --build-root build --gcov-options '\-lp' -e tests -e lib 
