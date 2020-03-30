@@ -43,6 +43,7 @@ size_t Convertor::convert<size_t>(const std::string& str)
 template <>
 double Convertor::convert<double>(const std::string& str)
 {
+    errno = 0;
     iss.clear();
     iss.str(str);
     double obj;
