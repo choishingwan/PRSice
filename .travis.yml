@@ -59,4 +59,4 @@ script:
   #- head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   - cd ../
-  - coveralls --build-root build --gcov-options '\-lp' -e tests -e lib 
+  - coveralls --build-root build --gcov-options '\-lp' -e tests -e lib -e build 
