@@ -242,6 +242,7 @@ TEST(CONVERTOR, CONVERTOR)
                   << std::numeric_limits<double>::min() << std::endl;
         res_db = misc::Convertor::convert<double>("1e-400");
         std::cerr << "Converted into: " << res_db << std::endl;
+        std::cerr << "Check erange: " << ERANGE << std::endl;
         FAIL();
     }
     catch (const std::runtime_error&)
