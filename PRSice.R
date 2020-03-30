@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.13"
+r.version <- "2.2.14"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -2075,7 +2075,7 @@ extract_matrix <- function(x, y) {
 # With this update, we only allow a single base file therefore we don't even need the
 # information of base here
 
-if (!provided("target", argv) & !provided("target-list", argv)) {
+if (!provided("target", argv) & !provided("target_list", argv)) {
     stop("Target file name not found. You'll need to provide the target name for plotting! (even with --plot)")
 }
 
@@ -2429,7 +2429,7 @@ if (provided("pheno_file", argv)) {
     # Assume no header
     target.info <- strsplit(argv$target_list, split = ",")[[1]]
     target.list <- read.table(argv$target_list)
-    target.prefix <- target.list[1]
+    target.prefix <- target.list[1,1]
     if (length(target.info) == 2) {
         pheno.file <- target.info[2]
         if (provided("type", argv)) {
