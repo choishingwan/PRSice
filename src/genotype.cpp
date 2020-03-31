@@ -46,6 +46,7 @@ std::string Genotype::print_duplicated_snps(
         + dup_name + ". You can avoid this error by using --extract "
         + dup_name);
 }
+
 void Genotype::build_clump_windows(const unsigned long long& clump_distance)
 {
     // should sort w.r.t reference
@@ -201,8 +202,6 @@ void Genotype::read_base(
             : 1.0;
     std::vector<std::string_view> token;
     std::string line;
-    GZSTREAM_NAMESPACE::igzstream gz_snp_file;
-    std::ifstream snp_file;
     std::string message = "Base file: " + base_file.file_name + "\n";
     // Some QC counts
     std::string rs_id;
@@ -227,62 +226,34 @@ void Genotype::read_base(
     size_t num_maf_filter = 0;
     std::streampos file_length = 0;
     unsigned long long category = 0;
-
-    bool gz_input = false;
-    try
+    bool gz_input;
+    auto stream = misc::load_stream(base_file.file_name, gz_input);
+    if (!gz_input)
     {
-        gz_input = misc::is_gz_file(base_file.file_name);
-    }
-    catch (const std::runtime_error& e)
-    {
-        throw std::runtime_error(e.what());
-    }
-    std::istream* stream;
-    if (gz_input)
-    {
-        gz_snp_file.open(base_file.file_name.c_str());
-        if (!gz_snp_file.good())
-        {
-            throw std::runtime_error("Error: Cannot open base file: "
-                                     + base_file.file_name
-                                     + " (gz) to read!\n");
-        }
-
-        message.append("GZ file detected.");
-        if (!base_file.is_index)
-        {
-            std::getline(gz_snp_file, line);
-            message.append(" Header of file is:\n" + line + "\n\n");
-        }
-        m_reporter->report("Due to library restrictions, we cannot display "
-                           "progress bar for gz");
-        stream = &(gz_snp_file);
+        stream->seekg(0, stream->end);
+        file_length = stream->tellg();
+        stream->clear();
+        stream->seekg(0, stream->beg);
     }
     else
     {
-        snp_file.open(base_file.file_name.c_str());
-        if (!snp_file.is_open())
-        {
-            throw std::runtime_error("Error: Cannot open base file: "
-                                     + base_file.file_name);
-        }
-        snp_file.seekg(0, snp_file.end);
-        file_length = snp_file.tellg();
-        snp_file.clear();
-        snp_file.seekg(0, snp_file.beg);
-        // if the input is index, we will keep the header, otherwise, we
-        // will remove the header
-        if (!base_file.is_index) std::getline(snp_file, line);
-        stream = &(snp_file);
+        message.append("GZ file detected. ");
     }
-    double prev_progress = 0.0;
+    if (!base_file.is_index)
+    {
+        std::getline(*stream, line);
+        message.append("Header of file is:\n" + line + "\n\n");
+    }
+    m_reporter->report(message);
+    message.clear();
+    double prev_progress = 0.0, progress;
     std::unordered_set<std::string> dup_index;
     while (std::getline(*stream, line))
     {
-        if (!gz_input)
+        if (gz_input)
         {
-            double progress = static_cast<double>(snp_file.tellg())
-                              / static_cast<double>(file_length) * 100;
+            progress = static_cast<double>(stream->tellg())
+                       / static_cast<double>(file_length) * 100;
             if (progress - prev_progress > 0.01)
             {
                 fprintf(stderr, "\rReading %03.2f%%", progress);
@@ -291,6 +262,7 @@ void Genotype::read_base(
         }
         misc::trim(line);
         if (line.empty()) continue;
+
         ++num_line_in_base;
         token = misc::tokenize(line);
         for (auto&& t : token) { misc::trim(t); }
@@ -384,7 +356,6 @@ void Genotype::read_base(
         m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
                                         stat, pvalue, category, pthres));
     }
-
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
     message.append(std::to_string(num_line_in_base)
                    + " variant(s) observed in base file, with:\n");

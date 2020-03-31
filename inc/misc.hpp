@@ -22,6 +22,7 @@
 #define _USE_MATH_DEFINES
 #include <algorithm>
 #include <cmath>
+#include <gzstream.h>
 #include <iostream>
 #include <limits>
 #include <math.h>
@@ -30,7 +31,6 @@
 #include <string>
 #include <string_view>
 #include <vector>
-
 #if defined __APPLE__
 #include <mach/mach.h>
 #include <mach/mach_host.h>
@@ -1163,6 +1163,39 @@ inline bool is_gz_file(const std::string& name)
         return false;
     }
 }
+
+inline std::unique_ptr<std::istream> load_stream(const std::string& filepath,
+                                                 bool& gz_input)
+{
+    gz_input = false;
+    try
+    {
+        gz_input = misc::is_gz_file(filepath);
+    }
+    catch (const std::runtime_error& e)
+    {
+        throw std::runtime_error(e.what());
+    }
+    if (gz_input)
+    {
+        auto gz =
+            std::make_unique<GZSTREAM_NAMESPACE::igzstream>(filepath.c_str());
+        if (!gz->good())
+        {
+            throw std::runtime_error("Error: Cannot open file: " + filepath
+                                     + " (gz) to read!\n");
+        }
+        return std::unique_ptr<std::istream>(*gz ? std::move(gz) : nullptr);
+    }
+    else
+    {
+        auto file = std::make_unique<std::ifstream>(filepath.c_str());
+        if (!file->is_open())
+        { throw std::runtime_error("Error: Cannot open file: " + filepath); }
+        return std::unique_ptr<std::istream>(*file ? std::move(file) : nullptr);
+    }
+}
+
 inline bool isNumeric(const std::string& s)
 {
     try

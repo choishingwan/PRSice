@@ -216,7 +216,7 @@ public:
         if (!base_file.has_column[index]) return 0;
         int32_t chr_code = get_chrom_code(token[base_file.column_index[index]]);
         if (chr_code < 0) { return 1; }
-        if (chr_code > MAX_POSSIBLE_CHROM
+        if (static_cast<size_t>(chr_code) > m_autosome_ct
             || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
         { return 2; }
         chr = static_cast<size_t>(chr_code);
@@ -657,8 +657,6 @@ protected:
         }
         return message;
     }
-
-
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const std::string& rs,
@@ -669,6 +667,8 @@ protected:
                     const std::unordered_set<std::string>& dup_index,
                     const BaseFile& base_file, std::string& rs_id)
     {
+        if (!base_file.has_column[+BASE_INDEX::RS])
+        { throw std::runtime_error("Error: RS ID column not provided!"); }
         rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
         if (dup_index.find(rs_id) != dup_index.end()) { return 1; }
         auto&& selection = m_snp_selection_list.find(rs_id);
@@ -687,6 +687,7 @@ protected:
                      : "";
         misc::to_upper(allele);
     }
+
     int parse_pvalue(const std::string_view& p_value_str,
                      const double max_threshold, double& pvalue)
     {

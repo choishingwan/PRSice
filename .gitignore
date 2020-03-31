@@ -26,3 +26,5 @@ zlib*
 build_test/
 
 coverage/
+
+build_quick/
