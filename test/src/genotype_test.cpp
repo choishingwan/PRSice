@@ -264,6 +264,10 @@ TEST_F(GENOTYPE_BASIC, READ_BASE_FILTER_BY_VALUE)
     ASSERT_TRUE(base_filter_by_value(token, base_file, 0.4, +BASE_INDEX::MAF));
     // don't filter if it is exact
     ASSERT_FALSE(base_filter_by_value(token, base_file, 0.3, +BASE_INDEX::MAF));
+    // and filter if it is not convertable
+    line = "chr1 1234 rs1234 a c 0.1 NA 0.9";
+    token = misc::tokenize(line);
+    ASSERT_TRUE(base_filter_by_value(token, base_file, 0.4, +BASE_INDEX::MAF));
 }
 TEST_F(GENOTYPE_BASIC, READ_BASE_P)
 {
@@ -276,6 +280,7 @@ TEST_F(GENOTYPE_BASIC, READ_BASE_P)
     ASSERT_EQ(parse_pvalue("2", 0.67, pvalue), 3);
     ASSERT_EQ(parse_pvalue("-1", 0.67, pvalue), 3);
 }
+
 TEST_F(GENOTYPE_BASIC, READ_BASE_STAT)
 {
     double stat;
@@ -530,5 +535,82 @@ TEST_F(GENOTYPE_BASIC, BAR_LEVELS)
     category_threshold(category, 7, pthres, 1);
 }
 
+TEST_F(GENOTYPE_BASIC, SNP_EXTRACTION)
+{
+    Reporter reporter(std::string("LOG"), 60, true);
+    m_reporter = &reporter;
+    std::ofstream dummy("DUMMY");
+    std::vector<std::string> expected = {"rs1234", "rs5467", "rs8769"};
+    for (auto e : expected) { dummy << e << std::endl; }
+    dummy.close();
+    ASSERT_TRUE(m_exclude_snp);
+    m_snp_selection_list.clear();
+    snp_extraction("DUMMY", "");
+    ASSERT_FALSE(m_exclude_snp);
+    ASSERT_EQ(m_snp_selection_list.size(), expected.size());
+    for (auto e : expected)
+    {
+        ASSERT_TRUE(m_snp_selection_list.find(e) != m_snp_selection_list.end());
+    }
+    m_snp_selection_list.clear();
+    m_exclude_snp = true;
+    snp_extraction("", "DUMMY");
+    ASSERT_TRUE(m_exclude_snp);
+    ASSERT_EQ(m_snp_selection_list.size(), expected.size());
+    for (auto e : expected)
+    {
+        ASSERT_TRUE(m_snp_selection_list.find(e) != m_snp_selection_list.end());
+    }
+    std::remove("DUMMY");
+}
 
+TEST_F(GENOTYPE_BASIC, LOAD_REF)
+{
+    Reporter reporter(std::string("LOG"), 60, true);
+    m_reporter = &reporter;
+    std::ofstream dummy("DUMMY");
+    std::vector<std::string> expected = {"ID1 ID1", "ID2 FID", "ID5 ABD"};
+    for (auto e : expected) { dummy << e << std::endl; }
+    dummy.close();
+
+    m_delim = "_";
+    bool ignore = true;
+    std::cerr << "BEfore load dummy" << std::endl;
+    auto res = load_ref("DUMMY", !ignore);
+    ASSERT_EQ(res.size(), expected.size());
+    std::vector<std::string> token;
+    for (auto e : expected)
+    {
+        token = misc::split(e);
+        auto id = token[0] + m_delim + token[1];
+        ASSERT_TRUE(res.find(id) != res.end());
+    }
+    // now try with ignore
+    res.clear();
+    m_delim = "a";
+    res = load_ref("DUMMY", ignore);
+    ASSERT_EQ(res.size(), expected.size());
+    for (auto e : expected)
+    {
+        token = misc::split(e);
+        ASSERT_TRUE(res.find(token[0]) != res.end());
+    }
+    // can't do without ignore if we only have one column
+    std::remove("DUMMY");
+    expected.clear();
+    expected = {"ID1", "ID2", "ID3"};
+    dummy.open("DUMMY");
+    for (auto e : expected) { dummy << e << std::endl; }
+    dummy.close();
+    try
+    {
+        res = load_ref("DUMMY", !ignore);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    std::remove("DUMMY");
+}
 #endif // GENOTYPE_TEST_HPP
