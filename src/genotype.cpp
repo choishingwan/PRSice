@@ -422,8 +422,7 @@ void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
     {
         message.append(std::to_string(filter_count[+FILTER_COUNT::AMBIG])
                        + " ambiguous variant(s)");
-        if (!filter_count[+FILTER_COUNT::AMBIG])
-        { message.append(" excluded"); }
+        if (!m_keep_ambig) { message.append(" excluded"); }
         message.append("\n");
     }
     if (filter_count[+FILTER_COUNT::DUPLICATE])
