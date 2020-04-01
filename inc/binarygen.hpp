@@ -71,6 +71,8 @@ protected:
      * \param prefix is the input bgen file prefix
      */
     void get_context(const size_t& idx);
+    size_t get_sex_col(const std::string& header,
+                       const std::string& format_line);
     /*!
      * \brief Check if the sample information and ordering of the bgen file
      *        matched the sample / phenotype file

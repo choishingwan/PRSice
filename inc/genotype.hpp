@@ -239,6 +239,41 @@ public:
         }
         return true;
     }
+    void init_sample_vectors()
+    {
+        if (m_unfiltered_sample_ct == 0)
+        {
+            throw std::runtime_error("Error: No sample found in genotype file");
+        }
+        const uintptr_t unfiltered_sample_ctl =
+            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+        m_founder_info.resize(unfiltered_sample_ctl, 0);
+        m_sample_include.resize(unfiltered_sample_ctl, 0);
+        m_num_male = 0;
+        m_num_female = 0;
+        m_num_ambig_sex = 0;
+        m_num_non_founder = 0;
+        m_sample_ct = 0;
+        m_founder_ct = 0;
+    }
+    void post_sample_read_init()
+    {
+        const uintptr_t unfiltered_sample_ctl =
+            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+        const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
+        m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
+        m_prs_info.resize(m_sample_ct, PRS());
+        m_in_regression.resize(m_sample_include.size(), 0);
+        m_sample_include2.resize(unfiltered_sample_ctv2, 0);
+        m_founder_include2.resize(unfiltered_sample_ctv2, 0);
+        // fill it with the required mask (copy from PLINK2)
+        init_quaterarr_from_bitarr(m_sample_include.data(),
+                                   m_unfiltered_sample_ct,
+                                   m_sample_include2.data());
+        init_quaterarr_from_bitarr(m_founder_info.data(),
+                                   m_unfiltered_sample_ct,
+                                   m_founder_include2.data());
+    }
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
     void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
@@ -660,6 +695,14 @@ protected:
         }
         return message;
     }
+    void gen_sample(const size_t fid_idx, const size_t iid_idx,
+                    const size_t sex_idx, const size_t dad_idx,
+                    const size_t mum_idx, const size_t cur_idx,
+                    const std::unordered_set<std::string>& founder_info,
+                    const std::string& pheno, std::vector<std::string>& token,
+                    std::vector<Sample_ID>& sample_storage,
+                    std::unordered_set<std::string>& sample_in_file,
+                    std::vector<std::string>& duplicated_sample_id);
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const std::string& rs,

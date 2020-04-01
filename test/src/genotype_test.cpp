@@ -537,8 +537,23 @@ TEST_F(GENOTYPE_BASIC, READ_BASE_FULL)
     {
         SUCCEED();
     }
-    // std::remove("LOG");
-    // std::remove("DUMMY");
+    // invalid p-value
+    dummy.open("DUMMY");
+    dummy << "CHR BP RS A1 A2 P STAT MAF INFO MAF_CASE" << std::endl;
+    dummy << "chr1 1234 invalid_p A C -0.05 1.96 0.1 0.9 0.05" << std::endl;
+    dummy.close();
+    // should fail due to invalid coordinates
+    try
+    {
+        read_base(base_file, base_qc, threshold_info, exclusion_regions);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    std::remove("LOG");
+    std::remove("DUMMY");
 }
 // init_chr
 // chr_code_check
@@ -676,7 +691,6 @@ TEST_F(GENOTYPE_BASIC, LOAD_REF)
 
     m_delim = "_";
     bool ignore = true;
-    std::cerr << "BEfore load dummy" << std::endl;
     auto res = load_ref("DUMMY", !ignore);
     ASSERT_EQ(res.size(), expected.size());
     std::vector<std::string> token;

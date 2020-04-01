@@ -437,6 +437,66 @@ void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
     { throw std::runtime_error("Error: No valid variant remaining"); }
 }
 
+void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
+                          const size_t sex_idx, const size_t dad_idx,
+                          const size_t mum_idx, const size_t cur_idx,
+                          const std::unordered_set<std::string>& founder_info,
+                          const std::string& pheno,
+                          std::vector<std::string>& token,
+                          std::vector<Sample_ID>& sample_storage,
+                          std::unordered_set<std::string>& sample_in_file,
+                          std::vector<std::string>& duplicated_sample_id)
+{
+    // we have already checked for malformed file
+    const std::string fid = token[fid_idx] + m_delim;
+    const std::string id =
+        (m_ignore_fid) ? token[iid_idx] : fid + token[iid_idx];
+    auto&& find_id = m_sample_selection_list.find(id);
+    bool inclusion = m_remove_sample
+                         ? (find_id == m_sample_selection_list.end())
+                         : (find_id != m_sample_selection_list.end());
+    bool founder = false;
+    if (founder_info.find(fid + token[dad_idx]) == founder_info.end()
+        && founder_info.find(fid + token[mum_idx]) == founder_info.end()
+        && inclusion)
+    {
+        // this is a founder (with no dad / mum)
+        ++m_founder_ct;
+        SET_BIT(cur_idx, m_founder_info.data());
+        SET_BIT(cur_idx, m_sample_include.data());
+        founder = true;
+    }
+    else if (inclusion)
+    {
+        // we still calculate PRS for this sample
+        SET_BIT(cur_idx, m_sample_include.data());
+        ++m_num_non_founder;
+        // but will only include it in the regression model if users asked
+        // to include non-founders
+        founder = m_keep_nonfounder;
+    }
+    m_sample_ct += inclusion;
+    // TODO: Better sex parsing? Can also be 0, 1 or F and M
+    if (sex_idx != ~size_t(0) && token[sex_idx] == "1") { ++m_num_male; }
+    else if (sex_idx != ~size_t(0) && token[sex_idx] == "2")
+    {
+        ++m_num_female;
+    }
+    else
+    {
+        ++m_num_ambig_sex;
+    }
+    // this must be incremented within each loop
+    if (sample_in_file.find(id) != sample_in_file.end())
+        duplicated_sample_id.push_back(id);
+    if (inclusion && !m_is_ref)
+    {
+        sample_storage.emplace_back(
+            Sample_ID(token[fid_idx], token[iid_idx], pheno, founder));
+    }
+    sample_in_file.insert(id);
+}
+
 std::vector<std::string>
 Genotype::load_genotype_prefix(const std::string& file_name)
 {

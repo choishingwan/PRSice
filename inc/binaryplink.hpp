@@ -56,6 +56,7 @@ protected:
                              bool force_cal = false);
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
+    std::unordered_set<std::string> get_founder_info(std::ifstream& famfile);
     inline void read_genotype(uintptr_t* __restrict genotype,
                               const std::streampos byte_pos,
                               const size_t& file_idx)

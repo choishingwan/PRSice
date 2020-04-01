@@ -26,25 +26,12 @@ BinaryPlink::BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
     m_reporter->report(message);
 }
 
-std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
+std::unordered_set<std::string>
+BinaryPlink::get_founder_info(std::ifstream& famfile)
 {
-    assert(m_genotype_file_names.size() > 0);
-    std::ifstream famfile;
-    famfile.open(m_sample_file.c_str());
-    if (!famfile.is_open())
-    {
-        throw std::runtime_error("Error: Cannot open fam file: "
-                                 + m_sample_file);
-    }
-    // number of unfiltered samples
-    // this must be correct as this value is use for all subsequent size
-    // intiailization
-    m_unfiltered_sample_ct = 0;
-    // capture all founder name and check if they exists within the file
-    std::unordered_set<std::string> founder_info;
-    // first pass to get the number of samples and also get the founder ID
-    std::vector<std::string> token;
     std::string line;
+    std::vector<std::string> token;
+    std::unordered_set<std::string> founder_info;
     while (std::getline(famfile, line))
     {
         misc::trim(line);
@@ -60,120 +47,53 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
         founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
         ++m_unfiltered_sample_ct;
     }
-    // now reset the fam file to the start
-    famfile.clear();
     famfile.seekg(0);
-    // the unfiltered_sampel_ct is used to define the size of all vector
-    // used within the program
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-
-    // Currently ignore sex information
-    // m_founder_info is a subset of m_sample_include
-    // and is used for LD calculation
-    m_founder_info.resize(unfiltered_sample_ctl, 0);
-    m_sample_include.resize(unfiltered_sample_ctl, 0);
-
-    m_num_male = 0;
-    m_num_female = 0;
-    m_num_ambig_sex = 0;
-    m_num_non_founder = 0;
+    famfile.clear();
+    return founder_info;
+}
+std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
+{
+    assert(m_genotype_file_names.size() > 0);
+    std::ifstream famfile;
+    famfile.open(m_sample_file.c_str());
+    if (!famfile.is_open())
+    {
+        throw std::runtime_error("Error: Cannot open fam file: "
+                                 + m_sample_file);
+    }
+    m_unfiltered_sample_ct = 0;
+    std::unordered_set<std::string> founder_info = get_founder_info(famfile);
+    init_sample_vectors();
     // we will return the sample_name
     std::vector<Sample_ID> sample_name;
     std::unordered_set<std::string> samples_in_fam;
+    std::vector<std::string> duplicated_sample_id;
     // for purpose of output
-    size_t number_duplicated_samples = 0;
     uintptr_t sample_index = 0; // this is just for error message
-    bool inclusion = false;
-    bool founder = false;
+    std::vector<std::string> token;
+    std::string line;
     while (std::getline(famfile, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
         misc::split(token, line);
         // we have already checked for malformed file
-        const std::string fid = token[+FAM::FID] + m_delim;
-        const std::string id =
-            (m_ignore_fid) ? token[+FAM::IID] : fid + token[+FAM::IID];
-        auto&& find_id = m_sample_selection_list.find(id);
-        inclusion = m_remove_sample
-                        ? (find_id == m_sample_selection_list.end())
-                        : (find_id != m_sample_selection_list.end());
-
-        if (founder_info.find(fid + token[+FAM::FATHER]) == founder_info.end()
-            && founder_info.find(fid + token[+FAM::MOTHER])
-                   == founder_info.end()
-            && inclusion)
-        {
-            // this is a founder (with no dad / mum)
-            ++m_founder_ct;
-            SET_BIT(sample_index, m_founder_info.data());
-            SET_BIT(sample_index, m_sample_include.data());
-            founder = true;
-        }
-        else if (inclusion)
-        {
-            // we still calculate PRS for this sample
-            SET_BIT(sample_index, m_sample_include.data());
-            ++m_num_non_founder;
-            // but will only include it in the regression model if users asked
-            // to include non-founders
-            founder = m_keep_nonfounder;
-        }
-        m_sample_ct += inclusion;
-        // TODO: Better sex parsing? Can also be 0, 1 or F and M
-        if (token[+FAM::SEX] == "1") { ++m_num_male; }
-        else if (token[+FAM::SEX] == "2")
-        {
-            ++m_num_female;
-        }
-        else
-        {
-            ++m_num_ambig_sex;
-        }
-        // this must be incremented within each loop
+        gen_sample(+FAM::FID, +FAM::IID, +FAM::SEX, +FAM::FATHER, +FAM::MOTHER,
+                   sample_index, founder_info, token[+FAM::PHENOTYPE], token,
+                   sample_name, samples_in_fam, duplicated_sample_id);
         ++sample_index;
-        if (samples_in_fam.find(id) != samples_in_fam.end())
-            ++number_duplicated_samples;
-        if (inclusion && !m_is_ref)
-        {
-            sample_name.emplace_back(
-                Sample_ID(token[+FAM::FID], token[+FAM::IID],
-                          token[+FAM::PHENOTYPE], founder));
-        }
-        samples_in_fam.insert(id);
     }
 
-    if (number_duplicated_samples > 0)
+    if (duplicated_sample_id.size() > 0)
     {
-        // TODO: Produce a file containing id of all valid samples
         throw std::runtime_error(
-            "Error: A total of " + misc::to_string(number_duplicated_samples)
+            "Error: A total of " + misc::to_string(duplicated_sample_id.size())
             + " duplicated samples detected!\n"
             + "Please ensure all samples have an unique identifier");
     }
 
     famfile.close();
-    // initialize the m_tmp_genotype vector
-    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
-    m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
-    // m_prs_info.reserve(m_sample_ct);
-    // now we add the prs information. For some reason, we can't do a simple
-    // reserve
-    m_prs_info.resize(m_sample_ct, PRS());
-    // for (size_t i = 0; i < m_sample_ct; ++i) {
-    // m_prs_info.emplace_back(PRS()); }
-    // also resize the in_regression flag
-    m_in_regression.resize(m_sample_include.size(), 0);
-    // initialize the sample_include2 and founder_include2 which are
-    // both needed in cal_maf or read_score for MAF calculation
-    m_sample_include2.resize(unfiltered_sample_ctv2, 0);
-    m_founder_include2.resize(unfiltered_sample_ctv2, 0);
-    // fill it with the required mask (copy from PLINK2)
-    init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
-                               m_sample_include2.data());
-    init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
-                               m_founder_include2.data());
+    post_sample_read_init();
     return sample_name;
 }
 
