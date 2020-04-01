@@ -239,7 +239,7 @@ public:
         }
         return true;
     }
-    void init_sample_vectors()
+    virtual void init_sample_vectors()
     {
         if (m_unfiltered_sample_ct == 0)
         {
@@ -256,7 +256,7 @@ public:
         m_sample_ct = 0;
         m_founder_ct = 0;
     }
-    void post_sample_read_init()
+    virtual void post_sample_read_init()
     {
         const uintptr_t unfiltered_sample_ctl =
             BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -695,14 +695,15 @@ protected:
         }
         return message;
     }
-    void gen_sample(const size_t fid_idx, const size_t iid_idx,
-                    const size_t sex_idx, const size_t dad_idx,
-                    const size_t mum_idx, const size_t cur_idx,
-                    const std::unordered_set<std::string>& founder_info,
-                    const std::string& pheno, std::vector<std::string>& token,
-                    std::vector<Sample_ID>& sample_storage,
-                    std::unordered_set<std::string>& sample_in_file,
-                    std::vector<std::string>& duplicated_sample_id);
+    virtual void gen_sample(const size_t fid_idx, const size_t iid_idx,
+                            const size_t sex_idx, const size_t dad_idx,
+                            const size_t mum_idx, const size_t cur_idx,
+                            const std::unordered_set<std::string>& founder_info,
+                            const std::string& pheno,
+                            std::vector<std::string>& token,
+                            std::vector<Sample_ID>& sample_storage,
+                            std::unordered_set<std::string>& sample_in_file,
+                            std::vector<std::string>& duplicated_sample_id);
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const std::string& rs,

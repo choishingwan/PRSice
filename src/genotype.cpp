@@ -240,7 +240,7 @@ Genotype::read_base(
     std::unordered_set<std::string> processed_rs, dup_rs;
     while (std::getline(*stream, line))
     {
-        if (gz_input)
+        if (!gz_input)
         {
             progress = static_cast<double>(stream->tellg())
                        / static_cast<double>(file_length) * 100;
@@ -451,10 +451,9 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     const std::string fid = token[fid_idx] + m_delim;
     const std::string id =
         (m_ignore_fid) ? token[iid_idx] : fid + token[iid_idx];
-    auto&& find_id = m_sample_selection_list.find(id);
-    bool inclusion = m_remove_sample
-                         ? (find_id == m_sample_selection_list.end())
-                         : (find_id != m_sample_selection_list.end());
+    auto&& find_id =
+        m_sample_selection_list.find(id) != m_sample_selection_list.end();
+    bool inclusion = m_remove_sample ^ find_id;
     bool founder = false;
     if (founder_info.find(fid + token[dad_idx]) == founder_info.end()
         && founder_info.find(fid + token[mum_idx]) == founder_info.end()

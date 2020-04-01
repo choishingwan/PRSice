@@ -47,8 +47,8 @@ BinaryPlink::get_founder_info(std::ifstream& famfile)
         founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
         ++m_unfiltered_sample_ct;
     }
-    famfile.seekg(0);
     famfile.clear();
+    famfile.seekg(0);
     return founder_info;
 }
 std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
@@ -62,6 +62,8 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
                                  + m_sample_file);
     }
     m_unfiltered_sample_ct = 0;
+    // will also count number of samples here. Which initialize the important
+    // m_unfiltered_sample_ct
     std::unordered_set<std::string> founder_info = get_founder_info(famfile);
     init_sample_vectors();
     // we will return the sample_name
