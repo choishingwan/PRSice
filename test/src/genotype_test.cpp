@@ -1,6 +1,7 @@
 #ifndef GENOTYPE_TEST_HPP
 #define GENOTYPE_TEST_HPP
 #include "genotype.hpp"
+#include "region.hpp"
 #include "gtest/gtest.h"
 class GENOTYPE_BASIC : public Genotype, public ::testing::Test
 {
@@ -439,6 +440,106 @@ TEST_F(GENOTYPE_BASIC, LOAD_SNP_LIST)
     }
 }
 
+TEST_F(GENOTYPE_BASIC, READ_BASE_FULL)
+{
+    Reporter reporter(std::string("LOG"), 60, true);
+    init_chr();
+    m_reporter = &reporter;
+    m_snp_selection_list.insert("exclude");
+    // wrong loc need to test separately as that is a throw condition
+    const double maf_case = 0.04, maf_control = 0.05, info = 0.8,
+                 max_thres = 0.5;
+    std::vector<std::string> base = {
+        "CHR BP RS A1 A2 P STAT MAF INFO MAF_CASE",
+        "chr1 1234 exclude A C 0.05 1.96 0.1 0.9 0.05",
+        "chr1 1234 normal A C 0.05 1.96 0.1 0.9 0.05",
+        "chr1 1234 dup A C 0.05 1.96 0.1 0.9 0.05",
+        "chr1 1234 dup A C 0.05 1.96 0.1 0.9 0.05",
+        "chrX 1234 sex_chr A C 0.07 1.98 0.1 0.9 0.05",
+        "chromosome 1234 wrong_chr A C 0.07 1.98 0.1 0.9 0.05",
+        "chr1 1234 filter_control A C 0.05 1.96 0.01 0.9 0.05",
+        "chr1 1234 filter_case A C 0.05 1.96 0.1 0.9 0.03",
+        "chr1 1234 filter_info A C 0.05 1.96 0.1 0.02 0.05",
+        "chr1 1234 p_not_convert A C NA 1.96 0.1 0.9 0.05",
+        "chr1 1234 p_exclude A C 0.6 1.96 0.1 0.9 0.05",
+        "chr1 1234 stat_not_convert A C 0.05 NA 0.1 0.9 0.05",
+        "chr1 1234 negative_stat A C 0.05 -1.96 0.1 0.9 0.05",
+        "chr6 1234 region_exclude A C 0.05 -1.96 0.1 0.9 0.05",
+        "chr1 1234 ambiguous A T 0.05 1.96 0.1 0.9 0.05"};
+    std::vector<size_t> expected(+FILTER_COUNT::MAX, 1);
+    // skip header, as we are not using is_index
+    expected[+FILTER_COUNT::NUM_LINE] = base.size() - 1;
+    // both P and stat shares the same count
+    expected[+FILTER_COUNT::NOT_CONVERT] = 2;
+    // same for maf case and maf control
+    expected[+FILTER_COUNT::MAF] = 2;
+    std::ofstream dummy("DUMMY");
+    for (auto e : base) { dummy << e << std::endl; }
+    dummy.close();
+    BaseFile base_file;
+    base_file.file_name = "DUMMY";
+    base_file.has_column[+BASE_INDEX::CHR] = true;
+    base_file.has_column[+BASE_INDEX::BP] = true;
+    base_file.has_column[+BASE_INDEX::EFFECT] = true;
+    base_file.has_column[+BASE_INDEX::INFO] = true;
+    base_file.has_column[+BASE_INDEX::MAF] = true;
+    base_file.has_column[+BASE_INDEX::MAF_CASE] = true;
+    base_file.has_column[+BASE_INDEX::NONEFFECT] = true;
+    base_file.has_column[+BASE_INDEX::P] = true;
+    base_file.has_column[+BASE_INDEX::RS] = true;
+    base_file.has_column[+BASE_INDEX::STAT] = true;
+    base_file.column_index[+BASE_INDEX::CHR] = 0;
+    base_file.column_index[+BASE_INDEX::BP] = 1;
+    base_file.column_index[+BASE_INDEX::RS] = 2;
+    base_file.column_index[+BASE_INDEX::EFFECT] = 3;
+    base_file.column_index[+BASE_INDEX::NONEFFECT] = 4;
+    base_file.column_index[+BASE_INDEX::P] = 5;
+    base_file.column_index[+BASE_INDEX::STAT] = 6;
+    base_file.column_index[+BASE_INDEX::MAF] = 7;
+    base_file.column_index[+BASE_INDEX::INFO] = 8;
+    base_file.column_index[+BASE_INDEX::MAF_CASE] = 9;
+    base_file.column_index[+BASE_INDEX::MAX] = 9;
+    base_file.is_or = true;
+    QCFiltering base_qc;
+    base_qc.info_score = info;
+    base_qc.maf = maf_control;
+    base_qc.maf_case = maf_case;
+    PThresholding threshold_info;
+    threshold_info.no_full = true;
+    threshold_info.fastscore = true;
+    threshold_info.bar_levels = {max_thres};
+    std::vector<IITree<size_t, size_t>> exclusion_regions;
+    Region::generate_exclusion(exclusion_regions, "chr6:1-2000");
+    auto [filter_count, dup_idx] =
+        read_base(base_file, base_qc, threshold_info, exclusion_regions);
+    std::remove("DUMMY");
+    // 2 because we have both normal and dup in it
+    ASSERT_EQ(m_existed_snps.size(), 2);
+    // normal must be here
+    ASSERT_TRUE(m_existed_snps_index.find("normal")
+                != m_existed_snps_index.end());
+    ASSERT_EQ(dup_idx.size(), 1);
+    ASSERT_TRUE(dup_idx.find("dup") != dup_idx.end());
+    ASSERT_EQ(expected.size(), filter_count.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    { ASSERT_EQ(filter_count[i], expected[i]); }
+    dummy.open("DUMMY");
+    dummy << "CHR BP RS A1 A2 P STAT MAF INFO MAF_CASE" << std::endl;
+    dummy << "chr1 -1234 negative_loc A C 0.05 1.96 0.1 0.9 0.05" << std::endl;
+    dummy.close();
+    // should fail due to invalid coordinates
+    try
+    {
+        read_base(base_file, base_qc, threshold_info, exclusion_regions);
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    // std::remove("LOG");
+    // std::remove("DUMMY");
+}
 // init_chr
 // chr_code_check
 // load_snp_list

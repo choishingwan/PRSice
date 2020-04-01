@@ -110,8 +110,30 @@ enum class SCORING
     CONTROL_STD,
     SUM
 };
+
+enum class FILTER_COUNT
+{
+    DUPLICATE = 0,
+    NUM_LINE,
+    EXCLUDE,
+    SELECT,
+    REGION,
+    AMBIG,
+    HAPLOID,
+    NOT_CONVERT,
+    NEGATIVE,
+    INFO,
+    CHR,
+    MAF,
+    MAX
+};
+
 template <>
 struct enumeration_traits<BASE_INDEX> : enumeration_trait_indexing
+{
+};
+template <>
+struct enumeration_traits<FILTER_COUNT> : enumeration_trait_indexing
 {
 };
 template <>

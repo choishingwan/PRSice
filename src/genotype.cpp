@@ -188,7 +188,8 @@ void Genotype::snp_extraction(const std::string& extract_snps,
     }
 }
 
-void Genotype::read_base(
+std::tuple<std::vector<size_t>, std::unordered_set<std::string>>
+Genotype::read_base(
     const BaseFile& base_file, const QCFiltering& base_qc,
     const PThresholding& threshold_info,
     const std::vector<IITree<size_t, size_t>>& exclusion_regions)
@@ -212,18 +213,7 @@ void Genotype::read_base(
     double pthres = 0.0;
     size_t chr = 0;
     size_t loc = 0;
-    size_t num_duplicated = 0;
-    size_t num_excluded = 0;
-    size_t num_selected = 0;
-    size_t num_region_exclude = 0;
-    size_t num_ambiguous = 0;
-    size_t num_haploid = 0;
-    size_t num_not_converted = 0; // this is for NA
-    size_t num_negative_stat = 0;
-    size_t num_line_in_base = 0;
-    size_t num_info_filter = 0;
-    size_t num_chr_filter = 0;
-    size_t num_maf_filter = 0;
+    std::vector<size_t> filter_count(+FILTER_COUNT::MAX, 0);
     std::streampos file_length = 0;
     unsigned long long category = 0;
     bool gz_input;
@@ -247,7 +237,7 @@ void Genotype::read_base(
     m_reporter->report(message);
     message.clear();
     double prev_progress = 0.0, progress;
-    std::unordered_set<std::string> dup_index;
+    std::unordered_set<std::string> processed_rs, dup_rs;
     while (std::getline(*stream, line))
     {
         if (gz_input)
@@ -263,7 +253,7 @@ void Genotype::read_base(
         misc::trim(line);
         if (line.empty()) continue;
 
-        ++num_line_in_base;
+        ++filter_count[+FILTER_COUNT::NUM_LINE];
         token = misc::tokenize(line);
         for (auto&& t : token) { misc::trim(t); }
         if (token.size() <= max_index)
@@ -271,16 +261,19 @@ void Genotype::read_base(
             throw std::runtime_error(line
                                      + "\nMore index than column in data\n");
         }
-        switch (parse_rs_id(token, dup_index, base_file, rs_id))
+        switch (parse_rs_id(token, processed_rs, base_file, rs_id))
         {
-        case 1: ++num_duplicated; continue;
-        case 2: ++num_selected; continue;
-        default: dup_index.insert(rs_id);
+        case 1:
+            ++filter_count[+FILTER_COUNT::DUPLICATE];
+            dup_rs.insert(rs_id);
+            continue;
+        case 2: ++filter_count[+FILTER_COUNT::SELECT]; continue;
+        default: processed_rs.insert(rs_id);
         }
         switch (parse_chr(token, base_file, +BASE_INDEX::CHR, chr))
         {
-        case 1: ++num_chr_filter; continue;
-        case 2: ++num_haploid; continue;
+        case 1: ++filter_count[+FILTER_COUNT::CHR]; continue;
+        case 2: ++filter_count[+FILTER_COUNT::HAPLOID]; continue;
         }
         parse_allele(token, base_file, +BASE_INDEX::EFFECT, ref_allele);
         parse_allele(token, base_file, +BASE_INDEX::NONEFFECT, alt_allele);
@@ -296,7 +289,7 @@ void Genotype::read_base(
         {
             if (Genotype::within_region(exclusion_regions, chr, loc))
             {
-                ++num_region_exclude;
+                ++filter_count[+FILTER_COUNT::REGION];
                 continue;
             }
         }
@@ -305,19 +298,30 @@ void Genotype::read_base(
         {
             // don't need to test case filtering if we have already filtered the
             // SNP with the control MAF
-            num_maf_filter += base_filter_by_value(
-                token, base_file, base_qc.maf_case, +BASE_INDEX::MAF_CASE);
+            if (base_filter_by_value(token, base_file, base_qc.maf_case,
+                                     +BASE_INDEX::MAF_CASE))
+            {
+                ++filter_count[+FILTER_COUNT::MAF];
+                continue;
+            }
         }
         else
-            ++num_maf_filter;
-        num_info_filter += base_filter_by_value(
-            token, base_file, base_qc.info_score, +BASE_INDEX::INFO);
+        {
+            ++filter_count[+FILTER_COUNT::MAF];
+            continue;
+        }
+        if (base_filter_by_value(token, base_file, base_qc.info_score,
+                                 +BASE_INDEX::INFO))
+        {
+            ++filter_count[+FILTER_COUNT::INFO];
+            continue;
+        }
 
         switch (parse_pvalue(token[base_file.column_index[+BASE_INDEX::P]],
                              max_threshold, pvalue))
         {
-        case 1: ++num_not_converted; continue;
-        case 2: ++num_excluded; continue;
+        case 1: ++filter_count[+FILTER_COUNT::NOT_CONVERT]; continue;
+        case 2: ++filter_count[+FILTER_COUNT::EXCLUDE]; continue;
         case 3:
             throw std::runtime_error("Error: Invalid p-value for " + rs_id
                                      + ": " + misc::to_string(pvalue) + "!\n");
@@ -325,12 +329,12 @@ void Genotype::read_base(
         switch (parse_stat(token[base_file.column_index[+BASE_INDEX::STAT]],
                            base_file.is_or, stat))
         {
-        case 1: ++num_not_converted; continue;
-        case 2: ++num_negative_stat; continue;
+        case 1: ++filter_count[+FILTER_COUNT::NOT_CONVERT]; continue;
+        case 2: ++filter_count[+FILTER_COUNT::NEGATIVE]; continue;
         }
         if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
         {
-            ++num_ambiguous;
+            ++filter_count[+FILTER_COUNT::AMBIG];
             if (!m_keep_ambig) continue;
         }
         category = 0;
@@ -357,69 +361,75 @@ void Genotype::read_base(
                                         stat, pvalue, category, pthres));
     }
     fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
-    message.append(std::to_string(num_line_in_base)
-                   + " variant(s) observed in base file, with:\n");
-    // should emit an error and terminate PRSice. But don't bother
-    // at the moment. Can implement the kill switch later
-    if (num_duplicated)
+    return {filter_count, dup_rs};
+}
+void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
+                               const std::unordered_set<std::string>& dup_index,
+                               const std::string& out, const double info_score)
+{
+    std::string message = std::to_string(filter_count[+FILTER_COUNT::NUM_LINE])
+                          + " variant(s) observed in base file, with:\n";
+    if (filter_count[+FILTER_COUNT::SELECT])
     {
-        message.append(std::to_string(num_duplicated)
-                       + " duplicated variant(s)\n");
-    }
-    if (num_selected)
-    {
-        message.append(std::to_string(num_selected)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::SELECT])
                        + " variant(s) excluded based on user input\n");
     }
-    if (num_chr_filter)
+    if (filter_count[+FILTER_COUNT::CHR])
     {
         message.append(
-            std::to_string(num_chr_filter)
+            std::to_string(filter_count[+FILTER_COUNT::CHR])
             + " variant(s) excluded as they are on unknown/sex chromosome\n");
     }
-    if (num_haploid)
+    if (filter_count[+FILTER_COUNT::HAPLOID])
     {
-        message.append(std::to_string(num_haploid)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::HAPLOID])
                        + " variant(s) located on haploid chromosome\n");
     }
-    if (num_region_exclude)
+    if (filter_count[+FILTER_COUNT::REGION])
     {
         message.append(
-            std::to_string(num_region_exclude)
+            std::to_string(filter_count[+FILTER_COUNT::REGION])
             + " variant(s) excluded as they fall within x-range region(s)\n");
     }
-    if (num_maf_filter)
+    if (filter_count[+FILTER_COUNT::MAF])
     {
-        message.append(std::to_string(num_maf_filter)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::MAF])
                        + " variant(s) excluded due to MAF threshold\n");
     }
-    if (num_info_filter)
+    if (filter_count[+FILTER_COUNT::INFO])
     {
-        message.append(std::to_string(num_info_filter)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::INFO])
                        + " variant(s) with INFO score less than "
-                       + std::to_string(base_qc.info_score) + "\n");
+                       + std::to_string(info_score) + "\n");
     }
-    if (num_excluded)
+    if (filter_count[+FILTER_COUNT::EXCLUDE])
     {
-        message.append(std::to_string(num_excluded)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::EXCLUDE])
                        + " variant(s) excluded due to p-value threshold\n");
     }
-    if (num_not_converted)
+    if (filter_count[+FILTER_COUNT::NOT_CONVERT])
     {
-        message.append(std::to_string(num_not_converted)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::NOT_CONVERT])
                        + " NA stat/p-value observed\n");
     }
-    if (num_negative_stat)
+    if (filter_count[+FILTER_COUNT::NEGATIVE])
     {
-        message.append(std::to_string(num_negative_stat)
+        message.append(std::to_string(filter_count[+FILTER_COUNT::NEGATIVE])
                        + " negative statistic observed. Maybe you have "
                          "forgotten the --beta flag?\n");
     }
-    if (num_ambiguous)
+    if (filter_count[+FILTER_COUNT::AMBIG])
     {
-        message.append(std::to_string(num_ambiguous) + " ambiguous variant(s)");
-        if (!m_keep_ambig) { message.append(" excluded"); }
+        message.append(std::to_string(filter_count[+FILTER_COUNT::AMBIG])
+                       + " ambiguous variant(s)");
+        if (!filter_count[+FILTER_COUNT::AMBIG])
+        { message.append(" excluded"); }
         message.append("\n");
+    }
+    if (filter_count[+FILTER_COUNT::DUPLICATE])
+    {
+        if (!message.empty()) { m_reporter->report(message); }
+        throw std::runtime_error(print_duplicated_snps(dup_index, out));
     }
     message.append(std::to_string(m_existed_snps.size())
                    + " total variant(s) included from base file\n\n");
@@ -427,7 +437,6 @@ void Genotype::read_base(
     if (m_existed_snps.size() == 0)
     { throw std::runtime_error("Error: No valid variant remaining"); }
 }
-
 
 std::vector<std::string>
 Genotype::load_genotype_prefix(const std::string& file_name)

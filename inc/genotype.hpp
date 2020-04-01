@@ -395,10 +395,13 @@ public:
      * intermediate output generation
      */
     void expect_reference() { m_expect_reference = true; }
-    void
+    std::tuple<std::vector<size_t>, std::unordered_set<std::string>>
     read_base(const BaseFile& base_file, const QCFiltering& base_qc,
               const PThresholding& threshold_info,
               const std::vector<IITree<size_t, size_t>>& exclusion_regions);
+    void print_base_stat(const std::vector<size_t>& filter_count,
+                         const std::unordered_set<std::string>& dup_index,
+                         const std::string& out, const double info_score);
     void build_clump_windows(const unsigned long long& clump_distance);
     intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
     void
@@ -984,6 +987,87 @@ protected:
         } while (uii < m_sample_ct);
     }
 
+    std::vector<Sample_ID>
+    process_sample_vector(const std::unordered_set<std::string>& founder_info,
+                          std::ifstream& input, size_t fid_idx, size_t iid_idx,
+                          size_t dad_idx, size_t mum_idx, size_t sex_idx)
+    {
+        if (!input.is_open())
+        { throw std::runtime_error("Error: Have not open file"); }
+        std::string line;
+        std::vector<std::string> token;
+        std::unordered_set<std::string> samples_in_fam;
+        bool inclusion = false, founder;
+        size_t sample_index = 0;
+        size_t number_duplicated_samples = 0;
+        std::vector<Sample_ID> sample_name;
+        while (std::getline(input, line))
+        {
+            misc::trim(line);
+            if (line.empty()) continue;
+            misc::split(token, line);
+            // we have already checked for malformed file
+            const std::string fid = token[fid_idx] + m_delim;
+            const std::string id =
+                (m_ignore_fid) ? token[iid_idx] : fid + token[iid_idx];
+            const bool id_selected = (m_sample_selection_list.find(id)
+                                      != m_sample_selection_list.end());
+            inclusion = m_remove_sample ^ id_selected;
+            if (inclusion
+                && founder_info.find(fid + token[dad_idx]) == founder_info.end()
+                && founder_info.find(fid + token[mum_idx])
+                       == founder_info.end())
+            {
+                // this is a founder (with no dad / mum)
+                ++m_founder_ct;
+                SET_BIT(sample_index, m_founder_info.data());
+                SET_BIT(sample_index, m_sample_include.data());
+                founder = true;
+            }
+            else if (inclusion)
+            {
+                // we still calculate PRS for this sample
+                SET_BIT(sample_index, m_sample_include.data());
+                ++m_num_non_founder;
+                // only include in regression if m_keep_nonfounder = T
+                founder = m_keep_nonfounder;
+            }
+            m_sample_ct += inclusion;
+            // TODO: Better sex parsing? Can also be 0, 1 or F and M
+            if (sex_idx != fid_idx)
+            {
+                if (token[sex_idx] == "1") { ++m_num_male; }
+                else if (token[sex_idx] == "2")
+                {
+                    ++m_num_female;
+                }
+                else
+                {
+                    ++m_num_ambig_sex;
+                }
+            }
+            ++sample_index;
+            if (samples_in_fam.find(id) != samples_in_fam.end())
+                ++number_duplicated_samples;
+            if (inclusion && !m_is_ref)
+            {
+                sample_name.emplace_back(
+                    Sample_ID(token[+FAM::FID], token[+FAM::IID],
+                              token[+FAM::PHENOTYPE], founder));
+            }
+            samples_in_fam.insert(id);
+        }
+        if (number_duplicated_samples > 0)
+        {
+            // TODO: Produce a file containing id of all valid samples
+            throw std::runtime_error(
+                "Error: A total of "
+                + misc::to_string(number_duplicated_samples)
+                + " duplicated samples detected!\n"
+                + "Please ensure all samples have an unique identifier");
+        }
+        return sample_name;
+    }
 
     void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,
                   const size_t ploidy, const double stat,

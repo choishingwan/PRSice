@@ -13,6 +13,18 @@
 #include <math.h>
 #include <storage.hpp>
 
+class BPLINK_TEST : public ::BinaryPlink
+{
+public:
+    BPLINK_TEST(GenoFile& geno, Phenotype& pheno, const std::string& delim,
+                Reporter* reporter)
+        : BinaryPlink(geno, pheno, delim, reporter)
+    {
+    }
+};
+
+TEST(BINARY_PLINK, LOAD_SAMPLE) {}
+
 class BPLINK_GEN_SAMPLE_TARGET : public ::testing::Test
 {
 protected:

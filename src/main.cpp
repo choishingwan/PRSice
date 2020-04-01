@@ -86,9 +86,12 @@ int main(int argc, char* argv[])
             reporter.report(message);
             target_file->snp_extraction(commander.extract_file(),
                                         commander.exclude_file());
-            target_file->read_base(
+            auto [filter_count, dup_rs_id] = target_file->read_base(
                 commander.get_base(), commander.get_base_qc(),
                 commander.get_p_threshold(), exclusion_regions);
+            target_file->print_base_stat(filter_count, dup_rs_id,
+                                         commander.out(),
+                                         commander.get_base_qc().info_score);
             // then we will read in the sample information
             message = "Loading Genotype info from target\n";
             message.append(separator);
