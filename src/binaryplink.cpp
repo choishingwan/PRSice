@@ -596,7 +596,7 @@ void BinaryPlink::read_score(
             if (m_unfiltered_sample_ct != m_sample_ct)
             {
                 copy_quaterarr_nonempty_subset(
-                    m_tmp_genotype.data(), m_sample_include.data(),
+                    m_tmp_genotype.data(), m_calculate_prs.data(),
                     static_cast<uint32_t>(m_unfiltered_sample_ct),
                     static_cast<uint32_t>(m_sample_ct), genotype.data());
             }

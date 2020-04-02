@@ -54,13 +54,13 @@ struct Sample_ID
     std::string FID;
     std::string IID;
     std::string pheno;
-    bool founder;
+    bool in_regression; // true if include in regression model
     Sample_ID(const std::string& F, const std::string& I, const std::string& P,
-              const bool& Founder)
-        : FID(F), IID(I), pheno(P), founder(Founder)
+              const bool& regression)
+        : FID(F), IID(I), pheno(P), in_regression(regression)
     {
     }
-    Sample_ID() : FID(""), IID(""), pheno(""), founder(false) {}
+    Sample_ID() : FID(""), IID(""), pheno(""), in_regression(false) {}
 };
 
 struct BaseFile

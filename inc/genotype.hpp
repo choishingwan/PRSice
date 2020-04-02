@@ -247,14 +247,15 @@ public:
         }
         const uintptr_t unfiltered_sample_ctl =
             BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-        m_founder_info.resize(unfiltered_sample_ctl, 0);
-        m_sample_include.resize(unfiltered_sample_ctl, 0);
+        m_sample_for_ld.resize(unfiltered_sample_ctl, 0);
+        m_calculate_prs.resize(unfiltered_sample_ctl, 0);
         m_num_male = 0;
         m_num_female = 0;
         m_num_ambig_sex = 0;
         m_num_non_founder = 0;
         m_sample_ct = 0;
         m_founder_ct = 0;
+        m_vector_initialized = true;
     }
     void post_sample_read_init()
     {
@@ -267,14 +268,14 @@ public:
         const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
         m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
         m_prs_info.resize(m_sample_ct, PRS());
-        m_in_regression.resize(m_sample_include.size(), 0);
+        m_in_regression.resize(m_calculate_prs.size(), 0);
         m_sample_include2.resize(unfiltered_sample_ctv2, 0);
         m_founder_include2.resize(unfiltered_sample_ctv2, 0);
         // fill it with the required mask (copy from PLINK2)
-        init_quaterarr_from_bitarr(m_sample_include.data(),
+        init_quaterarr_from_bitarr(m_calculate_prs.data(),
                                    m_unfiltered_sample_ct,
                                    m_sample_include2.data());
-        init_quaterarr_from_bitarr(m_founder_info.data(),
+        init_quaterarr_from_bitarr(m_sample_for_ld.data(),
                                    m_unfiltered_sample_ct,
                                    m_founder_include2.data());
     }
@@ -318,14 +319,10 @@ public:
             return m_sample_id[i].FID + delim + m_sample_id[i].IID;
     }
 
-    /*!
-     * \brief Funtion return whether sample is founder (whether sample
-     * should be included in regression)
-     *
-     * \param i is the sample index
-     * \return true if sample is to be included
-     */
-    bool is_founder(size_t i) const { return m_sample_id.at(i).founder; }
+    bool in_regression(size_t i) const
+    {
+        return m_sample_id.at(i).in_regression;
+    }
 
     // as we don't check i is within range, the following 3 functions
     // have a potential of array out of bound
@@ -596,9 +593,9 @@ protected:
     std::vector<std::string> m_genotype_file_names;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
-    std::vector<uintptr_t> m_founder_info;
+    std::vector<uintptr_t> m_sample_for_ld;
     std::vector<uintptr_t> m_founder_include2;
-    std::vector<uintptr_t> m_sample_include;
+    std::vector<uintptr_t> m_calculate_prs;
     std::vector<uintptr_t> m_sample_include2;
     std::vector<uintptr_t> m_exclude_from_std;
     std::vector<uintptr_t> m_in_regression;
@@ -657,6 +654,7 @@ protected:
     bool m_expect_reference = false;
     bool m_memory_initialized = false;
     bool m_very_small_thresholds = false;
+    bool m_vector_initialized = false;
     Reporter* m_reporter;
     CalculatePRS m_prs_calculation;
 
@@ -1032,88 +1030,6 @@ protected:
             // uii is the number of samples we have finished so far
             uii += BITCT2;
         } while (uii < m_sample_ct);
-    }
-
-    std::vector<Sample_ID>
-    process_sample_vector(const std::unordered_set<std::string>& founder_info,
-                          std::ifstream& input, size_t fid_idx, size_t iid_idx,
-                          size_t dad_idx, size_t mum_idx, size_t sex_idx)
-    {
-        if (!input.is_open())
-        { throw std::runtime_error("Error: Have not open file"); }
-        std::string line;
-        std::vector<std::string> token;
-        std::unordered_set<std::string> samples_in_fam;
-        bool inclusion = false, founder;
-        size_t sample_index = 0;
-        size_t number_duplicated_samples = 0;
-        std::vector<Sample_ID> sample_name;
-        while (std::getline(input, line))
-        {
-            misc::trim(line);
-            if (line.empty()) continue;
-            misc::split(token, line);
-            // we have already checked for malformed file
-            const std::string fid = token[fid_idx] + m_delim;
-            const std::string id =
-                (m_ignore_fid) ? token[iid_idx] : fid + token[iid_idx];
-            const bool id_selected = (m_sample_selection_list.find(id)
-                                      != m_sample_selection_list.end());
-            inclusion = m_remove_sample ^ id_selected;
-            if (inclusion
-                && founder_info.find(fid + token[dad_idx]) == founder_info.end()
-                && founder_info.find(fid + token[mum_idx])
-                       == founder_info.end())
-            {
-                // this is a founder (with no dad / mum)
-                ++m_founder_ct;
-                SET_BIT(sample_index, m_founder_info.data());
-                SET_BIT(sample_index, m_sample_include.data());
-                founder = true;
-            }
-            else if (inclusion)
-            {
-                // we still calculate PRS for this sample
-                SET_BIT(sample_index, m_sample_include.data());
-                ++m_num_non_founder;
-                // only include in regression if m_keep_nonfounder = T
-                founder = m_keep_nonfounder;
-            }
-            m_sample_ct += inclusion;
-            // TODO: Better sex parsing? Can also be 0, 1 or F and M
-            if (sex_idx != fid_idx)
-            {
-                if (token[sex_idx] == "1") { ++m_num_male; }
-                else if (token[sex_idx] == "2")
-                {
-                    ++m_num_female;
-                }
-                else
-                {
-                    ++m_num_ambig_sex;
-                }
-            }
-            ++sample_index;
-            if (samples_in_fam.find(id) != samples_in_fam.end())
-                ++number_duplicated_samples;
-            if (inclusion && !m_is_ref)
-            {
-                sample_name.emplace_back(
-                    Sample_ID(token[+FAM::FID], token[+FAM::IID],
-                              token[+FAM::PHENOTYPE], founder));
-            }
-            samples_in_fam.insert(id);
-        }
-        if (number_duplicated_samples > 0)
-        {
-            // TODO: Produce a file containing id of all valid samples
-            throw std::runtime_error(
-                "Error: A total of "
-                + misc::to_string(number_duplicated_samples)
-                + " duplicated samples detected!\n"
-                + "Please ensure all samples have an unique identifier");
-        }
-        return sample_name;
     }
 
     void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,

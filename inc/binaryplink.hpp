@@ -78,7 +78,7 @@ protected:
         if (m_unfiltered_sample_ct == m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
-                m_tmp_genotype.data(), m_founder_info.data(),
+                m_tmp_genotype.data(), m_sample_for_ld.data(),
                 static_cast<uint32_t>(m_unfiltered_sample_ct),
                 static_cast<uint32_t>(m_founder_ct), genotype);
         }

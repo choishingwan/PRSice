@@ -96,9 +96,9 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             for (size_t i = 0; i < m_unfiltered_sample_ct; ++i)
             {
                 ++m_sample_ct;
-                SET_BIT(i, m_sample_include.data());
+                SET_BIT(i, m_calculate_prs.data());
                 // we assume all bgen samples to be founder
-                SET_BIT(i, m_founder_info.data());
+                SET_BIT(i, m_sample_for_ld.data());
             }
         }
     }
@@ -344,7 +344,7 @@ bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
                 // Need to double check. BGEN format might differ depends
                 // if FID is provided. When FID is provided, then the ID
                 // should be FID + delimitor + IID; otherwise it'd be IID
-                if (IS_SET(m_sample_include.data(), i))
+                if (IS_SET(m_calculate_prs.data(), i))
                 {
                     if (m_sample_id[sample_vector_idx].IID != identifier
                         && (m_sample_id[sample_vector_idx].FID + m_delim
@@ -667,15 +667,15 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
     std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
     // fill it with the required mask (copy from PLINK2)
-    init_quaterarr_from_bitarr(m_sample_include.data(), m_unfiltered_sample_ct,
+    init_quaterarr_from_bitarr(m_calculate_prs.data(), m_unfiltered_sample_ct,
                                sample_include2.data());
-    init_quaterarr_from_bitarr(m_founder_info.data(), m_unfiltered_sample_ct,
+    init_quaterarr_from_bitarr(m_sample_for_ld.data(), m_unfiltered_sample_ct,
                                founder_include2.data());
     m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
     // we initialize the plink converter with the sample inclusion vector and
     // also the tempory genotype vector list. We also provide the hard coding
     // threshold
-    PLINK_generator setter(&m_sample_include, m_tmp_genotype.data(),
+    PLINK_generator setter(&m_calculate_prs, m_tmp_genotype.data(),
                            m_hard_threshold, m_dose_threshold);
     // now consider if we are generating the intermediate file
     std::ofstream inter_out;
@@ -847,7 +847,7 @@ void BinaryGen::dosage_score(
     // m_prs_info is where we store the PRS information
     // and m_sample_include let us know if the sample is required.
     // m_missing_score will inform us as to how to handle the missingness
-    PRS_Interpreter setter(&prs_list, &m_sample_include,
+    PRS_Interpreter setter(&prs_list, &m_calculate_prs,
                            m_prs_calculation.missing_score);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     size_t file_idx;
@@ -907,7 +907,7 @@ void BinaryGen::hard_code_score(
     // initialize the data structure for storing the genotype
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     genfile::bgen::Context context;
-    PLINK_generator setter(&m_sample_include, genotype.data(), m_hard_threshold,
+    PLINK_generator setter(&m_calculate_prs, genotype.data(), m_hard_threshold,
                            m_dose_threshold);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     size_t idx;

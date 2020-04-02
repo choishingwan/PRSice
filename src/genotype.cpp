@@ -447,32 +447,36 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
                           std::unordered_set<std::string>& sample_in_file,
                           std::vector<std::string>& duplicated_sample_id)
 {
+    assert(m_vector_initialized);
     // we have already checked for malformed file
-    const std::string fid = token[fid_idx] + m_delim;
+    const std::string fid = (m_ignore_fid) ? "" : token[fid_idx] + m_delim;
     const std::string id =
         (m_ignore_fid) ? token[iid_idx] : fid + token[iid_idx];
     auto&& find_id =
         m_sample_selection_list.find(id) != m_sample_selection_list.end();
     bool inclusion = m_remove_sample ^ find_id;
-    bool founder = false;
-    if (founder_info.find(fid + token[dad_idx]) == founder_info.end()
-        && founder_info.find(fid + token[mum_idx]) == founder_info.end()
-        && inclusion)
+    bool in_regression = false;
+    // we can't check founder if there isn't fid
+    if (inclusion
+        && (m_ignore_fid
+            || (founder_info.find(fid + token[dad_idx]) == founder_info.end()
+                && founder_info.find(fid + token[mum_idx])
+                       == founder_info.end())))
     {
         // this is a founder (with no dad / mum)
         ++m_founder_ct;
-        SET_BIT(cur_idx, m_founder_info.data());
-        SET_BIT(cur_idx, m_sample_include.data());
-        founder = true;
+        SET_BIT(cur_idx, m_sample_for_ld.data());
+        SET_BIT(cur_idx, m_calculate_prs.data());
+        in_regression = true;
     }
     else if (inclusion)
     {
         // we still calculate PRS for this sample
-        SET_BIT(cur_idx, m_sample_include.data());
+        SET_BIT(cur_idx, m_calculate_prs.data());
         ++m_num_non_founder;
         // but will only include it in the regression model if users asked
         // to include non-founders
-        founder = m_keep_nonfounder;
+        in_regression = m_keep_nonfounder;
     }
     m_sample_ct += inclusion;
     // TODO: Better sex parsing? Can also be 0, 1 or F and M
@@ -488,10 +492,10 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     // this must be incremented within each loop
     if (sample_in_file.find(id) != sample_in_file.end())
         duplicated_sample_id.push_back(id);
-    if (inclusion && !m_is_ref)
+    else if (inclusion && !m_is_ref)
     {
         sample_storage.emplace_back(
-            Sample_ID(token[fid_idx], token[iid_idx], pheno, founder));
+            Sample_ID(token[fid_idx], token[iid_idx], pheno, in_regression));
     }
     sample_in_file.insert(id);
 }
@@ -1501,7 +1505,7 @@ void Genotype::standardize_prs()
     const size_t num_prs = m_prs_info.size();
     for (size_t i = 0; i < num_prs; ++i)
     {
-        if (!IS_SET(m_sample_include, i) || IS_SET(m_exclude_from_std, i))
+        if (!IS_SET(m_calculate_prs, i) || IS_SET(m_exclude_from_std, i))
             continue;
         if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
         else

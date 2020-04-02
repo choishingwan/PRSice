@@ -151,7 +151,7 @@ protected:
         // TODO, might want to make this struct a member so that we don't
         // need to re-initialize it? Though it only contain pointers and
         // doesn't have any big structures
-        PLINK_generator setter(&m_sample_include, mainbuf, m_hard_threshold,
+        PLINK_generator setter(&m_calculate_prs, mainbuf, m_hard_threshold,
                                m_dose_threshold);
         // we can now use the bgen library to parse the BGEN input and
         // transform it into PLINK format (NOTE: The

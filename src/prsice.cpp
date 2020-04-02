@@ -465,7 +465,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         {
             id = target.sample_id(i_sample, delim);
             if (phenotype_info.find(id) != phenotype_info.end()
-                && phenotype_info[id] != "NA" && target.is_founder(i_sample))
+                && phenotype_info[id] != "NA" && target.in_regression(i_sample))
             {
                 try
                 {
@@ -492,7 +492,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         // Use information from the fam file directly
         for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
         {
-            if (target.pheno_is_na(i_sample) || !target.is_founder(i_sample))
+            if (target.pheno_is_na(i_sample) || !target.in_regression(i_sample))
             {
                 // it is ok to skip NA as default = sample.has_pheno = false
                 continue;
