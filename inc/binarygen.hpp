@@ -33,6 +33,7 @@
 class BinaryGen : public Genotype
 {
 public:
+    BinaryGen() {}
     BinaryGen(const GenoFile& geno, const Phenotype& pheno,
               const std::string& delim, Reporter* reporter);
     ~BinaryGen();
@@ -47,7 +48,7 @@ public:
 
 protected:
     typedef std::vector<std::vector<double>> Data;
-    std::unordered_map<size_t, genfile::bgen::Context> m_context_map;
+    std::vector<genfile::bgen::Context> m_context_map;
     std::vector<genfile::byte_t> m_buffer1, m_buffer2;
     bool m_target_plink = false;
     bool m_ref_plink = false;
@@ -65,12 +66,8 @@ protected:
                              const std::string& prefix,
                              Genotype* target = nullptr,
                              bool force_cal = false);
-    /*!
-     * \brief Read in the context information for the bgen. This will propergate
-     * the m_context_map
-     * \param prefix is the input bgen file prefix
-     */
-    void get_context(const size_t& idx);
+
+    genfile::bgen::Context get_context(const size_t& idx);
     size_t get_sex_col(const std::string& header,
                        const std::string& format_line);
     /*!

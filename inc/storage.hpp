@@ -87,6 +87,8 @@ struct GenoFile
     int num_autosome = 22;
     int hard_coded = false;
     int is_ref = false;
+    GenoFile(const std::string name) : file_name(name) {}
+    GenoFile() {}
 };
 
 struct Phenotype

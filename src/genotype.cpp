@@ -449,9 +449,9 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
 {
     assert(m_vector_initialized);
     // we have already checked for malformed file
-    const std::string fid = (m_ignore_fid) ? "" : token[fid_idx] + m_delim;
+    const std::string fid = (m_ignore_fid) ? "" : token[fid_idx];
     const std::string id =
-        (m_ignore_fid) ? token[iid_idx] : fid + token[iid_idx];
+        (m_ignore_fid) ? token[iid_idx] : fid + m_delim + token[iid_idx];
     auto&& find_id =
         m_sample_selection_list.find(id) != m_sample_selection_list.end();
     bool inclusion = m_remove_sample ^ find_id;
@@ -459,8 +459,9 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     // we can't check founder if there isn't fid
     if (inclusion
         && (m_ignore_fid
-            || (founder_info.find(fid + token[dad_idx]) == founder_info.end()
-                && founder_info.find(fid + token[mum_idx])
+            || (founder_info.find(fid + m_delim + token[dad_idx])
+                    == founder_info.end()
+                && founder_info.find(fid + m_delim + token[mum_idx])
                        == founder_info.end())))
     {
         // this is a founder (with no dad / mum)
@@ -495,7 +496,7 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     else if (inclusion && !m_is_ref)
     {
         sample_storage.emplace_back(
-            Sample_ID(token[fid_idx], token[iid_idx], pheno, in_regression));
+            Sample_ID(fid, token[iid_idx], pheno, in_regression));
     }
     sample_in_file.insert(id);
 }

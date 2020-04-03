@@ -40,6 +40,7 @@ public:
      * (F)
      * \param reporter is the logger
      */
+    BinaryPlink() {}
     BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
                 const std::string& delim, Reporter* reporter);
     ~BinaryPlink();

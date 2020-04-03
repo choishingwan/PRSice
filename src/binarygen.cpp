@@ -32,6 +32,8 @@ BinaryGen::BinaryGen(const GenoFile& geno, const Phenotype& pheno,
     {
         m_sample_file = pheno.pheno_file;
     }
+    // initialize the context size
+    m_context_map.resize(m_genotype_file_names.size());
     m_reporter->report(message);
 }
 
@@ -70,14 +72,17 @@ bool is_header(const std::string& in, const bool ignore_fid)
     std::vector<std::string> token = misc::split(in);
     misc::to_upper(token.front());
     return ((token.front() == "FID" || token.front() == "ID1"
-             || token.front() == "ID")
+             || token.front() == "ID" || token.front() == "ID_1")
             || (ignore_fid && token.front() == "IID"));
 }
 std::vector<Sample_ID> BinaryGen::gen_sample_vector()
 {
+    // this is the first time we do something w.r.t bgen file
+    // first initialize the context map
+    for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
+    { m_context_map[i] = get_context(i); }
     std::vector<Sample_ID> sample_name;
     // we always know the sample size from context
-    get_context(0);
     m_unfiltered_sample_ct = m_context_map[0].number_of_samples;
     init_sample_vectors();
     if (m_is_ref)
@@ -110,13 +115,11 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
         // runtime_error)
         const bool is_sample_format = check_is_sample_format(m_sample_file);
         std::ifstream sample_file(m_sample_file.c_str());
-        if (!sample_file.is_open())
-        {
-            throw std::runtime_error("Error: Cannot open sample file: "
-                                     + m_sample_file);
-        }
+        // don't need to check again as the check_is_sample_format function
+        // already checked if the file is opened
         std::string line;
         size_t sex_col = ~size_t(0);
+
         // now check if there's a sex information
         if (is_sample_format)
         {
@@ -133,8 +136,12 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
         std::vector<std::string> token;
         const size_t required_column =
             ((sex_col != ~size_t(0)) ? (sex_col) : (1 + !m_ignore_fid));
-        const size_t iid_idx = (is_sample_format || !m_ignore_fid) ? 0 : 1;
+        const size_t iid_idx = (is_sample_format || !m_ignore_fid) ? 1 : 0;
         const size_t fid_idx = 0;
+        // more robust header check, only remove header if sample size = line +
+        // 1
+        bool may_have_header = false;
+        std::string header_line_tmp;
         while (std::getline(sample_file, line))
         {
             misc::trim(line);
@@ -142,7 +149,12 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             token = misc::split(line);
             // if it is not the sample file, check if this has a header
             // not the best way, but will do it
-            if (line_id == 0 && is_header(line, m_ignore_fid)) continue;
+            if (line_id == 0 && is_header(line, m_ignore_fid)
+                && !is_sample_format)
+            {
+                may_have_header = true;
+                header_line_tmp = line;
+            }
             if (token.size() < required_column)
             {
                 throw std::runtime_error(
@@ -151,19 +163,10 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                     + " columns! Number of column="
                     + misc::to_string(token.size()));
             }
-            gen_sample(fid_idx, iid_idx, sex_col, 0, 0, line_id - 1,
+            gen_sample(fid_idx, iid_idx, sex_col, 0, 0, line_id,
                        std::unordered_set<std::string> {}, "", token,
                        sample_name, sample_in_file, duplicated_sample_id);
             ++line_id;
-        }
-        if (line_id != m_unfiltered_sample_ct)
-        {
-            throw std::runtime_error(
-                "Error: Number of sample in phenotype file does not match "
-                "number of samples specified in bgen file. Please check you "
-                "have the correct phenotype file input. Note: Phenotype file "
-                "should have the same number of samples as the bgen file and "
-                "they should appear in the same order");
         }
         if (!duplicated_sample_id.empty())
         {
@@ -176,6 +179,21 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                   "unique identifier");
         }
         sample_file.close();
+        if (line_id == m_unfiltered_sample_ct + 1 && may_have_header)
+        {
+            m_reporter->report("Assume phenotype file has header line: "
+                               + header_line_tmp);
+            sample_name.erase(sample_name.begin());
+        }
+        else if (line_id != m_unfiltered_sample_ct)
+        {
+            throw std::runtime_error(
+                "Error: Number of sample in phenotype file does not match "
+                "number of samples specified in bgen file. Please check you "
+                "have the correct phenotype file input. Note: Phenotype file "
+                "should have the same number of samples as the bgen file and "
+                "they should appear in the same order");
+        }
     }
     post_sample_read_init();
     return sample_name;
@@ -195,11 +213,13 @@ bool BinaryGen::check_is_sample_format(const std::string& input)
     // get the first two line of input
     std::string first_line, second_line;
     std::getline(sample_file, first_line);
-    std::getline(sample_file, second_line);
+    // we must have at least 2 row for a sample file
+    if (!std::getline(sample_file, second_line)) { return false; }
     sample_file.close();
     // split the first two lines
-    const std::vector<std::string> first_row = misc::split(first_line);
-    const std::vector<std::string> second_row = misc::split(second_line);
+    const std::vector<std::string_view> first_row = misc::tokenize(first_line);
+    const std::vector<std::string_view> second_row =
+        misc::tokenize(second_line);
     // each row should have the same number of column
     if (first_row.size() != second_row.size() || first_row.size() < 3)
     { return false; }
@@ -225,70 +245,18 @@ bool BinaryGen::check_is_sample_format(const std::string& input)
     return true;
 }
 
-void BinaryGen::get_context(const size_t& idx)
+genfile::bgen::Context BinaryGen::get_context(const size_t& idx)
 {
     // get the context information for the input bgen file
     // most of these codes are copy from the bgen library
-    const std::string prefix = m_genotype_file_names[idx];
+    const std::string prefix = m_genotype_file_names.at(idx);
     const std::string bgen_name = prefix + ".bgen";
     std::ifstream bgen_file(bgen_name.c_str(), std::ifstream::binary);
     if (!bgen_file.is_open())
     { throw std::runtime_error("Error: Cannot open bgen file " + bgen_name); }
-    // initialize the bgen context object
     genfile::bgen::Context context;
-    uint32_t offset, header_size = 0, number_of_snp_blocks = 0,
-                     number_of_samples = 0, flags = 0;
-    char magic[4];
-    const std::size_t fixed_data_size = 20;
-    std::vector<char> free_data;
-    // read in the offset information
-    genfile::bgen::read_little_endian_integer(bgen_file, &offset);
-    // read in the size of the header
-    genfile::bgen::read_little_endian_integer(bgen_file, &header_size);
-    // the size of header should be bigger than or equal to the fixed data size
-    assert(header_size >= fixed_data_size);
-    genfile::bgen::read_little_endian_integer(bgen_file, &number_of_snp_blocks);
-    genfile::bgen::read_little_endian_integer(bgen_file, &number_of_samples);
-    // now read in the magic number
-    bgen_file.read(&magic[0], 4);
-    free_data.resize(header_size - fixed_data_size);
-    if (free_data.size() > 0)
-    {
-        bgen_file.read(&free_data[0],
-                       static_cast<std::streamsize>(free_data.size()));
-    }
-    // now read in the flag
-    genfile::bgen::read_little_endian_integer(bgen_file, &flags);
-    if ((magic[0] != 'b' || magic[1] != 'g' || magic[2] != 'e'
-         || magic[3] != 'n')
-        && (magic[0] != 0 || magic[1] != 0 || magic[2] != 0 || magic[3] != 0))
-    {
-        throw std::runtime_error("Error: Incorrect magic string!\nPlease "
-                                 "check you have provided a valid bgen "
-                                 "file!");
-    }
-    if (bgen_file)
-    {
-        context.number_of_samples = number_of_samples;
-        context.number_of_variants = number_of_snp_blocks;
-        context.magic.assign(&magic[0], &magic[0] + 4);
-        context.offset = offset;
-        context.flags = flags;
-        m_context_map[idx].offset = context.offset;
-        m_context_map[idx].flags = context.flags;
-        m_context_map[idx].number_of_samples = context.number_of_samples;
-        m_context_map[idx].number_of_variants = context.number_of_variants;
-        if ((flags & genfile::bgen::e_CompressedSNPBlocks)
-            == genfile::bgen::e_ZstdCompression)
-        {
-            throw std::runtime_error(
-                "Error: zstd compression currently not supported");
-        }
-    }
-    else
-    {
-        throw std::runtime_error("Error: Problem reading bgen file!");
-    }
+    genfile::bgen::read_header_block(bgen_file, &context);
+    return context;
 }
 
 bool BinaryGen::check_sample_consistent(const std::string& bgen_name,
@@ -422,8 +390,6 @@ void BinaryGen::gen_snp_vector(
     bool to_remove = false;
     for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
     {
-        // go through each genotype file and get the context information
-        get_context(i);
         // get the total unfiltered snp size so that we can initalize the vector
         // TODO: Check if there are too many SNPs, therefore cause integer
         // overflow
