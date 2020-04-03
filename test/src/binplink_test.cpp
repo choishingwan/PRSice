@@ -21,10 +21,116 @@ public:
         : BinaryPlink(geno, pheno, delim, reporter)
     {
     }
+
+    std::vector<Sample_ID> gen_sample_vector_wrapper()
+    {
+        return gen_sample_vector();
+    }
+    void load_remove(const std::unordered_set<std::string>& input)
+    {
+        m_sample_selection_list = input;
+    }
+    void check_sample(const std::vector<Sample_ID>& result, size_t& res_idx,
+                      size_t& cur_idx, const std::string& fid,
+                      const std::string& iid, const bool in_ld,
+                      const bool in_reg, const bool cal_prs, const bool keep)
+    {
+        if (keep)
+        {
+            ASSERT_TRUE(result.size() > res_idx);
+            ASSERT_STREQ(result[res_idx].FID.c_str(), fid.c_str());
+            ASSERT_STREQ(result[res_idx].IID.c_str(), iid.c_str());
+            ASSERT_EQ(result[res_idx].in_regression, in_reg);
+            ++res_idx;
+        }
+        ASSERT_EQ(IS_SET(m_calculate_prs.data(), cur_idx), cal_prs);
+        ASSERT_EQ(IS_SET(m_sample_for_ld.data(), cur_idx), in_ld);
+        ++cur_idx;
+    }
 };
 
-TEST(BINARY_PLINK, LOAD_SAMPLE) {}
+TEST(BINARY_PLINK, LOAD_SAMPLE)
+{
+    GenoFile target;
+    target.file_name = "DUMMY";
+    // generate the fam file
+    std::vector<std::string> expected = {
+        "ID1 ID1 0 0 1 1",          // normal
+        "FAM1 DAD1 0 0 1 1",        // Founder dad
+        "FAM1 MUM1 0 0 2 1",        // founder mum
+        "REMOVE1 REMOVE1 0 0 1 2",  // Removed
+        "REMOVE2 NAME 0 0 2 1",     // not removed
+        "FAM1 BOY1 DAD1 MUM1 1 0",  // non-founder son
+        "FAM2 GIRL1 DAD2 MUM1 2 0", // founder as parent not found
+        "FAM1 MUM2 F1 F2 0 2",   // founder, in same family but parent not found
+        "FAM2 GIRL2 0 GIRL1 2 1" // non-founder one parent found
+    };
+    std::ofstream fam(target.file_name + ".fam");
+    for (auto e : expected) { fam << e << std::endl; }
+    fam.close();
+    target.is_ref = false;
+    target.num_autosome = 22;
+    Phenotype pheno;
+    pheno.binary = {true};
+    pheno.ignore_fid = false;
+    Reporter reporter(std::string("LOG"), 60, true);
+    BPLINK_TEST plink(target, pheno, " ", &reporter);
+    plink.load_remove(
+        std::unordered_set<std::string> {"REMOVE1 REMOVE1", "REMOVE2 REMOVE2"});
+    auto result = plink.gen_sample_vector_wrapper();
+    const bool in_ld = true, in_reg = true, in_prs = true, keep = true;
+    size_t cur_idx = 0, res_idx = 0;
+    plink.check_sample(result, res_idx, cur_idx, "ID1", "ID1", in_ld, in_reg,
+                       in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "FAM1", "DAD1", in_ld, in_reg,
+                       in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "FAM1", "MUM1", in_ld, in_reg,
+                       in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "REMOVE1", "REMOVE1", !in_ld,
+                       !in_reg, !in_prs, !keep);
+    plink.check_sample(result, res_idx, cur_idx, "REMOVE2", "NAME", in_ld,
+                       in_reg, in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "FAM1", "BOY1", !in_ld,
+                       !in_reg, in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "FAM2", "GIRL1", in_ld, in_reg,
+                       in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "FAM1", "MUM2", in_ld, in_reg,
+                       in_prs, keep);
+    plink.check_sample(result, res_idx, cur_idx, "FAM2", "GIRL2", !in_ld,
+                       !in_reg, in_prs, keep);
+    std::remove(std::string(target.file_name + ".fam").c_str());
+}
 
+
+TEST(BINARY_PLINK, LOAD_MALFORMED_SAMPLE)
+{
+    GenoFile target;
+    target.file_name = "DUMMY";
+    // generate the fam file
+    std::vector<std::string> expected = {"ID1 ID1 0 0 1 1 1"};
+    std::ofstream fam(target.file_name + ".fam");
+    fam << "ID1 ID1 0 0 1 1 1" << std::endl;
+    fam.close();
+    target.is_ref = false;
+    target.num_autosome = 22;
+    Phenotype pheno;
+    pheno.binary = {true};
+    pheno.ignore_fid = false;
+    Reporter reporter(std::string("LOG"), 60, true);
+    BPLINK_TEST plink(target, pheno, " ", &reporter);
+    plink.load_remove(
+        std::unordered_set<std::string> {"REMOVE1 REMOVE1", "REMOVE2 REMOVE2"});
+    try
+    {
+        auto result = plink.gen_sample_vector_wrapper();
+        FAIL();
+    }
+    catch (...)
+    {
+        SUCCEED();
+    }
+    std::remove(std::string(target.file_name + ".fam").c_str());
+}
 class BPLINK_GEN_SAMPLE_TARGET : public ::testing::Test
 {
 protected:

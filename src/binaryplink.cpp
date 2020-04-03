@@ -37,11 +37,11 @@ BinaryPlink::get_founder_info(std::ifstream& famfile)
         misc::trim(line);
         if (line.empty()) continue;
         misc::split(token, line);
-        if (token.size() < 6)
+        if (token.size() != 6)
         {
             throw std::runtime_error(
-                "Error: Malformed fam file. Less than 6 column on "
-                "line: "
+                "Error: Malformed fam file. Fam file should have 6 columns."
+                "Line: "
                 + std::to_string(m_unfiltered_sample_ct + 1) + "\n");
         }
         founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);

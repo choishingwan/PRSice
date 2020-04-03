@@ -16,21 +16,23 @@ public:
         m_ignore_fid = false;
     }
 
-    void sample_generation_check(
-        const std::unordered_set<std::string>& founder_info,
-        const bool in_regress, const bool cal_prs, const bool cal_ld,
-        const bool keep, const bool duplicated,
-        const std::vector<std::string>& input,
-        std::unordered_set<std::string>& processed_sample,
-        std::vector<Sample_ID>& result,
-        std::vector<std::string>& duplicated_sample, size_t& cur_idx,
-        bool remove_sample = true, bool ignore_fid = false)
+    void
+    sample_generation_check(const std::unordered_set<std::string>& founder_info,
+                            const bool in_regress, const bool cal_prs,
+                            const bool cal_ld, const bool keep,
+                            const bool duplicated,
+                            const std::vector<std::string>& input,
+                            std::unordered_set<std::string>& processed_sample,
+                            std::vector<Sample_ID>& result,
+                            std::vector<std::string>& duplicated_sample,
+                            size_t& cur_idx, bool remove_sample = true,
+                            bool ignore_fid = false, size_t sex_col = +FAM::SEX)
     {
         m_ignore_fid = ignore_fid;
         m_remove_sample = remove_sample;
         const size_t before = duplicated_sample.size();
         std::vector<std::string> token = input;
-        gen_sample(+FAM::FID, +FAM::IID, +FAM::SEX, +FAM::FATHER, +FAM::MOTHER,
+        gen_sample(+FAM::FID, +FAM::IID, sex_col, +FAM::FATHER, +FAM::MOTHER,
                    cur_idx, founder_info, token[+FAM::PHENOTYPE], token, result,
                    processed_sample, duplicated_sample);
         if (!keep)
@@ -856,7 +858,7 @@ TEST_F(GENOTYPE_BASIC, SAMPLE_GENERATION)
     // will use it for everything except LD
     sample_generation_check(
         founder_info, in_regress, cal_prs, !cal_ld, keep, !duplicated,
-        std::vector<std::string> {"FAM2", "GIRL1", "DAD2", "MUM2", "2", "0"},
+        std::vector<std::string> {"FAM2", "GIRL1", "DAD2", "MUM2", "2", "NA"},
         processed_sample, result, duplicated_sample, cur_idx);
     // another non-founder, but both parents are not found in the system
     // so should treat as a normal founders
@@ -900,6 +902,12 @@ TEST_F(GENOTYPE_BASIC, SAMPLE_GENERATION)
         founder_info, in_regress, cal_prs, cal_ld, keep, duplicated,
         std::vector<std::string> {"ID1", "ID1", "0", "0", "1", "1"},
         processed_sample, result, duplicated_sample, cur_idx);
+    // check when we have no sex information
+    sample_generation_check(
+        founder_info, in_regress, cal_prs, cal_ld, keep, !duplicated,
+        std::vector<std::string> {"NO_SEX", "Ambig", "0", "0", "1", "3"},
+        processed_sample, result, duplicated_sample, cur_idx, true, false,
+        ~size_t(0));
 }
 
 #endif // GENOTYPE_TEST_HPP
