@@ -67,14 +67,6 @@ size_t BinaryGen::get_sex_col(const std::string& header,
     return sex_col;
 }
 
-bool is_header(const std::string& in, const bool ignore_fid)
-{
-    std::vector<std::string> token = misc::split(in);
-    misc::to_upper(token.front());
-    return ((token.front() == "FID" || token.front() == "ID1"
-             || token.front() == "ID" || token.front() == "ID_1")
-            || (ignore_fid && token.front() == "IID"));
-}
 std::vector<Sample_ID> BinaryGen::gen_sample_vector()
 {
     // this is the first time we do something w.r.t bgen file
@@ -140,8 +132,38 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
         const size_t fid_idx = 0;
         // more robust header check, only remove header if sample size = line +
         // 1
-        bool may_have_header = false;
-        std::string header_line_tmp;
+        // first, get number of lines in the file
+        if (!is_sample_format)
+        {
+            bool have_header = false;
+            size_t num_line = 0;
+            while (std::getline(sample_file, line))
+            {
+                misc::trim(line);
+                if (!line.empty()) ++num_line;
+            }
+            if (num_line == m_unfiltered_sample_ct + 1) { have_header = true; }
+            else if (num_line != m_unfiltered_sample_ct)
+            {
+                throw std::runtime_error(
+                    "Error: Number of sample in phenotype file does not match "
+                    "number of samples specified in bgen file. Please check "
+                    "you "
+                    "have the correct phenotype file input. Note: Phenotype "
+                    "file "
+                    "should have the same number of samples as the bgen file "
+                    "and "
+                    "they should appear in the same order");
+            }
+            sample_file.clear();
+            sample_file.seekg(0);
+            if (have_header)
+            {
+                std::getline(sample_file, line);
+                m_reporter->report("Assume phenotype file has header line: "
+                                   + line);
+            }
+        }
         while (std::getline(sample_file, line))
         {
             misc::trim(line);
@@ -149,12 +171,6 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
             token = misc::split(line);
             // if it is not the sample file, check if this has a header
             // not the best way, but will do it
-            if (line_id == 0 && is_header(line, m_ignore_fid)
-                && !is_sample_format)
-            {
-                may_have_header = true;
-                header_line_tmp = line;
-            }
             if (token.size() < required_column)
             {
                 throw std::runtime_error(
@@ -179,21 +195,6 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                   "unique identifier");
         }
         sample_file.close();
-        if (line_id == m_unfiltered_sample_ct + 1 && may_have_header)
-        {
-            m_reporter->report("Assume phenotype file has header line: "
-                               + header_line_tmp);
-            sample_name.erase(sample_name.begin());
-        }
-        else if (line_id != m_unfiltered_sample_ct)
-        {
-            throw std::runtime_error(
-                "Error: Number of sample in phenotype file does not match "
-                "number of samples specified in bgen file. Please check you "
-                "have the correct phenotype file input. Note: Phenotype file "
-                "should have the same number of samples as the bgen file and "
-                "they should appear in the same order");
-        }
     }
     post_sample_read_init();
     return sample_name;

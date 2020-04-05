@@ -148,7 +148,7 @@ TEST_F(BGEN_TEST, LOAD_SAMPLE_SFILE_WITH_SEX)
     // not as complicated as we don't have non-founders with bgen format
     std::vector<std::string> expected = {
         "ID1 ID1 1 0.1 F", // normal
-        "FAM1 DAD1 1 0.5 M", "REMOVE1 REMOVE1 1 1.23 M", "FAM2 GIRL1 0.19 F"};
+        "FAM1 DAD1 1 0.5 M", "REMOVE1 REMOVE1 1 1.23 M", "FAM2 GIRL1 1 0.19 F"};
     m_sample_selection_list.insert("REMOVE1 REMOVE1");
     std::ofstream sample("dummy.sample");
     sample << header << std::endl;
@@ -166,9 +166,108 @@ TEST_F(BGEN_TEST, LOAD_SAMPLE_SFILE_WITH_SEX)
     check_sample(result, "REMOVE1", "REMOVE1", !keep, idx, bit_idx);
     check_sample(result, "FAM2", "GIRL1", keep, idx, bit_idx);
 }
-TEST(BINARY_GEN, LOAD_SAMPLE_PHENO_FILE_NO_HEADER) {}
-TEST_F(BGEN_TEST, LOAD_SAMPLE_SFILE_IGNORE_FID) {}
-TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_FILE_HEADER) {}
-TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_HEADER_WRONG_GUESS) {}
-TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_FILE_IGNORE_FID) {}
+TEST_F(BGEN_TEST, LOAD_SAMPLE_SFILE_IGNORE_FID)
+{
+    m_ignore_fid = true;
+    const size_t num_snp = 10;
+    // now generate sample file
+    std::string header = "ID_1 ID_2 missing Pheno Sex\n0 0 0 C D";
+    // not as complicated as we don't have non-founders with bgen format
+    std::vector<std::string> expected = {
+        "ID1 ID1 1 0.1 F", // normal
+        "FAM1 DAD1 1 0.5 M", "REMOVE1 REMOVE1 1 1.23 M", "FAM2 GIRL1 1 0.19 F"};
+    m_sample_selection_list.insert("REMOVE1");
+    std::ofstream sample("dummy.sample");
+    sample << header << std::endl;
+    for (auto e : expected) { sample << e << std::endl; }
+    sample.close();
+    // now generate the bgen header file
+    gen_bgen(num_snp, static_cast<uint32_t>(expected.size()), "Testing data",
+             4294967295u);
+    get_context(0);
+    auto result = gen_sample_vector();
+    const bool keep = true;
+    size_t idx = 0, bit_idx = 0;
+    check_sample(result, "", "ID1", keep, idx, bit_idx);
+    check_sample(result, "", "DAD1", keep, idx, bit_idx);
+    check_sample(result, "", "REMOVE1", !keep, idx, bit_idx);
+    check_sample(result, "", "GIRL1", keep, idx, bit_idx);
+}
+TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_FILE_NO_HEADER)
+{
+    const size_t num_snp = 10;
+    // now generate sample file
+    // not as complicated as we don't have non-founders with bgen format
+    std::vector<std::string> expected = {
+        "ID1 ID1 0.1", // normal
+        "FAM1 DAD1 0.5", "REMOVE1 REMOVE1 1.23", "FAM2 GIRL1 0.19"};
+    m_sample_selection_list.insert("REMOVE1 REMOVE1");
+    std::ofstream sample("dummy.sample");
+    for (auto e : expected) { sample << e << std::endl; }
+    sample.close();
+    // now generate the bgen header file
+    gen_bgen(num_snp, static_cast<uint32_t>(expected.size()), "Testing data",
+             4294967295u);
+    get_context(0);
+    auto result = gen_sample_vector();
+    const bool keep = true;
+    size_t idx = 0, bit_idx = 0;
+    check_sample(result, "ID1", "ID1", keep, idx, bit_idx);
+    check_sample(result, "FAM1", "DAD1", keep, idx, bit_idx);
+    check_sample(result, "REMOVE1", "REMOVE1", !keep, idx, bit_idx);
+    check_sample(result, "FAM2", "GIRL1", keep, idx, bit_idx);
+}
+TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_FILE_HEADER)
+{
+    const size_t num_snp = 10;
+    // now generate sample file
+    // not as complicated as we don't have non-founders with bgen format
+    std::string header = "FID IID Pheno";
+    std::vector<std::string> expected = {
+        "ID1 ID1 0.1", // normal
+        "FAM1 DAD1 0.5", "REMOVE1 REMOVE1 1.23", "FAM2 GIRL1 0.19"};
+    m_sample_selection_list.insert("REMOVE1 REMOVE1");
+    std::ofstream sample("dummy.sample");
+    sample << header << std::endl;
+    for (auto e : expected) { sample << e << std::endl; }
+    sample.close();
+    // now generate the bgen header file
+    gen_bgen(num_snp, static_cast<uint32_t>(expected.size()), "Testing data",
+             4294967295u);
+    get_context(0);
+    auto result = gen_sample_vector();
+    const bool keep = true;
+    size_t idx = 0, bit_idx = 0;
+    check_sample(result, "ID1", "ID1", keep, idx, bit_idx);
+    check_sample(result, "FAM1", "DAD1", keep, idx, bit_idx);
+    check_sample(result, "REMOVE1", "REMOVE1", !keep, idx, bit_idx);
+    check_sample(result, "FAM2", "GIRL1", keep, idx, bit_idx);
+}
+TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_FILE_IGNORE_FID)
+{
+    const size_t num_snp = 10;
+    // now generate sample file
+    // not as complicated as we don't have non-founders with bgen format
+    m_ignore_fid = true;
+    // with ignore fid and phenotype file, we will use the first column as the
+    // ID
+    std::vector<std::string> expected = {
+        "ID1 ID1 0.1", // normal
+        "FAM1 DAD1 0.5", "REMOVE1 REMOVE1 1.23", "FAM2 GIRL1 0.19"};
+    m_sample_selection_list.insert("REMOVE1");
+    std::ofstream sample("dummy.sample");
+    for (auto e : expected) { sample << e << std::endl; }
+    sample.close();
+    // now generate the bgen header file
+    gen_bgen(num_snp, static_cast<uint32_t>(expected.size()), "Testing data",
+             4294967295u);
+    get_context(0);
+    auto result = gen_sample_vector();
+    const bool keep = true;
+    size_t idx = 0, bit_idx = 0;
+    check_sample(result, "", "ID1", keep, idx, bit_idx);
+    check_sample(result, "", "FAM1", keep, idx, bit_idx);
+    check_sample(result, "", "REMOVE1", !keep, idx, bit_idx);
+    check_sample(result, "", "FAM2", keep, idx, bit_idx);
+}
 #endif
