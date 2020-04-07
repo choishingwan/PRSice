@@ -398,6 +398,41 @@ inline T convert(const std::string& str)
     return obj;
 }
 
+template <>
+inline size_t Convertor::convert<size_t>(const std::string& str)
+{
+    iss.clear();
+    iss.str(str);
+    size_t obj;
+    iss >> obj;
+    if (!iss.eof() || iss.fail())
+    { throw std::runtime_error("Unable to convert the input"); }
+    else if (static_cast<int>(obj) < 0)
+    {
+        throw std::runtime_error(
+            "Error: Negative input for a positive "
+            "variable, or you have a very large integer, e.g. larger than "
+            + std::to_string(std::numeric_limits<int>::max()));
+    }
+    return obj;
+}
+
+template <>
+inline double Convertor::convert<double>(const std::string& str)
+{
+    errno = 0;
+    iss.clear();
+    iss.str(str);
+    double obj;
+    iss >> obj;
+    if (!iss.eof() || iss.fail()
+        || (std::fpclassify(obj) != FP_NORMAL
+            && std::fpclassify(obj) != FP_ZERO)
+        || errno == ERANGE)
+    { throw std::runtime_error("Unable to convert the input"); }
+    return obj;
+}
+
 template <typename T>
 inline std::string to_string(T value)
 {
@@ -534,6 +569,7 @@ inline T remove_extension(T const& filename)
 inline void replace_substring(std::string& s, const std::string& search,
                               const std::string& replace)
 {
+    if(search.empty()) return;
     for (size_t pos = 0;; pos += replace.length())
     {
         // Locate the substring to replace

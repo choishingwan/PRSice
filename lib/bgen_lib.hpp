@@ -1041,7 +1041,7 @@ namespace bgen
                     : m_buffer(buffer)
                     , m_end(end)
                     , m_bits(bits)
-                    , m_bitMask((uint64_t(0xFFFFFFFFFFFFFFFF) >> (64 - bits)))
+                    , m_bitMask(((uint64_t)(0xFFFFFFFFFFFFFFFF) >> (64 - bits)))
                     , m_denominator(m_bitMask)
                     , m_shift(0)
                 {

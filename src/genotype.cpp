@@ -264,7 +264,7 @@ Genotype::read_base(
         switch (parse_rs_id(token, processed_rs, base_file, rs_id))
         {
         case 1:
-            ++filter_count[+FILTER_COUNT::DUPLICATE];
+            ++filter_count[+FILTER_COUNT::DUP_SNP];
             dup_rs.insert(rs_id);
             continue;
         case 2: ++filter_count[+FILTER_COUNT::SELECT]; continue;
@@ -425,7 +425,7 @@ void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
         if (!m_keep_ambig) { message.append(" excluded"); }
         message.append("\n");
     }
-    if (filter_count[+FILTER_COUNT::DUPLICATE])
+    if (filter_count[+FILTER_COUNT::DUP_SNP])
     {
         if (!message.empty()) { m_reporter->report(message); }
         throw std::runtime_error(print_duplicated_snps(dup_index, out));

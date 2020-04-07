@@ -64,6 +64,7 @@ private:
     bool m_unit_test = false;
 #if defined(WIN32) || defined(_WIN32) \
     || defined(__WIN32) && !defined(__CYGWIN__)
+    // some windows might support colored output, but I don't bother to check. This will give the most consistent and clearn output 
     const std::string m_error_color_start = "";
     const std::string m_warning_color_start = "";
     const std::string m_color_end = "";

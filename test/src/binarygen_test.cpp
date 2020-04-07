@@ -282,7 +282,7 @@ TEST_F(BGEN_TEST, LOAD_SAMPLE_FOR_LD_REFERENCE)
     gen_bgen(num_snp, static_cast<uint32_t>(num_samples), "Testing data",
              4294967295u);
     get_context(0);
-    auto result = gen_sample_vector();
+    gen_sample_vector();
     // all samples should have bit set
     for (size_t i = 0; i < num_samples; ++i)
     {

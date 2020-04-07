@@ -113,7 +113,7 @@ enum class SCORING
 
 enum class FILTER_COUNT
 {
-    DUPLICATE = 0,
+    DUP_SNP = 0,
     NUM_LINE,
     EXCLUDE,
     SELECT,
