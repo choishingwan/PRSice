@@ -270,4 +270,25 @@ TEST_F(BGEN_TEST, LOAD_SAMPLE_PHENO_FILE_IGNORE_FID)
     check_sample(result, "", "REMOVE1", !keep, idx, bit_idx);
     check_sample(result, "", "FAM2", keep, idx, bit_idx);
 }
+
+TEST_F(BGEN_TEST, LOAD_SAMPLE_FOR_LD_REFERENCE)
+{
+    const size_t num_snp = 10;
+    // now generate sample file
+    // with ignore fid and phenotype file, we will use the first column as the
+    // ID
+    m_is_ref = true;
+    const size_t num_samples = 125;
+    gen_bgen(num_snp, static_cast<uint32_t>(num_samples), "Testing data",
+             4294967295u);
+    get_context(0);
+    auto result = gen_sample_vector();
+    // all samples should have bit set
+    for (size_t i = 0; i < num_samples; ++i)
+    {
+        ASSERT_TRUE(IS_SET(m_sample_for_ld.data(), i));
+        // we don't differentiate the two
+        ASSERT_TRUE(IS_SET(m_calculate_prs.data(), i));
+    }
+}
 #endif
