@@ -366,7 +366,6 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
     if (idx < init_size) { result.resize(idx); }
 }
 
-#include <typeinfo>
 class Convertor
 {
 public:
