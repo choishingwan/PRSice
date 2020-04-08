@@ -430,6 +430,9 @@ inline double Convertor::convert<double>(const std::string& str)
             && std::fpclassify(obj) != FP_ZERO)
         || errno == ERANGE)
     { throw std::runtime_error("Unable to convert the input"); }
+    std::cerr << "check: " << obj << "\t" << str << "\t" << std::fpclassify(obj)
+              << "\t" << FP_NORMAL << "\t" << FP_ZERO << "\t" << errno << "\t"
+              << ERANGE << std::endl;
     return obj;
 }
 
@@ -569,7 +572,7 @@ inline T remove_extension(T const& filename)
 inline void replace_substring(std::string& s, const std::string& search,
                               const std::string& replace)
 {
-    if(search.empty()) return;
+    if (search.empty()) return;
     for (size_t pos = 0;; pos += replace.length())
     {
         // Locate the substring to replace
