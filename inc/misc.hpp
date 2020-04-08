@@ -435,7 +435,14 @@ inline double Convertor::convert<double>(const std::string& str, bool verbose)
         || (std::fpclassify(obj) != FP_NORMAL
             && std::fpclassify(obj) != FP_ZERO)
         || errno == ERANGE)
-    { throw std::runtime_error("Unable to convert the input"); }
+    {
+        throw std::runtime_error(
+            std::to_string(obj) + "\t" + str + "\t"
+            + std::to_string(std::fpclassify(obj)) + "\t"
+            + std::to_string(FP_NORMAL) + "\t" + std::to_string(FP_ZERO) + "\t"
+            + std::to_string(errno) + "\t" + std::to_string(ERANGE));
+        throw std::runtime_error("Unable to convert the input");
+    }
 
     return obj;
 }

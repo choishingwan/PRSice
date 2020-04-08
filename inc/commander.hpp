@@ -507,8 +507,9 @@ protected:
             target_boolean = true;
             return true;
         }
-        catch (...)
+        catch (const std::runtime_error& er)
         {
+            std::cerr << "Parse error: " << er.what() << std::endl;
             m_error_message.append("Error: Invalid numeric argument passed to "
                                    + c + ": " + input + "!\n");
             return false;
