@@ -11,7 +11,8 @@ target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 # Make test executable
 set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/catch-main.cpp)
 add_executable(tests ${TEST_SOURCES}
-    csrc/commander_test.cpp)
+    csrc/commander_test.cpp
+    csrc/misc_test.cpp)
 target_link_libraries(tests PRIVATE
     Catch
     bgen
