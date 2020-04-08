@@ -496,8 +496,13 @@ protected:
         m_parameter_log[c] = input;
         try
         {
+
             bool verbose = false;
-            if (input == "5e-400") { verbose = true; }
+            if (input == "5e-400")
+            {
+                std::cerr << c << "\t" << input << std::endl;
+                verbose = true;
+            }
             target = misc::convert<Type>(input, verbose);
             target_boolean = true;
             return true;

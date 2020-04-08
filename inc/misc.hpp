@@ -425,15 +425,18 @@ inline double Convertor::convert<double>(const std::string& str, bool verbose)
     iss.str(str);
     double obj;
     iss >> obj;
+    if (verbose)
+    {
+        std::cerr << "check: " << obj << "\t" << str << "\t"
+                  << std::fpclassify(obj) << "\t" << FP_NORMAL << "\t"
+                  << FP_ZERO << "\t" << errno << "\t" << ERANGE << std::endl;
+    }
     if (!iss.eof() || iss.fail()
         || (std::fpclassify(obj) != FP_NORMAL
             && std::fpclassify(obj) != FP_ZERO)
         || errno == ERANGE)
     { throw std::runtime_error("Unable to convert the input"); }
-    if (verbose)
-        std::cerr << "check: " << obj << "\t" << str << "\t"
-                  << std::fpclassify(obj) << "\t" << FP_NORMAL << "\t"
-                  << FP_ZERO << "\t" << errno << "\t" << ERANGE << std::endl;
+
     return obj;
 }
 
