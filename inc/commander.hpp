@@ -497,19 +497,12 @@ protected:
         try
         {
 
-            bool verbose = false;
-            if (input == "5e-400")
-            {
-                std::cerr << c << "\t" << input << std::endl;
-                verbose = true;
-            }
-            target = misc::convert<Type>(input, verbose);
+            target = misc::convert<Type>(input);
             target_boolean = true;
             return true;
         }
-        catch (const std::runtime_error& er)
+        catch (...)
         {
-            std::cerr << "Parse error: " << er.what() << std::endl;
             m_error_message.append("Error: Invalid numeric argument passed to "
                                    + c + ": " + input + "!\n");
             return false;

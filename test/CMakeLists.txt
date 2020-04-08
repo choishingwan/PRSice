@@ -12,13 +12,16 @@ target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/catch-main.cpp)
 add_executable(tests ${TEST_SOURCES}
     csrc/commander_test.cpp
-    csrc/misc_test.cpp)
+    csrc/misc_test.cpp
+    ${CMAKE_SOURCE_DIR}/src/commander.cpp
+    ${CMAKE_SOURCE_DIR}/src/misc.cpp
+    ${CMAKE_SOURCE_DIR}/src/reporter.cpp)
 target_link_libraries(tests PRIVATE
     Catch
     bgen
     gzstream
     plink
-    prsice_lib
+   # prsice_lib
     coverage_config)
 ################################
 #           Add zlib
@@ -35,4 +38,4 @@ find_package (Threads)
 target_link_libraries (tests PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries( tests  PUBLIC ${CMAKE_THREAD_LIBS_INIT} )
 target_compile_features(tests PRIVATE cxx_range_for)
-add_test(NAME unitTest COMMAND runUnitTests "${CMAKE_CURRENT_LIST_DIR}/test/data/")
+add_test(NAME unitTest COMMAND tests)

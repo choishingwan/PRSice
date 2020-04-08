@@ -366,18 +366,37 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
     if (idx < init_size) { result.resize(idx); }
 }
 
+#include <typeinfo>
 class Convertor
 {
 public:
     template <typename T>
-    static T convert(const std::string& str, bool verbose = false)
+    static T convert(const std::string& str)
     {
-        iss.clear();
-        iss.str(str);
+        errno = 0;
+        std::istringstream iss(str);
         T obj;
         iss >> obj;
         if (!iss.eof() || iss.fail())
         { throw std::runtime_error("Unable to convert the input"); }
+        if constexpr (std::is_same_v<T, double>)
+        {
+            if ((std::fpclassify(obj) != FP_NORMAL
+                 && std::fpclassify(obj) != FP_ZERO)
+                || errno == ERANGE)
+            { throw std::runtime_error("Unable to convert the input"); }
+        }
+        else if constexpr (std::is_same_v<T, size_t>)
+        {
+            if (static_cast<int>(obj) < 0)
+            {
+                throw std::runtime_error(
+                    "Error: Negative input for a positive "
+                    "variable, or you have a very large integer, e.g. larger "
+                    "than "
+                    + std::to_string(std::numeric_limits<int>::max()));
+            }
+        }
         return obj;
     }
 
@@ -385,68 +404,11 @@ public:
 private:
     static std::istringstream iss;
 };
-
 template <typename T>
-inline T convert(const std::string& str, bool verbose = false)
+inline T convert(const std::string& str)
 {
-    std::istringstream iss(str);
-    T obj;
-    iss >> obj;
-
-    if (!iss.eof() || iss.fail())
-    { throw std::runtime_error("Unable to convert the input"); }
-    return obj;
+    return Convertor::convert<T>(str);
 }
-
-template <>
-inline size_t Convertor::convert<size_t>(const std::string& str, bool verbose)
-{
-    iss.clear();
-    iss.str(str);
-    size_t obj;
-    iss >> obj;
-    if (!iss.eof() || iss.fail())
-    { throw std::runtime_error("Unable to convert the input"); }
-    else if (static_cast<int>(obj) < 0)
-    {
-        throw std::runtime_error(
-            "Error: Negative input for a positive "
-            "variable, or you have a very large integer, e.g. larger than "
-            + std::to_string(std::numeric_limits<int>::max()));
-    }
-    return obj;
-}
-
-template <>
-inline double Convertor::convert<double>(const std::string& str, bool verbose)
-{
-    errno = 0;
-    iss.clear();
-    iss.str(str);
-    double obj;
-    iss >> obj;
-    if (verbose)
-    {
-        std::cerr << "check: " << obj << "\t" << str << "\t"
-                  << std::fpclassify(obj) << "\t" << FP_NORMAL << "\t"
-                  << FP_ZERO << "\t" << errno << "\t" << ERANGE << std::endl;
-    }
-    if (!iss.eof() || iss.fail()
-        || (std::fpclassify(obj) != FP_NORMAL
-            && std::fpclassify(obj) != FP_ZERO)
-        || errno == ERANGE)
-    {
-        throw std::runtime_error(
-            std::to_string(obj) + "\t" + str + "\t"
-            + std::to_string(std::fpclassify(obj)) + "\t"
-            + std::to_string(FP_NORMAL) + "\t" + std::to_string(FP_ZERO) + "\t"
-            + std::to_string(errno) + "\t" + std::to_string(ERANGE));
-        throw std::runtime_error("Unable to convert the input");
-    }
-
-    return obj;
-}
-
 template <typename T>
 inline std::string to_string(T value)
 {
@@ -1251,7 +1213,7 @@ inline bool isNumeric(const std::string& s)
 {
     try
     {
-        convert<double>(s);
+        Convertor::convert<double>(s);
     }
     catch (...)
     {
