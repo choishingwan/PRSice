@@ -496,7 +496,9 @@ protected:
         m_parameter_log[c] = input;
         try
         {
-            target = misc::convert<Type>(input);
+            bool verbose = false;
+            if (input == "5e-400") { verbose = true; }
+            target = misc::convert<Type>(input, verbose);
             target_boolean = true;
             return true;
         }

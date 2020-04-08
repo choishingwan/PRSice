@@ -370,7 +370,7 @@ class Convertor
 {
 public:
     template <typename T>
-    static T convert(const std::string& str)
+    static T convert(const std::string& str, bool verbose = false)
     {
         iss.clear();
         iss.str(str);
@@ -387,7 +387,7 @@ private:
 };
 
 template <typename T>
-inline T convert(const std::string& str)
+inline T convert(const std::string& str, bool verbose = false)
 {
     std::istringstream iss(str);
     T obj;
@@ -399,7 +399,7 @@ inline T convert(const std::string& str)
 }
 
 template <>
-inline size_t Convertor::convert<size_t>(const std::string& str)
+inline size_t Convertor::convert<size_t>(const std::string& str, bool verbose)
 {
     iss.clear();
     iss.str(str);
@@ -418,7 +418,7 @@ inline size_t Convertor::convert<size_t>(const std::string& str)
 }
 
 template <>
-inline double Convertor::convert<double>(const std::string& str)
+inline double Convertor::convert<double>(const std::string& str, bool verbose)
 {
     errno = 0;
     iss.clear();
@@ -430,9 +430,10 @@ inline double Convertor::convert<double>(const std::string& str)
             && std::fpclassify(obj) != FP_ZERO)
         || errno == ERANGE)
     { throw std::runtime_error("Unable to convert the input"); }
-    std::cerr << "check: " << obj << "\t" << str << "\t" << std::fpclassify(obj)
-              << "\t" << FP_NORMAL << "\t" << FP_ZERO << "\t" << errno << "\t"
-              << ERANGE << std::endl;
+    if (verbose)
+        std::cerr << "check: " << obj << "\t" << str << "\t"
+                  << std::fpclassify(obj) << "\t" << FP_NORMAL << "\t"
+                  << FP_ZERO << "\t" << errno << "\t" << ERANGE << std::endl;
     return obj;
 }
 
