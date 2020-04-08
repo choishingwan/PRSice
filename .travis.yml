@@ -55,7 +55,7 @@ script:
   #- gprof ../bin/PRSice > gprof.log
   #- wget -O Test.zip https://www.dropbox.com/s/480vf64kv4aju0d/Test.zip?dl=1
   #- unzip -o Test.zip
-  - ../bin/test
+  - ../bin/tests
   #- head gprof.log -n 100
   #- ../test/runCoverage.sh . ../bin/runUnitTests ../test/data
   - cd ../
