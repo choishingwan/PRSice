@@ -164,6 +164,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     bool error = false;
     // TODO: Standardize function return such that they will return error if
     // failed
+    opterr = 0;
     while (opt != -1)
     {
         switch (opt)
@@ -382,7 +383,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             early_termination = true;
             return true;
         case 'v':
-            std::cerr << version << " (" << date << ") " << std::endl;
+            reporter.report(version + " (" + date + ") ");
             early_termination = true;
             return true;
         case '?':
@@ -1510,8 +1511,8 @@ std::unordered_set<std::string> Commander::get_cov_names()
     }
     return included;
 }
-std::tuple<std::vector<std::string>, std::unordered_map<std::string, size_t>>
-Commander::get_covariate_header()
+
+std::vector<std::string> Commander::get_covariate_header()
 {
     std::ifstream cov_file;
     cov_file.open(m_pheno_info.cov_file.c_str());
@@ -1531,11 +1532,8 @@ Commander::get_covariate_header()
             "Error: First line of covariate file is empty!\n");
         throw std::runtime_error("Empty line");
     }
-    std::unordered_map<std::string, size_t> ref_index;
     auto cov_header = misc::split(line);
-    for (size_t i = 0; i < cov_header.size(); ++i)
-    { ref_index[cov_header[i]] = i; }
-    return {cov_header, ref_index};
+    return cov_header;
 }
 size_t Commander::find_cov_idx(
     const std::unordered_set<std::string>& included,
@@ -1609,6 +1607,20 @@ bool Commander::process_factor_cov(
               m_pheno_info.col_index_of_factor_cov.end());
     return true;
 }
+void Commander::prepare_header_cov_check(
+    const std::vector<std::string>& cov_header,
+    std::unordered_map<std::string, size_t>& ref_index,
+    std::unordered_set<std::string>& included)
+{
+    for (size_t i = 0; i < cov_header.size(); ++i)
+    { ref_index[cov_header[i]] = i; }
+    if (m_pheno_info.cov_colname.size() == 0)
+    {
+        for (size_t i = (1 + !m_pheno_info.ignore_fid); i < cov_header.size();
+             ++i)
+        { included.insert(cov_header[i]); }
+    }
+}
 bool Commander::covariate_check()
 {
     // it is valid to have empty covariate file
@@ -1621,13 +1633,9 @@ bool Commander::covariate_check()
     std::unordered_set<std::string> ori_input = included;
     try
     {
-        auto [cov_header, ref_index] = get_covariate_header();
-        if (m_pheno_info.cov_colname.size() == 0)
-        {
-            for (size_t i = (1 + !m_pheno_info.ignore_fid);
-                 i < cov_header.size(); ++i)
-            { included.insert(cov_header[i]); }
-        }
+        auto cov_header = get_covariate_header();
+        std::unordered_map<std::string, size_t> ref_index;
+        prepare_header_cov_check(cov_header, ref_index, included);
         std::string missing;
         size_t valid_cov = find_cov_idx(included, ref_index, missing);
         if (!missing.empty())
@@ -1669,13 +1677,6 @@ bool Commander::filter_check()
                 "imputation input.\n");
         }
     }
-    if (!m_extract_file.empty() && !m_exclude_file.empty())
-    {
-        error = true;
-        m_error_message.append(
-            "Error: Can only use --extract or --exclude but not both\n");
-    }
-
     if (m_target.type == "bgen")
     {
         if (!misc::within_bound(m_target_filter.info_score, 0.0, 1.0))
@@ -1719,6 +1720,13 @@ bool Commander::filter_check()
 bool Commander::misc_check()
 {
     bool error = false;
+    if (!m_extract_file.empty() && !m_exclude_file.empty())
+    {
+        error = true;
+        m_error_message.append(
+            "Error: Can only use --extract or --exclude but not both\n");
+    }
+
     m_parameter_log["seed"] = misc::to_string(m_perm_info.seed);
     if (m_prs_info.thread <= 0)
     {

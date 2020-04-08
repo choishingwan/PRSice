@@ -156,9 +156,11 @@ protected:
     bool ref_check();
     bool covariate_check();
     std::unordered_set<std::string> get_cov_names();
-    std::tuple<std::vector<std::string>,
-               std::unordered_map<std::string, size_t>>
-    get_covariate_header();
+    void
+    prepare_header_cov_check(const std::vector<std::string>& cov_header,
+                             std::unordered_map<std::string, size_t>& ref_index,
+                             std::unordered_set<std::string>& included);
+    std::vector<std::string> get_covariate_header();
     size_t
     find_cov_idx(const std::unordered_set<std::string>& included,
                  const std::unordered_map<std::string, size_t>& ref_index,
