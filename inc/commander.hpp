@@ -787,7 +787,12 @@ protected:
                 m_base_info.has_column[+BASE_INDEX::MAF], m_base_filter.maf);
             // if we can't parse the control, we will return true (say
             // everything is ok) but will ignore MAF filtering
-            if (!parse_control_ok) return true;
+            if (!parse_control_ok)
+            {
+                m_base_info.has_column[+BASE_INDEX::MAF] = false;
+                m_base_info.has_column[+BASE_INDEX::MAF_CASE] = false;
+                return true;
+            }
             if (case_control.size() == 2)
             {
                 detail = misc::split(case_control.back(), ":");
@@ -799,13 +804,18 @@ protected:
                 // if we can't parse the case MAF filtering threshold, we will
                 // also disable the fitering of the control
                 if (!parse_case_ok)
+                {
                     m_base_info.has_column[+BASE_INDEX::MAF] = false;
+                    m_base_info.has_column[+BASE_INDEX::MAF_CASE] = false;
+                }
                 return true;
             }
             return true;
         }
         catch (const std::runtime_error& er)
         {
+            m_base_info.has_column[+BASE_INDEX::MAF] = false;
+            m_base_info.has_column[+BASE_INDEX::MAF_CASE] = false;
             m_error_message.append(er.what());
             return false;
         }

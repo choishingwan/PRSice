@@ -988,4 +988,72 @@ TEST_CASE("Base filtering validation")
         CHECK(commander.base_column_check_wrapper(col));
         REQUIRE_FALSE(commander.get_base().has_column[std::get<1>(i)]);
     }
+    SECTION("maf")
+    {
+        std::vector<std::string> col = {"P",  "CHR", "BETA", "LOC", "A1",
+                                        "A2", "SNP", "INFO", "MAF", "Cases"};
+        SECTION("only control")
+        {
+            auto i = GENERATE(take(100, random(-1.1, 1.1)));
+            std::string input = std::to_string(i);
+            REQUIRE(commander.parse_command_wrapper("--base-maf MAF:" + input));
+            // maf ain't essential
+
+            if (i > 1.0 || i < 0)
+            {
+                REQUIRE_FALSE(commander.base_column_check_wrapper(col));
+                REQUIRE_FALSE(
+                    commander.get_base().has_column[+BASE_INDEX::MAF]);
+            }
+            else
+            {
+                REQUIRE(commander.base_column_check_wrapper(col));
+                REQUIRE(commander.get_base().has_column[+BASE_INDEX::MAF]);
+                REQUIRE(commander.get_base().column_index[+BASE_INDEX::MAF]
+                        == 8);
+                REQUIRE(commander.get_base_qc().maf
+                        == Approx(misc::Convertor::convert<double>(input)));
+            }
+            REQUIRE_FALSE(
+                commander.get_base().has_column[+BASE_INDEX::MAF_CASE]);
+        }
+        SECTION("with cases")
+        {
+            SECTION("invalid control")
+            {
+                REQUIRE(commander.parse_command_wrapper(
+                    "--base-maf mAf:0.1,Cases:0.05"));
+                REQUIRE(commander.base_column_check_wrapper(col));
+                REQUIRE_FALSE(
+                    commander.get_base().has_column[+BASE_INDEX::MAF]);
+                REQUIRE_FALSE(
+                    commander.get_base().has_column[+BASE_INDEX::MAF_CASE]);
+            }
+            SECTION("Valid control")
+            {
+                auto i = GENERATE(take(100, random(-1.1, 1.1)));
+                std::string input = std::to_string(i);
+                REQUIRE(commander.parse_command_wrapper(
+                    "--base-maf MAF:0.1,Cases:" + input));
+                if (i > 1.0 | i < 0)
+                { REQUIRE_FALSE(commander.base_column_check_wrapper(col)); }
+                else
+                {
+                    REQUIRE(commander.base_column_check_wrapper(col));
+                    REQUIRE(commander.get_base().has_column[+BASE_INDEX::MAF]);
+                    REQUIRE(
+                        commander.get_base().has_column[+BASE_INDEX::MAF_CASE]);
+                    REQUIRE(commander.get_base().column_index[+BASE_INDEX::MAF]
+                            == 8);
+                    REQUIRE(
+                        commander.get_base().column_index[+BASE_INDEX::MAF_CASE]
+                        == 9);
+                    REQUIRE(commander.get_base_qc().maf == Approx(0.1));
+
+                    REQUIRE(commander.get_base_qc().maf_case
+                            == Approx(misc::Convertor::convert<double>(input)));
+                }
+            }
+        }
+    }
 }

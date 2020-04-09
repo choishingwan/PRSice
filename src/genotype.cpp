@@ -448,6 +448,7 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
                           std::vector<std::string>& duplicated_sample_id)
 {
     assert(m_vector_initialized);
+    for (size_t i = 0; i < token.size(); ++i) { misc::trim(token[i]); }
     // we have already checked for malformed file
     const std::string fid = (m_ignore_fid) ? "" : token[fid_idx];
     const std::string id =
