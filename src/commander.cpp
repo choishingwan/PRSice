@@ -1141,11 +1141,19 @@ bool Commander::base_column_check(std::vector<std::string>& column_names)
         m_error_message.append("Error: Statistic cannot be both OR and beta\n");
         error = true;
     }
+    bool user_provided_stat = m_base_info.has_column[+BASE_INDEX::STAT];
     bool has_col = in_file(column_names, +BASE_INDEX::STAT, "Error",
                            m_user_no_default, true, m_user_no_default);
-    // if allow default
-    if (!m_user_no_default && !has_col)
-    { error |= !get_statistic_column(column_names); }
+    if (!has_col && user_provided_stat)
+    {
+        error = true;
+        m_error_message.append("Error: Statistic column not found in file!\n");
+    }
+    else if (!m_user_no_default && !has_col)
+    {
+        // if allow default
+        error |= !get_statistic_column(column_names);
+    }
     // Statistic is ok, but beta and or not provided
     // use has_column vector instead of has_col as get_statistic_column might
     // have found the state column?
