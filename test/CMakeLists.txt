@@ -1,10 +1,9 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
 
-include_directories(${CMAKE_SOURCE_DIR}/test/)
 include_directories(SYSTEM ${CMAKE_SOURCE_DIR}/lib)
 include_directories(${CMAKE_SOURCE_DIR}/inc)
-set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/test)
+set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/test/inc)
 add_library(Catch INTERFACE)
 target_include_directories(Catch INTERFACE ${CATCH_INCLUDE_DIR})
 
@@ -13,6 +12,8 @@ set(TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/catch-main.cpp)
 add_executable(tests ${TEST_SOURCES}
     csrc/commander_test.cpp
     csrc/misc_test.cpp
+    csrc/command_loading.cpp
+    csrc/command_validation.cpp
     ${CMAKE_SOURCE_DIR}/src/commander.cpp
     ${CMAKE_SOURCE_DIR}/src/misc.cpp
     ${CMAKE_SOURCE_DIR}/src/reporter.cpp)
@@ -39,3 +40,9 @@ target_link_libraries (tests PUBLIC ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries( tests  PUBLIC ${CMAKE_THREAD_LIBS_INIT} )
 target_compile_features(tests PRIVATE cxx_range_for)
 add_test(NAME unitTest COMMAND tests)
+add_custom_command(
+     TARGET tests
+     COMMENT "Run tests"
+     POST_BUILD
+     COMMAND tests
+)

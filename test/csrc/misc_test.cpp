@@ -54,3 +54,46 @@ TEST_CASE("stringview trimming")
     misc::trim(t);
     REQUIRE(t == "testing");
 }
+
+
+TEST_CASE("hasEnding")
+{
+    std::string full_text;
+    std::string ending;
+    SECTION("empty text")
+    {
+        REQUIRE_THROWS(misc::hasEnding(full_text, ending));
+    }
+    full_text = "Hello";
+    SECTION("empty ending")
+    {
+        REQUIRE_THROWS(misc::hasEnding(full_text, ending));
+    }
+    SECTION("found ending")
+    {
+        auto i = GENERATE("ello", "lo", "o", "Hello");
+        REQUIRE(misc::hasEnding(full_text, i));
+    }
+    SECTION("ending not found")
+    {
+        auto i = GENERATE("Lo", "O", "aHello");
+        REQUIRE_FALSE(misc::hasEnding(full_text, i));
+    }
+}
+
+
+TEST_CASE("split")
+{
+    SECTION("stringview")
+    {
+        std::string input = "test,the,splitter,and,make,sure-it,works well";
+        std::vector<std::string_view> token = misc::tokenize(input, ",");
+        REQUIRE_THAT(token, Catch::Equals<std::string_view>(
+                                {"test", "the", "splitter", "and", "make",
+                                 "sure-it", "works well"}));
+        input = "sure-it\tworks well ok";
+        token = misc::tokenize(input);
+        REQUIRE_THAT(token, Catch::Equals<std::string_view>(
+                                {"sure-it", "works", "well", "ok"}));
+    }
+}
