@@ -1035,7 +1035,7 @@ TEST_CASE("Base filtering validation")
                 std::string input = std::to_string(i);
                 REQUIRE(commander.parse_command_wrapper(
                     "--base-maf MAF:0.1,Cases:" + input));
-                if (i > 1.0 | i < 0)
+                if (i > 1.0 || i < 0)
                 { REQUIRE_FALSE(commander.base_column_check_wrapper(col)); }
                 else
                 {
