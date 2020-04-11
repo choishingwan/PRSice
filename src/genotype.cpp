@@ -180,11 +180,13 @@ void Genotype::snp_extraction(const std::string& extract_snps,
     if (!extract_snps.empty())
     {
         m_exclude_snp = false;
-        m_snp_selection_list = load_snp_list(extract_snps);
+        auto input = misc::load_stream(extract_snps);
+        m_snp_selection_list = load_snp_list(std::move(input));
     }
     else if (!exclude_snps.empty())
     {
-        m_snp_selection_list = load_snp_list(exclude_snps);
+        auto input = misc::load_stream(exclude_snps);
+        m_snp_selection_list = load_snp_list(std::move(input));
     }
 }
 
@@ -503,24 +505,18 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
 }
 
 std::vector<std::string>
-Genotype::load_genotype_prefix(const std::string& file_name)
+Genotype::load_genotype_prefix(std::unique_ptr<std::istream> in)
 {
     std::vector<std::string> genotype_files;
-    std::ifstream multi;
-    multi.open(file_name.c_str());
-    if (!multi.is_open())
-    {
-        throw std::runtime_error(
-            std::string("Error: Cannot open list file: " + file_name));
-    }
     std::string line;
-    while (std::getline(multi, line))
+    while (std::getline(*in, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
         genotype_files.push_back(line);
     }
-    multi.close();
+    // we no longer need in
+    in.reset();
     return genotype_files;
 }
 
@@ -606,7 +602,7 @@ size_t Genotype::get_rs_column(const std::string& input)
             misc::to_upper(name);
             if (name == "SNP" || name == "RS" || name == "RS_ID"
                 || name == "RS.ID" || name == "RSID" || name == "VARIANT.ID"
-                || name == "VARIANT_ID")
+                || name == "VARIANT_ID" || name == "SNP_ID" || name == "SNP.ID")
             {
                 m_reporter->report(name
                                    + " assume to be column containing SNP ID");
@@ -641,31 +637,24 @@ size_t Genotype::get_rs_column(const std::string& input)
 }
 
 std::unordered_set<std::string>
-Genotype::load_snp_list(const std::string& input)
+Genotype::load_snp_list(std::unique_ptr<std::istream> input)
 {
-    std::ifstream in;
-    // first, we read in the file
-    in.open(input.c_str());
-    if (!in.is_open())
-    {
-        throw std::runtime_error("Error: Cannot open extract / exclude file: "
-                                 + input);
-    }
     std::string line;
-    std::getline(in, line);
-    in.clear();
-    in.seekg(0, std::ios::beg);
+    std::getline(*input, line);
+    input->clear();
+    input->seekg(0, std::ios::beg);
     misc::trim(line);
     size_t rs_index = get_rs_column(line);
     std::vector<std::string_view> token;
     std::unordered_set<std::string> result;
-    while (std::getline(in, line))
+    while (std::getline(*input, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
         token = misc::tokenize(line);
         result.insert(std::string(token[rs_index]));
     }
+    input.reset();
     return result;
 }
 

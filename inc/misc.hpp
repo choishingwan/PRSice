@@ -1175,7 +1175,13 @@ inline bool is_gz_file(const std::string& name)
         return false;
     }
 }
-
+inline std::unique_ptr<std::istream> load_stream(const std::string& filepath)
+{
+    auto file = std::make_unique<std::ifstream>(filepath.c_str());
+    if (!file->is_open())
+    { throw std::runtime_error("Error: Cannot open file: " + filepath); }
+    return std::unique_ptr<std::istream>(*file ? std::move(file) : nullptr);
+}
 inline std::unique_ptr<std::istream> load_stream(const std::string& filepath,
                                                  bool& gz_input)
 {
@@ -1201,10 +1207,7 @@ inline std::unique_ptr<std::istream> load_stream(const std::string& filepath,
     }
     else
     {
-        auto file = std::make_unique<std::ifstream>(filepath.c_str());
-        if (!file->is_open())
-        { throw std::runtime_error("Error: Cannot open file: " + filepath); }
-        return std::unique_ptr<std::istream>(*file ? std::move(file) : nullptr);
+        return load_stream(filepath);
     }
 }
 

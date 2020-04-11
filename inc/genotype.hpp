@@ -655,7 +655,7 @@ protected:
     bool m_memory_initialized = false;
     bool m_very_small_thresholds = false;
     bool m_vector_initialized = false;
-    Reporter* m_reporter;
+    Reporter* m_reporter = nullptr;
     CalculatePRS m_prs_calculation;
 
     std::string initialize(const GenoFile& geno, const Phenotype& pheno,
@@ -673,6 +673,10 @@ protected:
         const std::string file_name =
             use_list ? geno.file_list : geno.file_name;
         std::vector<std::string> token = misc::split(file_name, ",");
+        if (token.empty())
+        {
+            throw std::runtime_error("Error: Invalid user input: " + file_name);
+        }
         const bool external_sample = (token.size() == 2);
         if (token.size() > 2)
         {
@@ -682,7 +686,9 @@ protected:
         std::string message = "Initializing Genotype ";
         if (use_list)
         {
-            m_genotype_file_names = load_genotype_prefix(token[0]);
+            auto input = misc::load_stream(token[0]);
+            // we move input to function, can no longer use it
+            m_genotype_file_names = load_genotype_prefix(std::move(input));
             message.append("info from file: " + token[0] + " (" + type + ")\n");
         }
         else
@@ -850,7 +856,8 @@ protected:
      * to the vector \param file_name is the name of the list file \return a
      * vector of string containing names of all genotype files
      */
-    std::vector<std::string> load_genotype_prefix(const std::string& file_name);
+    std::vector<std::string>
+    load_genotype_prefix(std::unique_ptr<std::istream> in);
     /*!
      * \brief Initialize vector related to chromosome information
      * e.g.haplotype. Currently not really useful except for setting the
@@ -1109,7 +1116,8 @@ protected:
      * \param reporter the logger
      * \returnan unordered_set use for checking if the SNP is in the file
      */
-    std::unordered_set<std::string> load_snp_list(const std::string& input);
+    std::unordered_set<std::string>
+    load_snp_list(std::unique_ptr<std::istream> input);
     size_t get_rs_column(const std::string& input);
     /** Misc information **/
     /*!

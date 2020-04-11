@@ -14,9 +14,12 @@ add_executable(tests ${TEST_SOURCES}
     csrc/misc_test.cpp
     csrc/command_loading.cpp
     csrc/command_validation.cpp
+    csrc/genotype_basic.cpp
     ${CMAKE_SOURCE_DIR}/src/commander.cpp
     ${CMAKE_SOURCE_DIR}/src/misc.cpp
-    ${CMAKE_SOURCE_DIR}/src/reporter.cpp)
+    ${CMAKE_SOURCE_DIR}/src/genotype.cpp
+    ${CMAKE_SOURCE_DIR}/src/reporter.cpp
+    ${CMAKE_SOURCE_DIR}/src/snp.cpp)
 target_link_libraries(tests PRIVATE
     Catch
     bgen
