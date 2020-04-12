@@ -125,6 +125,8 @@ public:
     {
         return calculate_category(thresholding, pvalue, pthres);
     }
+    void test_init_sample_vectors() { init_sample_vectors(); }
+
     void add_select_snp(const std::string& in, bool exclude)
     {
         m_snp_selection_list.insert(in);
@@ -149,6 +151,7 @@ public:
     bool ignore_fid() const { return m_ignore_fid; }
     // helper
     void set_reporter(Reporter* reporter) { m_reporter = reporter; }
+    void set_sample(uintptr_t n_sample) { m_unfiltered_marker_ct = n_sample; }
 };
 
 #endif // MOCK_GENOTYPE_H
