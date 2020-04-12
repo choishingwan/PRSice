@@ -169,7 +169,7 @@ public:
     void set_ignore_fid(const bool ignore_fid) { m_ignore_fid = ignore_fid; }
     size_t num_male() const { return m_num_male; }
     size_t num_female() const { return m_num_female; }
-    size_t num_ambig() const { return m_num_ambig; }
+    size_t num_ambig_sex() const { return m_num_ambig_sex; }
     size_t num_nonfounder() const { return m_num_non_founder; }
     uintptr_t num_founder() const { return m_founder_ct; }
     uintptr_t num_sample() const { return m_sample_ct; }

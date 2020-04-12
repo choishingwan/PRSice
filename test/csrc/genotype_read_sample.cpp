@@ -89,17 +89,18 @@ TEST_CASE("Sample object generation")
                 included_samples.push_back(exp);
                 if (has_sex)
                 {
-                    switch (sex_rand(gen))
+                    auto sex = sex_rand(gen);
+                    switch (sex)
                     {
-                    case '1':
-                        mock_input[2] = "M";
+                    case 1:
+                        mock_input[2] = "1";
                         ++exp_male;
                         break;
-                    case '2':
-                        mock_input[2] = "F";
+                    case 2:
+                        mock_input[2] = "2";
                         ++exp_female;
                         break;
-                    case '3':
+                    case 3:
                         mock_input[2] = "NA";
                         ++exp_ambig;
                         break;
@@ -121,7 +122,7 @@ TEST_CASE("Sample object generation")
                 REQUIRE(IS_SET(in_ld.data(), i));
                 REQUIRE(geno.num_male() == exp_male);
                 REQUIRE(geno.num_female() == exp_female);
-                REQUIRE(geno.num_ambig() == exp_ambig);
+                REQUIRE(geno.num_ambig_sex() == exp_ambig);
                 // always have IID
                 REQUIRE(sample_storage.back().IID == exp);
                 REQUIRE(sample_storage.back().in_regression);
