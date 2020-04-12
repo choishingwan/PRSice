@@ -47,7 +47,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
     if (argc <= 1)
     {
         // use default PRSice
-        std::cerr << m_help_message << std::endl;
+        reporter.simple_report(m_help_message);
         throw std::runtime_error("Please provide the required parameters");
     }
     const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
@@ -380,11 +380,11 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                           m_p_thresholds.set_threshold);
             break;
         case 'h':
-            std::cerr << m_help_message << std::endl;
+            reporter.simple_report(m_help_message);
             early_termination = true;
             return true;
         case 'v':
-            std::cerr << version + " (" + date + ") " << std::endl;
+            reporter.simple_report(version + " (" + date + ") ");
             early_termination = true;
             return true;
         case '?':

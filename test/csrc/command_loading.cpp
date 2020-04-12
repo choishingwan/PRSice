@@ -160,48 +160,6 @@ TEST_CASE("Commander set flag")
     }
 }
 
-TEST_CASE("usage and version")
-{
-    mockCommander commander;
-    SECTION("No argument should throw error")
-    {
-        bool early_terminate;
-        REQUIRE_FALSE(commander.parse_command_wrapper("", early_terminate));
-        REQUIRE_FALSE(early_terminate);
-    }
-    SECTION("Print Usage with --help")
-    {
-        bool early_terminate;
-        REQUIRE_FALSE(
-            commander.parse_command_wrapper("--help", early_terminate));
-        REQUIRE(early_terminate);
-    }
-    SECTION("Print Usage with -h")
-    {
-        bool early_terminate;
-        REQUIRE_FALSE(commander.parse_command_wrapper("-h", early_terminate));
-        REQUIRE(early_terminate);
-    }
-    SECTION("Invalid operation -?")
-    {
-        bool early_terminate;
-        REQUIRE_FALSE(commander.parse_command_wrapper("-?", early_terminate));
-        REQUIRE_FALSE(early_terminate);
-    }
-    SECTION("Print version with --version")
-    {
-        bool early_terminate;
-        REQUIRE_FALSE(
-            commander.parse_command_wrapper("--version", early_terminate));
-        REQUIRE(early_terminate);
-    }
-    SECTION("Print version with -v")
-    {
-        bool early_terminate;
-        REQUIRE_FALSE(commander.parse_command_wrapper("-v", early_terminate));
-        REQUIRE(early_terminate);
-    }
-}
 
 TEST_CASE("binary target")
 {
@@ -1257,5 +1215,48 @@ TEST_CASE("Reference parameter loading")
             REQUIRE(commander.parse_command_wrapper("--ld-maf 0.01"));
             REQUIRE(commander.get_ref_qc().maf == Approx(0.01));
         }
+    }
+}
+
+TEST_CASE("usage and version")
+{
+    mockCommander commander;
+    SECTION("No argument should throw error")
+    {
+        bool early_terminate;
+        REQUIRE_FALSE(commander.parse_command_wrapper("", early_terminate));
+        REQUIRE_FALSE(early_terminate);
+    }
+    SECTION("Print Usage with --help")
+    {
+        bool early_terminate;
+        REQUIRE_FALSE(
+            commander.parse_command_wrapper("--help", early_terminate));
+        REQUIRE(early_terminate);
+    }
+    SECTION("Print Usage with -h")
+    {
+        bool early_terminate;
+        REQUIRE_FALSE(commander.parse_command_wrapper("-h", early_terminate));
+        REQUIRE(early_terminate);
+    }
+    SECTION("Invalid operation -?")
+    {
+        bool early_terminate;
+        REQUIRE_FALSE(commander.parse_command_wrapper("-?", early_terminate));
+        REQUIRE_FALSE(early_terminate);
+    }
+    SECTION("Print version with --version")
+    {
+        bool early_terminate;
+        REQUIRE_FALSE(
+            commander.parse_command_wrapper("--version", early_terminate));
+        REQUIRE(early_terminate);
+    }
+    SECTION("Print version with -v")
+    {
+        bool early_terminate;
+        REQUIRE_FALSE(commander.parse_command_wrapper("-v", early_terminate));
+        REQUIRE(early_terminate);
     }
 }

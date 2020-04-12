@@ -56,7 +56,7 @@ public:
     }
     virtual ~Reporter();
     void report(const std::string& input, bool wrap = true);
-
+    void simple_report(const std::string& input);
 
 private:
     std::ofstream m_log_file;

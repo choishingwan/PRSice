@@ -27,7 +27,12 @@ void split(std::vector<std::string>& result, const char* str, char c = ' ')
     } while (0 != *str++);
 }
 
-
+void Reporter::simple_report(const std::string& input)
+{
+    if (m_unit_test) return;
+    std::cerr << input << std::endl;
+    if (m_log_file.is_open()) { m_log_file << input << std::endl; }
+}
 void Reporter::report(const std::string& input, bool wrap)
 {
     if (m_unit_test) return;
