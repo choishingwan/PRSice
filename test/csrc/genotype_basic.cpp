@@ -202,8 +202,7 @@ TEST_CASE("load snp selection")
     }
     SECTION("load_snp_list")
     {
-        std::unique_ptr<std::istringstream> input =
-            std::make_unique<std::istringstream>();
+        auto input = std::make_unique<std::istringstream>();
         auto size = GENERATE(take(5, random(1, 20)));
         std::vector<std::string> expected;
         size_t idx = (size == 1 || size != 6) ? 0 : 1;
@@ -227,5 +226,105 @@ TEST_CASE("load snp selection")
         input->str(mock_file);
         auto res = geno.test_load_snp_list(std::move(input));
         REQUIRE_THAT(res, Catch::UnorderedEquals<std::string>(expected));
+    }
+}
+
+TEST_CASE("load sample selection")
+{
+    mockGenotype geno;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(1, 1000);
+    // generate 3 samples
+    std::vector<std::tuple<std::string, std::string>> samples;
+    for (size_t i = 0; i < 3; ++i)
+    {
+        auto sample = std::tuple<std::string, std::string>(
+            "F" + std::to_string(dis(gen)), "S" + std::to_string(dis(gen)));
+        samples.push_back(sample);
+    }
+
+    auto input = std::make_unique<std::istringstream>();
+    SECTION("single column")
+    {
+        std::string file_str;
+        std::vector<std::string> expected;
+        for (auto&& i : samples)
+        {
+            file_str.append(std::get<0>(i) + "\n");
+            expected.push_back(std::get<0>(i));
+        }
+        std::sort(expected.begin(), expected.end());
+        expected.erase(std::unique(expected.begin(), expected.end()),
+                       expected.end());
+        input->str(file_str);
+        SECTION("without ignore_fid")
+        {
+            REQUIRE_THROWS(geno.test_load_ref(std::move(input), " ", false));
+        }
+        SECTION("with ignore_fid")
+        {
+            auto res = geno.test_load_ref(std::move(input), " ", true);
+            REQUIRE_THAT(res, Catch::UnorderedEquals<std::string>(expected));
+        }
+    }
+    SECTION("more than one column")
+    {
+        std::string file_str;
+        std::vector<std::string> expected;
+        auto delim = GENERATE(" ", "\t");
+        for (auto&& i : samples)
+        {
+            file_str.append(std::get<0>(i) + delim + std::get<1>(i) + "\n");
+            expected.push_back(std::get<0>(i) + delim + std::get<1>(i));
+        }
+        std::sort(expected.begin(), expected.end());
+        expected.erase(std::unique(expected.begin(), expected.end()),
+                       expected.end());
+        input->str(file_str);
+        auto res = geno.test_load_ref(std::move(input), delim, false);
+        REQUIRE_THAT(res, Catch::UnorderedEquals<std::string>(expected));
+    }
+}
+
+
+TEST_CASE("initialize masks")
+{
+    // will become useful if we ever want to include haploid or sex chromosomes
+    // we assume all autosomes to be diploid at the moment
+    auto n_auto = GENERATE(take(10, random(1, 40)));
+    mockGenotype geno;
+    SECTION("standard usage")
+    {
+        // this is what PRSice usually does
+        auto no_x = GENERATE(true, false);
+        auto no_y = GENERATE(true, false);
+        auto no_xy = GENERATE(true, false);
+        auto no_mt = GENERATE(true, false);
+        geno.test_init_chr(n_auto, no_x, no_y, no_xy, no_mt);
+        std::vector<int32_t> expected(XYMT_OFFSET_CT, n_auto);
+        expected[X_OFFSET] = no_x ? -1 : n_auto + 1;
+        expected[Y_OFFSET] = no_y ? -1 : n_auto + 2;
+        expected[XY_OFFSET] = no_xy ? -1 : n_auto + 3;
+        expected[MT_OFFSET] = no_mt ? -1 : n_auto + 4;
+        REQUIRE_THAT(geno.xymt_codes(), Catch::Equals<int32_t>(expected));
+        auto res = geno.haploid_mask();
+        for (int i = 0; i < n_auto; ++i)
+        { REQUIRE_FALSE(IS_SET(res.data(), i)); }
+        REQUIRE(IS_SET(res.data(), n_auto + 1) == !no_x);
+        REQUIRE(IS_SET(res.data(), n_auto + 2) == !no_y);
+        // XY and MT never set, need to check why XY not set
+        REQUIRE_FALSE(IS_SET(res.data(), n_auto + 3));
+        REQUIRE_FALSE(IS_SET(res.data(), n_auto + 4));
+        if (!no_mt)
+            REQUIRE(geno.max_chr() == static_cast<uint32_t>(n_auto + 4));
+        else if (!no_xy)
+            REQUIRE(geno.max_chr() == static_cast<uint32_t>(n_auto + 3));
+        else if (!no_y)
+            REQUIRE(geno.max_chr() == static_cast<uint32_t>(n_auto + 2));
+        else if (!no_x)
+            REQUIRE(geno.max_chr() == static_cast<uint32_t>(n_auto + 1));
+        else
+            REQUIRE(geno.max_chr() == static_cast<uint32_t>(n_auto));
     }
 }

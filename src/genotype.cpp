@@ -191,10 +191,12 @@ void Genotype::snp_extraction(const std::string& extract_snps,
 }
 
 std::tuple<std::vector<size_t>, std::unordered_set<std::string>>
-Genotype::read_base(
+Genotype::transverse_base_file(
     const BaseFile& base_file, const QCFiltering& base_qc,
     const PThresholding& threshold_info,
-    const std::vector<IITree<size_t, size_t>>& exclusion_regions)
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    const std::streampos file_length, const bool gz_input,
+    std::unique_ptr<std::istream> input)
 {
     const unsigned long long max_index =
         base_file.column_index[+BASE_INDEX::MAX];
@@ -203,10 +205,8 @@ Genotype::read_base(
             ? (threshold_info.fastscore ? threshold_info.bar_levels.back()
                                         : threshold_info.upper)
             : 1.0;
+    double progress, prev_progress = 0.0;
     std::vector<std::string_view> token;
-    std::string line;
-    std::string message = "Base file: " + base_file.file_name + "\n";
-    // Some QC counts
     std::string rs_id;
     std::string ref_allele;
     std::string alt_allele;
@@ -215,9 +215,120 @@ Genotype::read_base(
     double pthres = 0.0;
     size_t chr = 0;
     size_t loc = 0;
-    std::vector<size_t> filter_count(+FILTER_COUNT::MAX, 0);
-    std::streampos file_length = 0;
     unsigned long long category = 0;
+    std::unordered_set<std::string> processed_rs, dup_rs;
+    std::vector<size_t> filter_count(+FILTER_COUNT::MAX, 0);
+    std::string line;
+    while (std::getline(*input, line))
+    {
+        if (!gz_input)
+        {
+            progress = static_cast<double>(input->tellg())
+                       / static_cast<double>(file_length) * 100;
+            if (progress - prev_progress > 0.01)
+            {
+                fprintf(stderr, "\rReading %03.2f%%", progress);
+                prev_progress = progress;
+            }
+        }
+        misc::trim(line);
+        if (line.empty()) continue;
+
+        ++filter_count[+FILTER_COUNT::NUM_LINE];
+        token = misc::tokenize(line);
+        for (auto&& t : token) { misc::trim(t); }
+        if (token.size() <= max_index)
+        {
+            throw std::runtime_error(line
+                                     + "\nMore index than column in data\n");
+        }
+        if (!parse_rs_id(token, base_file, processed_rs, dup_rs, filter_count,
+                         rs_id))
+        { continue; }
+        if (!parse_chr(token, base_file, filter_count, chr)) { continue; }
+        parse_allele(token, base_file, +BASE_INDEX::EFFECT, ref_allele);
+        parse_allele(token, base_file, +BASE_INDEX::NONEFFECT, alt_allele);
+        if (!parse_loc(token, base_file, loc))
+        {
+            throw std::runtime_error(
+                "Error: Invalid loci for " + rs_id + ": "
+                + std::string(token[base_file.column_index[+BASE_INDEX::BP]])
+                + "\n");
+        }
+        if (base_file.has_column[+BASE_INDEX::BP]
+            && base_file.has_column[+BASE_INDEX::CHR])
+        {
+            if (Genotype::within_region(exclusion_regions, chr, loc))
+            {
+                ++filter_count[+FILTER_COUNT::REGION];
+                continue;
+            }
+        }
+        if (base_filter_by_value(token, base_file, base_qc.maf, filter_count,
+                                 +FILTER_COUNT::MAF, +BASE_INDEX::MAF))
+        {
+            // don't need to test case filtering if we have already filtered the
+            // SNP with the control MAF
+            if (!base_filter_by_value(token, base_file, base_qc.maf_case,
+                                      filter_count, +FILTER_COUNT::MAF,
+                                      +BASE_INDEX::MAF_CASE))
+            { continue; }
+        }
+        else
+        {
+            continue;
+        }
+        if (!base_filter_by_value(token, base_file, base_qc.info_score,
+                                  filter_count, +FILTER_COUNT::INFO,
+                                  +BASE_INDEX::INFO))
+        { continue; }
+        if (!parse_pvalue(token[base_file.column_index[+BASE_INDEX::P]],
+                          max_threshold, filter_count, pvalue))
+        { continue; }
+        if (!parse_stat(token[base_file.column_index[+BASE_INDEX::STAT]],
+                        base_file.is_or, filter_count, stat))
+        { continue; }
+        if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
+        {
+            ++filter_count[+FILTER_COUNT::AMBIG];
+            if (!m_keep_ambig) continue;
+        }
+        category = 0;
+        pthres = 0.0;
+        if (threshold_info.fastscore)
+        {
+            category =
+                cal_bar_category(pvalue, threshold_info.bar_levels, pthres);
+        }
+        else
+        {
+            try
+            {
+                category = calculate_category(threshold_info, pvalue, pthres);
+            }
+            catch (const std::runtime_error&)
+            {
+                m_very_small_thresholds = true;
+                category = 0;
+            }
+        }
+        m_existed_snps_index[rs_id] = m_existed_snps.size();
+        m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
+                                        stat, pvalue, category, pthres));
+    }
+    fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
+    input.reset();
+    return {filter_count, dup_rs};
+}
+std::tuple<std::vector<size_t>, std::unordered_set<std::string>>
+Genotype::read_base(
+    const BaseFile& base_file, const QCFiltering& base_qc,
+    const PThresholding& threshold_info,
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions)
+{
+    std::string line;
+    std::string message = "Base file: " + base_file.file_name + "\n";
+    std::streampos file_length = 0;
     bool gz_input;
     auto stream = misc::load_stream(base_file.file_name, gz_input);
     if (!gz_input)
@@ -238,133 +349,12 @@ Genotype::read_base(
     }
     m_reporter->report(message);
     message.clear();
-    double prev_progress = 0.0, progress;
-    std::unordered_set<std::string> processed_rs, dup_rs;
-    while (std::getline(*stream, line))
-    {
-        if (!gz_input)
-        {
-            progress = static_cast<double>(stream->tellg())
-                       / static_cast<double>(file_length) * 100;
-            if (progress - prev_progress > 0.01)
-            {
-                fprintf(stderr, "\rReading %03.2f%%", progress);
-                prev_progress = progress;
-            }
-        }
-        misc::trim(line);
-        if (line.empty()) continue;
-
-        ++filter_count[+FILTER_COUNT::NUM_LINE];
-        token = misc::tokenize(line);
-        for (auto&& t : token) { misc::trim(t); }
-        if (token.size() <= max_index)
-        {
-            throw std::runtime_error(line
-                                     + "\nMore index than column in data\n");
-        }
-        switch (parse_rs_id(token, processed_rs, base_file, rs_id))
-        {
-        case 1:
-            ++filter_count[+FILTER_COUNT::DUP_SNP];
-            dup_rs.insert(rs_id);
-            continue;
-        case 2: ++filter_count[+FILTER_COUNT::SELECT]; continue;
-        default: processed_rs.insert(rs_id);
-        }
-        switch (parse_chr(token, base_file, +BASE_INDEX::CHR, chr))
-        {
-        case 1: ++filter_count[+FILTER_COUNT::CHR]; continue;
-        case 2: ++filter_count[+FILTER_COUNT::HAPLOID]; continue;
-        }
-        parse_allele(token, base_file, +BASE_INDEX::EFFECT, ref_allele);
-        parse_allele(token, base_file, +BASE_INDEX::NONEFFECT, alt_allele);
-        if (!parse_loc(token, base_file, +BASE_INDEX::BP, loc))
-        {
-            throw std::runtime_error(
-                "Error: Invalid loci for " + rs_id + ": "
-                + std::string(token[base_file.column_index[+BASE_INDEX::BP]])
-                + "\n");
-        }
-        if (base_file.has_column[+BASE_INDEX::BP]
-            && base_file.has_column[+BASE_INDEX::CHR])
-        {
-            if (Genotype::within_region(exclusion_regions, chr, loc))
-            {
-                ++filter_count[+FILTER_COUNT::REGION];
-                continue;
-            }
-        }
-        if (!base_filter_by_value(token, base_file, base_qc.maf,
-                                  +BASE_INDEX::MAF))
-        {
-            // don't need to test case filtering if we have already filtered the
-            // SNP with the control MAF
-            if (base_filter_by_value(token, base_file, base_qc.maf_case,
-                                     +BASE_INDEX::MAF_CASE))
-            {
-                ++filter_count[+FILTER_COUNT::MAF];
-                continue;
-            }
-        }
-        else
-        {
-            ++filter_count[+FILTER_COUNT::MAF];
-            continue;
-        }
-        if (base_filter_by_value(token, base_file, base_qc.info_score,
-                                 +BASE_INDEX::INFO))
-        {
-            ++filter_count[+FILTER_COUNT::INFO];
-            continue;
-        }
-
-        switch (parse_pvalue(token[base_file.column_index[+BASE_INDEX::P]],
-                             max_threshold, pvalue))
-        {
-        case 1: ++filter_count[+FILTER_COUNT::NOT_CONVERT]; continue;
-        case 2: ++filter_count[+FILTER_COUNT::EXCLUDE]; continue;
-        case 3:
-            throw std::runtime_error("Error: Invalid p-value for " + rs_id
-                                     + ": " + misc::to_string(pvalue) + "!\n");
-        }
-        switch (parse_stat(token[base_file.column_index[+BASE_INDEX::STAT]],
-                           base_file.is_or, stat))
-        {
-        case 1: ++filter_count[+FILTER_COUNT::NOT_CONVERT]; continue;
-        case 2: ++filter_count[+FILTER_COUNT::NEGATIVE]; continue;
-        }
-        if (!alt_allele.empty() && ambiguous(ref_allele, alt_allele))
-        {
-            ++filter_count[+FILTER_COUNT::AMBIG];
-            if (!m_keep_ambig) continue;
-        }
-        category = 0;
-        pthres = 0.0;
-        if (threshold_info.fastscore)
-        {
-            category =
-                calculate_category(pvalue, threshold_info.bar_levels, pthres);
-        }
-        else
-        {
-            try
-            {
-                category = calculate_category(pvalue, pthres, threshold_info);
-            }
-            catch (const std::runtime_error&)
-            {
-                m_very_small_thresholds = true;
-                category = 0;
-            }
-        }
-        m_existed_snps_index[rs_id] = m_existed_snps.size();
-        m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
-                                        stat, pvalue, category, pthres));
-    }
-    fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
-    return {filter_count, dup_rs};
+    return transverse_base_file(base_file, base_qc, threshold_info,
+                                exclusion_regions, file_length, gz_input,
+                                std::move(stream));
 }
+
+
 void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
                                const std::unordered_set<std::string>& dup_index,
                                const std::string& out, const double info_score)
@@ -404,9 +394,9 @@ void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
                        + " variant(s) with INFO score less than "
                        + std::to_string(info_score) + "\n");
     }
-    if (filter_count[+FILTER_COUNT::EXCLUDE])
+    if (filter_count[+FILTER_COUNT::P_EXCLUDED])
     {
-        message.append(std::to_string(filter_count[+FILTER_COUNT::EXCLUDE])
+        message.append(std::to_string(filter_count[+FILTER_COUNT::P_EXCLUDED])
                        + " variant(s) excluded due to p-value threshold\n");
     }
     if (filter_count[+FILTER_COUNT::NOT_CONVERT])
@@ -528,6 +518,8 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
     m_haploid_mask.resize(CHROM_MASK_WORDS, 0);
     if (num_auto < 0)
     {
+        // not required at the moment
+        /*
         num_auto = -num_auto;
         m_autosome_ct = static_cast<uint32_t>(num_auto);
         m_xymt_codes[X_OFFSET] = -1;
@@ -536,7 +528,7 @@ void Genotype::init_chr(int num_auto, bool no_x, bool no_y, bool no_xy,
         m_xymt_codes[MT_OFFSET] = -1;
         m_max_code = static_cast<uint32_t>(num_auto);
         fill_all_bits((static_cast<uint32_t>(num_auto)) + 1,
-                      m_haploid_mask.data());
+                      m_haploid_mask.data());*/
     }
     else
     {
@@ -658,23 +650,15 @@ Genotype::load_snp_list(std::unique_ptr<std::istream> input)
     return result;
 }
 
-std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
-                                                   bool ignore_fid)
+std::unordered_set<std::string>
+Genotype::load_ref(std::unique_ptr<std::istream> input, bool ignore_fid)
 {
-    std::ifstream in;
-    in.open(input.c_str());
-    if (!in.is_open())
-    {
-        throw std::runtime_error("Error: Cannot open keep / remove file: "
-                                 + input);
-    }
-    // read in the file
     std::string line;
     // now go through the sample file. We require the FID (if any) and IID  must
     // be the first 1/2 column of the file
     std::vector<std::string> token;
     std::unordered_set<std::string> result;
-    while (std::getline(in, line))
+    while (std::getline(*input, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
@@ -689,7 +673,7 @@ std::unordered_set<std::string> Genotype::load_ref(const std::string& input,
             result.insert(token[0] + m_delim + token[1]);
         }
     }
-    in.close();
+    input.reset();
     return result;
 }
 
@@ -722,11 +706,15 @@ bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
 void Genotype::load_samples(bool verbose)
 {
     if (!m_remove_file.empty())
-    { m_sample_selection_list = load_ref(m_remove_file, m_ignore_fid); }
+    {
+        auto input = misc::load_stream(m_remove_file);
+        m_sample_selection_list = load_ref(std::move(input), m_ignore_fid);
+    }
     else if (!m_keep_file.empty())
     {
         m_remove_sample = false;
-        m_sample_selection_list = load_ref(m_keep_file, m_ignore_fid);
+        auto input = misc::load_stream(m_keep_file);
+        m_sample_selection_list = load_ref(std::move(input), m_ignore_fid);
     }
     if (!m_is_ref) { m_sample_id = gen_sample_vector(); }
     else

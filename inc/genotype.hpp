@@ -193,9 +193,13 @@ public:
                           const std::string& out_prefix);
     bool base_filter_by_value(const std::vector<std::string_view>& token,
                               const BaseFile& base_file,
-                              const double& threshold, size_t index)
+                              const double& threshold,
+                              std::vector<size_t>& filter_count, size_t type,
+                              size_t index)
     {
-        if (!base_file.has_column[index]) return false;
+        if (!base_file.has_column[index]) return true;
+        if (filter_count.size() != +FILTER_COUNT::MAX)
+        { filter_count.resize(+FILTER_COUNT::MAX, 0); }
         double value = 1;
         try
         {
@@ -204,34 +208,51 @@ public:
         }
         catch (...)
         {
-            return true;
+            ++filter_count[type];
+            return false;
         }
-        if (value < threshold) return true;
-        return false;
+        if (value < threshold)
+        {
+            ++filter_count[type];
+            return false;
+        }
+        return true;
     }
-    int parse_chr(const std::vector<std::string_view>& token,
-                  const BaseFile& base_file, size_t index, size_t& chr)
+    bool parse_chr(const std::vector<std::string_view>& token,
+                   const BaseFile& base_file, std::vector<size_t>& filter_count,
+                   size_t& chr)
     {
+        if (filter_count.size() != +FILTER_COUNT::MAX)
+        { filter_count.resize(+FILTER_COUNT::MAX, 0); }
         chr = ~size_t(0);
-        if (!base_file.has_column[index]) return 0;
-        int32_t chr_code = get_chrom_code(token[base_file.column_index[index]]);
-        if (chr_code < 0) { return 1; }
+        if (!base_file.has_column[+BASE_INDEX::CHR]) return true;
+        int32_t chr_code =
+            get_chrom_code(token[base_file.column_index[+BASE_INDEX::CHR]]);
+        if (chr_code < 0)
+        {
+            ++filter_count[+FILTER_COUNT::CHR];
+            return false;
+        }
         if (static_cast<size_t>(chr_code) > m_autosome_ct
             || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
-        { return 2; }
+        {
+            ++filter_count[+FILTER_COUNT::HAPLOID];
+            return false;
+        }
         chr = static_cast<size_t>(chr_code);
-        return 0;
+        return true;
     }
 
     bool parse_loc(const std::vector<std::string_view>& token,
-                   const BaseFile& base_file, size_t index, size_t& loc)
+                   const BaseFile& base_file, size_t& loc)
     {
         loc = ~size_t(0);
-        if (!base_file.has_column[index]) return true;
+        if (!base_file.has_column[+BASE_INDEX::BP]) return true;
         try
         {
             loc = misc::Convertor::convert<size_t>(
-                std::string(token[base_file.column_index[index]]).c_str());
+                std::string(token[base_file.column_index[+BASE_INDEX::BP]])
+                    .c_str());
         }
         catch (...)
         {
@@ -435,6 +456,13 @@ public:
     read_base(const BaseFile& base_file, const QCFiltering& base_qc,
               const PThresholding& threshold_info,
               const std::vector<IITree<size_t, size_t>>& exclusion_regions);
+    std::tuple<std::vector<size_t>, std::unordered_set<std::string>>
+    transverse_base_file(
+        const BaseFile& base_file, const QCFiltering& base_qc,
+        const PThresholding& threshold_info,
+        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+        const std::streampos file_length, const bool gz_input,
+        std::unique_ptr<std::istream> input);
     void print_base_stat(const std::vector<size_t>& filter_count,
                          const std::unordered_set<std::string>& dup_index,
                          const std::string& out, const double info_score);
@@ -717,19 +745,32 @@ protected:
                         const std::string& a1, const std::string& a2,
                         const size_t chr_num, const size_t loc);
 
-    int parse_rs_id(const std::vector<std::string_view>& token,
-                    const std::unordered_set<std::string>& dup_index,
-                    const BaseFile& base_file, std::string& rs_id)
+    bool parse_rs_id(const std::vector<std::string_view>& token,
+                     const BaseFile& base_file,
+                     std::unordered_set<std::string>& processed_idx,
+                     std::unordered_set<std::string>& dup_rs,
+                     std::vector<size_t>& filter_count, std::string& rs_id)
     {
+        if (filter_count.size() != +FILTER_COUNT::MAX)
+        { filter_count.resize(+FILTER_COUNT::MAX, 0); }
         if (!base_file.has_column[+BASE_INDEX::RS])
         { throw std::runtime_error("Error: RS ID column not provided!"); }
         rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
-        if (dup_index.find(rs_id) != dup_index.end()) { return 1; }
+        if (processed_idx.find(rs_id) != processed_idx.end())
+        {
+            ++filter_count[+FILTER_COUNT::DUP_SNP];
+            dup_rs.insert(rs_id);
+            return false;
+        }
         auto&& selection = m_snp_selection_list.find(rs_id);
         if ((!m_exclude_snp && selection == m_snp_selection_list.end())
             || (m_exclude_snp && selection != m_snp_selection_list.end()))
-        { return 2; }
-        return 0;
+        {
+            ++filter_count[+FILTER_COUNT::SELECT];
+            return false;
+        }
+        processed_idx.insert(rs_id);
+        return true;
     }
 
     void parse_allele(const std::vector<std::string_view>& token,
@@ -742,37 +783,59 @@ protected:
         misc::to_upper(allele);
     }
 
-    int parse_pvalue(const std::string_view& p_value_str,
-                     const double max_threshold, double& pvalue)
+    bool parse_pvalue(const std::string_view& p_value_str,
+                      const double max_threshold,
+                      std::vector<size_t>& filter_count, double& pvalue)
     {
+        if (filter_count.size() != +FILTER_COUNT::MAX)
+        { filter_count.resize(+FILTER_COUNT::MAX, 0); }
         try
         {
             pvalue = misc::Convertor::convert<double>(std::string(p_value_str));
         }
         catch (...)
         {
-            return 1;
+            ++filter_count[+FILTER_COUNT::NOT_CONVERT];
+            return false;
         }
-        if (pvalue < 0.0 || pvalue > 1.0) return 3;
-        if (pvalue > max_threshold) { return 2; }
-        return 0;
+        if (pvalue < 0.0 || pvalue > 1.0)
+        {
+            throw std::runtime_error("Error: Invalid p-value: "
+                                     + std::string(p_value_str));
+        }
+        if (pvalue > max_threshold)
+        {
+            ++filter_count[+FILTER_COUNT::P_EXCLUDED];
+            return false;
+        }
+        return true;
     }
-    int parse_stat(const std::string_view& stat_str, const bool odd_ratio,
-                   double& stat)
+    bool parse_stat(const std::string_view& stat_str, const bool odd_ratio,
+                    std::vector<size_t>& filter_count, double& stat)
     {
+        if (filter_count.size() != +FILTER_COUNT::MAX)
+        { filter_count.resize(+FILTER_COUNT::MAX, 0); }
         try
         {
             stat = misc::Convertor::convert<double>(std::string(stat_str));
-            if (odd_ratio && misc::logically_equal(stat, 0.0)) { return 1; }
+            if (odd_ratio && misc::logically_equal(stat, 0.0))
+            {
+                ++filter_count[+FILTER_COUNT::NOT_CONVERT];
+                return false;
+            }
             else if (odd_ratio && stat < 0.0)
-                return 2;
+            {
+                ++filter_count[+FILTER_COUNT::NEGATIVE];
+                return false;
+            }
             else if (odd_ratio)
                 stat = log(stat);
-            return 0;
+            return true;
         }
         catch (...)
         {
-            return 1;
+            ++filter_count[+FILTER_COUNT::NOT_CONVERT];
+            return false;
         }
     }
     /*!
@@ -784,16 +847,18 @@ protected:
      * \param no_full indicate if we want the p=1 threshold
      * \return the category where this SNP belongs to
      */
-    unsigned long long calculate_category(const double& pvalue, double& pthres,
-                                          const PThresholding& thresolding)
+    unsigned long long calculate_category(const PThresholding& thresholding,
+                                          const double& pvalue, double& pthres)
     {
         // NOTE: Threshold is x < p <= end and minimum category is 0
         unsigned long long category = 0;
         double division;
-        if (pvalue > thresolding.upper && !thresolding.no_full)
+        if (std::fpclassify(thresholding.inter) != FP_NORMAL)
+        { throw std::runtime_error("Error: interval is too small."); }
+        else if (pvalue > thresholding.upper && !thresholding.no_full)
         {
-            division = (thresolding.upper + 0.1 - thresolding.lower)
-                       / thresolding.inter;
+            division = (thresholding.upper + 0.1 - thresholding.lower)
+                       / thresholding.inter;
             if (division > std::numeric_limits<unsigned long long>::max())
             {
                 throw std::runtime_error(
@@ -804,10 +869,10 @@ protected:
         }
         else
         {
-            if (pvalue > thresolding.lower
-                || misc::logically_equal(pvalue, thresolding.lower))
+            if (pvalue > thresholding.lower
+                || misc::logically_equal(pvalue, thresholding.lower))
             {
-                division = (pvalue - thresolding.lower) / thresolding.inter;
+                division = (pvalue - thresholding.lower) / thresholding.inter;
                 if (division > std::numeric_limits<unsigned long long>::max())
                 {
                     throw std::runtime_error("Error: Number of threshold "
@@ -815,21 +880,14 @@ protected:
                 }
                 category = static_cast<unsigned long long>(std::ceil(division));
             }
-            pthres = category * thresolding.inter + thresolding.lower;
+            pthres = category * thresholding.inter + thresholding.lower;
         }
         return category;
     }
 
-    /*!
-     * \brief Calculate the category based on the input pvalue and barlevels
-     * \param pvalue the input pvalue
-     * \param barlevels the bar levels
-     * \param pthres the p-value threshold this SNP belong to
-     * \return the category of this SNP
-     */
-    unsigned long long calculate_category(const double& pvalue,
-                                          const std::vector<double>& barlevels,
-                                          double& pthres)
+    unsigned long long cal_bar_category(const double& pvalue,
+                                        const std::vector<double>& barlevels,
+                                        double& pthres)
     {
         for (unsigned long long i = 0; i < barlevels.size(); ++i)
         {
@@ -1097,8 +1155,8 @@ protected:
      * 1) \return an unordered_set use for checking if the sample is in the
      * file
      */
-    std::unordered_set<std::string> load_ref(const std::string& input,
-                                             bool ignore_fid);
+    std::unordered_set<std::string>
+    load_ref(std::unique_ptr<std::istream> input, bool ignore_fid);
 
     void shrink_snp_vector(const std::vector<bool>& retain)
     {

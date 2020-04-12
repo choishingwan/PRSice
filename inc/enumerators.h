@@ -115,7 +115,7 @@ enum class FILTER_COUNT
 {
     DUP_SNP = 0,
     NUM_LINE,
-    EXCLUDE,
+    P_EXCLUDED,
     SELECT,
     REGION,
     AMBIG,

@@ -15,11 +15,13 @@ add_executable(tests ${TEST_SOURCES}
     csrc/command_loading.cpp
     csrc/command_validation.cpp
     csrc/genotype_basic.cpp
+    csrc/genotype_read_base.cpp
     ${CMAKE_SOURCE_DIR}/src/commander.cpp
     ${CMAKE_SOURCE_DIR}/src/misc.cpp
     ${CMAKE_SOURCE_DIR}/src/genotype.cpp
     ${CMAKE_SOURCE_DIR}/src/reporter.cpp
-    ${CMAKE_SOURCE_DIR}/src/snp.cpp)
+    ${CMAKE_SOURCE_DIR}/src/snp.cpp
+    ${CMAKE_SOURCE_DIR}/src/region.cpp)
 target_link_libraries(tests PRIVATE
     Catch
     bgen
