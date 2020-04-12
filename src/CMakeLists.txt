@@ -50,7 +50,7 @@ target_include_directories(genotyping PUBLIC
     ${CMAKE_SOURCE_DIR}/inc)
 target_include_directories(genotyping SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/lib)
-target_link_libraries(genotyping INTERFACE
+target_link_libraries(genotyping PUBLIC
     plink
     utility
     bgen

@@ -15,7 +15,7 @@ UNIT_TEST="${2}"
 "${LCOV}" -d "${SRC_DIR}" -z
 "${LCOV}" --rc lcov_branch_coverage=1 --capture -i -b "${SRC_DIR}/../"  -d "${SRC_DIR}" -o "${SRC_DIR}/baseline.info" > log
 
-"${UNIT_TEST}" "${3}"
+"${UNIT_TEST}" 
 
 HTML_RESULTS="${1}/html"
 
