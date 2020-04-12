@@ -28,7 +28,9 @@ add_library(utility
     ${CMAKE_SOURCE_DIR}/src/reporter.cpp)
 target_include_directories(utility PUBLIC
     ${CMAKE_SOURCE_DIR}/inc)
-target_link_libraries(utility PUBLIC gzstream)
+target_link_libraries(utility PUBLIC
+    gzstream
+    coverage_config)
 
 # plink
 add_library(plink
@@ -51,7 +53,8 @@ target_include_directories(genotyping SYSTEM PUBLIC
 target_link_libraries(genotyping INTERFACE
     plink
     utility
-    bgen)
+    bgen
+    coverage_config)
 
 
 add_library(regression
@@ -73,7 +76,8 @@ target_link_libraries(prsice_lib PUBLIC
     genotyping
     regression
     utility
-    ${CMAKE_THREAD_LIBS_INIT})
+    ${CMAKE_THREAD_LIBS_INIT}
+    coverage_config)
 
 
 add_executable(PRSice
