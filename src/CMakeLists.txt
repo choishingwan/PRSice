@@ -34,7 +34,7 @@ target_link_libraries(utility PUBLIC gzstream)
 add_library(plink
     ${CMAKE_SOURCE_DIR}/src/plink_common.cpp
     ${CMAKE_SOURCE_DIR}/src/dcdflib.cpp)
-target_include_directories(plink PUBLIC
+target_include_directories(plink SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/lib)
 target_link_libraries(plink PUBLIC utility)
 
@@ -45,18 +45,21 @@ add_library(genotyping
     ${CMAKE_SOURCE_DIR}/src/genotype.cpp
     ${CMAKE_SOURCE_DIR}/src/snp.cpp)
 target_include_directories(genotyping PUBLIC
-    ${CMAKE_SOURCE_DIR}/inc
+    ${CMAKE_SOURCE_DIR}/inc)
+target_include_directories(genotyping SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/lib)
 target_link_libraries(genotyping INTERFACE
-    bgen
-    utility)
+    plink
+    utility
+    bgen)
 
 
 add_library(regression
     ${CMAKE_SOURCE_DIR}/src/fastlm.cpp
     ${CMAKE_SOURCE_DIR}/src/regression.cpp)
 target_include_directories(regression PUBLIC
-    ${CMAKE_SOURCE_DIR}/inc
+    ${CMAKE_SOURCE_DIR}/inc)
+target_include_directories(regression SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/lib)
 
 

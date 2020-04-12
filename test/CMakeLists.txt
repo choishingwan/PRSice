@@ -16,7 +16,8 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/command_validation.cpp
     ${TEST_SRC_DIR}/misc_test.cpp
     ${TEST_SRC_DIR}/genotype_basic.cpp
-    ${TEST_SRC_DIR}/genotype_read_base.cpp)
+    ${TEST_SRC_DIR}/genotype_read_base.cpp
+    ${TEST_SRC_DIR}/genotype_read_sample.cpp)
 target_link_libraries(tests PUBLIC
     Catch
     genotyping
