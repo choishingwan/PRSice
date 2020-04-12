@@ -429,6 +429,15 @@ void Genotype::print_base_stat(const std::vector<size_t>& filter_count,
     { throw std::runtime_error("Error: No valid variant remaining"); }
 }
 
+bool Genotype::has_parent(const std::unordered_set<std::string>& founder_info,
+                          const std::vector<std::string>& token,
+                          const std::string& fid, const size_t idx)
+{
+
+    if (idx == ~size_t(0)) return false;
+    auto found = founder_info.find(fid + m_delim + token.at(idx));
+    return found != founder_info.end();
+}
 void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
                           const size_t sex_idx, const size_t dad_idx,
                           const size_t mum_idx, const size_t cur_idx,
@@ -450,27 +459,27 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     bool inclusion = m_remove_sample ^ find_id;
     bool in_regression = false;
     // we can't check founder if there isn't fid
-    if (inclusion
-        && (m_ignore_fid
-            || (founder_info.find(fid + m_delim + token[dad_idx])
-                    == founder_info.end()
-                && founder_info.find(fid + m_delim + token[mum_idx])
-                       == founder_info.end())))
+
+    const bool has_father = has_parent(founder_info, token, fid, dad_idx);
+    const bool has_mother = has_parent(founder_info, token, fid, mum_idx);
+    if (inclusion)
     {
-        // this is a founder (with no dad / mum)
-        ++m_founder_ct;
-        SET_BIT(cur_idx, m_sample_for_ld.data());
-        SET_BIT(cur_idx, m_calculate_prs.data());
-        in_regression = true;
-    }
-    else if (inclusion)
-    {
-        // we still calculate PRS for this sample
-        SET_BIT(cur_idx, m_calculate_prs.data());
-        ++m_num_non_founder;
-        // but will only include it in the regression model if users asked
-        // to include non-founders
-        in_regression = m_keep_nonfounder;
+        if (!m_ignore_fid && (has_father || has_mother))
+        {
+            // we still calculate PRS for this sample
+            SET_BIT(cur_idx, m_calculate_prs.data());
+            ++m_num_non_founder;
+            // but will only include it in the regression model if users asked
+            // to include non-founders
+            in_regression = m_keep_nonfounder;
+        }
+        else
+        {
+            ++m_founder_ct;
+            SET_BIT(cur_idx, m_sample_for_ld.data());
+            SET_BIT(cur_idx, m_calculate_prs.data());
+            in_regression = true;
+        }
     }
     m_sample_ct += inclusion;
     // TODO: Better sex parsing? Can also be 0, 1 or F and M

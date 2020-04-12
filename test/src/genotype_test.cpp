@@ -80,31 +80,6 @@ public:
 
 
 
-TEST_F(GENOTYPE_BASIC, INIT_SAMPLE_VECTOR)
-{
-    // should fail as m_unfiltered_sample_ct is 0
-    try
-    {
-        init_sample_vectors();
-        FAIL();
-    }
-    catch (...)
-    {
-        SUCCEED();
-    }
-    // should sucess
-    m_unfiltered_sample_ct = 1025;
-    init_sample_vectors();
-    ASSERT_EQ(m_num_male, 0);
-    ASSERT_EQ(m_num_female, 0);
-    ASSERT_EQ(m_num_ambig, 0);
-    ASSERT_EQ(m_num_non_founder, 0);
-    ASSERT_EQ(m_sample_ct, 0);
-    ASSERT_EQ(m_founder_ct, 0);
-    ASSERT_TRUE(!m_sample_for_ld.empty());
-    ASSERT_TRUE(!m_calculate_prs.empty());
-}
-
 
 TEST_F(GENOTYPE_BASIC, SAMPLE_GENERATION)
 {

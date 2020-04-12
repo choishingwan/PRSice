@@ -126,7 +126,20 @@ public:
         return calculate_category(thresholding, pvalue, pthres);
     }
     void test_init_sample_vectors() { init_sample_vectors(); }
-
+    void test_gen_sample(const size_t fid_idx, const size_t iid_idx,
+                         const size_t sex_idx, const size_t dad_idx,
+                         const size_t mum_idx, const size_t cur_idx,
+                         const std::unordered_set<std::string>& founder_info,
+                         const std::string& pheno,
+                         std::vector<std::string>& token,
+                         std::vector<Sample_ID>& sample_storage,
+                         std::unordered_set<std::string>& sample_in_file,
+                         std::vector<std::string>& duplicated_sample_id)
+    {
+        gen_sample(fid_idx, iid_idx, sex_idx, dad_idx, mum_idx, cur_idx,
+                   founder_info, pheno, token, sample_storage, sample_in_file,
+                   duplicated_sample_id);
+    }
     void add_select_snp(const std::string& in, bool exclude)
     {
         m_snp_selection_list.insert(in);
@@ -151,7 +164,17 @@ public:
     bool ignore_fid() const { return m_ignore_fid; }
     // helper
     void set_reporter(Reporter* reporter) { m_reporter = reporter; }
-    void set_sample(uintptr_t n_sample) { m_unfiltered_marker_ct = n_sample; }
+    void set_sample(uintptr_t n_sample) { m_unfiltered_sample_ct = n_sample; }
+    void set_delim(const std::string& delim) { m_delim = delim; }
+    void set_ignore_fid(const bool ignore_fid) { m_ignore_fid = ignore_fid; }
+    size_t num_male() const { return m_num_male; }
+    size_t num_female() const { return m_num_female; }
+    size_t num_ambig() const { return m_num_ambig; }
+    size_t num_nonfounder() const { return m_num_non_founder; }
+    uintptr_t num_founder() const { return m_founder_ct; }
+    uintptr_t num_sample() const { return m_sample_ct; }
+    std::vector<uintptr_t> sample_for_ld() const { return m_sample_for_ld; }
+    std::vector<uintptr_t> calculate_prs() const { return m_calculate_prs; }
 };
 
 #endif // MOCK_GENOTYPE_H

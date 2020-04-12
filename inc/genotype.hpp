@@ -654,6 +654,10 @@ protected:
     size_t m_num_info_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
+    size_t m_num_male = 0;
+    size_t m_num_female = 0;
+    size_t m_num_ambig_sex = 0;
+    size_t m_num_non_founder = 0;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_sample_ct = 0;
@@ -664,10 +668,6 @@ protected:
     uint32_t m_max_code = 0;
     std::random_device::result_type m_seed = 0;
     uint32_t m_num_ref_target_mismatch = 0;
-    uint32_t m_num_male = 0;
-    uint32_t m_num_female = 0;
-    uint32_t m_num_ambig_sex = 0;
-    uint32_t m_num_non_founder = 0;
     bool m_genotype_stored = false;
     bool m_use_proxy = false;
     bool m_has_prs_instruction = false;
@@ -731,6 +731,9 @@ protected:
         }
         return message;
     }
+    bool has_parent(const std::unordered_set<std::string>& founder_info,
+                    const std::vector<std::string>& token,
+                    const std::string& fid, const size_t idx);
     void gen_sample(const size_t fid_idx, const size_t iid_idx,
                     const size_t sex_idx, const size_t dad_idx,
                     const size_t mum_idx, const size_t cur_idx,
