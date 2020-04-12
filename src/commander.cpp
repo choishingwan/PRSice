@@ -33,8 +33,8 @@ bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
     { message.append(" \\\n    --" + com.first + " " + com.second); }
     message.append("\n");
     reporter.report(message, false);
-    if (error) throw std::runtime_error(m_error_message);
     if (!m_error_message.empty()) reporter.report(m_error_message);
+    if (error) throw std::runtime_error(m_error_message);
     return true;
 }
 bool Commander::init(int argc, char* argv[], bool& early_termination,
@@ -46,7 +46,8 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
     optind = 0;
     if (argc <= 1)
     {
-        reporter.report(m_help_message);
+        // use default PRSice
+        std::cerr << m_help_message << std::endl;
         throw std::runtime_error("Please provide the required parameters");
     }
     const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
@@ -379,11 +380,11 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                                           m_p_thresholds.set_threshold);
             break;
         case 'h':
-            reporter.report(m_help_message);
+            std::cerr << m_help_message << std::endl;
             early_termination = true;
             return true;
         case 'v':
-            reporter.report(version + " (" + date + ") ");
+            std::cerr << version + " (" + date + ") " << std::endl;
             early_termination = true;
             return true;
         case '?':
