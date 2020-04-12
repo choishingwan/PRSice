@@ -34,7 +34,7 @@ public:
        result.insert(result.end(), res.begin(), res.end());
        return result;
    }
-   std::vector<std::string> test_load_ref(std::unique_ptr<std::istream> input, const std::string delim, bool ignore_fid){
+   std::vector<std::string> test_load_ref(std::unique_ptr<std::istream> input, const std::string& delim, bool ignore_fid){
        m_delim = delim;
        auto tmp = load_ref(std::move(input), ignore_fid);
        std::vector<std::string> result;
