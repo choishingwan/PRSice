@@ -16,7 +16,7 @@ TEST_CASE("initialize sample vectors")
         const uintptr_t expected_size =
             BITCT_TO_WORDCT(static_cast<uintptr_t>(n_sample));
         REQUIRE_NOTHROW(geno.init_sample_vectors());
-        REQUIRE(geno.num_ambig() == 0);
+        REQUIRE(geno.num_ambig_sex() == 0);
         REQUIRE(geno.num_male() == 0);
         REQUIRE(geno.num_female() == 0);
         REQUIRE(geno.num_founder() == 0);
@@ -100,7 +100,7 @@ TEST_CASE("Sample object generation")
                         mock_input[2] = "2";
                         ++exp_female;
                         break;
-                    case 3:
+                    default:
                         mock_input[2] = "NA";
                         ++exp_ambig;
                         break;
@@ -109,7 +109,9 @@ TEST_CASE("Sample object generation")
                 }
                 else
                 {
+                    // when there's no sex information, we assume ambiguous
                     sex_idx = ~size_t(0);
+                    ++exp_ambig;
                 }
                 REQUIRE_NOTHROW(geno.test_gen_sample(
                     fid_idx, iid_idx, sex_idx, ~size_t(0), ~size_t(0), i,
