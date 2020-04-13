@@ -373,7 +373,7 @@ TEST_CASE("base file read")
         base_qc.maf_case = 0.04;
         PThresholding threshold_info;
         threshold_info.no_full = true;
-        threshold_info.fastscore = true;
+        threshold_info.fastscore = GENERATE(true, false);
         threshold_info.bar_levels = {0.5};
         // won't have header as read_base should have dealt with the header
         std::vector<std::string> base = {

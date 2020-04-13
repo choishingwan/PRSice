@@ -140,10 +140,19 @@ public:
                    founder_info, pheno, token, sample_storage, sample_in_file,
                    duplicated_sample_id);
     }
+    void add_select_sample(const std::string& in){
+        m_sample_selection_list.insert(in);
+    }
+    void change_sample_selection(bool remove){
+        m_remove_sample = remove;
+    }
     void add_select_snp(const std::string& in, bool exclude)
     {
         m_snp_selection_list.insert(in);
         m_exclude_snp = exclude;
+    }
+    void set_keep_nonfounder(bool keep_nonfounder){
+        m_keep_nonfounder = keep_nonfounder;
     }
     uint32_t num_auto() const { return m_autosome_ct; }
     std::vector<int32_t> xymt_codes() const { return m_xymt_codes; }

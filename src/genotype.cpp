@@ -454,6 +454,12 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     const std::string fid = (m_ignore_fid) ? "" : token[fid_idx];
     const std::string id =
         (m_ignore_fid) ? token[iid_idx] : fid + m_delim + token[iid_idx];
+    // end immediately if duplicated samples are found
+    if (sample_in_file.find(id) != sample_in_file.end())
+    {
+        duplicated_sample_id.push_back(id);
+        return;
+    }
     auto&& find_id =
         m_sample_selection_list.find(id) != m_sample_selection_list.end();
     bool inclusion = m_remove_sample ^ find_id;
@@ -493,9 +499,7 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
         ++m_num_ambig_sex;
     }
     // this must be incremented within each loop
-    if (sample_in_file.find(id) != sample_in_file.end())
-        duplicated_sample_id.push_back(id);
-    else if (inclusion && !m_is_ref)
+    if (inclusion && !m_is_ref)
     {
         sample_storage.emplace_back(
             Sample_ID(fid, token[iid_idx], pheno, in_regression));
