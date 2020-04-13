@@ -27,12 +27,12 @@ BinaryPlink::BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
 }
 
 std::unordered_set<std::string>
-BinaryPlink::get_founder_info(std::ifstream& famfile)
+BinaryPlink::get_founder_info(std::unique_ptr<std::istream>& famfile)
 {
     std::string line;
     std::vector<std::string> token;
     std::unordered_set<std::string> founder_info;
-    while (std::getline(famfile, line))
+    while (std::getline(*famfile, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
@@ -47,20 +47,14 @@ BinaryPlink::get_founder_info(std::ifstream& famfile)
         founder_info.insert(token[+FAM::FID] + m_delim + token[+FAM::IID]);
         ++m_unfiltered_sample_ct;
     }
-    famfile.clear();
-    famfile.seekg(0);
+    (*famfile).clear();
+    (*famfile).seekg(0);
     return founder_info;
 }
 std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 {
     assert(m_genotype_file_names.size() > 0);
-    std::ifstream famfile;
-    famfile.open(m_sample_file.c_str());
-    if (!famfile.is_open())
-    {
-        throw std::runtime_error("Error: Cannot open fam file: "
-                                 + m_sample_file);
-    }
+    auto famfile = misc::load_stream(m_sample_file);
     m_unfiltered_sample_ct = 0;
     // will also count number of samples here. Which initialize the important
     // m_unfiltered_sample_ct
@@ -74,7 +68,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
     uintptr_t sample_index = 0; // this is just for error message
     std::vector<std::string> token;
     std::string line;
-    while (std::getline(famfile, line))
+    while (std::getline(*famfile, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
@@ -93,8 +87,7 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
             + " duplicated samples detected!\n"
             + "Please ensure all samples have an unique identifier");
     }
-
-    famfile.close();
+    famfile.reset();
     post_sample_read_init();
     return sample_name;
 }

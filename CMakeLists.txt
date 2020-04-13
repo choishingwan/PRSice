@@ -59,7 +59,7 @@ endif()
 
 add_subdirectory(src)
 
-option (BUILD_TESTING "Build the testing tree." OFF)
+option (BUILD_TESTING "Build the unit test." OFF)
 # Only build tests if we are the top-level project
 # Allows this to be used by super projects with `add_subdirectory`
 if (BUILD_TESTING AND (PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR))

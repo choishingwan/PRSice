@@ -44,7 +44,7 @@ public:
      *        or just a simple text file
      * \return
      */
-    static bool check_is_sample_format(const std::string& input);
+    static bool check_is_sample_format(std::unique_ptr<std::istream>& input);
 
 protected:
     typedef std::vector<std::vector<double>> Data;
@@ -59,6 +59,7 @@ protected:
      * \return Vector containing the sample information
      */
     std::vector<Sample_ID> gen_sample_vector();
+    void handle_pheno_header(std::unique_ptr<std::istream>& sample);
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    const std::string& out_prefix, Genotype* target = nullptr);

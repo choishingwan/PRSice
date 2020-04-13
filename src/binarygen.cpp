@@ -67,6 +67,37 @@ size_t BinaryGen::get_sex_col(const std::string& header,
     return sex_col;
 }
 
+void BinaryGen::handle_pheno_header(std::unique_ptr<std::istream>& sample)
+{
+    std::string line;
+    bool have_header = false;
+    size_t num_line = 0;
+    while (std::getline(*sample, line))
+    {
+        misc::trim(line);
+        if (!line.empty()) ++num_line;
+    }
+    if (num_line == m_unfiltered_sample_ct + 1) { have_header = true; }
+    else if (num_line != m_unfiltered_sample_ct)
+    {
+        throw std::runtime_error(
+            "Error: Number of sample in phenotype file does not match "
+            "number of samples specified in bgen file. Please check "
+            "you "
+            "have the correct phenotype file input. Note: Phenotype "
+            "file "
+            "should have the same number of samples as the bgen file "
+            "and "
+            "they should appear in the same order");
+    }
+    (*sample).clear();
+    (*sample).seekg(0);
+    if (have_header)
+    {
+        std::getline(*sample, line);
+        m_reporter->report("Assume phenotype file has header line: " + line);
+    }
+}
 std::vector<Sample_ID> BinaryGen::gen_sample_vector()
 {
     // this is the first time we do something w.r.t bgen file
@@ -77,48 +108,39 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
     // we always know the sample size from context
     m_unfiltered_sample_ct = m_context_map[0].number_of_samples;
     init_sample_vectors();
-    if (m_is_ref)
+    if (m_is_ref && m_sample_selection_list.empty())
     {
-        // don't bother with sample check if we are using bgen as reference and
-        // not exclude/extracting samples
-        if ((!m_keep_file.empty() || !m_remove_file.empty())
-            && (m_sample_file.empty()))
+        for (size_t i = 0; i < m_unfiltered_sample_ct; ++i)
+        {
+            ++m_sample_ct;
+            SET_BIT(i, m_calculate_prs.data());
+            // we assume all bgen samples to be founder
+            SET_BIT(i, m_sample_for_ld.data());
+        }
+    }
+    else if (!m_is_ref || !m_sample_selection_list.empty())
+    {
+        // this is the target, where the m_sample_file must be correct, or
+        // this is the reference, which we asked for --keep or --remove and
+        // an external sample file was provided (that's why we don't get
+        // into the runtime_error)
+        if (m_is_ref && m_sample_file.empty())
         {
             throw std::runtime_error("Error: Cannot perform sample "
                                      "filtering on the LD reference "
                                      "file without the sample file!");
         }
-        else
-        {
-            for (size_t i = 0; i < m_unfiltered_sample_ct; ++i)
-            {
-                ++m_sample_ct;
-                SET_BIT(i, m_calculate_prs.data());
-                // we assume all bgen samples to be founder
-                SET_BIT(i, m_sample_for_ld.data());
-            }
-        }
-    }
-    else if (!m_is_ref || (!m_keep_file.empty() || !m_remove_file.empty()))
-    {
-        // this is the target, where the m_sample_file must be correct, or this
-        // is the reference, which we asked for --keep or --remove and an
-        // external sample file was provided (that's why we don't get into the
-        // runtime_error)
-        const bool is_sample_format = check_is_sample_format(m_sample_file);
-        std::ifstream sample_file(m_sample_file.c_str());
-        // don't need to check again as the check_is_sample_format function
-        // already checked if the file is opened
+        auto sample = misc::load_stream(m_sample_file);
+        const bool is_sample_format = check_is_sample_format(sample);
         std::string line;
         size_t sex_col = ~size_t(0);
-
         // now check if there's a sex information
         if (is_sample_format)
         {
             // only do this if the file is sample format
-            std::getline(sample_file, line);
+            std::getline(*sample, line);
             std::string format;
-            std::getline(sample_file, format);
+            std::getline(*sample, format);
             sex_col = get_sex_col(line, format);
         }
         // now start reading the file
@@ -127,44 +149,11 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
         std::vector<std::string> duplicated_sample_id;
         std::vector<std::string> token;
         const size_t required_column =
-            ((sex_col != ~size_t(0)) ? (sex_col) : (1 + !m_ignore_fid));
+            ((sex_col != ~size_t(0)) ? (sex_col + 1) : (1 + !m_ignore_fid));
         const size_t iid_idx = (is_sample_format || !m_ignore_fid) ? 1 : 0;
         const size_t fid_idx = 0;
-        // more robust header check, only remove header if sample size = line +
-        // 1
-        // first, get number of lines in the file
-        if (!is_sample_format)
-        {
-            bool have_header = false;
-            size_t num_line = 0;
-            while (std::getline(sample_file, line))
-            {
-                misc::trim(line);
-                if (!line.empty()) ++num_line;
-            }
-            if (num_line == m_unfiltered_sample_ct + 1) { have_header = true; }
-            else if (num_line != m_unfiltered_sample_ct)
-            {
-                throw std::runtime_error(
-                    "Error: Number of sample in phenotype file does not match "
-                    "number of samples specified in bgen file. Please check "
-                    "you "
-                    "have the correct phenotype file input. Note: Phenotype "
-                    "file "
-                    "should have the same number of samples as the bgen file "
-                    "and "
-                    "they should appear in the same order");
-            }
-            sample_file.clear();
-            sample_file.seekg(0);
-            if (have_header)
-            {
-                std::getline(sample_file, line);
-                m_reporter->report("Assume phenotype file has header line: "
-                                   + line);
-            }
-        }
-        while (std::getline(sample_file, line))
+        if (!is_sample_format) { handle_pheno_header(sample); }
+        while (std::getline(*sample, line))
         {
             misc::trim(line);
             if (line.empty()) continue;
@@ -179,8 +168,8 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                     + " columns! Number of column="
                     + misc::to_string(token.size()));
             }
-            gen_sample(fid_idx, iid_idx, sex_col, 0, 0, line_id,
-                       std::unordered_set<std::string> {}, "", token,
+            gen_sample(fid_idx, iid_idx, sex_col, ~size_t(0), ~size_t(0),
+                       line_id, std::unordered_set<std::string> {}, "", token,
                        sample_name, sample_in_file, duplicated_sample_id);
             ++line_id;
         }
@@ -194,29 +183,24 @@ std::vector<Sample_ID> BinaryGen::gen_sample_vector()
                   "have an "
                   "unique identifier");
         }
-        sample_file.close();
+        sample.reset();
     }
     post_sample_read_init();
     return sample_name;
 }
 
-bool BinaryGen::check_is_sample_format(const std::string& input)
+bool BinaryGen::check_is_sample_format(std::unique_ptr<std::istream>& input)
 {
     // read the sample file
     // might want to change it according to the new sample file,
     // which only mandate the first column
-    std::ifstream sample_file(input.c_str());
-    if (!sample_file.is_open())
-    {
-        std::string error_message = "Error: Cannot open sample file: " + input;
-        throw std::runtime_error(error_message);
-    }
     // get the first two line of input
     std::string first_line, second_line;
-    std::getline(sample_file, first_line);
+    std::getline(*input, first_line);
     // we must have at least 2 row for a sample file
-    if (!std::getline(sample_file, second_line)) { return false; }
-    sample_file.close();
+    if (!std::getline(*input, second_line)) { return false; }
+    (*input).clear();
+    (*input).seekg(0);
     // split the first two lines
     const std::vector<std::string_view> first_row = misc::tokenize(first_line);
     const std::vector<std::string_view> second_row =
