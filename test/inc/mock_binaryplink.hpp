@@ -21,8 +21,13 @@ mock_binaryplink(){}
                    uintptr_t& bed_offset){
         check_bed(bed_name, num_marker, bed_offset);
     }
-
+    void manual_load_snp(SNP cur){
+        m_existed_snps_index[cur.rs()] = m_existed_snps.size();
+        m_existed_snps.emplace_back(cur);
+    }
+    std::vector<SNP> existed_snps () const { return m_existed_snps;}
     void set_sample(uintptr_t n_sample) { m_unfiltered_sample_ct = n_sample; }
+    void set_reporter(Reporter* reporter) { m_reporter = reporter; }
     void gen_bed_head(const std::string& name, size_t num_sample,
                       size_t num_snp, bool new_version, bool sample_major)
     {
