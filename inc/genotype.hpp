@@ -711,6 +711,15 @@ protected:
             throw std::runtime_error("Error: Undefine user input: "
                                      + file_name);
         }
+        // check for empty input
+        for (auto&& t : token)
+        {
+            if (t.empty())
+            {
+                throw std::runtime_error("Error: Invalid user input: "
+                                         + file_name);
+            }
+        }
         std::string message = "Initializing Genotype ";
         if (use_list)
         {

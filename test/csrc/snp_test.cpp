@@ -184,6 +184,32 @@ TEST_CASE("SNP Matching")
             REQUIRE_FALSE(snp.matching(1, 1, ref, alt, flipped));
         }
     }
+    SECTION("with indel")
+    {
+        // we can't really do complement
+        auto mref = GENERATE(std::string("AATT"), "TCG");
+        auto malt = GENERATE(std::string("AATT"), "TCG");
+        auto ref = GENERATE(std::string("AATT"), "ATCG");
+        auto alt = GENERATE(std::string("TCG"), "ATCG");
+        SNP snp("rs", 1, 1, mref, malt, 0, 0, 0, 0);
+        bool flipped;
+        // with indel, we can never do complementary mapping as that just don't
+        // work
+        if (ref == mref && malt == alt)
+        {
+            REQUIRE(snp.matching(1, 1, ref, alt, flipped));
+            REQUIRE_FALSE(flipped);
+        }
+        else if (alt == mref && ref == malt)
+        {
+            REQUIRE(snp.matching(1, 1, ref, alt, flipped));
+            REQUIRE(flipped);
+        }
+        else
+        {
+            REQUIRE_FALSE(snp.matching(1, 1, ref, alt, flipped));
+        }
+    }
     SECTION("with missing alternative allele")
     {
 

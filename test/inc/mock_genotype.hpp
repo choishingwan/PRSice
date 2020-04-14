@@ -140,6 +140,17 @@ public:
                    founder_info, pheno, token, sample_storage, sample_in_file,
                    duplicated_sample_id);
     }
+
+    bool test_check_chr(const std::string& chr_str, std::string& prev_chr,
+                             size_t& chr_num, bool& chr_error, bool& sex_error){
+        return(check_chr(chr_str, prev_chr, chr_num, chr_error, sex_error));
+    }
+    bool test_check_rs(std::string& rsid, std::string& snpid,
+                       std::unordered_set<std::string>& processed_snps,
+                       std::unordered_set<std::string>& duplicated_snps,
+                       Genotype* genotype){
+        return check_rs(rsid, snpid, processed_snps, duplicated_snps, genotype);
+    }
     void add_select_sample(const std::string& in){
         m_sample_selection_list.insert(in);
     }
@@ -153,6 +164,10 @@ public:
     }
     void set_keep_nonfounder(bool keep_nonfounder){
         m_keep_nonfounder = keep_nonfounder;
+    }
+    void load_snp(const std::string& rs){
+        m_existed_snps_index[rs] = m_existed_snps.size();
+        m_existed_snps.emplace_back(SNP(rs,1, 1, "A", "C", 0, 0, 1 , 1));
     }
     uint32_t num_auto() const { return m_autosome_ct; }
     std::vector<int32_t> xymt_codes() const { return m_xymt_codes; }

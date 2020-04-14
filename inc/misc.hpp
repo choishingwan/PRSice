@@ -292,11 +292,10 @@ inline std::vector<std::string> split(const std::string& seq,
     std::vector<std::string> result;
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
     {
-        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
+        result.emplace_back(seq.substr(prev, pos - prev));
         prev = pos + 1;
     }
-    if (prev < seq.length())
-        result.emplace_back(seq.substr(prev, std::string::npos));
+    result.emplace_back(seq.substr(prev, pos - prev));
     return result;
 }
 
@@ -305,14 +304,17 @@ inline std::vector<std::string_view> tokenize(std::string_view str,
 {
     std::vector<std::string_view> output;
     // output.reserve(str.size() / 2);
-    for (auto first = str.data(), second = str.data(),
-              last = first + str.size();
-         second != last && first != last; first = second + 1)
+    auto first = str.data();
+    auto second = first;
+    auto last = str.end();
+    while ((second = std::find_first_of(first, last, std::cbegin(delims),
+                                        std::cend(delims)))
+           != last)
     {
-        second = std::find_first_of(first, last, std::cbegin(delims),
-                                    std::cend(delims));
-        if (first != second) output.emplace_back(first, second - first);
+        output.emplace_back(first, second - first);
+        first = second + 1;
     }
+    output.emplace_back(first, second - first);
     return output;
 }
 

@@ -329,9 +329,10 @@ protected:
         if (!input.empty() && input.back() == ',')
         {
             m_error_message.append(
-                "Warning: , detected at end of input: " + input
+                "Error: , detected at end of input: " + input
                 + ". Have you accidentally included space in "
                   "your input? (Space is not allowed)");
+            return false;
         }
         std::vector<std::string> token = misc::split(input, ",");
         try

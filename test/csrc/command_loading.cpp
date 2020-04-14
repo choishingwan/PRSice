@@ -217,10 +217,9 @@ TEST_CASE("binary target")
     SECTION("Grey area - space")
     {
         REQUIRE(commander.get_pheno().binary.empty());
-        // 3F will be ignored
-        REQUIRE(commander.parse_command_wrapper("--binary-target F,2T, 3F"));
-        REQUIRE_THAT(commander.get_pheno().binary,
-                     Catch::Equals<bool>({false, true, true}));
+        // 3F will be ignored and the 2T, will trigger the error
+        REQUIRE_FALSE(
+            commander.parse_command_wrapper("--binary-target F,2T, 3F"));
     }
     SECTION("Valid")
     {

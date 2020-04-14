@@ -95,5 +95,41 @@ TEST_CASE("split")
         token = misc::tokenize(input);
         REQUIRE_THAT(token, Catch::Equals<std::string_view>(
                                 {"sure-it", "works", "well", "ok"}));
+        input = "what\tif\twe\tgot\tempty\t\tinput";
+        token = misc::tokenize(input);
+        REQUIRE_THAT(token,
+                     Catch::Equals<std::string_view>(
+                         {"what", "if", "we", "got", "empty", "", "input"}));
+        input = "back\tempty\t";
+        token = misc::tokenize(input);
+        REQUIRE_THAT(token,
+                     Catch::Equals<std::string_view>({"back", "empty", ""}));
+        input = "\tfront\tempty";
+        token = misc::tokenize(input);
+        REQUIRE_THAT(token,
+                     Catch::Equals<std::string_view>({"", "front", "empty"}));
+    }
+    SECTION("string")
+    {
+        std::string input = "test,the,splitter,and,make,sure-it,works well";
+        std::vector<std::string> token = misc::split(input, ",");
+        REQUIRE_THAT(token, Catch::Equals<std::string>(
+                                {"test", "the", "splitter", "and", "make",
+                                 "sure-it", "works well"}));
+        input = "sure-it\tworks well ok";
+        token = misc::split(input);
+        REQUIRE_THAT(token, Catch::Equals<std::string>(
+                                {"sure-it", "works", "well", "ok"}));
+        input = "what\tif\twe\tgot\tempty\t\tinput";
+        token = misc::split(input);
+        REQUIRE_THAT(token,
+                     Catch::Equals<std::string>(
+                         {"what", "if", "we", "got", "empty", "", "input"}));
+        input = "back\tempty\t";
+        token = misc::split(input);
+        REQUIRE_THAT(token, Catch::Equals<std::string>({"back", "empty", ""}));
+        input = "\tfront\tempty";
+        token = misc::split(input);
+        REQUIRE_THAT(token, Catch::Equals<std::string>({"", "front", "empty"}));
     }
 }

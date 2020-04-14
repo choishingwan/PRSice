@@ -474,7 +474,8 @@ bool Genotype::check_rs(std::string& rsid, std::string& snpid,
                         std::unordered_set<std::string>& duplicated_snps,
                         Genotype* genotype)
 {
-    if (snpid == "." && rsid == ".") { return false; }
+    if ((snpid.empty() || snpid == ".") && (rsid.empty() || rsid == "."))
+    { return false; }
     auto&& find_rs = genotype->m_existed_snps_index.find(rsid);
     if (find_rs == genotype->m_existed_snps_index.end())
     {
@@ -717,7 +718,12 @@ size_t Genotype::get_rs_column(const std::string& input)
             }
             ++rs_index;
         }
-        if (token.size() == 6)
+        // if user accidentally add an empty column at the back of their bim
+        // file
+        // now it is possible that the file has an empty column for header, but
+        // that will just be an edge case and can be easily solved by adding the
+        // appropriate header
+        if (token.size() == 6 || (token.size() == 7 && token.back().empty()))
         {
             m_reporter->report(
                 "SNP extraction/exclusion list contains 6 columns, "
