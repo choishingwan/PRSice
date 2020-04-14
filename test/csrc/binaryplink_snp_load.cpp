@@ -73,7 +73,7 @@ TEST_CASE("generate snp vector")
                               "chr1	SNP_5	0	742429	A C G");
         bim << input << std::endl;
         bim.close();
-        bplink.gen_bed_head("load_snp2.bed", num_sample, 3, true, false);
+        bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
         REQUIRE_THROWS(bplink.load_snps(
             "load_snp", std::vector<IITree<size_t, size_t>> {}, false));
     }
