@@ -140,55 +140,64 @@ public:
                    founder_info, pheno, token, sample_storage, sample_in_file,
                    duplicated_sample_id);
     }
-    bool test_check_ambig(const std::string &a1, const std::string &a2, const std::string& ref, bool & flipping){
+    bool test_check_ambig(const std::string& a1, const std::string& a2,
+                          const std::string& ref, bool& flipping)
+    {
         return check_ambig(a1, a2, ref, flipping);
     }
     bool test_check_chr(const std::string& chr_str, std::string& prev_chr,
-                             size_t& chr_num, bool& chr_error, bool& sex_error){
-        return(check_chr(chr_str, prev_chr, chr_num, chr_error, sex_error));
+                        size_t& chr_num, bool& chr_error, bool& sex_error)
+    {
+        return (check_chr(chr_str, prev_chr, chr_num, chr_error, sex_error));
     }
-    bool test_check_rs(const std::string& snp_id, const std::string &chr_id,
+    bool test_check_rs(const std::string& snp_id, const std::string& chr_id,
                        std::string& rs_id,
                        std::unordered_set<std::string>& processed_snps,
                        std::unordered_set<std::string>& duplicated_snps,
-                       Genotype* genotype){
-        return check_rs( snp_id, chr_id, rs_id,processed_snps, duplicated_snps, genotype);
+                       Genotype* genotype)
+    {
+        return check_rs(snp_id, chr_id, rs_id, processed_snps, duplicated_snps,
+                        genotype);
     }
     bool test_process_snp(
-            const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-            const std::string& mismatch_snp_record_name,
-            const std::string& mismatch_source, const std::string& snpid, SNP& snp,
-            std::unordered_set<std::string>& processed_snps,
-            std::unordered_set<std::string>& duplicated_snps,
-            std::vector<bool>& retain_snp, Genotype* genotype){
-        return
-                process_snp (exclusion_regions,  mismatch_snp_record_name, mismatch_source,snpid, snp,
-                processed_snps, duplicated_snps, retain_snp, genotype);
+        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+        const std::string& mismatch_snp_record_name,
+        const std::string& mismatch_source, const std::string& snpid, SNP& snp,
+        std::unordered_set<std::string>& processed_snps,
+        std::unordered_set<std::string>& duplicated_snps,
+        std::vector<bool>& retain_snp, Genotype* genotype)
+    {
+        return process_snp(exclusion_regions, mismatch_snp_record_name,
+                           mismatch_source, snpid, snp, processed_snps,
+                           duplicated_snps, retain_snp, genotype);
     }
-    bool
-    test_not_in_xregion(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const SNP& base, const SNP& target){
+    bool test_not_in_xregion(
+        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+        const SNP& base, const SNP& target)
+    {
         return not_in_xregion(exclusion_regions, base, target);
     }
-    void add_select_sample(const std::string& in){
+    void add_select_sample(const std::string& in)
+    {
         m_sample_selection_list.insert(in);
     }
-    void change_sample_selection(bool remove){
-        m_remove_sample = remove;
-    }
+    void change_sample_selection(bool remove) { m_remove_sample = remove; }
     void add_select_snp(const std::string& in, bool exclude)
     {
         m_snp_selection_list.insert(in);
         m_exclude_snp = exclude;
     }
-    void set_keep_nonfounder(bool keep_nonfounder){
+    void set_keep_nonfounder(bool keep_nonfounder)
+    {
         m_keep_nonfounder = keep_nonfounder;
     }
-    void load_snp(const std::string& rs){
+    void load_snp(const std::string& rs)
+    {
         m_existed_snps_index[rs] = m_existed_snps.size();
-        m_existed_snps.emplace_back(SNP(rs,1, 1, "A", "C", 0, 0, 1 , 1));
+        m_existed_snps.emplace_back(SNP(rs, 1, 1, "A", "C", 0, 0, 1, 1));
     }
-    void load_snp(SNP snp){
+    void load_snp(SNP snp)
+    {
         m_existed_snps_index[snp.rs()] = m_existed_snps.size();
         m_existed_snps.emplace_back(snp);
     }
@@ -217,10 +226,10 @@ public:
     size_t num_male() const { return m_num_male; }
     size_t num_female() const { return m_num_female; }
     size_t num_ambig_sex() const { return m_num_ambig_sex; }
-    size_t num_ambig() const { return m_num_ambig;}
-    size_t num_xrange() const {return m_num_xrange;}
+    size_t num_ambig() const { return m_num_ambig; }
+    size_t num_xrange() const { return m_num_xrange; }
     size_t num_nonfounder() const { return m_num_non_founder; }
-    size_t base_missed() const { return m_base_missed;}
+    size_t base_missed() const { return m_base_missed; }
     uintptr_t num_founder() const { return m_founder_ct; }
     uintptr_t num_sample() const { return m_sample_ct; }
     std::vector<uintptr_t> sample_for_ld() const { return m_sample_for_ld; }

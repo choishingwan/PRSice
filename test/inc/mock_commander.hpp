@@ -100,9 +100,11 @@ public:
     {
         Reporter reporter("log", 60, true);
 
-        std::vector<std::string> argv_str ;
-        if(!command.empty()) argv_str = misc::split("PRSice " + command);
-        else argv_str = {"PRSice "};
+        std::vector<std::string> argv_str;
+        if (!command.empty())
+            argv_str = misc::split("PRSice " + command);
+        else
+            argv_str = {"PRSice "};
         std::vector<char*> cstrings;
         cstrings.reserve(argv_str.size());
         for (size_t i = 0; i < argv_str.size(); ++i)

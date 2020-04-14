@@ -21,6 +21,7 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/genotype_load_snp.cpp
     ${TEST_SRC_DIR}/snp_test.cpp
     ${TEST_SRC_DIR}/binaryplink_sample_load.cpp
+    ${TEST_SRC_DIR}/binaryplink_snp_load.cpp
     ${TEST_SRC_DIR}/binarygen_sample_load.cpp
     )
 target_link_libraries(tests PUBLIC
