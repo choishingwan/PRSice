@@ -756,33 +756,59 @@ protected:
                         const SNP& target, const std::string& rs,
                         const std::string& a1, const std::string& a2,
                         const size_t chr_num, const size_t loc);
-
-    bool parse_rs_id(const std::vector<std::string_view>& token,
-                     const BaseFile& base_file,
-                     std::unordered_set<std::string>& processed_idx,
-                     std::unordered_set<std::string>& dup_rs,
-                     std::vector<size_t>& filter_count, std::string& rs_id)
+    /*
+        bool parse_chr_id(const std::vector<std::string_view>& token,
+                          const BaseFile& base_file,
+                          std::unordered_set<std::string>& processed_idx,
+                          std::unordered_set<std::string>& dup_rs,
+                          std::vector<size_t>& filter_count, std::string&
+       chr_id)
+        {
+            if (!base_file.has_column[+BASE_INDEX::CHR]
+                && !base_file.has_column[+BASE_INDEX::BP])
+            {
+                throw std::runtime_error(
+                    "Error: Need chr and bp column to construct chr id");
+            }
+            chr_id = SNP::chr_id(token[+BASE_INDEX::CHR],
+       token[+BASE_INDEX::BP]); return snp_dup_selection_check(chr_id,
+       processed_idx, dup_rs, filter_count);
+        }
+        */
+    bool snp_dup_selection_check(const std::string& id,
+                                 std::unordered_set<std::string>& processed_idx,
+                                 std::unordered_set<std::string>& dup_rs,
+                                 std::vector<size_t>& filter_count)
     {
         if (filter_count.size() != +FILTER_COUNT::MAX)
         { filter_count.resize(+FILTER_COUNT::MAX, 0); }
-        if (!base_file.has_column[+BASE_INDEX::RS])
-        { throw std::runtime_error("Error: RS ID column not provided!"); }
-        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
-        if (processed_idx.find(rs_id) != processed_idx.end())
+        if (processed_idx.find(id) != processed_idx.end())
         {
             ++filter_count[+FILTER_COUNT::DUP_SNP];
-            dup_rs.insert(rs_id);
+            dup_rs.insert(id);
             return false;
         }
-        auto&& selection = m_snp_selection_list.find(rs_id);
+        auto&& selection = m_snp_selection_list.find(id);
         if ((!m_exclude_snp && selection == m_snp_selection_list.end())
             || (m_exclude_snp && selection != m_snp_selection_list.end()))
         {
             ++filter_count[+FILTER_COUNT::SELECT];
             return false;
         }
-        processed_idx.insert(rs_id);
+        processed_idx.insert(id);
         return true;
+    }
+    bool parse_rs_id(const std::vector<std::string_view>& token,
+                     const BaseFile& base_file,
+                     std::unordered_set<std::string>& processed_idx,
+                     std::unordered_set<std::string>& dup_rs,
+                     std::vector<size_t>& filter_count, std::string& rs_id)
+    {
+        if (!base_file.has_column[+BASE_INDEX::RS])
+        { throw std::runtime_error("Error: RS ID column not provided!"); }
+        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
+        return (snp_dup_selection_check(rs_id, processed_idx, dup_rs,
+                                        filter_count));
     }
 
     void parse_allele(const std::vector<std::string_view>& token,
@@ -1169,10 +1195,16 @@ protected:
      */
     std::unordered_set<std::string>
     load_ref(std::unique_ptr<std::istream> input, bool ignore_fid);
-    bool check_rs(std::string& rsid, std::string& snpid,
+    bool
+    not_in_xregion(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+                   const size_t base_chr, const size_t base_bp,
+                   const size_t chr, const size_t bp);
+    bool check_rs(std::string& rsid, std::string& snpid, std::string& chrid,
                   std::unordered_set<std::string>& processed_snps,
                   std::unordered_set<std::string>& duplicated_snps,
                   Genotype* genotype);
+    bool check_ambig(const std::string& a1, const std::string& a2,
+                     const std::string& ref, bool& flipping);
     bool check_chr(const std::string& chr_str, std::string& prev_chr,
                    size_t& chr_num, bool& chr_error, bool& sex_error);
     void process_snp(

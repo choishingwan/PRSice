@@ -17,7 +17,10 @@
 #include "snp.hpp"
 
 SNP::~SNP() {}
-
+/*
+std::string SNP::g_separator = ":";
+bool SNP::g_use_chr = false;
+*/
 std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
 {
     std::vector<size_t> idx(input.size());

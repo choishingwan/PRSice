@@ -403,8 +403,21 @@ public:
         else
             return allele; // Cannot flip, so will just return it as is
     }
+    /*
+     static std::string chr_id(size_t chr, size_t loc)
+     {
+         return chr_id(std::to_string(chr) , std::to_string(loc));
+     }*/
+    /*
+    static std::string chr_id(const std::string& chr, const std::string& loc)
+    {
+        return chr + g_separator + loc;
+    }*/
 
 private:
+    /*static std::string g_separator;
+    static bool g_use_chr;
+    */
     AlleleCounts m_ref_count;
     AlleleCounts m_target_count;
     FileInfo m_target;

@@ -242,6 +242,13 @@ Genotype::transverse_base_file(
             throw std::runtime_error(line
                                      + "\nMore index than column in data\n");
         }
+
+        /*
+                if (SNP::use_chr_id()
+                    && !parse_chr_id(token, base_file, processed_rs, dup_rs,
+                                     filter_count, rs_id))
+                {}
+                else */
         if (!parse_rs_id(token, base_file, processed_rs, dup_rs, filter_count,
                          rs_id))
         { continue; }
@@ -256,28 +263,19 @@ Genotype::transverse_base_file(
                 + "\n");
         }
         if (base_file.has_column[+BASE_INDEX::BP]
-            && base_file.has_column[+BASE_INDEX::CHR])
+            && base_file.has_column[+BASE_INDEX::CHR]
+            && Genotype::within_region(exclusion_regions, chr, loc))
         {
-            if (Genotype::within_region(exclusion_regions, chr, loc))
-            {
-                ++filter_count[+FILTER_COUNT::REGION];
-                continue;
-            }
-        }
-        if (base_filter_by_value(token, base_file, base_qc.maf, filter_count,
-                                 +FILTER_COUNT::MAF, +BASE_INDEX::MAF))
-        {
-            // don't need to test case filtering if we have already filtered the
-            // SNP with the control MAF
-            if (!base_filter_by_value(token, base_file, base_qc.maf_case,
-                                      filter_count, +FILTER_COUNT::MAF,
-                                      +BASE_INDEX::MAF_CASE))
-            { continue; }
-        }
-        else
-        {
+            ++filter_count[+FILTER_COUNT::REGION];
             continue;
         }
+
+        if (!base_filter_by_value(token, base_file, base_qc.maf, filter_count,
+                                  +FILTER_COUNT::MAF, +BASE_INDEX::MAF)
+            || !base_filter_by_value(token, base_file, base_qc.maf_case,
+                                     filter_count, +FILTER_COUNT::MAF,
+                                     +BASE_INDEX::MAF_CASE))
+        { continue; }
         if (!base_filter_by_value(token, base_file, base_qc.info_score,
                                   filter_count, +FILTER_COUNT::INFO,
                                   +BASE_INDEX::INFO))
@@ -470,24 +468,74 @@ bool Genotype::check_chr(const std::string& chr_str, std::string& prev_chr,
     return true;
 }
 bool Genotype::check_rs(std::string& rsid, std::string& snpid,
+                        std::string& chrid,
                         std::unordered_set<std::string>& processed_snps,
                         std::unordered_set<std::string>& duplicated_snps,
                         Genotype* genotype)
 {
     if ((snpid.empty() || snpid == ".") && (rsid.empty() || rsid == "."))
-    { return false; }
+    {
+        ++m_base_missed;
+        return false;
+    }
     auto&& find_rs = genotype->m_existed_snps_index.find(rsid);
     if (find_rs == genotype->m_existed_snps_index.end())
     {
         if (snpid.empty()
             || genotype->m_existed_snps_index.find(snpid)
                    == genotype->m_existed_snps_index.end())
-        { return false; }
-        rsid = snpid;
+        {
+            if (chrid.empty()
+                || genotype->m_existed_snps_index.find(chrid)
+                       == genotype->m_existed_snps_index.end())
+            {
+                ++m_base_missed;
+                return false;
+            }
+            rsid = chrid;
+        }
+        else
+        {
+            rsid = snpid;
+        }
     }
     if (processed_snps.find(rsid) != processed_snps.end())
     {
+        // no need to add m_base_missed as this will completley error out
         duplicated_snps.insert(rsid);
+        return false;
+    }
+    return true;
+}
+
+bool Genotype::check_ambig(const std::string& a1, const std::string& a2,
+                           const std::string& ref, bool& flipping)
+{
+    bool ambig = ambiguous(a1, a2);
+    if (ambig)
+    {
+        ++m_num_ambig;
+        if (!m_keep_ambig) return false;
+        // we assume allele matching has been done
+        // therefore ref = a1 or complementary ref = a1
+        // or alt = a1 or complementary(alt = a1)
+        // but as this is ambiguous, the complemenary check will always return
+        // true AT match to TA without need of flipping (as comp TA = AT)
+        // but we want to flip this (we want AT to match to AT)
+        // so we will check if a1 == ref and only flip when that is not true
+        flipping = (a1 != ref);
+    }
+    return true;
+}
+bool Genotype::not_in_xregion(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    const size_t base_chr, const size_t base_bp, const size_t chr,
+    const size_t bp)
+{
+    if (base_chr != ~size_t(0) && base_bp != ~size_t(0)) return true;
+    if (Genotype::within_region(exclusion_regions, chr, bp))
+    {
+        ++m_num_xrange;
         return false;
     }
     return true;
@@ -505,24 +553,18 @@ void Genotype::process_snp(
     Genotype* genotype)
 {
     if (!check_chr(chr_str, prev_chr, chr_num, chr_error, sex_error)) return;
-    if (!check_rs(rsid, snpid, processed_snps, duplicated_snps, genotype))
+    // TODO: allow  chr_id in future
+    // std::string chr_id = SNP::chr_id(chr_num, bp);
+    std::string chr_id = "";
+    if (!check_rs(rsid, snpid, chr_id, processed_snps, duplicated_snps,
+                  genotype))
         return;
-    misc::to_upper(a1);
-    misc::to_upper(a2);
-    bool ambig = ambiguous(a1, a2);
-    if (ambig)
-    {
-        ++m_num_ambig;
-        if (!m_keep_ambig) return;
-    }
-    if (Genotype::within_region(exclusion_regions, chr_num, bp))
-    {
-        ++m_num_xrange;
-        return;
-    }
-    bool flipping;
     auto snp_idx = genotype->m_existed_snps_index[rsid];
     auto&& snp = genotype->m_existed_snps[snp_idx];
+
+    misc::to_upper(a1);
+    misc::to_upper(a2);
+    bool flipping;
     if (!snp.matching(chr_num, bp, a1, a2, flipping))
     {
         genotype->print_mismatch(mismatch_snp_record_name, mismatch_source, snp,
@@ -530,15 +572,18 @@ void Genotype::process_snp(
         ++m_num_ref_target_mismatch;
         return;
     }
-    else
-    {
-        processed_snps.insert(rsid);
-        if (ambig) { flipping = (a1 != snp.ref()); }
-        snp.add_snp_info(file_idx, byte_pos, chr_num, bp, a1, a2, flipping,
-                         m_is_ref);
-        retain_snp[snp_idx] = true;
-        ++ref_target_match;
-    }
+    if (!check_ambig(a1, a2, snp.ref(), flipping)) return;
+    // only do region test if we know we haven't done it during read_base
+    // we will do it in read_base if we have chr and loc info.
+    if (!not_in_xregion(exclusion_regions, snp.chr(), snp.loc(), chr_num, bp))
+    { return; }
+
+    //  only add valid SNPs
+    processed_snps.insert(rsid);
+    snp.add_snp_info(file_idx, byte_pos, chr_num, bp, a1, a2, flipping,
+                     m_is_ref);
+    retain_snp[snp_idx] = true;
+    ++ref_target_match;
 }
 
 void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
