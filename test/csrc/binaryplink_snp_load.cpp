@@ -69,8 +69,7 @@ TEST_CASE("generate snp vector")
     {
         bim.open("load_snp2.bim");
         auto input = GENERATE("chr1	SNP_5	0	-742429	A	C",
-                              "chr1	SNP_5	0	742429	A",
-                              "chr1	SNP_5	0	742429	A C G");
+                              "chr1	SNP_5	0	742429	A");
         bim << input << std::endl;
         bim.close();
         bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
