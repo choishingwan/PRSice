@@ -835,32 +835,6 @@ Genotype::load_ref(std::unique_ptr<std::istream> input, bool ignore_fid)
     return result;
 }
 
-// return true if chr code is ok
-// TODO: Might want to change it to something not rely on PLINK as this
-// shouldn't be too difficult anyway
-bool Genotype::chr_code_check(int32_t chr_code, bool& sex_error,
-                              bool& chr_error, std::string& error_message)
-{
-    if (chr_code < 0)
-    {
-        // invalid chr code
-        chr_error = true;
-        error_message = "Error: Invalid chromosome number for SNP";
-        return true;
-    }
-    if (chr_code > MAX_POSSIBLE_CHROM
-        || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
-    {
-        // this is sex / mt chromosome
-        sex_error = true;
-        error_message = "Warning: Currently not support "
-                        "haploid chromosome and sex "
-                        "chromosomes\n";
-        return true;
-    }
-    return false;
-}
-
 void Genotype::load_samples(bool verbose)
 {
     if (!m_remove_file.empty())

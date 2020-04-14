@@ -299,6 +299,32 @@ inline std::vector<std::string> split(const std::string& seq,
     return result;
 }
 
+inline void split(std::vector<std::string>& result, const std::string& seq,
+                  const std::string& separators = "\t ")
+{
+    std::size_t prev = 0, pos, idx = 0;
+    const size_t init_size = result.size();
+    // assuming we have the same size
+    // result.clear();
+    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
+    {
+        if (idx >= init_size)
+        { result.emplace_back(seq.substr(prev, pos - prev)); }
+        else
+        {
+            result[idx] = seq.substr(prev, pos - prev);
+        }
+        ++idx;
+        prev = pos + 1;
+    }
+    if (idx > init_size) { result.emplace_back(seq.substr(prev, pos - prev)); }
+    else
+    {
+        result[idx] = seq.substr(prev, pos - prev);
+        ++idx;
+    }
+    if (idx < init_size) { result.resize(idx); }
+}
 inline std::vector<std::string_view> tokenize(std::string_view str,
                                               std::string delims = "\t ")
 {
@@ -318,55 +344,6 @@ inline std::vector<std::string_view> tokenize(std::string_view str,
     return output;
 }
 
-inline std::vector<std::string_view> split(std::string_view str,
-                                           std::string delims = " ")
-{
-    std::vector<std::string_view> output;
-    // output.reserve(str.size() / 2);
-    for (auto first = str.data(), second = str.data(),
-              last = first + str.size();
-         second != last && first != last; first = second + 1)
-    {
-        second = std::find_first_of(first, last, std::cbegin(delims),
-                                    std::cend(delims));
-        if (first != second) output.emplace_back(first, second - first);
-    }
-    return output;
-}
-
-inline void split(std::vector<std::string>& result, const std::string& seq,
-                  const std::string& separators = "\t ")
-{
-    std::size_t prev = 0, pos, idx = 0;
-    const size_t init_size = result.size();
-    // assuming we have the same size
-    // result.clear();
-    while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
-    {
-        if (pos > prev)
-        {
-            if (idx >= init_size)
-            { result.emplace_back(seq.substr(prev, pos - prev)); }
-            else
-            {
-                result[idx] = seq.substr(prev, pos - prev);
-            }
-            ++idx;
-        }
-        prev = pos + 1;
-    }
-    if (prev < seq.length())
-    {
-        if (idx > init_size)
-        { result.emplace_back(seq.substr(prev, std::string::npos)); }
-        else
-        {
-            result[idx] = seq.substr(prev, std::string::npos);
-        }
-        ++idx;
-    }
-    if (idx < init_size) { result.resize(idx); }
-}
 
 class Convertor
 {

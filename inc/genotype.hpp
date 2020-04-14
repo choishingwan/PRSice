@@ -965,16 +965,8 @@ protected:
      */
     void init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                   bool no_xy = false, bool no_mt = false);
-    /*!
-     * \brief For a given error code, check if this chromsome should be kept
-     * \param chr_code is the chromosome code
-     * \param sex_error indicate if the error is related to sex chromosome
-     * \param chr_error indicate if the error is related to chromosome
-     * number too big \param error_message contain the error message \return
-     * true if we want to skip this chromosome
-     */
-    bool chr_code_check(int32_t chr_code, bool& sex_error, bool& chr_error,
-                        std::string& error_message);
+
+
     /*!
      * \brief Function to read in the sample. Any subclass must implement
      * this function. They \b must initialize the \b m_sample_info \b
