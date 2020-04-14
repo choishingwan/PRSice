@@ -50,7 +50,7 @@ TEST_CASE("Target validation")
         SECTION("universial bound check")
         {
             auto para = GENERATE("--geno ", "--maf ");
-            auto value = GENERATE(take(100, random(-1.1, 1.1)));
+            auto value = GENERATE(take(10, random(-1.1, 1.1)));
             REQUIRE(commander.parse_command_wrapper(std::string(para)
                                                     + std::to_string(value)));
             if (value > 1 || value < 0)
@@ -63,7 +63,7 @@ TEST_CASE("Target validation")
         SECTION("bgen bound check")
         {
             auto para = GENERATE("--hard-thres ", "--dose-thres ", "--info ");
-            auto value = GENERATE(take(100, random(-1.1, 1.1)));
+            auto value = GENERATE(take(10, random(-1.1, 1.1)));
             REQUIRE(commander.parse_command_wrapper(
                 "--type bgen " + std::string(para) + std::to_string(value)));
             if (value > 1 || value < 0)
@@ -80,7 +80,7 @@ TEST_CASE("Target validation")
         }
         SECTION("autosome")
         {
-            auto i = GENERATE(take(100, random(-100, 100)));
+            auto i = GENERATE(take(10, random(-100, 100)));
             REQUIRE(commander.parse_command_wrapper("--num-auto "
                                                     + std::to_string(i)));
             if (i < 0) { REQUIRE_FALSE(commander.target_check_wrapper()); }
@@ -142,7 +142,7 @@ TEST_CASE("Thresholding validation")
     }
     SECTION("bar level")
     {
-        auto i = GENERATE(take(100, random(-1.1, 1.1)));
+        auto i = GENERATE(take(10, random(-1.1, 1.1)));
         REQUIRE(commander.parse_command_wrapper("--bar-levels "
                                                 + std::to_string(i)));
         if (i <= 1.0 && i >= 0.0) { REQUIRE(commander.prsice_check_wrapper()); }
@@ -154,7 +154,7 @@ TEST_CASE("Thresholding validation")
     SECTION("high res check")
     {
         auto para = GENERATE("--lower ", "--upper ", "--inter ");
-        auto value = GENERATE(take(100, random(-1.1, 1.1)));
+        auto value = GENERATE(take(10, random(-1.1, 1.1)));
         REQUIRE(commander.parse_command_wrapper(std::string(para)
                                                 + std::to_string(value)));
         if (value > 1 || value < 0
@@ -188,7 +188,7 @@ TEST_CASE("Clump")
     {
         // we just check the validation, set and get checked before
         auto para = GENERATE("--clump-p ", "--clump-r2 ", "--proxy ");
-        auto value = GENERATE(take(100, random(-1.1, 1.1)));
+        auto value = GENERATE(take(10, random(-1.1, 1.1)));
         REQUIRE(commander.parse_command_wrapper(std::string(para)
                                                 + std::to_string(value)));
         if (value > 1 || value < 0)
@@ -253,7 +253,7 @@ TEST_CASE("Reference validation")
         SECTION("universial bound check")
         {
             auto para = GENERATE("--ld-geno ", "--ld-maf ");
-            auto value = GENERATE(take(100, random(-1.1, 1.1)));
+            auto value = GENERATE(take(10, random(-1.1, 1.1)));
             REQUIRE(commander.parse_command_wrapper(std::string(para)
                                                     + std::to_string(value)));
             if (value > 1 || value < 0)
@@ -267,7 +267,7 @@ TEST_CASE("Reference validation")
         {
             auto para =
                 GENERATE("--ld-hard-thres ", "--ld-dose-thres ", "--ld-info ");
-            auto value = GENERATE(take(100, random(-1.1, 1.1)));
+            auto value = GENERATE(take(10, random(-1.1, 1.1)));
             REQUIRE(commander.parse_command_wrapper(
                 "--ld-type bgen " + std::string(para) + std::to_string(value)));
             if (value > 1 || value < 0)
@@ -656,7 +656,7 @@ TEST_CASE("Phenotype validation")
             }
             SECTION("prevalence bound")
             {
-                auto i = GENERATE(take(100, random(1.1, -1.0)));
+                auto i = GENERATE(take(10, random(1.1, -1.0)));
                 REQUIRE(commander.parse_command_wrapper(
                     "--binary-target F,2T -k 0.1," + std::to_string(i)));
                 if (i <= 0 || i >= 1)
@@ -994,7 +994,7 @@ TEST_CASE("Base filtering validation")
                                         "A2", "SNP", "INFO", "MAF", "Cases"};
         SECTION("only control")
         {
-            auto i = GENERATE(take(100, random(-1.1, 1.1)));
+            auto i = GENERATE(take(10, random(-1.1, 1.1)));
             std::string input = std::to_string(i);
             REQUIRE(commander.parse_command_wrapper("--base-maf MAF:" + input));
             // maf ain't essential
@@ -1031,7 +1031,7 @@ TEST_CASE("Base filtering validation")
             }
             SECTION("Valid control")
             {
-                auto i = GENERATE(take(100, random(-1.1, 1.1)));
+                auto i = GENERATE(take(10, random(-1.1, 1.1)));
                 std::string input = std::to_string(i);
                 REQUIRE(commander.parse_command_wrapper(
                     "--base-maf MAF:0.1,Cases:" + input));

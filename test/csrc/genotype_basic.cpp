@@ -85,7 +85,7 @@ TEST_CASE("Initialize genotype")
         }
         SECTION("chromosome number replacement")
         {
-            auto num_auto = GENERATE(take(10, random(1, 40)));
+            auto num_auto = GENERATE(take(5, random(1, 40)));
             geno.num_autosome = num_auto;
             geno.file_name = "chr#_geno";
             std::vector<std::string> expected;
@@ -102,7 +102,7 @@ TEST_CASE("Initialize genotype")
         }
         SECTION("chromosome number multiple replacement")
         {
-            auto num_auto = GENERATE(take(10, random(1, 40)));
+            auto num_auto = GENERATE(take(5, random(1, 40)));
             geno.num_autosome = num_auto;
             geno.file_name = "chr#_geno#";
             std::vector<std::string> expected;
@@ -183,7 +183,7 @@ TEST_CASE("load snp selection")
         SECTION("Guess from header")
         {
             std::vector<std::string> input(6, "A");
-            auto idx = GENERATE(take(10, random(0, 5)));
+            auto idx = GENERATE(take(5, random(0, 5)));
             auto header = GENERATE("RS.ID", "RS_ID", "RSID", "SNP.ID", "SNP_ID",
                                    "Variant_ID", "Variant.ID", "SNP");
 
@@ -292,7 +292,7 @@ TEST_CASE("initialize masks")
 {
     // will become useful if we ever want to include haploid or sex chromosomes
     // we assume all autosomes to be diploid at the moment
-    auto n_auto = GENERATE(take(10, random(1, 40)));
+    auto n_auto = GENERATE(take(5, random(1, 40)));
     mockGenotype geno;
     SECTION("standard usage")
     {

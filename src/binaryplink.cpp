@@ -222,54 +222,42 @@ void BinaryPlink::gen_snp_vector(
     std::vector<std::string> bim_token;
     auto&& genotype = (m_is_ref) ? target : this;
     std::vector<bool> retain_snp(genotype->m_existed_snps.size(), false);
-    std::ifstream bim;
-    std::string bim_name, bed_name, chr, line;
-    std::string prev_chr = "", error_message = "";
+    std::string bed_name, line;
+    std::string prev_chr = "", snpid = "";
     std::string prefix;
     uintptr_t bed_offset;
     size_t num_retained = 0;
     size_t chr_num = 0;
     size_t num_snp_read = 0;
     std::streampos byte_pos;
-    int chr_code = 0;
-    bool chr_error = false, chr_sex_error = false, prev_chr_sex_error = false,
-         prev_chr_error = false, flipping = false;
+    bool chr_error = false, chr_sex_error = false;
     for (size_t idx = 0; idx < m_genotype_file_names.size(); ++idx)
     {
         // go through each genotype file
         prefix = m_genotype_file_names[idx];
-        bim_name = prefix + ".bim";
         bed_name = prefix + ".bed";
         // make sure we reset the flag of the ifstream by closing it before use
-        if (bim.is_open()) bim.close();
-        bim.clear();
-        bim.open(bim_name.c_str());
-        if (!bim.is_open())
-        {
-            throw std::runtime_error("Error: Cannot open bim file: "
-                                     + bim_name);
-        }
+        auto bim = misc::load_stream(prefix + ".bim");
         // First pass, get the number of marker in bed & bim
         // as we want the number for checking, num_snp_read will start at 0
         num_snp_read = 0;
         prev_chr = "";
-        while (std::getline(bim, line))
+        while (std::getline(*bim, line))
         {
             misc::trim(line);
             if (line.empty()) continue;
             ++num_snp_read;
         }
-        bim.clear();
-        bim.seekg(0, bim.beg);
+        (*bim).clear();
+        (*bim).seekg(0, (*bim).beg);
         // check if the bed file is valid
         check_bed(bed_name, num_snp_read, bed_offset);
         // now go through the bim file and perform filtering
         num_snp_read = 0;
-        while (std::getline(bim, line))
+        while (std::getline(*bim, line))
         {
             misc::trim(line);
             if (line.empty()) continue;
-            // we need to remember the actual number read is num_snp_read+1
             ++num_snp_read;
             misc::split(bim_token, line);
             if (bim_token.size() < 6)
@@ -279,50 +267,10 @@ void BinaryPlink::gen_snp_vector(
                     "line: "
                     + misc::to_string(num_snp_read) + "\n");
             }
-            auto&& base_idx =
-                genotype->m_existed_snps_index.find(bim_token[+BIM::RS]);
-            if (base_idx == genotype->m_existed_snps_index.end())
-            {
-                ++m_base_missed;
-                continue;
-            }
-            // read in the chromosome string
-            chr = bim_token[+BIM::CHR];
-            // check if this is a new chromosome. If this is a new chromosome,
-            // check if we want to remove it
-            if (chr != prev_chr)
-            {
-                // get the chromosome code using PLINK 2 function
-                chr_code = get_chrom_code_raw(chr.c_str());
-                // check if we want to skip this chromosome
-                if (chr_code_check(chr_code, chr_sex_error, chr_error,
-                                   error_message))
-                {
-                    // only print chr error message if we haven't already
-                    if (chr_error && !prev_chr_error)
-                    {
-                        m_reporter->report(error_message);
-                        prev_chr_error = chr_error;
-                    }
-                    // only print sex chr error message if we haven't already
-                    else if (chr_sex_error && !prev_chr_sex_error)
-                    {
-                        m_reporter->report(error_message);
-                        prev_chr_sex_error = chr_sex_error;
-                    }
-                    continue;
-                }
-                // only update the prev_chr after we have done the checking
-                // this will help us to continue to skip all SNPs that are
-                // supposed to be removed instead of the first entry
-                prev_chr = chr;
-                chr_num = static_cast<size_t>(chr_code);
-            }
-            // now read in the coordinate
             size_t loc = ~size_t(0);
             try
             {
-                loc = misc::string_to_size_t(bim_token[+BIM::BP].c_str());
+                loc = misc::convert<size_t>(bim_token[+BIM::BP]);
             }
             catch (...)
             {
@@ -331,67 +279,16 @@ void BinaryPlink::gen_snp_vector(
                     + ":" + bim_token[+BIM::BP]
                     + "\nPlease check you have the correct input");
             }
-            if (Genotype::within_region(exclusion_regions, chr_num, loc))
-            {
-                ++m_num_xrange;
-                continue;
-            }
-
-            // ensure all alleles are capitalized for easy matching
-            std::transform(bim_token[+BIM::A1].begin(),
-                           bim_token[+BIM::A1].end(),
-                           bim_token[+BIM::A1].begin(), ::toupper);
-            std::transform(bim_token[+BIM::A2].begin(),
-                           bim_token[+BIM::A2].end(),
-                           bim_token[+BIM::A2].begin(), ::toupper);
-            // check if this is a duplicated SNP
-            bool ambig = ambiguous(bim_token[+BIM::A1], bim_token[+BIM::A2]);
-            if (processed_snps.find(bim_token[+BIM::RS])
-                != processed_snps.end())
-            {
-                duplicated_snp.insert(bim_token[+BIM::RS]);
-                continue;
-            }
-            else if (!ambig || m_keep_ambig)
-            {
-                // if the SNP is not ambiguous (or if we want to keep ambiguous
-                // SNPs)
-                m_num_ambig += ambig;
-                if (!genotype->m_existed_snps[base_idx->second].matching(
-                        chr_num, loc, bim_token[+BIM::A1], bim_token[+BIM::A2],
-                        flipping))
-                {
-                    genotype->print_mismatch(
-                        mismatch_snp_record_name, mismatch_print_type,
-                        genotype->m_existed_snps[base_idx->second],
-                        bim_token[+BIM::RS], bim_token[+BIM::A1],
-                        bim_token[+BIM::A2], chr_num, loc);
-                    ++m_num_ref_target_mismatch;
-                }
-                else
-                {
-                    byte_pos = static_cast<std::streampos>(
-                        bed_offset
-                        + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
-                    if (ambig)
-                    {
-                        flipping = (bim_token[+BIM::A1]
-                                    != m_existed_snps[base_idx->second].ref());
-                    }
-                    genotype->m_existed_snps[base_idx->second].add_snp_info(
-                        idx, byte_pos, chr_num, loc, bim_token[+BIM::A1],
-                        bim_token[+BIM::A2], flipping, m_is_ref);
-                    processed_snps.insert(bim_token[+BIM::RS]);
-                    retain_snp[base_idx->second] = true;
-                    ++num_retained;
-                }
-            }
-            else
-            {
-                ++m_num_ambig;
-            }
+            byte_pos = static_cast<std::streampos>(
+                bed_offset + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
+            process_snp(exclusion_regions, bim_token[+BIM::CHR],
+                        mismatch_snp_record_name, mismatch_print_type, loc, idx,
+                        byte_pos, bim_token[+BIM::A1], bim_token[+BIM::A2],
+                        bim_token[+BIM::RS], snpid, processed_snps,
+                        duplicated_snp, retain_snp, prev_chr, chr_num,
+                        num_retained, chr_error, chr_sex_error, genotype);
         }
-        bim.close();
+        bim.reset();
     }
     // try to release memory
     if (num_retained != genotype->m_existed_snps.size())

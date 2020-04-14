@@ -54,8 +54,8 @@ TEST_CASE("Covariate Transformation")
         }
         SECTION("valid ranges")
         {
-            int start = GENERATE(take(10, random(1, 1000)));
-            int end = GENERATE(take(10, random(1, 1000)));
+            int start = GENERATE(take(5, random(1, 1000)));
+            int end = GENERATE(take(5, random(1, 1000)));
             REQUIRE(mockCommander::parse_range_wrapper(
                 std::to_string(start) + "-" + std::to_string(end), res));
             if (start > end) { std::swap(start, end); }
@@ -70,7 +70,7 @@ TEST_CASE("Covariate Transformation")
         }
         SECTION("single value")
         {
-            auto i = GENERATE(take(100, random(-100, 100)));
+            auto i = GENERATE(take(5, random(-100, 100)));
             if (i < 0)
             {
                 REQUIRE_FALSE(

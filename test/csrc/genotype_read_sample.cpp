@@ -11,7 +11,7 @@ TEST_CASE("initialize sample vectors")
     }
     SECTION("with samples")
     {
-        auto n_sample = GENERATE(range(1023, 1025), range(127, 129));
+        auto n_sample = GENERATE(range(1023, 1025));
         geno.set_sample(static_cast<uintptr_t>(n_sample));
         const uintptr_t expected_size =
             BITCT_TO_WORDCT(static_cast<uintptr_t>(n_sample));
@@ -35,9 +35,7 @@ TEST_CASE("Sample object generation")
     std::vector<std::string> duplicated_sample_names;
     std::vector<Sample_ID> sample_storage;
     // initialize the vector for later use
-    auto n_sample = GENERATE(range(63, 65));
-    // auto n_sample = GENERATE(range(63, 65),range(1023, 1025), range(127,
-    // 129));
+    auto n_sample = GENERATE(range(127, 129));
     geno.set_sample(static_cast<uintptr_t>(n_sample));
     geno.test_init_sample_vectors();
     // test handling of ignore fid
@@ -45,13 +43,14 @@ TEST_CASE("Sample object generation")
     geno.set_ignore_fid(ignore_fid);
     auto keep_nonfounder = GENERATE(true, false);
     geno.set_keep_nonfounder(keep_nonfounder);
-    auto delim = GENERATE(" ", "-", "\t");
+    // use funny symbol to make sure it is set and used
+    auto delim = "@";
     geno.set_delim(delim);
     // select
     // extract
     // duplicates
     // test different file format
-    auto n_col = GENERATE(range(5, 20));
+    auto n_col = GENERATE(take(2, range(5, 20)));
     // test handling of sex chromosome
     auto has_sex = GENERATE(true, false);
     auto has_father_id = GENERATE(true, false);

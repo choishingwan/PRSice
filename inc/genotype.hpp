@@ -1160,7 +1160,23 @@ protected:
      */
     std::unordered_set<std::string>
     load_ref(std::unique_ptr<std::istream> input, bool ignore_fid);
-
+    bool check_rs(std::string& rsid, std::string& snpid,
+                  std::unordered_set<std::string>& processed_snps,
+                  std::unordered_set<std::string>& duplicated_snps,
+                  Genotype* genotype);
+    bool check_chr(const std::string& chr_str, std::string& prev_chr,
+                   size_t& chr_num, bool& chr_error, bool& sex_error);
+    void process_snp(
+        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+        const std::string& chr_str, const std::string& mismatch_snp_record_name,
+        const std::string& mismatch_source, const size_t& bp,
+        const size_t file_idx, const std::streampos byte_pos, std::string& a1,
+        std::string& a2, std::string& rsid, std::string& snpid,
+        std::unordered_set<std::string>& processed_snps,
+        std::unordered_set<std::string>& duplicated_snps,
+        std::vector<bool>& retain_snp, std::string& prev_chr, size_t& chr_num,
+        size_t ref_target_match, bool& chr_error, bool& sex_error,
+        Genotype* genotype);
     void shrink_snp_vector(const std::vector<bool>& retain)
     {
         m_existed_snps.erase(

@@ -358,21 +358,15 @@ void BinaryGen::gen_snp_vector(
     std::string file_name;
     std::string error_message = "";
     std::string A1, A2, prefix;
-    std::streampos byte_pos, start;
+    std::streampos byte_pos;
     size_t total_unfiltered_snps = 0;
     size_t ref_target_match = 0;
     size_t num_snp;
     size_t chr_num = 0;
     uint32_t SNP_position = 0;
     uint32_t offset;
-    int chr_code = 0;
-    bool exclude_snp = false;
     bool chr_sex_error = false;
     bool chr_error = false;
-    bool prev_chr_sex_error = false;
-    bool prev_chr_error = false;
-    bool flipping = false;
-    bool to_remove = false;
     for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
     {
         // get the total unfiltered snp size so that we can initalize the vector
@@ -422,124 +416,21 @@ void BinaryGen::gen_snp_vector(
                 fprintf(stderr, "\r%zu SNPs processed in %s\r", i_snp,
                         bgen_name.c_str());
             }
-            m_unfiltered_marker_ct++;
-            start = bgen_file.tellg();
+            ++m_unfiltered_marker_ct;
             // directly use the library without decompressing the genotype
             read_snp_identifying_data(bgen_file, context, &SNPID, &RSID,
                                       &chromosome, &SNP_position, &A1, &A2);
-            exclude_snp = false;
-            if (chromosome != prev_chr)
-            {
-                chr_code = get_chrom_code_raw(chromosome.c_str());
-                if (chr_code_check(chr_code, chr_sex_error, chr_error,
-                                   error_message))
-                {
-                    if (chr_error && !prev_chr_error)
-                    {
-                        std::cerr << error_message << "\n";
-                        prev_chr_error = chr_error;
-                    }
-                    if (chr_sex_error && !prev_chr_sex_error)
-                    {
-                        std::cerr << error_message << "\n";
-                        prev_chr_sex_error = chr_sex_error;
-                    }
-                    exclude_snp = true;
-                }
-                chr_num = ~size_t(0);
-                if (!exclude_snp)
-                {
-                    // only update prev_chr if we want to include this SNP
-                    prev_chr = chromosome;
-                    chr_num = static_cast<size_t>(chr_code);
-                }
-            }
-
-            if (RSID == "." && SNPID == ".")
-            {
-                // when both rs id and SNP id isn't available, just skip
-                exclude_snp = true;
-            }
-            // default to RS
-            cur_id = RSID;
-            // by this time point, we should always have the
-            // m_existed_snps_index propagated with SNPs from the base. So we
-            // can first check if the SNP are presented in base
-            auto&& find_rs = genotype->m_existed_snps_index.find(RSID);
-            auto&& find_snp = genotype->m_existed_snps_index.find(SNPID);
-            if (find_rs == genotype->m_existed_snps_index.end()
-                && find_snp == genotype->m_existed_snps_index.end())
-            {
-                // this is the reference panel, and the SNP wasn't found in the
-                // target doens't matter if we use RSID or SNPID
-                ++m_base_missed;
-                exclude_snp = true;
-            }
-            else if (find_snp != genotype->m_existed_snps_index.end())
-            {
-                // we found the SNPID
-                cur_id = SNPID;
-            }
-            else if (find_rs != genotype->m_existed_snps_index.end())
-            {
-                // we found the RSID
-                cur_id = RSID;
-            }
-
-            bool ambig = ambiguous(A1, A2);
-            if (processed_snps.find(cur_id) != processed_snps.end())
-            {
-                duplicated_snps.insert(cur_id);
-                exclude_snp = true;
-            }
-            // perform check on ambiguousity
-            else if (ambig)
-            {
-                ++m_num_ambig;
-                if (!m_keep_ambig) exclude_snp = true;
-            }
-
-            to_remove = Genotype::within_region(exclusion_regions, chr_num,
-                                                SNP_position);
-            if (to_remove)
-            {
-                ++m_num_xrange;
-                exclude_snp = true;
-            }
             // get the current location of bgen file, this will be used to skip
             // to current location later on
             byte_pos = bgen_file.tellg();
+            process_snp(exclusion_regions, chromosome, mismatch_snp_record_name,
+                        mismatch_source, SNP_position, file_idx, byte_pos, A1,
+                        A2, RSID, SNPID, processed_snps, duplicated_snps,
+                        retain_snp, prev_chr, chr_num, ref_target_match,
+                        chr_error, chr_sex_error, genotype);
             // read in the genotype data block so that we advance the ifstream
             // pointer to the next SNP entry
             read_genotype_data_block(bgen_file, context, &m_buffer1);
-            // if we want to exclude this SNP, we will not perform
-            // decompression
-            if (!exclude_snp)
-            {
-                // A1 = alleles.front();
-                // A2 = alleles.back();
-                auto&& target_index = genotype->m_existed_snps_index[cur_id];
-                if (!genotype->m_existed_snps[target_index].matching(
-                        chr_num, SNP_position, A1, A2, flipping))
-                {
-                    genotype->print_mismatch(
-                        mismatch_snp_record_name, mismatch_source,
-                        genotype->m_existed_snps[target_index], cur_id, A1, A2,
-                        chr_num, SNP_position);
-                    ++m_num_ref_target_mismatch;
-                }
-                else
-                {
-                    processed_snps.insert(cur_id);
-                    if (ambig)
-                    { flipping = (A1 != m_existed_snps[target_index].ref()); }
-                    genotype->m_existed_snps[target_index].add_snp_info(
-                        file_idx, byte_pos, chr_num, SNP_position, A1, A2,
-                        flipping, m_is_ref);
-                    retain_snp[target_index] = true;
-                    ++ref_target_match;
-                }
-            }
         }
         if (num_snp % 1000 == 0)
         {

@@ -31,7 +31,7 @@ TEST_CASE("base file read")
             base_file.column_index[+BASE_INDEX::CHR] = 0;
             SECTION("Numeric input")
             {
-                auto i = GENERATE(take(50, random(1, 40)));
+                auto i = GENERATE(take(10, random(1, 40)));
                 std::string line = "chr" + std::to_string(i) + tmp;
                 token = misc::tokenize(line);
                 // 22 is the default number of autosome
@@ -103,7 +103,7 @@ TEST_CASE("base file read")
         std::string suffix = " rs1234 a t";
         // converter tested, doesn't need to test non-numeric
         auto has_column = GENERATE(true, false);
-        auto loc = GENERATE(take(100, random(-10000, 10000)));
+        auto loc = GENERATE(take(10, random(-10000, 10000)));
         base_file.has_column[+BASE_INDEX::BP] = has_column;
         base_file.column_index[+BASE_INDEX::BP] = 1;
         std::string line = pref + std::to_string(loc) + suffix;
@@ -126,7 +126,7 @@ TEST_CASE("base file read")
     {
         SECTION("numeric")
         {
-            auto i = GENERATE(take(100, random(-1.1, 1.1)));
+            auto i = GENERATE(take(10, random(-1.1, 1.1)));
             auto threshold = GENERATE(take(10, random(0.1, 1.0)));
             std::string input = std::to_string(i);
             double expected = misc::Convertor::convert<double>(input);

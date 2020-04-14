@@ -2,6 +2,15 @@
 #include "catch.hpp"
 #include "mock_binarygen.hpp"
 
+TEST_CASE("failed bgen load")
+{
+    // Require external samples
+    GenoFile geno;
+    geno.file_name = "pheno_load";
+    Phenotype pheno;
+    Reporter reporter("log", 60, true);
+    REQUIRE_THROWS(mock_binarygen(geno, pheno, " ", &reporter));
+}
 TEST_CASE("check phenotype header")
 {
     // Check if the external sample file contain a header
@@ -85,12 +94,13 @@ TEST_CASE("sample file check")
         mock_binarygen bgen;
         Reporter reporter("log", 60, true);
         bgen.set_reporter(&reporter);
-        size_t ncol = GENERATE(range(5, 10));
-        size_t sex_col = GENERATE(range(3, 4));
+        auto ncol = GENERATE(take(2, random(size_t(5), size_t(10))));
+        auto sex_col = GENERATE(range(size_t(3), size_t(4)));
+
         std::string line, format;
         std::vector<std::string> header(ncol, "0");
         auto colname = GENERATE("Sex", "sex", "SEX", "nosex");
-        header[sex_col] = colname;
+        header[static_cast<size_t>(sex_col)] = colname;
         line = header[0];
         for (size_t i = 1; i < ncol; ++i) { line.append("\t" + header[i]); }
         auto code = GENERATE("D", "C");
@@ -111,7 +121,7 @@ TEST_CASE("full sample load")
 {
     auto ignore_fid = GENERATE(true, false);
     auto is_ref = GENERATE(true, false);
-    auto delim = GENERATE(" ", "\t");
+    auto delim = GENERATE("@");
     Reporter reporter("log", 60, true);
     GenoFile geno;
     geno.is_ref = is_ref;

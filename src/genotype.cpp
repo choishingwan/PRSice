@@ -438,6 +438,108 @@ bool Genotype::has_parent(const std::unordered_set<std::string>& founder_info,
     auto found = founder_info.find(fid + m_delim + token.at(idx));
     return found != founder_info.end();
 }
+
+
+bool Genotype::check_chr(const std::string& chr_str, std::string& prev_chr,
+                         size_t& chr_num, bool& chr_error, bool& sex_error)
+{
+    if (chr_str != prev_chr)
+    {
+        auto chr_code = get_chrom_code(chr_str);
+        if (chr_code < 0)
+        {
+            if (!chr_error)
+                m_reporter->report("Error: Invalid chromosome number for SNP");
+            chr_error = true;
+            return false;
+        }
+        if (chr_code > static_cast<int>(m_autosome_ct)
+            || is_set(m_haploid_mask.data(), static_cast<uint32_t>(chr_code)))
+        {
+            // this is sex / mt chromosome
+            if (!sex_error)
+                m_reporter->report("Warning: Currently not support "
+                                   "haploid chromosome and sex "
+                                   "chromosomes\n");
+            sex_error = true;
+            return false;
+        }
+        chr_num = static_cast<size_t>(chr_code);
+        prev_chr = chr_str;
+    }
+    return true;
+}
+bool Genotype::check_rs(std::string& rsid, std::string& snpid,
+                        std::unordered_set<std::string>& processed_snps,
+                        std::unordered_set<std::string>& duplicated_snps,
+                        Genotype* genotype)
+{
+    if (snpid == "." && rsid == ".") { return false; }
+    auto&& find_rs = genotype->m_existed_snps_index.find(rsid);
+    if (find_rs == genotype->m_existed_snps_index.end())
+    {
+        if (snpid.empty()
+            || genotype->m_existed_snps_index.find(snpid)
+                   == genotype->m_existed_snps_index.end())
+        { return false; }
+        rsid = snpid;
+    }
+    if (processed_snps.find(rsid) != processed_snps.end())
+    {
+        duplicated_snps.insert(rsid);
+        return false;
+    }
+    return true;
+}
+void Genotype::process_snp(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    const std::string& chr_str, const std::string& mismatch_snp_record_name,
+    const std::string& mismatch_source, const size_t& bp, const size_t file_idx,
+    const std::streampos byte_pos, std::string& a1, std::string& a2,
+    std::string& rsid, std::string& snpid,
+    std::unordered_set<std::string>& processed_snps,
+    std::unordered_set<std::string>& duplicated_snps,
+    std::vector<bool>& retain_snp, std::string& prev_chr, size_t& chr_num,
+    size_t ref_target_match, bool& chr_error, bool& sex_error,
+    Genotype* genotype)
+{
+    if (!check_chr(chr_str, prev_chr, chr_num, chr_error, sex_error)) return;
+    if (!check_rs(rsid, snpid, processed_snps, duplicated_snps, genotype))
+        return;
+    misc::to_upper(a1);
+    misc::to_upper(a2);
+    bool ambig = ambiguous(a1, a2);
+    if (ambig)
+    {
+        ++m_num_ambig;
+        if (!m_keep_ambig) return;
+    }
+    if (Genotype::within_region(exclusion_regions, chr_num, bp))
+    {
+        ++m_num_xrange;
+        return;
+    }
+    bool flipping;
+    auto snp_idx = genotype->m_existed_snps_index[rsid];
+    auto&& snp = genotype->m_existed_snps[snp_idx];
+    if (!snp.matching(chr_num, bp, a1, a2, flipping))
+    {
+        genotype->print_mismatch(mismatch_snp_record_name, mismatch_source, snp,
+                                 rsid, a1, a2, chr_num, bp);
+        ++m_num_ref_target_mismatch;
+        return;
+    }
+    else
+    {
+        processed_snps.insert(rsid);
+        if (ambig) { flipping = (a1 != snp.ref()); }
+        snp.add_snp_info(file_idx, byte_pos, chr_num, bp, a1, a2, flipping,
+                         m_is_ref);
+        retain_snp[snp_idx] = true;
+        ++ref_target_match;
+    }
+}
+
 void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
                           const size_t sex_idx, const size_t dad_idx,
                           const size_t mum_idx, const size_t cur_idx,
@@ -828,6 +930,7 @@ void Genotype::print_mismatch(const std::string& out, const std::string& type,
     m_mismatch_snp_record << a1 << "\t" << target.ref() << "\t" << a2 << "\t"
                           << target.alt() << std::endl;
 }
+
 void Genotype::load_snps(
     const std::string& out,
     const std::vector<IITree<size_t, size_t>>& exclusion_regions, bool verbose,

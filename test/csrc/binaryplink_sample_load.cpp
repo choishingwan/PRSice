@@ -10,6 +10,8 @@ TEST_CASE("binary plink load sample")
     Phenotype pheno;
     pheno.ignore_fid = GENERATE(true, false);
     Reporter reporter("log", 60, true);
+    auto keep_nonfounder = GENERATE(true, false);
+    auto is_ref = GENERATE(true, false);
     SECTION("Normal file")
     {
         // generate a small test file
@@ -18,8 +20,6 @@ TEST_CASE("binary plink load sample")
         mock_fam << "CAS_1 CAS_2 0 0 1 2" << std::endl;
         mock_fam << "CAS_1 CAS_3 CAS_1 CAS_2 1 2" << std::endl;
         mock_binaryplink bplink(geno, pheno, " ", &reporter);
-        auto keep_nonfounder = GENERATE(true, false);
-        auto is_ref = GENERATE(true, false);
         if (is_ref) { bplink.reference(); }
         bplink.keep_nonfounder(keep_nonfounder);
         // this is ok as we know we haven't check for the bed and bim file yet
@@ -55,8 +55,6 @@ TEST_CASE("binary plink load sample")
         mock_fam << "CAS_1 CAS_2" << std::endl;
         mock_fam << "CAS_1 CAS_3 CAS_1 CAS_2 1 2 3 4 5 6 7" << std::endl;
         mock_binaryplink bplink(geno, pheno, " ", &reporter);
-        auto keep_nonfounder = GENERATE(true, false);
-        auto is_ref = GENERATE(true, false);
         if (is_ref) { bplink.reference(); }
         bplink.keep_nonfounder(keep_nonfounder);
         // this is ok as we know we haven't check for the bed and bim file yet

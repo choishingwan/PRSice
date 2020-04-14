@@ -27,43 +27,6 @@ protected:
     void TearDown() override {}
 };
 
-TEST_F(SNP_INIT_TEST, INIT_TEST)
-{
-    // check if the initialization sets all the parameters correctly
-    size_t homcom, het, homrar, missing;
-    ASSERT_STREQ(snp.rs().c_str(), rs.c_str());
-    ASSERT_STREQ(snp.ref().c_str(), ref.c_str());
-    ASSERT_STREQ(snp.alt().c_str(), alt.c_str());
-    ASSERT_EQ(snp.chr(), chr);
-    ASSERT_EQ(snp.loc(), loc);
-    bool is_ref = true;
-    // The file information should be missing thus far
-    ASSERT_EQ(snp.get_file_idx(is_ref), ~size_t(0));
-    ASSERT_EQ(snp.get_file_idx(!is_ref), ~size_t(0));
-    ASSERT_EQ(snp.get_byte_pos(is_ref), 0);
-    ASSERT_EQ(snp.get_byte_pos(!is_ref), 0);
-    // When initialize without count, has_count (return value of get_counts)
-    // should be false
-    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, false));
-    // should be false for both using reference maf and not using it
-    ASSERT_FALSE(snp.get_counts(homcom, het, homrar, missing, true));
-    // default of clump should be false
-    ASSERT_FALSE(snp.clumped());
-    // default of flipped should be false
-    ASSERT_FALSE(snp.is_flipped());
-    ASSERT_DOUBLE_EQ(snp.stat(), stat);
-    ASSERT_DOUBLE_EQ(snp.p_value(), p);
-    ASSERT_DOUBLE_EQ(snp.get_threshold(), p_threshold);
-    ASSERT_EQ(snp.category(), category);
-    // default bounaries is always ~size_t(0)
-    ASSERT_EQ(snp.low_bound(), ~size_t(0));
-    ASSERT_EQ(snp.up_bound(), ~size_t(0));
-    ASSERT_EQ(homcom, 0);
-    ASSERT_EQ(het, 0);
-    ASSERT_EQ(homrar, 0);
-    ASSERT_EQ(missing, 0);
-}
-
 TEST_F(SNP_INIT_TEST, ADD_REF)
 {
     // default, reference are empty

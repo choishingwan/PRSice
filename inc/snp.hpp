@@ -27,9 +27,10 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
-static_assert(sizeof(std::streamsize) <= sizeof(unsigned long long),
-              "streampos larger than long long, don't know how to proceed. "
-              "Please use PRSice on another machine");
+static_assert(
+    sizeof(std::streamsize) <= sizeof(unsigned long long),
+    "streampos larger than unsigned long long, don't know how to proceed. "
+    "Please use PRSice on another machine");
 class Genotype;
 class SNP
 {
@@ -60,18 +61,7 @@ public:
         target.name_idx = idx;
         target.byte_pos = byte_pos;
     }
-    void update_file(const size_t& idx, const std::streampos byte_pos,
-                     const bool is_ref, const bool flip)
-    {
-        auto&& target = is_ref ? m_reference : m_target;
-        target.name_idx = idx;
-        target.byte_pos = byte_pos;
-        if (is_ref) { m_ref_flipped = flip; }
-        else
-        {
-            m_flipped = flip;
-        }
-    }
+
     void add_snp_info(const size_t& idx, const std::streampos byte_pos,
                       const size_t chr, const size_t loc,
                       const std::string& ref, const std::string& alt,
@@ -83,9 +73,9 @@ public:
             m_target.byte_pos = byte_pos;
             m_chr = chr;
             m_loc = loc;
-            m_flipped = flipping;
             m_ref = ref;
             m_alt = alt;
+            m_flipped = flipping;
         }
         else
         {
@@ -109,7 +99,7 @@ public:
      * \param chr is the chromosome encoding of the other SNP
      * \param loc is the coordinate of the other SNP
      * \param ref is the reference allele of the other SNP
-     * \param alt is the alternative allele of teh other SNP
+     * \param alt is the alternative allele of the other SNP
      * \param flipped is used as a return value. If flipping is required,
      * flipped = true
      * \return true if it is a match
@@ -136,14 +126,17 @@ public:
             else
                 return true;
         }
-        else if (!m_alt.empty() && !alt.empty())
+        else if (!alt.empty())
         {
-            if ((m_ref == alt) && (m_alt == ref))
+            // here, we already know the refs don't match so we want it to match
+            // with alt
+            if ((m_ref == alt) && (m_alt.empty() || m_alt == ref))
             {
                 flipped = true;
                 return true;
             }
-            if ((complement(m_ref) == alt) && (complement(m_alt) == ref))
+            if ((complement(m_ref) == alt)
+                && (m_alt.empty() || complement(m_alt) == ref))
             {
                 flipped = true;
                 return true;
@@ -372,29 +365,6 @@ public:
         target.has_count = true;
     }
 
-    std::vector<size_t> get_set_idx(const size_t num_sets) const
-    {
-        std::vector<uintptr_t> flags = m_clump_info.flags;
-        uintptr_t bitset;
-        std::vector<size_t> out;
-        out.reserve(num_sets);
-        for (size_t k = 0; k < m_clump_info.max_flag_idx; ++k)
-        {
-            bitset = m_clump_info.flags[k];
-            while (bitset != 0)
-            {
-                uint64_t t = bitset & -bitset;
-                // TODO: Potential bug here. CTZLU seems to only take 32bit on
-                // none-64bit window according to plink (NOTE: PLINK also used
-                // this in their score calculation. Maybe ask Chris about it?)
-                int r = CTZLU(bitset);
-                out.push_back(k * BITCT + static_cast<size_t>(r));
-                bitset ^= t;
-            }
-        }
-        return out;
-    }
-
 
     /*!
      * \brief Obtain the upper bound of the clump region correspond to this SNP
@@ -422,6 +392,17 @@ public:
         m_genotype = genotype;
     }
     std::vector<uintptr_t> get_genotype() const { return m_genotype; }
+    static std::string complement(const std::string& allele)
+    {
+        // assume capitalized
+        if (allele == "A") return "T";
+        if (allele == "T") return "A";
+        if (allele == "G") return "C";
+        if (allele == "C")
+            return "G";
+        else
+            return allele; // Cannot flip, so will just return it as is
+    }
 
 private:
     AlleleCounts m_ref_count;
@@ -446,18 +427,6 @@ private:
     bool m_flipped = false;
     bool m_ref_flipped = false;
     bool m_is_valid = true;
-
-    inline std::string complement(const std::string& allele) const
-    {
-        // assume capitalized
-        if (allele == "A") return "T";
-        if (allele == "T") return "A";
-        if (allele == "G") return "C";
-        if (allele == "C")
-            return "G";
-        else
-            return allele; // Cannot flip, so will just return it as is
-    }
 };
 
 #endif // SNP_H
