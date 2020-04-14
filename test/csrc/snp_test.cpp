@@ -66,8 +66,8 @@ TEST_CASE("Set SNP")
         auto file_idx = GENERATE(take(1, random(1ul, 100000ul)));
         auto byte_pos = GENERATE(
             take(1, random(1ll, std::numeric_limits<long long>::max())));
-        snp.add_snp_info(file_idx, byte_pos, chr + 1, loc + 1, ref, alt,
-                         flipped, is_ref);
+        SNP src("", chr + 1, loc + 1, ref, alt, file_idx, byte_pos);
+        snp.add_snp_info(src, flipped, is_ref);
         SECTION("updated file_idx")
         {
             REQUIRE(snp.get_file_idx(is_ref) == file_idx);
@@ -256,6 +256,42 @@ TEST_CASE("SNP Matching")
             REQUIRE(snp.matching(chr, loc + 1, std::get<0>(missing_alt),
                                  std::get<1>(missing_alt), flip)
                     == (loc == ~size_t(0)));
+        }
+    }
+}
+
+TEST_CASE("set function return")
+{
+    SNP snp("rs", 1, 1, "a", "c", 1, 1);
+    SECTION("change rs")
+    {
+        snp.rs() = "RS";
+        REQUIRE(snp.rs() == "RS");
+    }
+    SECTION("change ref")
+    {
+        SECTION("subsitute")
+        {
+            snp.ref() = "T";
+            REQUIRE(snp.ref() == "T");
+        }
+        SECTION("to upper")
+        {
+            misc::to_upper(snp.ref());
+            REQUIRE(snp.ref() == "A");
+        }
+    }
+    SECTION("change alt")
+    {
+        SECTION("subsitute")
+        {
+            snp.alt() = "G";
+            REQUIRE(snp.alt() == "G");
+        }
+        SECTION("to upper")
+        {
+            misc::to_upper(snp.alt());
+            REQUIRE(snp.alt() == "C");
         }
     }
 }

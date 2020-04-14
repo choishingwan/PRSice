@@ -230,7 +230,7 @@ void BinaryPlink::gen_snp_vector(
     size_t chr_num = 0;
     size_t num_snp_read = 0;
     std::streampos byte_pos;
-    bool chr_error = false, chr_sex_error = false;
+    bool chr_error = false, sex_error = false;
     for (size_t idx = 0; idx < m_genotype_file_names.size(); ++idx)
     {
         // go through each genotype file
@@ -281,12 +281,16 @@ void BinaryPlink::gen_snp_vector(
             }
             byte_pos = static_cast<std::streampos>(
                 bed_offset + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
-            process_snp(exclusion_regions, bim_token[+BIM::CHR],
-                        mismatch_snp_record_name, mismatch_print_type, loc, idx,
-                        byte_pos, bim_token[+BIM::A1], bim_token[+BIM::A2],
-                        bim_token[+BIM::RS], snpid, processed_snps,
-                        duplicated_snp, retain_snp, prev_chr, chr_num,
-                        num_retained, chr_error, chr_sex_error, genotype);
+
+            if (!check_chr(bim_token[+BIM::CHR], prev_chr, chr_num, chr_error,
+                           sex_error))
+            { continue; }
+            SNP cur_snp(bim_token[+BIM::RS], chr_num, loc, bim_token[+BIM::A1],
+                        bim_token[+BIM::A2], idx, byte_pos);
+            if (process_snp(exclusion_regions, mismatch_snp_record_name,
+                            mismatch_print_type, "", cur_snp, processed_snps,
+                            duplicated_snp, retain_snp, genotype))
+            { ++num_retained; }
         }
         bim.reset();
     }

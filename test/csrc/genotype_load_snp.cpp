@@ -65,7 +65,7 @@ TEST_CASE("process snp")
             rs_id = GENERATE(".", "");
             snp_id = GENERATE(".", "");
             REQUIRE_FALSE(geno.test_check_rs(
-                rs_id, snp_id, chr_id, processed_snps, duplicated_snps, &geno));
+                snp_id, chr_id, rs_id, processed_snps, duplicated_snps, &geno));
             REQUIRE(geno.base_missed() == 1);
         }
         SECTION("Genotype have not loaded any SNPs")
@@ -74,7 +74,7 @@ TEST_CASE("process snp")
             rs_id = "rs";
             snp_id = "rs123";
             REQUIRE_FALSE(geno.test_check_rs(
-                rs_id, snp_id, chr_id, processed_snps, duplicated_snps, &geno));
+                snp_id, chr_id, rs_id, processed_snps, duplicated_snps, &geno));
             REQUIRE(geno.base_missed() == 1);
         }
         SECTION("Genotype have SNPs loaded")
@@ -84,7 +84,7 @@ TEST_CASE("process snp")
             {
                 rs_id = "rs1234";
                 snp_id = "rs4321";
-                REQUIRE(geno.test_check_rs(rs_id, snp_id, chr_id,
+                REQUIRE(geno.test_check_rs(snp_id, chr_id, rs_id,
                                            processed_snps, duplicated_snps,
                                            &geno));
                 REQUIRE(geno.base_missed() == 0);
@@ -93,7 +93,7 @@ TEST_CASE("process snp")
             {
                 rs_id = "rs4321";
                 snp_id = "rs1234";
-                REQUIRE(geno.test_check_rs(rs_id, snp_id, chr_id,
+                REQUIRE(geno.test_check_rs(snp_id, chr_id, rs_id,
                                            processed_snps, duplicated_snps,
                                            &geno));
                 // we will update rs_id if snp_id is found instead of rs_id
@@ -141,19 +141,17 @@ TEST_CASE("process snp")
         auto extend = GENERATE(table<size_t, size_t, bool>(
             {record {6, 10, true}, record {1, 10, false},
              record(6, 2001, false)}));
+        SNP snp("rs", std::get<0>(extend), std::get<1>(extend), "A", "C", 1, 1);
+        SNP base("rs", base_chr, base_loc, "A", "C", 1, 1);
         if (base_chr != ~size_t(0) && base_loc != ~size_t(0))
         {
             // always assume already filtered
-            REQUIRE(geno.test_not_in_xregion(exclusion_regions, base_chr,
-                                             base_loc, std::get<0>(extend),
-                                             std::get<1>(extend)));
+            REQUIRE(geno.test_not_in_xregion(exclusion_regions, base, snp));
         }
         else
         {
             // we will actually do the check
-            REQUIRE(geno.test_not_in_xregion(exclusion_regions, base_chr,
-                                             base_loc, std::get<0>(extend),
-                                             std::get<1>(extend))
+            REQUIRE(geno.test_not_in_xregion(exclusion_regions, base, snp)
                     != std::get<2>(extend));
             if (std::get<2>(extend)) { REQUIRE(geno.num_xrange() == 1); }
             else
@@ -168,11 +166,106 @@ TEST_CASE("process snp")
         // out
         std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions, "chr6:1-2000");
-        // we need the following (doesn't matter how, just one is enough)
-        // chr failed
-        // rs failed
-        // mismatch
-        // ambig
-        // filter by region
+        std::string name = "load.mismatch";
+        std::string type = "Base";
+        // when we go into process, we have already handled chr
+        // this allow us to pack the SNP object as a parameter
+
+        std::unordered_set<std::string> processed_snps;
+        std::unordered_set<std::string> duplicated_snps;
+        std::vector<bool> retain_snp(1, false);
+        SECTION("failed at rs")
+        {
+            // not found
+            SNP cur("not found", 1, 1, "A", "C", 1, 1);
+            REQUIRE_FALSE(geno.test_process_snp(
+                exclusion_regions, name, type, "", cur, processed_snps,
+                duplicated_snps, retain_snp, &geno));
+            REQUIRE_FALSE(retain_snp[0]);
+            REQUIRE(geno.base_missed() == 1);
+        }
+        SECTION("ok at rs")
+        {
+            std::string rs = "rs1234";
+            size_t chr = 1, loc = 1;
+            SECTION("failed match")
+            {
+                SNP ref(rs, chr, loc, "A", "C", 1, 1);
+                geno.load_snp(ref);
+                SNP cur(rs, chr + 1, loc + 1, "A", "C", 1, 1);
+                REQUIRE_FALSE(geno.test_process_snp(
+                    exclusion_regions, name, type, "", cur, processed_snps,
+                    duplicated_snps, retain_snp, &geno));
+                REQUIRE_FALSE(retain_snp[0]);
+            }
+
+            SECTION("ok match")
+            {
+                SECTION("failed ambig")
+                {
+                    geno.keep_ambig(false);
+                    SNP ref(rs, chr, loc, "A", "T", 1, 1);
+                    geno.load_snp(ref);
+                    REQUIRE_FALSE(geno.test_process_snp(
+                        exclusion_regions, name, type, "", ref, processed_snps,
+                        duplicated_snps, retain_snp, &geno));
+                    REQUIRE_FALSE(retain_snp[0]);
+                    REQUIRE(geno.num_ambig() == 1);
+                }
+                SECTION("ok ambig")
+                {
+                    SECTION("filtered by xregion")
+                    {
+                        SNP ref(rs, ~size_t(0), ~size_t(0), "A", "C", 1, 1);
+                        geno.load_snp(ref);
+                        SNP cur(rs, 6, 10, "A", "C", 1, 1);
+                        REQUIRE_FALSE(geno.test_process_snp(
+                            exclusion_regions, name, type, "", cur,
+                            processed_snps, duplicated_snps, retain_snp,
+                            &geno));
+                        REQUIRE_FALSE(retain_snp[0]);
+                        REQUIRE(geno.num_xrange() == 1);
+                    }
+                    SECTION("valid input")
+                    {
+                        SNP ref(rs, 6, 10, "A", "C", 1, 1);
+                        SNP cur(rs, 6, 10, "A", "C", 10, 20);
+                        geno.load_snp(ref);
+                        SECTION("in target file")
+                        {
+                            REQUIRE(geno.test_process_snp(
+                                exclusion_regions, name, type, "", cur,
+                                processed_snps, duplicated_snps, retain_snp,
+                                &geno));
+                            REQUIRE(retain_snp[0]);
+                            REQUIRE(geno.existed_snps().size() == 1);
+                            auto res = geno.existed_snps().front();
+                            REQUIRE(res.get_file_idx() == cur.get_file_idx());
+                            REQUIRE(res.get_byte_pos() == cur.get_byte_pos());
+                        }
+                        SECTION("in reference")
+                        {
+                            mockGenotype target;
+                            target.set_reporter(&reporter);
+                            target.test_init_chr();
+                            target.reference();
+
+                            REQUIRE(target.test_process_snp(
+                                exclusion_regions, name, type, "", cur,
+                                processed_snps, duplicated_snps, retain_snp,
+                                &geno));
+                            REQUIRE(retain_snp[0]);
+                            REQUIRE(geno.existed_snps().size() == 1);
+                            REQUIRE(target.existed_snps().size() == 0);
+                            auto res = geno.existed_snps().front();
+                            REQUIRE(res.get_file_idx(true)
+                                    == cur.get_file_idx());
+                            REQUIRE(res.get_byte_pos(true)
+                                    == cur.get_byte_pos());
+                        }
+                    }
+                }
+            }
+        }
     }
 }

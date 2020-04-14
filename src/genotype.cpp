@@ -467,8 +467,8 @@ bool Genotype::check_chr(const std::string& chr_str, std::string& prev_chr,
     }
     return true;
 }
-bool Genotype::check_rs(std::string& rsid, std::string& snpid,
-                        std::string& chrid,
+bool Genotype::check_rs(const std::string& snpid, const std::string& chrid,
+                        std::string& rsid,
                         std::unordered_set<std::string>& processed_snps,
                         std::unordered_set<std::string>& duplicated_snps,
                         Genotype* genotype)
@@ -529,61 +529,53 @@ bool Genotype::check_ambig(const std::string& a1, const std::string& a2,
 }
 bool Genotype::not_in_xregion(
     const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    const size_t base_chr, const size_t base_bp, const size_t chr,
-    const size_t bp)
+    const SNP& base, const SNP& target)
 {
-    if (base_chr != ~size_t(0) && base_bp != ~size_t(0)) return true;
-    if (Genotype::within_region(exclusion_regions, chr, bp))
+    if (base.chr() != ~size_t(0) && base.loc() != ~size_t(0)) return true;
+    if (Genotype::within_region(exclusion_regions, target.chr(), target.loc()))
     {
         ++m_num_xrange;
         return false;
     }
     return true;
 }
-void Genotype::process_snp(
+bool Genotype::process_snp(
     const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    const std::string& chr_str, const std::string& mismatch_snp_record_name,
-    const std::string& mismatch_source, const size_t& bp, const size_t file_idx,
-    const std::streampos byte_pos, std::string& a1, std::string& a2,
-    std::string& rsid, std::string& snpid,
+    const std::string& mismatch_snp_record_name,
+    const std::string& mismatch_source, const std::string& snpid, SNP& snp,
     std::unordered_set<std::string>& processed_snps,
     std::unordered_set<std::string>& duplicated_snps,
-    std::vector<bool>& retain_snp, std::string& prev_chr, size_t& chr_num,
-    size_t ref_target_match, bool& chr_error, bool& sex_error,
-    Genotype* genotype)
+    std::vector<bool>& retain_snp, Genotype* genotype)
 {
-    if (!check_chr(chr_str, prev_chr, chr_num, chr_error, sex_error)) return;
     // TODO: allow  chr_id in future
     // std::string chr_id = SNP::chr_id(chr_num, bp);
-    std::string chr_id = "";
-    if (!check_rs(rsid, snpid, chr_id, processed_snps, duplicated_snps,
+    if (!check_rs(snpid, "", snp.rs(), processed_snps, duplicated_snps,
                   genotype))
-        return;
-    auto snp_idx = genotype->m_existed_snps_index[rsid];
-    auto&& snp = genotype->m_existed_snps[snp_idx];
+        return false;
+    auto snp_idx = genotype->m_existed_snps_index[snp.rs()];
+    auto&& target_snp = genotype->m_existed_snps[snp_idx];
 
-    misc::to_upper(a1);
-    misc::to_upper(a2);
+    misc::to_upper(snp.ref());
+    misc::to_upper(snp.alt());
     bool flipping;
-    if (!snp.matching(chr_num, bp, a1, a2, flipping))
+    if (!target_snp.matching(snp, flipping))
     {
-        genotype->print_mismatch(mismatch_snp_record_name, mismatch_source, snp,
-                                 rsid, a1, a2, chr_num, bp);
+        genotype->print_mismatch(mismatch_snp_record_name, mismatch_source,
+                                 target_snp, snp);
         ++m_num_ref_target_mismatch;
-        return;
+        return false;
     }
-    if (!check_ambig(a1, a2, snp.ref(), flipping)) return;
+    if (!check_ambig(snp.ref(), snp.alt(), target_snp.ref(), flipping))
+        return false;
     // only do region test if we know we haven't done it during read_base
     // we will do it in read_base if we have chr and loc info.
-    if (!not_in_xregion(exclusion_regions, snp.chr(), snp.loc(), chr_num, bp))
-    { return; }
+    if (!not_in_xregion(exclusion_regions, target_snp, snp)) { return false; }
 
     //  only add valid SNPs
-    processed_snps.insert(rsid);
-    snp.add_snp_info(file_idx, byte_pos, chr_num, bp, a1, a2, flipping,
-                     m_is_ref);
+    processed_snps.insert(snp.rs());
+    target_snp.add_snp_info(snp, flipping, m_is_ref);
     retain_snp[snp_idx] = true;
-    ++ref_target_match;
+    return true;
 }
 
 void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
@@ -947,9 +939,7 @@ void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
 }
 
 void Genotype::print_mismatch(const std::string& out, const std::string& type,
-                              const SNP& target, const std::string& rs,
-                              const std::string& a1, const std::string& a2,
-                              const size_t chr_num, const size_t loc)
+                              const SNP& target, const SNP& new_snp)
 {
     // mismatch found between base target and reference
     if (!m_mismatch_snp_record.is_open())
@@ -966,20 +956,21 @@ void Genotype::print_mismatch(const std::string& out, const std::string& type,
                                  "Target\tA1_File\tA2_Target\tA2_"
                                  "File\n";
     }
-    m_mismatch_snp_record << type << "\t" << rs << "\t" << chr_num << "\t";
+    m_mismatch_snp_record << type << "\t" << new_snp.rs() << "\t"
+                          << new_snp.chr() << "\t";
     if (target.chr() == ~size_t(0)) { m_mismatch_snp_record << "-\t"; }
     else
     {
         m_mismatch_snp_record << target.chr() << "\t";
     }
-    m_mismatch_snp_record << loc << "\t";
+    m_mismatch_snp_record << new_snp.loc() << "\t";
     if (target.loc() == ~size_t(0)) { m_mismatch_snp_record << "-\t"; }
     else
     {
         m_mismatch_snp_record << target.loc() << "\t";
     }
-    m_mismatch_snp_record << a1 << "\t" << target.ref() << "\t" << a2 << "\t"
-                          << target.alt() << std::endl;
+    m_mismatch_snp_record << new_snp.ref() << "\t" << target.ref() << "\t"
+                          << new_snp.alt() << "\t" << target.alt() << std::endl;
 }
 
 void Genotype::load_snps(

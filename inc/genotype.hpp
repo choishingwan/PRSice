@@ -243,6 +243,7 @@ public:
         return true;
     }
 
+
     bool parse_loc(const std::vector<std::string_view>& token,
                    const BaseFile& base_file, size_t& loc)
     {
@@ -753,9 +754,7 @@ protected:
                     std::vector<std::string>& duplicated_sample_id);
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
-                        const SNP& target, const std::string& rs,
-                        const std::string& a1, const std::string& a2,
-                        const size_t chr_num, const size_t loc);
+                        const SNP& target, const SNP& new_snp);
     /*
         bool parse_chr_id(const std::vector<std::string_view>& token,
                           const BaseFile& base_file,
@@ -1197,9 +1196,9 @@ protected:
     load_ref(std::unique_ptr<std::istream> input, bool ignore_fid);
     bool
     not_in_xregion(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const size_t base_chr, const size_t base_bp,
-                   const size_t chr, const size_t bp);
-    bool check_rs(std::string& rsid, std::string& snpid, std::string& chrid,
+                   const SNP& base, const SNP& target);
+    bool check_rs(const std::string& snpid, const std::string& chrid,
+                  std::string& rsid,
                   std::unordered_set<std::string>& processed_snps,
                   std::unordered_set<std::string>& duplicated_snps,
                   Genotype* genotype);
@@ -1207,17 +1206,13 @@ protected:
                      const std::string& ref, bool& flipping);
     bool check_chr(const std::string& chr_str, std::string& prev_chr,
                    size_t& chr_num, bool& chr_error, bool& sex_error);
-    void process_snp(
-        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-        const std::string& chr_str, const std::string& mismatch_snp_record_name,
-        const std::string& mismatch_source, const size_t& bp,
-        const size_t file_idx, const std::streampos byte_pos, std::string& a1,
-        std::string& a2, std::string& rsid, std::string& snpid,
-        std::unordered_set<std::string>& processed_snps,
-        std::unordered_set<std::string>& duplicated_snps,
-        std::vector<bool>& retain_snp, std::string& prev_chr, size_t& chr_num,
-        size_t ref_target_match, bool& chr_error, bool& sex_error,
-        Genotype* genotype);
+    bool
+    process_snp(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+                const std::string& mismatch_snp_record_name,
+                const std::string& mismatch_source, const std::string& snpid,
+                SNP& snp, std::unordered_set<std::string>& processed_snps,
+                std::unordered_set<std::string>& duplicated_snps,
+                std::vector<bool>& retain_snp, Genotype* genotype);
     void shrink_snp_vector(const std::vector<bool>& retain)
     {
         m_existed_snps.erase(

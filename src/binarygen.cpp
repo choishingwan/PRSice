@@ -365,7 +365,7 @@ void BinaryGen::gen_snp_vector(
     size_t chr_num = 0;
     uint32_t SNP_position = 0;
     uint32_t offset;
-    bool chr_sex_error = false;
+    bool sex_error = false;
     bool chr_error = false;
     for (size_t i = 0; i < m_genotype_file_names.size(); ++i)
     {
@@ -423,11 +423,16 @@ void BinaryGen::gen_snp_vector(
             // get the current location of bgen file, this will be used to skip
             // to current location later on
             byte_pos = bgen_file.tellg();
-            process_snp(exclusion_regions, chromosome, mismatch_snp_record_name,
-                        mismatch_source, SNP_position, file_idx, byte_pos, A1,
-                        A2, RSID, SNPID, processed_snps, duplicated_snps,
-                        retain_snp, prev_chr, chr_num, ref_target_match,
-                        chr_error, chr_sex_error, genotype);
+            if (check_chr(chromosome, prev_chr, chr_num, chr_error, sex_error))
+            {
+                SNP cur_snp(RSID, chr_num, SNP_position, A1, A2, file_idx,
+                            byte_pos);
+                if (process_snp(exclusion_regions, mismatch_snp_record_name,
+                                mismatch_source, SNPID, cur_snp, processed_snps,
+                                duplicated_snps, retain_snp, genotype))
+                { ++ref_target_match; }
+            }
+
             // read in the genotype data block so that we advance the ifstream
             // pointer to the next SNP entry
             read_genotype_data_block(bgen_file, context, &m_buffer1);

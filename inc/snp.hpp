@@ -51,6 +51,18 @@ public:
         , m_category(category)
     {
     }
+    SNP(const std::string& rs_id, const size_t chr, const size_t loc,
+        const std::string& ref_allele, const std::string& alt_allele,
+        const size_t& idx, const std::streampos byte_pos)
+        : m_alt(alt_allele)
+        , m_ref(ref_allele)
+        , m_rs(rs_id)
+        , m_chr(chr)
+        , m_loc(loc)
+    {
+        m_target.name_idx = idx;
+        m_target.byte_pos = byte_pos;
+    }
 
     virtual ~SNP();
 
@@ -61,30 +73,25 @@ public:
         target.name_idx = idx;
         target.byte_pos = byte_pos;
     }
-
-    void add_snp_info(const size_t& idx, const std::streampos byte_pos,
-                      const size_t chr, const size_t loc,
-                      const std::string& ref, const std::string& alt,
-                      const bool flipping, const bool is_ref)
+    void add_snp_info(const SNP& src, const bool flipping, const bool is_ref)
     {
         if (!is_ref)
         {
-            m_target.name_idx = idx;
-            m_target.byte_pos = byte_pos;
-            m_chr = chr;
-            m_loc = loc;
-            m_ref = ref;
-            m_alt = alt;
+            m_target.name_idx = src.get_file_idx();
+            m_target.byte_pos = src.get_byte_pos();
+            m_chr = src.chr();
+            m_loc = src.loc();
+            m_ref = src.ref();
+            m_alt = src.alt();
             m_flipped = flipping;
         }
         else
         {
             m_ref_flipped = flipping;
         }
-        m_reference.name_idx = idx;
-        m_reference.byte_pos = byte_pos;
+        m_reference.name_idx = src.get_file_idx();
+        m_reference.byte_pos = src.get_byte_pos();
     }
-
 
     /*!
      * \brief Function to sort a vector of SNP by their chr then by their
@@ -104,8 +111,13 @@ public:
      * flipped = true
      * \return true if it is a match
      */
-    inline bool matching(size_t chr, size_t loc, std::string& ref,
-                         std::string& alt, bool& flipped)
+    inline bool matching(const SNP& i, bool& flipped)
+    {
+        return matching(i.chr(), i.loc(), i.ref(), i.alt(), flipped);
+    }
+    inline bool matching(const size_t chr, const size_t loc,
+                         const std::string& ref, const std::string& alt,
+                         bool& flipped)
     {
         // should be trimmed
         if (chr != ~size_t(0) && m_chr != ~size_t(0) && chr != m_chr)
@@ -217,8 +229,11 @@ public:
     }
 
     std::string rs() const { return m_rs; }
+    std::string& rs() { return m_rs; }
     std::string ref() const { return m_ref; }
+    std::string& ref() { return m_ref; }
     std::string alt() const { return m_alt; }
+    std::string& alt() { return m_alt; }
     bool is_flipped() const { return m_flipped; }
     bool is_ref_flipped() const { return m_ref_flipped; }
 
