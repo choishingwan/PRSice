@@ -65,16 +65,19 @@ TEST_CASE("generate snp vector")
     bplink.manual_load_snp(SNP("SNP_5", 1, 742429, "A", "C", 1, 1));
     // load SNP
 
-    SECTION("invalid bp")
+    SECTION("invalid SNPs")
     {
         bim.open("load_snp2.bim");
-        bim << "chr2	SNP_5	0	-742429	1	2" << std::endl;
+        auto input = GENERATE("chr1	SNP_5	0	-742429	A	C",
+                              "chr1	SNP_5	0	742429	A",
+                              "chr1	SNP_5	0	742429	A C G");
+        bim << input << std::endl;
         bim.close();
         bplink.gen_bed_head("load_snp2.bed", num_sample, 3, true, false);
         REQUIRE_THROWS(bplink.load_snps(
             "load_snp", std::vector<IITree<size_t, size_t>> {}, false));
     }
-    SECTION("filtered out exxept mismatch")
+    SECTION("filtered out except mismatch")
     {
         auto input = GENERATE("chrX	SNP_5	0	742429	A	C",
                               "chr1	SNP_5	0	742429	A	G");
