@@ -51,62 +51,64 @@ TEST_CASE("generate snp vector")
     size_t num_sample = 10;
     bplink.set_sample(num_sample);
 
-    std::ofstream bim("load_snp1.bim");
-    // first chr only good SNP * 3
-    bim << "1	SNP_1	0	742429	A	C" << std::endl;
-    bim << "1	SNP_2	0	933331	C	T" << std::endl;
-    bim << "1	SNP_4	0	1008567	G	A" << std::endl;
-    bim.close();
+    size_t idx = 0;
     bplink.gen_bed_head("load_snp1.bed", num_sample, 3, true, false);
-    bplink.manual_load_snp(SNP("SNP_1", 1, 742429, "A", "C", 1, 1));
-    bplink.manual_load_snp(SNP("SNP_2", 1, 933331, "C", "T", 1, 1));
-    bplink.manual_load_snp(SNP("SNP_3", 1, 933331, "C", "T", 1, 1));
-    bplink.manual_load_snp(SNP("SNP_4", 1, 1008567, "G", "A", 1, 1));
-    bplink.manual_load_snp(SNP("SNP_5", 1, 742429, "A", "C", 1, 1));
+    bplink.manual_load_snp(SNP("SNP_1", 1, 742429, "A", "C", idx, 1));
+    bplink.manual_load_snp(SNP("SNP_2", 1, 933331, "C", "T", idx, 1));
+    bplink.manual_load_snp(SNP("SNP_3", 1, 933331, "C", "T", idx, 1));
+    bplink.manual_load_snp(SNP("SNP_4", 1, 1008567, "G", "A", idx, 1));
+    bplink.manual_load_snp(SNP("SNP_5", 1, 742429, "A", "C", idx, 1));
     // load SNP
-
+    std::vector<IITree<size_t, size_t>> exclusion_region;
+    std::string mismatch_name = "mismatch";
+    uintptr_t unfiltered_sample_ct4 = 0;
+    uintptr_t bed_offset = 4;
+    std::unordered_set<std::string> duplicated_snps;
+    std::unordered_set<std::string> processed_snps;
+    std::vector<bool> retain_snp(5, false);
+    bool chr_error = false;
+    bool sex_error = false;
     SECTION("invalid SNPs")
     {
-        bim.open("load_snp2.bim");
-        auto input = GENERATE("chr1	SNP_5	0	-742429	A	C",
-                              "chr1	SNP_5	0	742429	A");
-        bim << input << std::endl;
-        bim.close();
-        bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
-        REQUIRE_THROWS(bplink.load_snps(
-            "load_snp", std::vector<IITree<size_t, size_t>> {}, false));
+
+        auto str =
+            GENERATE("chr1	SNP_5	0	-742429	A	C", /* Negative coord*/
+                     "chr1	SNP_5	0	742429	A" /* malformed bed*/);
+        std::unique_ptr<std::istream> input =
+            std::make_unique<std::istringstream>(str);
+        REQUIRE_THROWS(bplink.test_transverse_bed_for_snp(
+            exclusion_region, mismatch_name, idx, unfiltered_sample_ct4,
+            bed_offset, std::move(input), duplicated_snps, processed_snps,
+            retain_snp, chr_error, sex_error, &bplink));
     }
     SECTION("filtered out except mismatch")
     {
-        auto input = GENERATE("chrX	SNP_5	0	742429	A	C",
-                              "chr1	SNP_5	0	742429	A	G");
-        bim.open("load_snp2.bim");
-        bim << input << std::endl;
-        bim.close();
-        bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
-        bplink.load_snps("load_snp", std::vector<IITree<size_t, size_t>> {},
-                         false);
+        std::unique_ptr<std::istream> input =
+            std::make_unique<std::istringstream>(
+                "chrX	SNP_5	0	742429	A	C");
+        // == 0 as no SNP loaded
+        REQUIRE(bplink.test_transverse_bed_for_snp(
+                    exclusion_region, mismatch_name, idx, unfiltered_sample_ct4,
+                    bed_offset, std::move(input), duplicated_snps,
+                    processed_snps, retain_snp, chr_error, sex_error, &bplink)
+                == 0);
         auto res = bplink.existed_snps();
-        REQUIRE(res.size() == 3);
-        REQUIRE(res[0].rs() == "SNP_1");
-        REQUIRE(res[1].rs() == "SNP_2");
-        REQUIRE(res[2].rs() == "SNP_4");
+        // we shouldn't have reshaped our vector here
+        REQUIRE(res.size() == 5);
+        REQUIRE(sex_error);
     }
     SECTION("mismatch")
     {
-        auto input = "chr1	SNP_5	0	742430	A	C";
-        bim.open("load_snp2.bim");
-        bim << input << std::endl;
-        bim.close();
-        bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
-        bplink.load_snps("load_snp", std::vector<IITree<size_t, size_t>> {},
-                         false);
-        auto res = bplink.existed_snps();
-        REQUIRE(res.size() == 3);
-        REQUIRE(res[0].rs() == "SNP_1");
-        REQUIRE(res[1].rs() == "SNP_2");
-        REQUIRE(res[2].rs() == "SNP_4");
-        std::ifstream mismatch("load_snp.mismatch");
+        auto str = GENERATE("chr1	SNP_5	0	742430	A	C",
+                            "chr1	SNP_5	0	742429	A	G");
+        std::unique_ptr<std::istream> input =
+            std::make_unique<std::istringstream>(str);
+        REQUIRE(bplink.test_transverse_bed_for_snp(
+                    exclusion_region, mismatch_name, idx, unfiltered_sample_ct4,
+                    bed_offset, std::move(input), duplicated_snps,
+                    processed_snps, retain_snp, chr_error, sex_error, &bplink)
+                == 0);
+        std::ifstream mismatch(mismatch_name.c_str());
         REQUIRE(mismatch.is_open());
         std::string line;
         size_t num_dup = 0;
@@ -123,6 +125,47 @@ TEST_CASE("generate snp vector")
     }
     SECTION("valid")
     {
+        std::unique_ptr<std::istream> input =
+            std::make_unique<std::istringstream>(
+                "chr1	SNP_5	0	742429	A	C");
+        REQUIRE(bplink.test_transverse_bed_for_snp(
+                    exclusion_region, mismatch_name, idx + 1,
+                    unfiltered_sample_ct4, bed_offset, std::move(input),
+                    duplicated_snps, processed_snps, retain_snp, chr_error,
+                    sex_error, &bplink)
+                == 1);
+        auto res = bplink.existed_snps();
+        REQUIRE(res.size() == 5);
+        REQUIRE(res[0].rs() == "SNP_1");
+        REQUIRE(res[1].rs() == "SNP_2");
+        REQUIRE(res[2].rs() == "SNP_3");
+        REQUIRE(res[3].rs() == "SNP_4");
+        REQUIRE(res[4].rs() == "SNP_5");
+        REQUIRE(res[4].get_file_idx() == idx + 1);
+    }
+    SECTION("duplicated SNP")
+    {
+        std::unique_ptr<std::istream> input =
+            std::make_unique<std::istringstream>("1	SNP_5	0	742429	A	C\n"
+                                                 "1	SNP_5	0	742429	A	C");
+        REQUIRE(bplink.test_transverse_bed_for_snp(
+                    exclusion_region, mismatch_name, idx + 1,
+                    unfiltered_sample_ct4, bed_offset, std::move(input),
+                    duplicated_snps, processed_snps, retain_snp, chr_error,
+                    sex_error, &bplink)
+                == 1);
+        REQUIRE(duplicated_snps.size() == 1);
+        REQUIRE(duplicated_snps.find("SNP_5") != duplicated_snps.end());
+    }
+    SECTION("Full test")
+    {
+        // this will test the gen_snp
+        std::ofstream bim("load_snp1.bim");
+        // first chr only good SNP * 3
+        bim << "1	SNP_1	0	742429	A	C" << std::endl;
+        bim << "1	SNP_2	0	933331	C	T" << std::endl;
+        bim << "1	SNP_4	0	1008567	G	A" << std::endl;
+        bim.close();
         bim.open("load_snp2.bim");
         bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
         bim.close();
@@ -135,32 +178,6 @@ TEST_CASE("generate snp vector")
         REQUIRE(res[1].rs() == "SNP_2");
         REQUIRE(res[2].rs() == "SNP_4");
         REQUIRE(res[3].rs() == "SNP_5");
-    }
-    SECTION("duplicated SNP")
-    {
-        bim.open("load_snp2.bim");
-        bim << "1	SNP_5	0	742429	A	C" << std::endl;
-        bim << "1	SNP_5	0	742429	A	C" << std::endl;
-        bim.close();
-        bplink.gen_bed_head("load_snp2.bed", num_sample, 2, true, false);
-        std::cerr << "Start duplicate check" << std::endl;
-        REQUIRE_THROWS(bplink.load_snps(
-            "load_snp", std::vector<IITree<size_t, size_t>> {}, false));
-        // we only output the valid SNPs
-        std::ifstream dup("load_snp.valid");
-        REQUIRE(dup.is_open());
-        std::string line;
-        size_t num_dup = 0;
-        std::vector<std::string> token;
-        while (std::getline(dup, line))
-        {
-            token = misc::split(line, "\t");
-            ++num_dup;
-        }
-        // because of header
-        REQUIRE(num_dup == 3);
-        REQUIRE(token.size() == 5);
-        REQUIRE(token[0] == "SNP_4");
     }
 
     // one invalid loc

@@ -210,6 +210,67 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
     return true;
 }
 
+size_t BinaryPlink::transverse_bed_for_snp(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    const std::string mismatch_snp_record_name, const size_t idx,
+    const uintptr_t unfiltered_sample_ct4, const uintptr_t bed_offset,
+    std::unique_ptr<std::istream> bim,
+    std::unordered_set<std::string>& duplicated_snps,
+    std::unordered_set<std::string>& processed_snps,
+    std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
+    Genotype* genotype)
+{
+    assert(bim->is_open());
+    assert(genotype != nullptr);
+    const std::string mismatch_source = m_is_ref ? "Reference" : "Base";
+    std::vector<std::string> bim_token(6, "");
+    std::string line;
+    std::string prev_chr = "";
+    std::streampos byte_pos;
+    size_t num_snp_read = 0;
+    size_t num_retained = 0;
+    size_t chr_num = 0;
+    while (std::getline(*bim, line))
+    {
+        misc::trim(line);
+        if (line.empty()) continue;
+        ++num_snp_read;
+        misc::split(bim_token, line);
+        if (bim_token.size() < 6)
+        {
+            throw std::runtime_error(
+                "Error: Malformed bim file. Less than 6 column on "
+                "line: "
+                + misc::to_string(num_snp_read) + "\n");
+        }
+        size_t loc = ~size_t(0);
+        try
+        {
+            loc = misc::convert<size_t>(bim_token[+BIM::BP]);
+        }
+        catch (...)
+        {
+            throw std::runtime_error(
+                "Error: Invalid SNP coordinate: " + bim_token[+BIM::RS] + ":"
+                + bim_token[+BIM::BP]
+                + "\nPlease check you have the correct input");
+        }
+        byte_pos = static_cast<std::streampos>(
+            bed_offset + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
+
+        if (!check_chr(bim_token[+BIM::CHR], prev_chr, chr_num, chr_error,
+                       sex_error))
+        { continue; }
+        SNP cur_snp(bim_token[+BIM::RS], chr_num, loc, bim_token[+BIM::A1],
+                    bim_token[+BIM::A2], idx, byte_pos);
+        if (process_snp(exclusion_regions, mismatch_snp_record_name,
+                        mismatch_source, "", cur_snp, processed_snps,
+                        duplicated_snps, retain_snp, genotype))
+        { ++num_retained; }
+    }
+    bim.reset();
+    return num_retained;
+}
 void BinaryPlink::gen_snp_vector(
     const std::vector<IITree<size_t, size_t>>& exclusion_regions,
     const std::string& out_prefix, Genotype* target)
@@ -227,7 +288,6 @@ void BinaryPlink::gen_snp_vector(
     std::string prefix;
     uintptr_t bed_offset;
     size_t num_retained = 0;
-    size_t chr_num = 0;
     size_t num_snp_read = 0;
     std::streampos byte_pos;
     bool chr_error = false, sex_error = false;
@@ -240,59 +300,12 @@ void BinaryPlink::gen_snp_vector(
         auto bim = misc::load_stream(prefix + ".bim");
         // First pass, get the number of marker in bed & bim
         // as we want the number for checking, num_snp_read will start at 0
-        num_snp_read = 0;
-        prev_chr = "";
-        while (std::getline(*bim, line))
-        {
-            misc::trim(line);
-            if (line.empty()) continue;
-            ++num_snp_read;
-        }
-        (*bim).clear();
-        (*bim).seekg(0, (*bim).beg);
-        // check if the bed file is valid
+        num_snp_read = misc::get_num_line(bim);
         check_bed(bed_name, num_snp_read, bed_offset);
-        // now go through the bim file and perform filtering
-        num_snp_read = 0;
-        while (std::getline(*bim, line))
-        {
-            misc::trim(line);
-            if (line.empty()) continue;
-            ++num_snp_read;
-            misc::split(bim_token, line);
-            if (bim_token.size() < 6)
-            {
-                throw std::runtime_error(
-                    "Error: Malformed bim file. Less than 6 column on "
-                    "line: "
-                    + misc::to_string(num_snp_read) + "\n");
-            }
-            size_t loc = ~size_t(0);
-            try
-            {
-                loc = misc::convert<size_t>(bim_token[+BIM::BP]);
-            }
-            catch (...)
-            {
-                throw std::runtime_error(
-                    "Error: Invalid SNP coordinate: " + bim_token[+BIM::RS]
-                    + ":" + bim_token[+BIM::BP]
-                    + "\nPlease check you have the correct input");
-            }
-            byte_pos = static_cast<std::streampos>(
-                bed_offset + ((num_snp_read - 1) * (unfiltered_sample_ct4)));
-
-            if (!check_chr(bim_token[+BIM::CHR], prev_chr, chr_num, chr_error,
-                           sex_error))
-            { continue; }
-            SNP cur_snp(bim_token[+BIM::RS], chr_num, loc, bim_token[+BIM::A1],
-                        bim_token[+BIM::A2], idx, byte_pos);
-            if (process_snp(exclusion_regions, mismatch_snp_record_name,
-                            mismatch_print_type, "", cur_snp, processed_snps,
-                            duplicated_snp, retain_snp, genotype))
-            { ++num_retained; }
-        }
-        bim.reset();
+        num_retained += transverse_bed_for_snp(
+            exclusion_regions, mismatch_snp_record_name, idx,
+            unfiltered_sample_ct4, bed_offset, std::move(bim), duplicated_snp,
+            processed_snps, retain_snp, chr_error, sex_error, genotype);
     }
     // try to release memory
     if (num_retained != genotype->m_existed_snps.size())

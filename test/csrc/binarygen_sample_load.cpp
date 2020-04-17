@@ -277,3 +277,6 @@ TEST_CASE("full sample load")
     // reference with selection
     // reference with selection but not sample file
 }
+
+
+TEST_CASE("check sample consistence") {}

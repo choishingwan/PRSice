@@ -570,7 +570,6 @@ bool Genotype::process_snp(
     // only do region test if we know we haven't done it during read_base
     // we will do it in read_base if we have chr and loc info.
     if (!not_in_xregion(exclusion_regions, target_snp, snp)) { return false; }
-
     //  only add valid SNPs
     processed_snps.insert(snp.rs());
     target_snp.add_snp_info(snp, flipping, m_is_ref);

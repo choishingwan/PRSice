@@ -57,6 +57,15 @@ protected:
                              bool force_cal = false);
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
+    size_t transverse_bed_for_snp(
+        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+        const std::string mismatch_snp_record_name, const size_t idx,
+        const uintptr_t unfiltered_sample_ct4, const uintptr_t bed_offset,
+        std::unique_ptr<std::istream> bim,
+        std::unordered_set<std::string>& duplicated_snps,
+        std::unordered_set<std::string>& processed_snps,
+        std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
+        Genotype* genotype);
     std::unordered_set<std::string>
     get_founder_info(std::unique_ptr<std::istream>& famfile);
     inline void read_genotype(uintptr_t* __restrict genotype,

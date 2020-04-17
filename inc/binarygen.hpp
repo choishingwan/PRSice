@@ -78,9 +78,17 @@ protected:
      * \param context is the context object
      * \return true if the sample is consistent
      */
-    bool check_sample_consistent(const std::string& bgen_name,
-                                 const genfile::bgen::Context& context);
+    void check_sample_consistent(const genfile::bgen::Context& context,
+                                 std::istream& stream);
 
+    size_t transverse_bgen_for_snp(
+        const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+        const std::string mismatch_snp_record_name, const size_t file_idx,
+        std::unique_ptr<std::istream> bgen_file,
+        std::unordered_set<std::string>& duplicated_snps,
+        std::unordered_set<std::string>& processed_snps,
+        std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
+        Genotype* genotype);
     /*!
      * \brief This function will read in the bgen probability data and transform
      * it into PLINK bianry
