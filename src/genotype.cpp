@@ -225,7 +225,7 @@ Genotype::transverse_base_file(
         {
             progress = static_cast<double>(input->tellg())
                        / static_cast<double>(file_length) * 100;
-            if (progress - prev_progress > 0.01)
+            if (!m_reporter->unit_testing() && progress - prev_progress > 0.01)
             {
                 fprintf(stderr, "\rReading %03.2f%%", progress);
                 prev_progress = progress;
@@ -314,7 +314,8 @@ Genotype::transverse_base_file(
         m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
                                         stat, pvalue, category, pthres));
     }
-    fprintf(stderr, "\rReading %03.2f%%\n", 100.0);
+    if (!m_reporter->unit_testing())
+    { fprintf(stderr, "\rReading %03.2f%%\n", 100.0); }
     input.reset();
     return {filter_count, dup_rs};
 }

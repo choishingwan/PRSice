@@ -1157,7 +1157,7 @@ inline bool is_gz_file(const std::string& name)
 
 inline size_t get_num_line(std::unique_ptr<std::istream>& input)
 {
-    assert(input->is_open());
+    //assert(input->is_open());
     size_t num_line = 0;
     std::string line;
     while (std::getline(*input, line))

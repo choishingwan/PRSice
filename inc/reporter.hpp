@@ -57,6 +57,7 @@ public:
     virtual ~Reporter();
     void report(const std::string& input, bool wrap = true);
     void simple_report(const std::string& input);
+    bool unit_testing() const { return m_unit_test; }
 
 private:
     std::ofstream m_log_file;

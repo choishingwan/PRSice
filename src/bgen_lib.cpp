@@ -53,6 +53,7 @@ namespace bgen
         , magic(other.magic)
         , free_data(other.free_data)
         , flags(other.flags)
+        , offset(other.offset)
     {
     }
 
@@ -63,6 +64,7 @@ namespace bgen
         magic = other.magic;
         free_data = other.free_data;
         flags = other.flags;
+        offset = other.offset;
         return *this;
     }
 
@@ -87,7 +89,6 @@ namespace bgen
         char magic[4];
         std::size_t fixed_data_size = 20;
         std::vector<char> free_data;
-
         read_little_endian_integer(aStream, &header_size);
         assert(header_size >= fixed_data_size);
         read_little_endian_integer(aStream, &number_of_snp_blocks);
@@ -110,7 +111,6 @@ namespace bgen
             context->magic.assign(&magic[0], &magic[0] + 4);
             context->free_data.assign(free_data.begin(), free_data.end());
             context->flags = flags;
-
             return (header_size);
         }
         else

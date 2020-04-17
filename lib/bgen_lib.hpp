@@ -653,6 +653,7 @@ namespace bgen
             }
             catch (BGenError const&)
             {
+                std::cerr << "Cannot read number of samples" << std::endl;
                 return false;
             }
             if (number_of_samples != context.number_of_samples)
@@ -1980,7 +1981,6 @@ namespace bgen
     {
         uint32_t const layout = context.flags & e_Layout;
         assert(layout == e_Layout1 || layout == e_Layout2);
-
         // Make sure we have space
         std::size_t size = 10 + RSID.size() + SNPID.size() + chromosome.size()
                            + ((layout == e_Layout1) ? 4 : 2);
@@ -2078,7 +2078,6 @@ namespace bgen
                             * m_number_of_bits)
                            + 7)
                           / 8));
-            ;
             m_buffer1->resize(buffer_size);
             m_writer->initialise(nSamples, nAlleles, &(*m_buffer1)[0],
                                  &(*m_buffer1)[0] + buffer_size);
@@ -2127,7 +2126,6 @@ namespace bgen
                 (m_context.flags & e_CompressedSNPBlocks);
             if (compressionType != e_NoCompression)
             {
-#if HAVE_ZLIB
                 std::size_t offset = (m_layout == e_Layout2) ? 8 : 4;
                 if (compressionType == e_ZlibCompression)
                 {
@@ -2175,9 +2173,6 @@ namespace bgen
 
                 m_result = std::make_pair(&(*m_buffer2)[0],
                                           &(*m_buffer2)[0] + m_buffer2->size());
-#else
-                assert(0);
-#endif
             }
             else
             {

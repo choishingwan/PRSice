@@ -240,7 +240,10 @@ genfile::bgen::Context BinaryGen::get_context(const size_t& idx)
     if (!bgen_file.is_open())
     { throw std::runtime_error("Error: Cannot open bgen file " + bgen_name); }
     genfile::bgen::Context context;
+    uint32_t offset;
+    genfile::bgen::read_offset(bgen_file, &offset);
     genfile::bgen::read_header_block(bgen_file, &context);
+    context.offset = offset;
     return context;
 }
 
@@ -292,7 +295,8 @@ size_t BinaryGen::transverse_bgen_for_snp(
 {
     // skip the offset (first 4 are used to store the offset)
     // offset contains the byte location of the first variant data block
-    auto context = m_context_map[file_idx];
+    assert(m_context_map.size() > file_idx);
+    auto&& context = m_context_map[file_idx];
     bgen_file->seekg(context.offset + 4);
     const size_t num_snp = context.number_of_variants;
     const std::string mismatch_source = m_is_ref ? "Reference" : "Base";
@@ -311,14 +315,14 @@ size_t BinaryGen::transverse_bgen_for_snp(
     for (size_t i_snp = 0; i_snp < num_snp; ++i_snp)
     {
         // go through each SNP in the file
-        if (i_snp % 1000 == 0)
-        {
-            fprintf(stderr, "\r%zuK SNPs processed in %s   \r", i_snp / 1000,
-                    name.c_str());
-        }
-        else if (i_snp < 1000)
+        if (i_snp < 1000 && !m_reporter->unit_testing())
         {
             fprintf(stderr, "\r%zu SNPs processed in %s\r", i_snp,
+                    name.c_str());
+        }
+        else if (i_snp % 1000 == 0 && !m_reporter->unit_testing())
+        {
+            fprintf(stderr, "\r%zuK SNPs processed in %s   \r", i_snp / 1000,
                     name.c_str());
         }
         ++m_unfiltered_marker_ct;
@@ -341,17 +345,17 @@ size_t BinaryGen::transverse_bgen_for_snp(
         // ifstream pointer to the next SNP entry
         genfile::bgen::ignore_genotype_data_block(*bgen_file, context);
     }
-    if (num_snp % 1000 == 0)
+    if (num_snp < 1000 && !m_reporter->unit_testing())
+    {
+        fprintf(stderr, "\r%zu SNPs processed in %s\r", num_snp, name.c_str());
+    }
+    else if (num_snp % 1000 == 0 && !m_reporter->unit_testing())
     {
         fprintf(stderr, "\r%zuK SNPs processed in %s   \r", num_snp / 1000,
                 name.c_str());
     }
-    else if (num_snp < 1000)
-    {
-        fprintf(stderr, "\r%zu SNPs processed in %s\r", num_snp, name.c_str());
-    }
     bgen_file.reset();
-    fprintf(stderr, "\n");
+    if (!m_reporter->unit_testing()) fprintf(stderr, "\n");
     return ref_target_match;
 }
 

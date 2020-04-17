@@ -171,6 +171,7 @@ public:
                            mismatch_source, snpid, snp, processed_snps,
                            duplicated_snps, retain_snp, genotype);
     }
+
     bool test_not_in_xregion(
         const std::vector<IITree<size_t, size_t>>& exclusion_regions,
         const SNP& base, const SNP& target)

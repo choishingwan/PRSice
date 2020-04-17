@@ -366,6 +366,8 @@ TEST_CASE("base file read")
     {
         // just need to ensure the subroutines are working as expected
         geno.add_select_snp("exclude", true);
+        Reporter reporter("log", 60, true);
+        geno.set_reporter(&reporter);
         base_file.is_or = true;
         QCFiltering base_qc;
         base_qc.info_score = 0.8;
@@ -419,7 +421,6 @@ TEST_CASE("base file read")
         auto [filter_count, dup_idx] = geno.test_transverse_base_file(
             base_file, base_qc, threshold_info, exclusion_regions, 10, true,
             std::move(input));
-
         auto check = geno.existed_snps();
         REQUIRE_THAT(filter_count, Catch::Equals<size_t>(expected));
         REQUIRE_FALSE(dup_idx.find("dup") == dup_idx.end());
