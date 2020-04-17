@@ -49,6 +49,43 @@ public:
         genfile::bgen::write_header_block(dummy, context);
         dummy.close();
     }
+
+    void generate_bgen(const std::string& file_name,
+                       uint32_t number_of_snp_blocks,
+                       uint32_t number_of_samples, std::string free_data,
+                       uint32_t flags)
+    {
+        /*
+            void write_header_block(std::ostream & aStream, Context const&
+           context); std::size_t write_sample_identifier_block( std::ostream &
+           aStream, Context const& context, std::vector<std::string> const&
+           sample_ids); byte_t* write_snp_identifying_data( std::vector<byte_t>
+           * buffer, Context const& context, std::string SNPID, std::string
+           RSID, std::string chromosome, uint32_t position, uint16_t const
+           number_of_alleles, AlleleGetter get_allele);
+
+
+            std::ostringstream outStream;
+            a and b are A1 and A2 in string format
+            std::vector<genfile::byte_t> buffer;
+            std::vector<genfile::byte_t> buffer2;
+            genfile::byte_t* end = genfile::bgen::write_snp_identifying_data(
+                &buffer, context, SNPID, RSID, chromosome, SNP_position, 2,
+                [&a, &b](std::size_t i) {
+                    if (i == 0) { return a; }
+                    else if (i == 1)
+                    {
+                        return b;
+                    }
+                    else
+                    {
+                        assert(0);
+                    }
+                });
+            outStream.write(reinterpret_cast<char*>(&buffer[0]), end -
+           &buffer[0]);
+            */
+    }
 };
 
 #endif // MOCK_BINARYGEN_HPP
