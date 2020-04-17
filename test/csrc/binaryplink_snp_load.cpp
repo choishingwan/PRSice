@@ -111,15 +111,15 @@ TEST_CASE("generate snp vector")
         std::ifstream mismatch(mismatch_name.c_str());
         REQUIRE(mismatch.is_open());
         std::string line;
-        size_t num_dup = 0;
+        size_t num_mismatch = 0;
         std::vector<std::string> token;
         while (std::getline(mismatch, line))
         {
             token = misc::split(line, "\t");
-            ++num_dup;
+            ++num_mismatch;
         }
         // because of header
-        REQUIRE(num_dup == 2);
+        REQUIRE(num_mismatch == 2);
         REQUIRE(token.size() == 10);
         REQUIRE(token[1] == "SNP_5");
     }
@@ -187,7 +187,7 @@ TEST_CASE("generate snp vector")
             bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
             bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
             bim.close();
-            bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
+            bplink.gen_bed_head("load_snp2.bed", num_sample, 2, true, false);
             REQUIRE_THROWS(bplink.load_snps(
                 "load_snp", std::vector<IITree<size_t, size_t>> {}, false));
             std::ifstream dup("load_snp.valid");
