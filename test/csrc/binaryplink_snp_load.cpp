@@ -166,19 +166,47 @@ TEST_CASE("generate snp vector")
         bim << "1	SNP_2	0	933331	C	T" << std::endl;
         bim << "1	SNP_4	0	1008567	G	A" << std::endl;
         bim.close();
-        bim.open("load_snp2.bim");
-        bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
-        bim.close();
-        bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
-        bplink.load_snps("load_snp", std::vector<IITree<size_t, size_t>> {},
-                         false);
-        auto res = bplink.existed_snps();
-        REQUIRE(res.size() == 4);
-        REQUIRE(res[0].rs() == "SNP_1");
-        REQUIRE(res[1].rs() == "SNP_2");
-        REQUIRE(res[2].rs() == "SNP_4");
-        REQUIRE(res[3].rs() == "SNP_5");
+        SECTION("without duplicates")
+        {
+            bim.open("load_snp2.bim");
+            bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
+            bim.close();
+            bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
+            bplink.load_snps("load_snp", std::vector<IITree<size_t, size_t>> {},
+                             false);
+            auto res = bplink.existed_snps();
+            REQUIRE(res.size() == 4);
+            REQUIRE(res[0].rs() == "SNP_1");
+            REQUIRE(res[1].rs() == "SNP_2");
+            REQUIRE(res[2].rs() == "SNP_4");
+            REQUIRE(res[3].rs() == "SNP_5");
+        }
+        SECTION("with duplicates")
+        {
+            bim.open("load_snp2.bim");
+            bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
+            bim << "chr1	SNP_5	0	742429	A	C" << std::endl;
+            bim.close();
+            bplink.gen_bed_head("load_snp2.bed", num_sample, 1, true, false);
+            REQUIRE_THROWS(bplink.load_snps(
+                "load_snp", std::vector<IITree<size_t, size_t>> {}, false));
+            std::ifstream dup("load_snp.valid");
+            REQUIRE(dup.is_open());
+            std::string line;
+            size_t num_dup = 0;
+            std::vector<std::string> token;
+            while (std::getline(dup, line))
+            {
+                token = misc::split(line, "\t");
+                ++num_dup;
+            }
+            REQUIRE(num_dup == 3);
+            REQUIRE(token.size() == 5);
+            // we are checking the last line only
+            REQUIRE(token[0] == "SNP_4");
+        }
     }
+
 
     // one invalid loc
     // one invalid chr
