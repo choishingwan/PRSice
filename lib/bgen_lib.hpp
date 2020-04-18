@@ -675,7 +675,6 @@ namespace bgen
         {
             assert(0);
         }
-
         read_length_followed_by_data(aStream, &RSID_size, RSID);
         read_length_followed_by_data(aStream, &chromosome_size, chromosome);
         read_little_endian_integer(aStream, SNP_position);
