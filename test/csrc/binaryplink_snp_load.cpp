@@ -193,14 +193,14 @@ TEST_CASE("generate snp vector")
             std::ifstream dup("load_snp.valid");
             REQUIRE(dup.is_open());
             std::string line;
-            size_t num_dup = 0;
+            size_t num_valid = 0;
             std::vector<std::string> token;
             while (std::getline(dup, line))
             {
                 token = misc::split(line, "\t");
-                ++num_dup;
+                ++num_valid;
             }
-            REQUIRE(num_dup == 3);
+            REQUIRE(num_valid == 3);
             REQUIRE(token.size() == 5);
             // we are checking the last line only
             REQUIRE(token[0] == "SNP_4");

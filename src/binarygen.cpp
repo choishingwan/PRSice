@@ -381,7 +381,7 @@ void BinaryGen::gen_snp_vector(
     for (auto context : m_context_map)
     {
         if (std::numeric_limits<size_t>::max() - total_unfiltered_snps
-            > context.number_of_variants)
+            <= context.number_of_variants)
         {
             throw std::runtime_error(
                 "Error: Too many SNPs in bgen file (> "

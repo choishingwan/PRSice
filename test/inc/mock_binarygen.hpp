@@ -72,15 +72,17 @@ public:
         if (m_context_map.size() < idx + 1) { m_context_map.resize(idx); }
         m_context_map[idx] = context;
     }
-    void load_context(std::istream& in_file)
+    void load_context(std::istream& in_file, size_t idx=0)
     {
-        m_context_map.clear();
+        if(m_context_map.size() <= idx+1){
+            m_context_map.resize(idx+1);
+        }
         genfile::bgen::Context context;
         uint32_t offset;
         genfile::bgen::read_offset(in_file, &offset);
         genfile::bgen::read_header_block(in_file, &context);
         context.offset = offset;
-        m_context_map.push_back(context);
+        m_context_map[idx] = context;
     }
     void test_init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
                        bool no_xy = false, bool no_mt = false)
