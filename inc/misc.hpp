@@ -292,10 +292,10 @@ inline std::vector<std::string> split(const std::string& seq,
     std::vector<std::string> result;
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
     {
-        result.emplace_back(seq.substr(prev, pos - prev));
+        if (pos > prev) result.emplace_back(seq.substr(prev, pos - prev));
         prev = pos + 1;
     }
-    result.emplace_back(seq.substr(prev, pos - prev));
+    if (prev < seq.length()) result.emplace_back(seq.substr(prev, pos - prev));
     return result;
 }
 
@@ -308,20 +308,27 @@ inline void split(std::vector<std::string>& result, const std::string& seq,
     // result.clear();
     while ((pos = seq.find_first_of(separators, prev)) != std::string::npos)
     {
-        if (idx >= init_size)
+        if (pos > prev)
+        {
+            if (idx >= init_size)
+            { result.emplace_back(seq.substr(prev, pos - prev)); }
+            else
+            {
+                result[idx] = seq.substr(prev, pos - prev);
+            }
+            ++idx;
+        }
+        prev = pos + 1;
+    }
+    if (prev < seq.length())
+    {
+        if (idx > init_size)
         { result.emplace_back(seq.substr(prev, pos - prev)); }
         else
         {
             result[idx] = seq.substr(prev, pos - prev);
+            ++idx;
         }
-        ++idx;
-        prev = pos + 1;
-    }
-    if (idx > init_size) { result.emplace_back(seq.substr(prev, pos - prev)); }
-    else
-    {
-        result[idx] = seq.substr(prev, pos - prev);
-        ++idx;
     }
     if (idx < init_size) { result.resize(idx); }
 }
@@ -333,14 +340,13 @@ inline std::vector<std::string_view> tokenize(std::string_view str,
     auto first = str.data();
     auto second = first;
     auto last = str.end();
-    while ((second = std::find_first_of(first, last, std::cbegin(delims),
-                                        std::cend(delims)))
-           != last)
+    for (; second != last && first != last; first = second + 1)
     {
-        output.emplace_back(first, second - first);
-        first = second + 1;
+        second = std::find_first_of(first, last, std::cbegin(delims),
+                                    std::cend(delims));
+        if (first != second) output.emplace_back(first, second - first);
     }
-    output.emplace_back(first, second - first);
+    // output.emplace_back(first, second - first);
     return output;
 }
 
@@ -1157,7 +1163,7 @@ inline bool is_gz_file(const std::string& name)
 
 inline size_t get_num_line(std::unique_ptr<std::istream>& input)
 {
-    //assert(input->is_open());
+    // assert(input->is_open());
     size_t num_line = 0;
     std::string line;
     while (std::getline(*input, line))
