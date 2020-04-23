@@ -95,7 +95,6 @@ std::vector<Sample_ID> BinaryPlink::gen_sample_vector()
 bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
                                       const std::string&, Genotype* genotype)
 {
-    const double sample_ct_recip = 1.0 / (static_cast<double>(m_sample_ct));
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
@@ -103,7 +102,6 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
     const size_t total_snp = genotype->m_existed_snps.size();
     std::vector<bool> retain_snps(total_snp, false);
     double progress = 0.0, prev_progress = -1.0;
-    double cur_maf, cur_geno;
     std::streampos byte_pos;
     size_t processed_count = 0;
     size_t retained = 0;
@@ -114,9 +112,7 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
     uint32_t ref_founder_count = 0;
     uint32_t het_founder_count = 0;
     uint32_t alt_founder_count = 0;
-    uint32_t total_alleles = 0;
-    uint32_t missing = 0;
-    uint32_t total_founder_alleles = 0;
+    uint32_t missing_founder_ct = 0;
     // initialize the sample inclusion mask
     for (auto&& snp : genotype->m_existed_snps)
     {
@@ -129,10 +125,7 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
                     progress);
             prev_progress = progress;
         }
-        ++processed_count;
-
         snp.get_file_info(cur_file_idx, byte_pos, m_is_ref);
-
         m_genotype_file.read(m_genotype_file_names[cur_file_idx] + ".bed",
                              byte_pos,
                              static_cast<long long>(unfiltered_sample_ct4),
@@ -144,46 +137,14 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
             m_sample_include2.data(), m_founder_include2.data(), m_sample_ct,
             &ref_count, &het_count, &alt_count, m_founder_ct,
             &ref_founder_count, &het_founder_count, &alt_founder_count);
-        total_alleles = ref_count + het_count + alt_count;
-        cur_geno =
-            1.0 - (static_cast<int32_t>(total_alleles)) * sample_ct_recip;
-        // filter by genotype missingness
-        if (filter_info.geno < cur_geno)
-        {
-            ++m_num_geno_filter;
-            continue;
-        }
-        // filter by maf
-        total_founder_alleles =
-            (ref_founder_count + het_founder_count + alt_founder_count);
-        assert(m_founder_ct >= total_founder_alleles);
-        missing = static_cast<uint32_t>(m_founder_ct) - total_founder_alleles;
-        if (missing == m_founder_ct)
-        {
-            // invalid SNP as all missing. Should just remove it
-            ++m_num_miss_filter;
-            continue;
-        }
-        cur_maf =
-            (static_cast<double>(2 * alt_founder_count + het_founder_count))
-            / (static_cast<double>(2 * total_founder_alleles));
-        cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
-        if (misc::logically_equal(cur_maf, 0.0)
-            || misc::logically_equal(cur_maf, 1.0))
-        {
-            // none of the sample contain this SNP
-            // still count as MAF filtering (for now)
-            ++m_num_maf_filter;
-            continue;
-        }
-        if (cur_maf < filter_info.maf)
-        {
-            ++m_num_maf_filter;
-            continue;
-        }
+        ++processed_count;
+        if (filter_snp(ref_count, het_count, alt_count, ref_founder_count,
+                       het_founder_count, alt_founder_count, filter_info.geno,
+                       filter_info.maf, missing_founder_ct))
+        { continue; }
         // if we can reach here, it is not removed
         snp.set_counts(ref_founder_count, het_founder_count, alt_founder_count,
-                       missing, m_is_ref);
+                       missing_founder_ct, m_is_ref);
         ++retained;
         // we need to -1 because we put processed_count ++ forward
         // to avoid continue skipping out the addition
