@@ -428,7 +428,7 @@ protected:
         if (value <= 0)
         {
             m_error_message.append("Error: Non-zero positive number required. "
-                                   + misc::to_string(target)
+                                   + input
                                    + " provided, please check if you have "
                                      "provided the correct input\n");
             return false;

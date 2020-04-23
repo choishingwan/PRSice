@@ -1216,6 +1216,49 @@ protected:
             m_existed_snps.end());
         m_existed_snps.shrink_to_fit();
     }
+    bool filter_snp(const uint32_t ref_ct, const uint32_t het_ct,
+                    const uint32_t alt_ct, const uint32_t ref_founder_ct,
+                    const uint32_t het_founder_ct,
+                    const uint32_t alt_founder_ct, const double geno,
+                    const double maf, uint32_t& missing_founder_ct)
+    {
+        uint32_t total_alleles = ref_ct + het_ct + alt_ct;
+        double cur_geno =
+            1.0 - total_alleles / (static_cast<double>(m_sample_ct));
+        uint32_t missing_ct =
+            static_cast<uint32_t>(m_sample_ct) - total_alleles;
+        if (missing_ct == m_sample_ct)
+        {
+            ++m_num_miss_filter;
+            return true;
+        }
+        if (geno < cur_geno)
+        {
+            ++m_num_geno_filter;
+            return true;
+        }
+
+        uint32_t total_founder_alleles =
+            ref_founder_ct + het_founder_ct + alt_founder_ct;
+        missing_founder_ct =
+            static_cast<uint32_t>(m_founder_ct) - total_founder_alleles;
+        double cur_maf =
+            (static_cast<double>(2.0 * alt_founder_ct + het_founder_ct))
+            / (static_cast<double>(2.0 * total_founder_alleles));
+        cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
+        if (missing_founder_ct == m_founder_ct)
+        {
+            ++m_num_miss_filter;
+            return true;
+        }
+        if (alt_founder_ct == total_founder_alleles
+            || ref_founder_ct == total_founder_alleles || cur_maf < maf)
+        {
+            ++m_num_maf_filter;
+            return true;
+        }
+        return false;
+    }
     /*!
      * \brief Function to load in SNP extraction exclusion list
      * \param input the file name of the SNP list

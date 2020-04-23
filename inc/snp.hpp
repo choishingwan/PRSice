@@ -391,8 +391,13 @@ public:
      * \return the lower bound of the region
      */
     size_t low_bound() const { return m_clump_info.low_bound; }
-    void set_expected(double expected) { m_expected_value = expected; }
-    void set_ref_expected(double expected) { m_ref_expected_value = expected; }
+    void set_expected(double expected, bool is_ref = false)
+    {
+        if (is_ref)
+            m_ref_expected_value = expected;
+        else
+            m_expected_value = expected;
+    }
     bool has_expected() const { return m_has_expected; }
     bool has_ref_expected() const { return m_has_ref_expected; }
     double get_expected(bool use_ref_maf) const

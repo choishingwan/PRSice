@@ -439,12 +439,6 @@ protected:
         bool m_centre = false;
     };
 
-    /*!
-     * \brief The PLINK_generator struct. This will be passed into the bgen
-     * library and used for parsing the BGEN data. This will generate a
-     * plink binary as an output (stored in the genotype vector passed
-     * during construction)
-     */
     struct PLINK_generator
     {
         PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
@@ -467,16 +461,11 @@ protected:
             m_homrar_ct = 0;
             m_het_ct = 0;
             m_missing_ct = 0;
-            // we also clean the running stat (not RS ID), so that we can go
+            m_impute2 = 0;
+            // we also clean the running stat, so that we can go
             // through another round of calculation of mean and sd
-            rs.clear();
+            statistic.clear();
         }
-        /*!
-         * \brief set_min_max_ploidy is a function required by BGEN. As we
-         * only allow diploid, this function should not concern us (as we
-         * will error out otherwise
-         *
-         */
         void set_min_max_ploidy(uint32_t, uint32_t, uint32_t, uint32_t) {}
         /*!
          * \brief set_sample is the function to be called when BGEN start to
@@ -489,14 +478,10 @@ protected:
         {
             // we set the sample index to i
             m_sample_i = i;
-            // set the genotype binary representation to 2 (missing)
-            m_geno = 2;
             // we also reset the hard_prob to 0
             m_hard_prob = 0.0;
             // and expected value to 0
-            m_exp_value = 0.0;
             m_missing = false;
-            std::fill(m_prob.begin(), m_prob.end(), 0.0);
             // then we determine if we want to include sample using by
             // consulting the flag on m_sample
             return IS_SET(m_sample->data(), m_sample_i);
@@ -505,7 +490,9 @@ protected:
                                    genfile::OrderType phased,
                                    genfile::ValueType)
         {
-            m_phased = phased;
+            m_phased =
+                (phased == genfile::OrderType::ePerPhasedHaplotypePerAllele);
+            m_prob.resize(3 + m_phased, 0.0);
         }
 
         // Called once for each genotype (or haplotype) probability per
@@ -515,7 +502,7 @@ protected:
          * probability per sample \param value where value is the
          * probability of the genotype
          */
-        void set_value(uint32_t geno, double value)
+        void set_value(uint32_t idx, double value)
         {
             // if the current probability is the highest and the value is
             // higher than the required threshold, we will assign it
@@ -538,32 +525,17 @@ protected:
             //            }
             // TODO: To account for situation where there are more than 3
             // genotype (which shouldn't happen to be honest)
-            if (m_phased == genfile::OrderType::ePerPhasedHaplotypePerAllele
-                && geno > 1)
-            {
-                switch (geno)
-                {
-                case 3: geno = 2; break;
-                default: geno = 0;
-                }
-            }
-            m_prob[geno] = value;
-            // when we calculate the expected value, we want to multiply the
-            // probability with our coding instead of just using byte
-            // representation
-            m_exp_value += static_cast<double>(geno) * value;
+
+            // when data is phased, BGEN Lib will give us 4 probabbilities:
+            // prob of allele 1 in hap 1, prob of allele 2 in hap 1 and then
+            // prob of allele 1 in hap 2 and then prob of allele 2 in hap 2,
+            // which is slightly different from what was stated in the bgen
+            // format as the bgen lib api automatically do the 1-prob allele 1
+            // to give us the prob of allele 2
+            m_prob[idx] = value;
         }
-        /*!
-         * \brief set_value will capture the missingness signature and do
-         * nothing
-         *
-         * \param value this is the missing signature used by bgen v1.2+
-         */
+
         void set_value(uint32_t, genfile::MissingValue) { m_missing = true; }
-        /*!
-         * \brief finalise This function is called when the SNP is
-         * processed. Do nothing here
-         */
         void finalise() {}
         /*!
          * \brief sample_completed is called when each sample is completed.
@@ -574,39 +546,54 @@ protected:
             // if m_shift is zero, it is when we meet the index for the
             // first time, therefore we want to initialize it
             if (m_shift == 0) m_genotype[m_index] = 0;
-            // check if it is missing in addition to original
-            double prob1 = m_prob[0] * 2 + m_prob[1];
-            double prob2 = m_prob[2] * 2 + m_prob[1];
-            double missing_check = m_prob[0] + m_prob[1] + m_prob[2];
-            if ((std::fabs(prob1 - std::round(prob1))
-                 + std::fabs(prob2 - std::round(prob2)))
-                        * 0.5
-                    > m_hard_threshold
-                || misc::logically_equal(missing_check, 0.0) || m_missing)
+            // check missing not required for phased data, as phased data only
+            // supported in 1.2+, which represent missing value differently
+            if (!m_phased && !m_missing)
             {
-                // set to missing
-                m_geno = 1;
+                m_missing = misc::logically_equal(
+                    m_prob[0] + m_prob[1] + m_prob[2], 0.0);
+                m_geno_prob = m_prob;
             }
             else
+            {
+                // convert haplotype prob into genotype prob
+                m_geno_prob.resize(3, 0.0);
+                m_geno_prob[0] = m_prob[0] * m_prob[2];
+                m_geno_prob[1] = m_prob[0] * m_prob[3] + m_prob[1] * m_prob[2];
+                m_geno_prob[2] = m_prob[1] * m_prob[3];
+            }
+            double impute2_tmp = 0.0;
+            m_exp_value = 0;
+            for (size_t i = 0; i < 3; ++i)
+            {
+                m_exp_value += m_geno_prob[i] * i;
+                impute2_tmp += m_geno_prob[i] * i * i;
+            }
+            m_impute2 += impute2_tmp - m_exp_value;
+
+            const double prob1 = m_geno_prob[0] * 2 + m_geno_prob[1];
+            const double prob2 = m_geno_prob[2] * 2 + m_geno_prob[1];
+            uintptr_t obs_genotype = 1;
+            const double hard_score = (std::fabs(prob1 - std::round(prob1))
+                                       + std::fabs(prob2 - std::round(prob2)))
+                                      * 0.5;
+            if (!m_missing && (hard_score <= m_hard_threshold))
             {
                 m_hard_prob = 0;
                 for (size_t geno = 0; geno < 3; ++geno)
                 {
-                    if (m_prob[geno] > m_hard_prob)
+                    if (m_prob[geno] > m_hard_prob
+                        && m_prob[geno] >= m_dose_threshold)
                     {
-                        m_geno = (geno == 0) ? geno : geno + 1;
+                        // +1 because geno ==1 represents missing
+                        obs_genotype = (geno == 0) ? geno : geno + 1;
                         m_hard_prob = m_prob[geno];
                     }
                 }
-                if (m_hard_prob < m_dose_threshold)
-                {
-                    // set to missing
-                    m_geno = 1;
-                }
             }
             // we now add the genotype to the vector
-            m_genotype[m_index] |= m_geno << m_shift;
-            switch (m_geno)
+            m_genotype[m_index] |= obs_genotype << m_shift;
+            switch (obs_genotype)
             {
             case 3: ++m_homrar_ct; break;
             case 2: ++m_het_ct; break;
@@ -624,8 +611,9 @@ protected:
             }
             // we can now push in the expected value for this sample. This
             // can then use for the calculation of the info score
-            // always calculate for any inclusion
-            if (IS_SET(m_sample->data(), m_sample_i)) rs.push(m_exp_value);
+            // only calculate for included samples
+            if (IS_SET(m_sample->data(), m_sample_i))
+                statistic.push(m_exp_value);
         }
         /*!
          * \brief info_score is the function use to calculate the info score
@@ -633,13 +621,27 @@ protected:
          */
         double info_score() const
         {
-            double p = rs.mean() / 2.0;
+            double p = statistic.mean() / 2.0;
             double p_all = 2.0 * p * (1.0 - p);
-            return (rs.var() / p_all);
+            return (statistic.var() / p_all);
         }
-        double expected() const { return rs.mean(); }
+        double impute_info_score() const
+        {
+            double p = statistic.mean() / 2.0;
+            double p_all = 2.0 * p * (1.0 - p) * statistic.get_n();
+            return 1 - (m_impute2 / p_all);
+        }
+        double expected() const { return statistic.mean(); }
         void get_count(size_t& homcom_ct, size_t& het_ct, size_t& homrar_ct,
                        size_t& missing_ct) const
+        {
+            homcom_ct = m_homcom_ct;
+            het_ct = m_het_ct;
+            homrar_ct = m_homrar_ct;
+            missing_ct = m_missing_ct;
+        }
+        void get_count(uint32_t& homcom_ct, uint32_t& het_ct,
+                       uint32_t& homrar_ct, uint32_t& missing_ct) const
         {
             homcom_ct = m_homcom_ct;
             het_ct = m_het_ct;
@@ -649,25 +651,26 @@ protected:
         virtual ~PLINK_generator() {}
 
     private:
-        // is the sample inclusion vector, if bit is set, sample is required
+        // the sample inclusion vector, if bit is set, sample is required
         std::vector<uintptr_t>* m_sample;
         std::vector<double> m_prob;
+        std::vector<double> m_geno_prob;
         // is the genotype vector
         uintptr_t* m_genotype;
-        misc::RunningStat rs;
+        misc::RunningStat statistic;
         double m_hard_threshold = 0.0;
         double m_dose_threshold = 0.0;
         double m_hard_prob = 0;
         double m_exp_value = 0.0;
-        uintptr_t m_geno = 1;
+        double m_impute2 = 0.0;
         uint32_t m_shift = 0;
         uint32_t m_index = 0;
         size_t m_sample_i = 0;
-        size_t m_homcom_ct = 0;
-        size_t m_homrar_ct = 0;
-        size_t m_het_ct = 0;
-        size_t m_missing_ct = 0;
-        genfile::OrderType m_phased = genfile::OrderType::ePerUnorderedGenotype;
+        uint32_t m_homcom_ct = 0;
+        uint32_t m_homrar_ct = 0;
+        uint32_t m_het_ct = 0;
+        uint32_t m_missing_ct = 0;
+        bool m_phased = false;
         bool m_missing = false;
     };
 };
