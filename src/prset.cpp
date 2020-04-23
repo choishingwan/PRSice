@@ -356,7 +356,7 @@ void PRSice::run_competitive(
         {
             bigstack = new double[basic_memory_required_per_thread
                                   * static_cast<size_t>(num_thread)];
-            delete bigstack;
+            delete[] bigstack;
             break;
         }
         catch (const std::bad_alloc&)
