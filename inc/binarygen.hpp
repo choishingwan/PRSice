@@ -65,8 +65,7 @@ protected:
                    const std::string& out_prefix, Genotype* target = nullptr);
     bool calc_freq_gen_inter(const QCFiltering& filter_info,
                              const std::string& prefix,
-                             Genotype* target = nullptr,
-                             bool force_cal = false);
+                             Genotype* genotype = nullptr);
 
     genfile::bgen::Context get_context(const size_t& idx);
     size_t get_sex_col(const std::string& header,

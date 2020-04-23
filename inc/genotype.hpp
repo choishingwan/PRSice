@@ -100,8 +100,7 @@ public:
 
     void calc_freqs_and_intermediate(const QCFiltering& filter_info,
                                      const std::string& prefix, bool verbose,
-                                     Genotype* target = nullptr,
-                                     bool force_cal = false);
+                                     Genotype* target = nullptr);
     /*!
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
@@ -496,7 +495,8 @@ public:
         return !output.empty();
     }
 
-
+    bool perform_freqs_and_inter(const QCFiltering& filter_info,
+                                 const std::string& prefix, Genotype* target);
     static void construct_flag(
         const std::string& rs,
         const std::vector<IITree<size_t, size_t>>& gene_sets,
@@ -653,6 +653,7 @@ protected:
     size_t m_num_maf_filter = 0;
     size_t m_num_geno_filter = 0;
     size_t m_num_info_filter = 0;
+    size_t m_num_miss_filter = 0;
     size_t m_num_xrange = 0;
     size_t m_base_missed = 0;
     size_t m_num_male = 0;
@@ -985,8 +986,8 @@ protected:
     {
     }
     virtual bool calc_freq_gen_inter(const QCFiltering& /*QC info*/,
-                                     const std::string& prefix,
-                                     Genotype* /*target=nullptr*/, bool /**/)
+                                     const std::string& /*prefix*/,
+                                     Genotype* /*target=nullptr*/)
     {
         return false;
     }

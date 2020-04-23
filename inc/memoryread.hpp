@@ -15,15 +15,12 @@ public:
               const std::streampos read_size, char* result)
     {
         if (file != m_file_name) { new_file(file, byte_pos); }
-
         assert(m_input.is_open());
-        if (byte_pos != m_offset)
+        if (byte_pos != m_offset
+            && !m_input.seekg(byte_pos, std::ios_base::beg))
         {
-            if (!m_input.seekg(byte_pos, std::ios_base::beg))
-            {
-                throw std::runtime_error("Error: Cannot seek within file: "
-                                         + m_file_name);
-            }
+            throw std::runtime_error("Error: Cannot seek within file: "
+                                     + m_file_name);
         }
         if (!m_input.read(result, read_size))
         {
@@ -43,13 +40,10 @@ private:
         if (m_input.is_open()) { m_input.close(); }
         m_input.clear();
         m_input.open(m_file_name.c_str(), std::ios::binary);
-        if (byte_pos != 0)
+        if (byte_pos != 0 && !m_input.seekg(byte_pos, std::ios_base::beg))
         {
-            if (!m_input.seekg(byte_pos, std::ios_base::beg))
-            {
-                throw std::runtime_error("Error: Cannot seek within file: "
-                                         + m_file_name);
-            }
+            throw std::runtime_error("Error: Cannot seek within file: "
+                                     + m_file_name);
         }
     }
 };

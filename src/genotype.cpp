@@ -868,17 +868,44 @@ void Genotype::load_samples(bool verbose)
     m_sample_selection_list.clear();
 }
 
+bool Genotype::perform_freqs_and_inter(const QCFiltering& filter_info,
+                                       const std::string& prefix,
+                                       Genotype* target)
+{
+    if (!m_intermediate
+        && (misc::logically_equal(filter_info.geno, 1.0)
+            || filter_info.geno > 1.0)
+        && (misc::logically_equal(filter_info.maf, 0.0)
+            || filter_info.maf > 0.0)
+        && (misc::logically_equal(filter_info.info_score, 0.0)
+            || filter_info.info_score < 0.0))
+    { return false; }
+    const std::string print_target = (m_is_ref) ? "reference" : "target";
+    m_reporter->report("Calculate MAF and perform filtering on " + print_target
+                       + " SNPs\n"
+                         "==================================================");
+    auto&& genotype = (m_is_ref) ? target : this;
+    std::sort(
+        begin(genotype->m_existed_snps), end(genotype->m_existed_snps),
+        [this](SNP const& t1, SNP const& t2) {
+            if (t1.get_file_idx(m_is_ref) == t2.get_file_idx(m_is_ref))
+            { return t1.get_byte_pos(m_is_ref) < t2.get_byte_pos(m_is_ref); }
+            else
+                return t1.get_file_idx(m_is_ref) == t2.get_file_idx(m_is_ref);
+        });
+    return calc_freq_gen_inter(filter_info, prefix, genotype);
+}
+
 void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
                                            const std::string& prefix,
-                                           bool verbose, Genotype* target,
-                                           bool force_cal)
+                                           bool verbose, Genotype* target)
 {
     std::string message = "";
     m_num_geno_filter = 0;
     m_num_maf_filter = 0;
     m_num_info_filter = 0;
     // only print the filtering message if filtering was performed
-    if (calc_freq_gen_inter(filter_info, prefix, target, force_cal))
+    if (perform_freqs_and_inter(filter_info, prefix, target))
     {
         m_marker_ct = m_existed_snps.size();
         if (m_num_geno_filter != 0)
@@ -897,6 +924,12 @@ void Genotype::calc_freqs_and_intermediate(const QCFiltering& filter_info,
             message.append(
                 std::to_string(m_num_info_filter)
                 + " variant(s) excluded based on INFO score threshold\n");
+        }
+        if (m_num_miss_filter != 0)
+        {
+            message.append(std::to_string(m_num_miss_filter)
+                           + " variant(s) excluded as they are completely "
+                             "missed on all founder samples\n");
         }
         if (!m_is_ref)
         {

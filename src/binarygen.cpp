@@ -418,39 +418,14 @@ void BinaryGen::gen_snp_vector(
 
 
 bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
-                                    const std::string& prefix, Genotype* target,
-                                    bool force_cal)
+                                    const std::string& prefix,
+                                    Genotype* genotype)
 {
-    if (!m_intermediate
-        && (misc::logically_equal(filter_info.geno, 1.0)
-            || filter_info.geno > 1.0)
-        && (misc::logically_equal(filter_info.maf, 0.0)
-            || filter_info.maf < 0.0)
-        && (misc::logically_equal(filter_info.info_score, 0.0)
-            || filter_info.maf < 0.0)
-        && !force_cal)
-    { return false; }
-    const std::string print_target = (m_is_ref) ? "reference" : "target";
-    m_reporter->report("Calculate MAF and perform filtering on " + print_target
-                       + " SNPs\n"
-                         "==================================================");
-    auto&& genotype = (m_is_ref) ? target : this;
-    std::sort(
-        begin(genotype->m_existed_snps), end(genotype->m_existed_snps),
-        [this](SNP const& t1, SNP const& t2) {
-            if (t1.get_file_idx(m_is_ref) == t2.get_file_idx(m_is_ref))
-            { return t1.get_byte_pos(m_is_ref) < t2.get_byte_pos(m_is_ref); }
-            else
-                return t1.get_file_idx(m_is_ref) == t2.get_file_idx(m_is_ref);
-        });
     const double sample_ct_recip = 1.0 / (static_cast<double>(m_sample_ct));
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
-    std::vector<bool> retain_snps(genotype->m_existed_snps.size(), false);
-
-    std::string bgen_name = "";
     const std::string intermediate_name = prefix + ".inter";
+
+    std::vector<bool> retain_snps(genotype->m_existed_snps.size(), false);
+    std::string bgen_name = "";
     std::ifstream bgen_file;
     double cur_maf, cur_geno;
     std::streampos byte_pos, tmp_byte_pos;
@@ -462,15 +437,6 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     size_t hh_ct = 0;
     size_t uii = 0;
     size_t missing = 0;
-    // initialize the sample inclusion mask
-    std::vector<uintptr_t> sample_include2(unfiltered_sample_ctv2);
-    std::vector<uintptr_t> founder_include2(unfiltered_sample_ctv2);
-    // fill it with the required mask (copy from PLINK2)
-    init_quaterarr_from_bitarr(m_calculate_prs.data(), m_unfiltered_sample_ct,
-                               sample_include2.data());
-    init_quaterarr_from_bitarr(m_sample_for_ld.data(), m_unfiltered_sample_ct,
-                               founder_include2.data());
-    m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
     // we initialize the plink converter with the sample inclusion vector
     // and also the tempory genotype vector list. We also provide the hard
     // coding threshold
