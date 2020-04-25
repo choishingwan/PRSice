@@ -403,11 +403,6 @@ struct PLINK_generator
                 for(auto && g: m_geno_prob) m_total_probability+=g;
         }
     }
-    /*!
-     * \brief info_score is the function use to calculate the info score
-     * \return return the  MaCH INFO score
-     */
-    double total() const { return m_total_probability;}
     double info_score(const INFO type) const
     {
         double p = statistic.mean() / 2.0;
@@ -419,10 +414,6 @@ struct PLINK_generator
         }
         throw std::runtime_error("Error: Undefined info score type");
     }
-    misc::RunningStat get_stat() const { return statistic;}
-    double get_pall() const {  double p = statistic.mean() / 2.0;
-                               double p_all = 2.0 * p * (1.0 - p);return p_all; }
-    double get_impute2() const { return m_impute2; }
     double expected() const { return statistic.mean(); }
     void get_count(size_t& homcom_ct, size_t& het_ct, size_t& homrar_ct,
                    size_t& missing_ct) const

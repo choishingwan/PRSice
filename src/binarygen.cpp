@@ -423,8 +423,6 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
 {
     const std::string intermediate_name = prefix + ".inter";
     std::vector<bool> retain_snps(genotype->m_existed_snps.size(), false);
-    std::string bgen_name = "";
-    std::ifstream bgen_file;
     std::streampos byte_pos, tmp_byte_pos;
     size_t processed_count = 0;
     size_t cur_file_idx = 0;
@@ -467,7 +465,6 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
             byte_pos);
         // no founder, much easier
         setter.get_count(ref_count, het_count, alt_count, missing_count);
-
         ++processed_count;
         if (filter_snp(ref_count, het_count, alt_count, ref_count, het_count,
                        alt_count, filter_info.geno, filter_info.maf,

@@ -3,7 +3,7 @@
 #include "catch.hpp"
 #include "mock_binarygen.hpp"
 
-TEST_CASE("Target filtering")
+TEST_CASE("BGEN Target filtering")
 {
     auto n_sample = GENERATE(repeat(2, range(124u, 126u)));
     using record = std::tuple<genfile::bgen::Layout, genfile::OrderType>;
@@ -120,7 +120,7 @@ TEST_CASE("Target filtering")
     Reporter reporter("log", 60, true);
     GenoFile geno;
     geno.num_autosome = 2;
-    geno.file_name = "load_snp,sample";
+    geno.file_name = "filtering,sample";
     Phenotype pheno;
     mock_binarygen bgen(geno, pheno, " ", &reporter);
     bgen.test_init_chr();
@@ -135,9 +135,8 @@ TEST_CASE("Target filtering")
             std::get<1>(settings), std::get<0>(settings), compressed);
         auto in_file = std::make_unique<std::istringstream>(str);
         bgen.load_context(*in_file);
-        auto [ct, cal_pall, i2, total, impute, mach] =
-            bgen.test_plink_generator(std::move(in_file),
-                                      input.front().get_byte_pos());
+        auto [ct, impute, mach] = bgen.test_plink_generator(
+            std::move(in_file), input.front().get_byte_pos());
         REQUIRE(ct.homcom == ref_ct);
         REQUIRE(ct.het == het_ct);
         REQUIRE(ct.homrar == alt_ct);
@@ -145,5 +144,61 @@ TEST_CASE("Target filtering")
         // BGEN only has accuracy up to four decimal places.
         REQUIRE(impute == Approx(exp_impute2).epsilon(1e-4));
         REQUIRE(mach == Approx(exp_mach).epsilon(1e-4));
+    }
+    SECTION("Test filter from file")
+    {
+        auto str = bgen.gen_mock_snp(
+            std::vector<std::vector<double>> {genotype_prob}, input, n_sample,
+            std::get<1>(settings), std::get<0>(settings), compressed);
+        auto in_file = std::make_unique<std::istringstream>(str);
+        bgen.manual_load_snp(input.front());
+        bgen.load_context(*in_file);
+        std::ofstream file("filtering.bgen", std::ios::binary);
+        file << str << std::endl;
+        file.close();
+        qc.info_type = GENERATE(INFO::IMPUTE2, INFO::MACH);
+        qc.info_score = GENERATE(take(2, random(0.0, 1.0)));
+        qc.geno = GENERATE(take(1, random(0.0, 1.0)));
+        qc.maf = GENERATE(take(1, random(0.0, 1.0)));
+        REQUIRE(bgen.test_calc_freq_gen_inter(qc, "filter"));
+        double exp_maf =
+            (2.0 * alt_ct + het_ct) / (2.0 * (ref_ct + het_ct + alt_ct));
+        if (exp_maf > 0.5) exp_maf = 1 - exp_maf;
+        if (miss_ct == n_sample)
+        {
+            REQUIRE(bgen.num_miss_filter() == 1);
+            REQUIRE(bgen.num_geno_filter() == 0);
+            REQUIRE(bgen.num_maf_filter() == 0);
+            REQUIRE(bgen.num_info_filter() == 0);
+        }
+        else if (n_missing / n_sample > qc.geno)
+        {
+            REQUIRE(bgen.num_miss_filter() == 0);
+            REQUIRE(bgen.num_maf_filter() == 0);
+            REQUIRE(bgen.num_info_filter() == 0);
+            REQUIRE(bgen.num_geno_filter() == 1);
+        }
+        else if (exp_maf < qc.maf)
+        {
+            REQUIRE(bgen.num_miss_filter() == 0);
+            REQUIRE(bgen.num_info_filter() == 0);
+            REQUIRE(bgen.num_geno_filter() == 0);
+            REQUIRE(bgen.num_maf_filter() == 1);
+        }
+        else if ((qc.info_type == INFO::IMPUTE2 && qc.info_score > exp_impute2)
+                 || (qc.info_type == INFO::MACH && qc.info_score > exp_mach))
+        {
+            REQUIRE(bgen.num_miss_filter() == 0);
+            REQUIRE(bgen.num_geno_filter() == 0);
+            REQUIRE(bgen.num_maf_filter() == 0);
+            REQUIRE(bgen.num_info_filter() == 1);
+        }
+        else
+        {
+            REQUIRE(bgen.num_miss_filter() == 0);
+            REQUIRE(bgen.num_geno_filter() == 0);
+            REQUIRE(bgen.num_maf_filter() == 0);
+            REQUIRE(bgen.num_info_filter() == 0);
+        }
     }
 }

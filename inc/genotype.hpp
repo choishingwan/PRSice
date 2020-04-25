@@ -1225,9 +1225,7 @@ protected:
         uint32_t total_alleles = ref_ct + het_ct + alt_ct;
         double cur_geno =
             1.0 - total_alleles / (static_cast<double>(m_sample_ct));
-        uint32_t missing_ct =
-            static_cast<uint32_t>(m_sample_ct) - total_alleles;
-        if (missing_ct == m_sample_ct)
+        if (total_alleles == m_sample_ct)
         {
             ++m_num_miss_filter;
             return true;
@@ -1242,15 +1240,15 @@ protected:
             ref_founder_ct + het_founder_ct + alt_founder_ct;
         missing_founder_ct =
             static_cast<uint32_t>(m_founder_ct) - total_founder_alleles;
-        double cur_maf =
-            (static_cast<double>(2.0 * alt_founder_ct + het_founder_ct))
-            / (static_cast<double>(2.0 * total_founder_alleles));
-        cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
         if (missing_founder_ct == m_founder_ct)
         {
             ++m_num_miss_filter;
             return true;
         }
+        double cur_maf =
+            (static_cast<double>(2.0 * alt_founder_ct + het_founder_ct))
+            / (static_cast<double>(2.0 * total_founder_alleles));
+        cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
         if (alt_founder_ct == total_founder_alleles
             || ref_founder_ct == total_founder_alleles || cur_maf < maf)
         {

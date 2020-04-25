@@ -99,7 +99,7 @@ public:
     {
         init_chr(num_auto, no_x, no_y, no_xy, no_mt);
     }
-    std::tuple<AlleleCounts, double, double, double, double, double>
+    std::tuple<AlleleCounts, double, double>
     test_plink_generator(std::unique_ptr<std::istream> bgen_file,
                          const std::streampos& bytepos)
     {
@@ -116,12 +116,7 @@ public:
         setter.get_count(ct.homcom, ct.het, ct.homrar, ct.missing);
         double impute = setter.info_score(INFO::IMPUTE2);
         double mach = setter.info_score(INFO::MACH);
-        return {ct,
-                setter.get_pall(),
-                setter.get_impute2(),
-                setter.total(),
-                impute,
-                mach};
+        return {ct, impute, mach};
     }
     std::string gen_mock_snp(const std::vector<std::vector<double>>& geno_prob,
                              std::vector<SNP>& input, uint32_t n_sample,
@@ -158,6 +153,11 @@ public:
         mock_w_offset.write(mock_file.str().data(), mock_file.str().size());
         return (mock_w_offset.str());
     }
+    bool test_calc_freq_gen_inter(const QCFiltering& filter_info,
+                                  const std::string& prefix)
+    {
+        return calc_freq_gen_inter(filter_info, prefix, this);
+    }
     std::string gen_mock_snp(const std::vector<SNP>& input,
                              uint32_t number_individual,
                              genfile::OrderType& phased,
@@ -189,7 +189,11 @@ public:
         mock_w_offset.write(mock_file.str().data(), mock_file.str().size());
         return (mock_w_offset.str());
     }
-
+    void add_file(const std::string& name)
+    {
+        m_genotype_file_names.clear();
+        m_genotype_file_names.push_back(name);
+    }
     void gen_ostringstream_for_snp(
         const std::vector<double>& geno_prob, const std::string& snpid,
         const std::string& rsid, const std::string chr, const size_t loc,
@@ -241,7 +245,10 @@ public:
         }
         writer.finalise();
     }
-
+    size_t num_info_filter() const { return m_num_info_filter; }
+    size_t num_geno_filter() const { return m_num_geno_filter; }
+    size_t num_maf_filter() const { return m_num_maf_filter; }
+    size_t num_miss_filter() const { return m_num_miss_filter; }
     void manual_load_snp(SNP cur)
     {
         m_existed_snps_index[cur.rs()] = m_existed_snps.size();
