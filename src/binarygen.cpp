@@ -422,7 +422,6 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
                                     Genotype* genotype)
 {
     const std::string intermediate_name = prefix + ".inter";
-
     std::vector<bool> retain_snps(genotype->m_existed_snps.size(), false);
     std::string bgen_name = "";
     std::ifstream bgen_file;
@@ -475,7 +474,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
                        missing_count))
         { continue; }
 
-        if (setter.info_score() < filter_info.info_score)
+        if (setter.info_score(filter_info.info_type) < filter_info.info_score)
         {
             ++m_num_info_filter;
             continue;
@@ -566,8 +565,17 @@ void BinaryGen::dosage_score(
     // m_prs_info is where we store the PRS information
     // and m_sample_include let us know if the sample is required.
     // m_missing_score will inform us as to how to handle the missingness
-    PRS_Interpreter setter(&prs_list, &m_calculate_prs,
-                           m_prs_calculation.missing_score);
+    PRS_Interpreter* setter;
+    if (not_first)
+    {
+        setter = new Add_PRS(&prs_list, &m_calculate_prs,
+                             m_prs_calculation.missing_score);
+    }
+    else
+    {
+        setter = new First_PRS(&prs_list, &m_calculate_prs,
+                               m_prs_calculation.missing_score);
+    }
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     size_t file_idx;
     std::streampos byte_pos;
@@ -577,18 +585,25 @@ void BinaryGen::dosage_score(
         snp.get_file_info(file_idx, byte_pos, m_is_ref);
         // if the file name differ, or the file isn't open, we will open it
         auto&& context = m_context_map[file_idx];
-        setter.set_stat(snp.stat(), m_homcom_weight, m_het_weight,
-                        m_homrar_weight, snp.is_flipped(), not_first);
-
+        setter->set_stat(snp.stat(), m_homcom_weight, m_het_weight,
+                         m_homrar_weight, snp.is_flipped());
         // start performing the parsing
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_genotype_file, m_genotype_file_names[file_idx] + ".bgen", context,
-            setter, &m_buffer1, &m_buffer2, byte_pos);
+            *setter, &m_buffer1, &m_buffer2, byte_pos);
         // check if this SNP has some non-missing sample, if not, invalidate
         // it
         // after reading in this SNP, we no longer need to reset the PRS
+        if (!not_first)
+        {
+            // use a new setter
+            delete setter;
+            setter = new Add_PRS(&prs_list, &m_calculate_prs,
+                                 m_prs_calculation.missing_score);
+        }
         not_first = true;
     }
+    delete setter;
 }
 
 
@@ -603,10 +618,10 @@ void BinaryGen::hard_code_score(
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     // genotype counts
-    size_t homrar_ct = 0;
-    size_t missing_ct = 0;
-    size_t het_ct = 0;
-    size_t homcom_ct = 0;
+    uint32_t homrar_ct = 0;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
     // weight of each genotype
     double homcom_weight = m_homcom_weight;
     double het_weight = m_het_weight;

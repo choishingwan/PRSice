@@ -133,10 +133,10 @@ struct SNPClump
 
 struct AlleleCounts
 {
-    size_t homcom = 0;
-    size_t het = 0;
-    size_t homrar = 0;
-    size_t missing = 0;
+    uint32_t homcom = 0;
+    uint32_t het = 0;
+    uint32_t homrar = 0;
+    uint32_t missing = 0;
     bool has_count = false;
 };
 
@@ -184,6 +184,7 @@ struct QCFiltering
     double maf = 0.0;
     double maf_case = 0.0;
     double info_score = 0.0;
+    INFO info_type = INFO::IMPUTE2;
     bool provided_hard_thres = false;
     bool provided_dose_thres = false;
 };

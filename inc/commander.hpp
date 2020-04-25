@@ -43,7 +43,7 @@
 #endif
 
 const std::string version = "2.2.14";
-const std::string date = "2020-04-15";
+const std::string date = "2020-04-25";
 class Commander
 {
 public:
@@ -125,7 +125,6 @@ protected:
     QCFiltering m_base_filter;
     Phenotype m_pheno_info;
     PThresholding m_p_thresholds;
-
     std::map<std::string, std::string> m_parameter_log;
     std::string m_error_message = "";
     ////////////////////////////////////////////
@@ -539,7 +538,30 @@ protected:
     {
         return parse_unit_value(input, "memory", 2, m_memory, true);
     }
-
+    inline bool set_info(const std::string& in)
+    {
+        std::string input = in;
+        check_duplicate("info-type");
+        misc::to_lower(input);
+        switch (input.at(0))
+        {
+        case 'm':
+            input = "mach";
+            m_target_filter.info_type = INFO::MACH;
+            break;
+        case 'i':
+            input = "impute2";
+            m_target_filter.info_type = INFO::IMPUTE2;
+            break;
+        default:
+            m_error_message.append("Error: Unrecognized info type: " + in
+                                   + "!\n");
+            return false;
+        }
+        m_ref_filter.info_type = m_target_filter.info_type;
+        m_parameter_log["info-type"] = input;
+        return true;
+    }
     inline bool set_missing(const std::string& in)
     {
         std::string input = in;

@@ -27,9 +27,9 @@ TEST_CASE("Geno and MAF filtering")
         std::count(sample_genotype.begin(), sample_genotype.end(), 3);
     double exp_geno =
         static_cast<double>(n_missing) / static_cast<double>(n_sample);
-    size_t ref_founder_ct = 0, het_founder_ct = 0, alt_founder_ct = 0,
-           miss_founder_ct = 0, ref_exp_ct = 0, het_exp_ct = 0, alt_exp_ct = 0,
-           miss_exp_ct = 0, n_founder = 0;
+    uint32_t ref_founder_ct = 0, het_founder_ct = 0, alt_founder_ct = 0,
+             miss_founder_ct = 0, ref_exp_ct = 0, het_exp_ct = 0,
+             alt_exp_ct = 0, miss_exp_ct = 0, n_founder = 0;
     for (size_t i = 0; i < n_sample; ++i)
     {
         switch (sample_genotype[i])
@@ -100,7 +100,7 @@ TEST_CASE("Geno and MAF filtering")
         else
         {
             REQUIRE(res.size() == 1);
-            size_t ref_ct = 0, het_ct = 0, alt_ct = 0, miss = 0;
+            uint32_t ref_ct = 0, het_ct = 0, alt_ct = 0, miss = 0;
             res.front().get_counts(ref_ct, het_ct, alt_ct, miss, false);
             REQUIRE(ref_ct == ref_founder_ct);
             REQUIRE(het_ct == het_founder_ct);

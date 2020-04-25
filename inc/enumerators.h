@@ -27,6 +27,12 @@ operator++(e& val)
 }
 // END
 
+enum class INFO
+{
+    IMPUTE2,
+    MACH
+};
+
 enum class BIM
 {
     CHR = 0,

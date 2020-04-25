@@ -373,11 +373,11 @@ void BinaryPlink::read_score(
     uint32_t ll_ct, lh_ct, hh_ct;
     uint32_t ll_ctf, lh_ctf, hh_ctf;
     // for storing the count of each observation
-    size_t homrar_ct = 0;
-    size_t missing_ct = 0;
-    size_t het_ct = 0;
-    size_t homcom_ct = 0;
-    size_t tmp_total = 0;
+    uint32_t homrar_ct = 0;
+    uint32_t missing_ct = 0;
+    uint32_t het_ct = 0;
+    uint32_t homcom_ct = 0;
+    uint32_t tmp_total = 0;
     // currently hard code ploidy to 2. Will keep it this way unil we know how
     // to properly handly non-diploid chromosomes in human and other organisms
     const size_t ploidy = 2;

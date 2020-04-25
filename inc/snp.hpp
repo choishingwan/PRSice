@@ -349,8 +349,8 @@ public:
      * \param missing is the number of missing genotypes
      * \return true if calculation is already done
      */
-    bool get_counts(size_t& homcom, size_t& het, size_t& homrar,
-                    size_t& missing, const bool use_ref_maf) const
+    bool get_counts(uint32_t& homcom, uint32_t& het, uint32_t& homrar,
+                    uint32_t& missing, const bool use_ref_maf) const
     {
         auto&& from = use_ref_maf ? m_ref_count : m_target_count;
         homcom = from.homcom;
@@ -368,8 +368,8 @@ public:
      * \param homrar is the count of homozygous rare allele
      * \param missing is the number of missing genotypes
      */
-    void set_counts(size_t homcom, size_t het, size_t homrar, size_t missing,
-                    bool is_ref)
+    void set_counts(uint32_t homcom, uint32_t het, uint32_t homrar,
+                    uint32_t missing, bool is_ref)
     {
         auto&& target = is_ref ? m_ref_count : m_target_count;
         if (m_ref_flipped && is_ref) std::swap(homcom, homrar);

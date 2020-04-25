@@ -38,7 +38,7 @@ TEST_CASE("Set SNP")
         }
         SECTION("get_counts")
         {
-            size_t homcom, het, homrar, missing;
+            uint32_t homcom, het, homrar, missing;
             for (auto i : {true, false})
             {
                 REQUIRE_FALSE(snp.get_counts(homcom, het, homrar, missing, i));

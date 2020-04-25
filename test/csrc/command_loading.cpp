@@ -108,7 +108,6 @@ TEST_CASE("Commander set flag")
         REQUIRE(commander.parse_command_wrapper("--ignore-fid"));
         REQUIRE(commander.get_pheno().ignore_fid);
     }
-
     SECTION("keep-ambig")
     {
         REQUIRE_FALSE(commander.keep_ambig());
@@ -980,6 +979,27 @@ TEST_CASE("P-value thresholding parameter loading")
     }
 }
 
+TEST_CASE("Info type loading")
+{
+    mockCommander commander;
+    SECTION("default")
+    {
+        REQUIRE(commander.get_target_qc().info_type == INFO::IMPUTE2);
+        REQUIRE(commander.get_ref_qc().info_type == INFO::IMPUTE2);
+    }
+    SECTION("MACH")
+    {
+        REQUIRE(commander.parse_command_wrapper("--info-type MACH"));
+        REQUIRE(commander.get_target_qc().info_type == INFO::MACH);
+        REQUIRE(commander.get_ref_qc().info_type == INFO::MACH);
+    }
+    SECTION("IMPUTE2")
+    {
+        REQUIRE(commander.parse_command_wrapper("--info-type impute2"));
+        REQUIRE(commander.get_target_qc().info_type == INFO::IMPUTE2);
+        REQUIRE(commander.get_ref_qc().info_type == INFO::IMPUTE2);
+    }
+}
 TEST_CASE("Scoring parameter loading")
 {
     mockCommander commander;

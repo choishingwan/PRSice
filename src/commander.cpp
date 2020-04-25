@@ -121,6 +121,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"hard-thres", required_argument, nullptr, 0},
         {"id-delim", required_argument, nullptr, 0},
         {"info", required_argument, nullptr, 0},
+        {"info-type", required_argument, nullptr, 0},
         {"keep", required_argument, nullptr, 0},
         {"ld-dose-thres", required_argument, nullptr, 0},
         {"ld-keep", required_argument, nullptr, 0},
@@ -230,6 +231,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "info")
                 error |= !set_numeric<double>(optarg, command,
                                               m_target_filter.info_score);
+            else if (command == "info-type")
+                error |= !set_info(optarg);
             else if (command == "keep")
                 set_string(optarg, command, m_target.keep);
             else if (command == "ld-dose-thres")

@@ -251,7 +251,7 @@ public:
     void push(double x)
     {
         double delta, delta_n, delta_n2, term1;
-
+        s += x;
         size_t n1 = n;
         n++;
         delta = x - M1;
@@ -272,10 +272,11 @@ public:
     double var() const { return M2 / (static_cast<double>(n) - 1.0); }
 
     double sd() const { return sqrt(var()); }
+    double sum() const { return s; }
 
 private:
     size_t n = 0;
-    double M1 = 0, M2 = 0, M3 = 0, M4 = 0;
+    double M1 = 0.0, M2 = 0.0, M3 = 0.0, M4 = 0.0, s = 0.0;
 };
 
 
