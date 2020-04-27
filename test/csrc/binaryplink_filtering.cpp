@@ -7,7 +7,7 @@
 // 2. And to account for founder / non-founder status
 TEST_CASE("Geno and MAF filtering")
 {
-    auto n_sample = GENERATE(repeat(5, range(124ul, 126ul)));
+    auto n_sample = GENERATE(repeat(2, range(124ul, 127ul)));
     // use random generators to generate our founder and genotypes
     std::random_device rnd_device;
     std::mt19937 mersenne_engine {rnd_device()}; // Generates random integers

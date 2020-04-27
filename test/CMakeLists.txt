@@ -36,6 +36,7 @@ target_link_libraries(tests PUBLIC
     coverage_config)
 
 add_test(NAME unitTest COMMAND tests)
+
 add_custom_command(
      TARGET tests
      COMMENT "Run tests"

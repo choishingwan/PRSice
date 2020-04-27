@@ -255,6 +255,10 @@ public:
         m_existed_snps.emplace_back(cur);
     }
     std::vector<SNP> existed_snps() const { return m_existed_snps; }
+    std::vector<std::string> genotype_file_names() const
+    {
+        return m_genotype_file_names;
+    }
 };
 
 #endif // MOCK_BINARYGEN_HPP

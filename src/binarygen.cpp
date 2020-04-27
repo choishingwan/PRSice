@@ -496,7 +496,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
             // 4. We are dealing with target file and we are
             // expected to use hard_coding
             tmp_byte_pos = inter_out.tellp();
-            inter_out.write(reinterpret_cast<char*>(&m_tmp_genotype[0]),
+            inter_out.write(reinterpret_cast<char*>(m_tmp_genotype.data()),
                             m_tmp_genotype.size() * sizeof(m_tmp_genotype[0]));
             if (!m_is_ref)
             {
