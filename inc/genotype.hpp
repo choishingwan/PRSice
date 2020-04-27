@@ -137,13 +137,13 @@ public:
         return true;
     }
 
-    bool chr_prefix(std::string_view str)
+    static bool chr_prefix(std::string_view str)
     {
         if (str.length() <= 3) { return false; }
         return ((str[0] & 0xdf) == 'C' && (str[1] & 0xdf) == 'H'
                 && (str[2] & 0xdf) == 'R');
     }
-    int32_t get_chrom_code(std::string_view str)
+    static int32_t get_chrom_code(std::string_view str)
     {
         if (chr_prefix(str)) { str.remove_prefix(3); }
         if (str.length() == 0) return -1;
@@ -603,6 +603,11 @@ public:
 
     void load_genotype_to_memory();
     bool genotyped_stored() const { return m_genotype_stored; }
+    const std::unordered_map<std::string, size_t>& included_snps_idx() const
+    {
+        return m_existed_snps_index;
+    }
+    const std::vector<SNP>& included_snps() const { return m_existed_snps; }
 
 protected:
     // friend with all child class so that they can also access the
@@ -1197,6 +1202,7 @@ protected:
                   Genotype* genotype);
     bool check_ambig(const std::string& a1, const std::string& a2,
                      const std::string& ref, bool& flipping);
+
     bool check_chr(const std::string& chr_str, std::string& prev_chr,
                    size_t& chr_num, bool& chr_error, bool& sex_error);
     bool

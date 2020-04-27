@@ -26,6 +26,8 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/binarygen_sample_load.cpp
     ${TEST_SRC_DIR}/binarygen_snp_load.cpp
     ${TEST_SRC_DIR}/binarygen_filtering.cpp
+    ${TEST_SRC_DIR}/region_basic.cpp
+    ${TEST_SRC_DIR}/region_exclusion.cpp
     )
 target_link_libraries(tests PUBLIC
     Catch

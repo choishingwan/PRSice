@@ -141,8 +141,9 @@ int main(int argc, char* argv[])
             // now should get the correct MAF and should have filtered the
             // SNPs accordingly Generate Region flag information
             Region region(commander.get_set(), &reporter);
-            const size_t num_regions =
-                region.generate_regions(target_file->max_chr());
+            const size_t num_regions = region.generate_regions(
+                target_file->included_snps_idx(), target_file->included_snps(),
+                target_file->max_chr());
             std::vector<std::string> region_names = region.get_names();
             target_file->add_flags(region.get_gene_sets(),
                                    region.get_snp_sets(), num_regions,
