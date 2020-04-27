@@ -26,7 +26,7 @@ void generate_samples(const size_t n_entries, const size_t n_sample,
     auto gen_prob = [&dist, &mersenne_engine]() {
         // return dist(mersenne_engine);
         double tmp = dist(mersenne_engine);
-        return std::round(tmp * 10000.0) / 10000.0;
+        return std::round(tmp * 1000.0) / 1000.0;
     };
     auto missing_prob = [&rand_miss, &mersenne_engine]() {
         return rand_miss(mersenne_engine) <= 2;
@@ -226,7 +226,52 @@ TEST_CASE("BGEN Target filtering")
                 { REQUIRE(observed[i] == plink_genotype[i]); }
             }
         }
-        SECTION("Without intermediate")
+        SECTION("Test using genotype function")
+        {
+            bgen.calc_freqs_and_intermediate(qc, "test", false);
+            double exp_maf =
+                (2.0 * alt_ct + het_ct) / (2.0 * (ref_ct + het_ct + alt_ct));
+            if (exp_maf > 0.5) exp_maf = 1 - exp_maf;
+            if (miss_ct == n_sample)
+            {
+                REQUIRE(bgen.num_miss_filter() == 1);
+                REQUIRE(bgen.num_geno_filter() == 0);
+                REQUIRE(bgen.num_maf_filter() == 0);
+                REQUIRE(bgen.num_info_filter() == 0);
+            }
+            else if (miss_ct / n_sample > qc.geno)
+            {
+                REQUIRE(bgen.num_miss_filter() == 0);
+                REQUIRE(bgen.num_maf_filter() == 0);
+                REQUIRE(bgen.num_info_filter() == 0);
+                REQUIRE(bgen.num_geno_filter() == 1);
+            }
+            else if (exp_maf < qc.maf)
+            {
+                REQUIRE(bgen.num_miss_filter() == 0);
+                REQUIRE(bgen.num_info_filter() == 0);
+                REQUIRE(bgen.num_geno_filter() == 0);
+                REQUIRE(bgen.num_maf_filter() == 1);
+            }
+            else if ((qc.info_type == INFO::IMPUTE2
+                      && qc.info_score > exp_impute)
+                     || (qc.info_type == INFO::MACH
+                         && qc.info_score > exp_mach))
+            {
+                REQUIRE(bgen.num_miss_filter() == 0);
+                REQUIRE(bgen.num_geno_filter() == 0);
+                REQUIRE(bgen.num_maf_filter() == 0);
+                REQUIRE(bgen.num_info_filter() == 1);
+            }
+            else
+            {
+                REQUIRE(bgen.num_miss_filter() == 0);
+                REQUIRE(bgen.num_geno_filter() == 0);
+                REQUIRE(bgen.num_maf_filter() == 0);
+                REQUIRE(bgen.num_info_filter() == 0);
+            }
+        }
+        SECTION("Using bgen function Without intermediate")
         {
             REQUIRE(bgen.test_calc_freq_gen_inter(qc, "filter"));
             double exp_maf =
