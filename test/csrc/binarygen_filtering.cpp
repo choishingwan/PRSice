@@ -24,9 +24,9 @@ void generate_samples(const size_t n_entries, const size_t n_sample,
     // round to 4 decimal places so that BGEN's imprecision would not cause our
     // test to break
     auto gen_prob = [&dist, &mersenne_engine]() {
-        return dist(mersenne_engine);
-        // double tmp = dist(mersenne_engine);
-        // return std::round(tmp * 100000.0) / 100000.0;
+        // return dist(mersenne_engine);
+        double tmp = dist(mersenne_engine);
+        return std::round(tmp * 10000.0) / 10000.0;
     };
     auto missing_prob = [&rand_miss, &mersenne_engine]() {
         return rand_miss(mersenne_engine) <= 2;
