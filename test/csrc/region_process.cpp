@@ -18,8 +18,49 @@ TEST_CASE("Generate regions")
     }
 }
 
-TEST_CASE("Load background") {}
-TEST_CASE("Load GTF") {}
+TEST_CASE("Load background")
+{
+    mock_region region;
+    Reporter reporter("log", 60, true);
+    region.set_reporter(&reporter);
+}
+TEST_CASE("Load GTF")
+{
+    mock_region region;
+    Reporter reporter("log", 60, true);
+    region.set_reporter(&reporter);
+}
+TEST_CASE("Full load bed file")
+{
+    mock_region region;
+    Reporter reporter("log", 60, true);
+    region.set_reporter(&reporter);
+    std::ofstream bed_file("full_bed.test");
+    bed_file << "chr3 123 148" << std::endl;
+    bed_file << "chr3 144 152" << std::endl;
+    bed_file.close();
+    auto set_idx = GENERATE(take(1, random(1ul, 1026ul)));
+    auto ori_idx = set_idx;
+    using record = std::tuple<std::string, std::string>;
+    auto input = GENERATE(table<std::string, std::string>(
+        {record {"full_bed.test", "full_bed.test"},
+         record {"full_bed.test:SetA", "SetA"}}));
+    REQUIRE(region.test_load_bed_regions(std::get<0>(input), set_idx, 22));
+    region.index();
+    // we don't advance the set idx here
+    REQUIRE(ori_idx == set_idx);
+    auto name = region.get_names();
+    REQUIRE_THAT(name, Catch::Equals<std::string>({std::get<1>(input)}));
+    auto set = region.get_gene_sets();
+    std::vector<size_t> out;
+    for (size_t i = 124; i < 152; ++i)
+    {
+        REQUIRE(set[3].has_overlap(i, out));
+        REQUIRE_THAT(out, Catch::Equals<size_t>({ori_idx}));
+    }
+    REQUIRE_FALSE(set[3].has_overlap(123, out));
+    REQUIRE_FALSE(set[3].has_overlap(153, out));
+}
 TEST_CASE("load msigdb")
 {
     mock_region region;

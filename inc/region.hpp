@@ -131,8 +131,8 @@ protected:
         }
         catch (...)
         {
-            throw std::runtime_error("Error: Invalid start coordinate: "
-                                     + start_str);
+            throw std::runtime_error(
+                "Error: Invalid start coordinate: " + start_str + "\n");
         }
         try
         {
@@ -140,8 +140,8 @@ protected:
         }
         catch (...)
         {
-            throw std::runtime_error("Error: Invalid end coordinate: "
-                                     + start_str);
+            throw std::runtime_error(
+                "Error: Invalid end coordinate: " + start_str + "\n");
         }
         if (start > end)
         {

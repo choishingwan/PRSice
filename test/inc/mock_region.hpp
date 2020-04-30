@@ -102,6 +102,19 @@ public:
     {
         load_msigdb(msigdb_list, std::move(input), set_idx);
     }
+    bool test_load_bed_regions(const std::string& bed_file,
+                               const size_t set_idx, const size_t max_chr)
+    {
+        return load_bed_regions(bed_file, set_idx, max_chr);
+    }
+    void index()
+    {
+        for (auto&& tree : m_gene_sets) { tree.index(); }
+    }
+    void add_duplicated_set(const std::string& in)
+    {
+        m_processed_sets.insert(in);
+    }
 };
 
 #endif // MOCK_REGION_HPP
