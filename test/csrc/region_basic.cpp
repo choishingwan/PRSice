@@ -65,6 +65,10 @@ TEST_CASE("get set name")
         REQUIRE(file_name == "Input");
         REQUIRE(set_name == "Name");
     }
+    SECTION("invalid input")
+    {
+        REQUIRE_THROWS(region.test_get_set_name("Input:Name:fun"));
+    }
 }
 
 TEST_CASE("region extension")

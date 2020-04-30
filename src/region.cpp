@@ -113,7 +113,6 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
         }
         else if (range.size() == 2)
         {
-            int chr = Genotype::get_chrom_code(range[0]);
             boundary = misc::split(range[1], "-");
             if (boundary.size() > 2)
             {
@@ -123,6 +122,12 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
             }
             auto [low_bound, upper_bound] =
                 start_end(boundary.front(), boundary.back(), !ZERO_BASED);
+            int chr = Genotype::get_chrom_code(range[0]);
+            if (chr < 0)
+            {
+                throw std::runtime_error(
+                    "Error: Invalid chromosome --x-range input\n");
+            }
             if (chr >= 0 && chr < MAX_POSSIBLE_CHROM)
             {
                 // ignore any chromosome that we failed to parse, which

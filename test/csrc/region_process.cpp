@@ -143,5 +143,4 @@ TEST_CASE("Read bed file")
             REQUIRE_FALSE(gene_set[chr].has_overlap(exp_end, out));
         }
     }
-    // chr >= max chr
 }
