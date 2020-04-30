@@ -96,6 +96,12 @@ public:
                             std::move(input), set_idx);
         for (auto&& tree : m_gene_sets) { tree.index(); }
     }
+    void test_load_msigdb(
+        std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        std::unique_ptr<std::istream> input, size_t& set_idx)
+    {
+        load_msigdb(msigdb_list, std::move(input), set_idx);
+    }
 };
 
 #endif // MOCK_REGION_HPP

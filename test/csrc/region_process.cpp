@@ -20,6 +20,51 @@ TEST_CASE("Generate regions")
 
 TEST_CASE("Load background") {}
 TEST_CASE("Load GTF") {}
+TEST_CASE("load msigdb")
+{
+    mock_region region;
+    Reporter reporter("log", 60, true);
+    region.set_reporter(&reporter);
+    std::unordered_map<std::string, std::vector<size_t>> msigdb_list;
+    auto set_idx = GENERATE(take(1, random(1ul, 1025ul)));
+    size_t ori_idx = set_idx;
+    SECTION("Invalid msig")
+    {
+        auto input = std::make_unique<std::istringstream>("Set1");
+        REQUIRE_THROWS(
+            region.test_load_msigdb(msigdb_list, std::move(input), set_idx));
+        REQUIRE(set_idx == ori_idx);
+    }
+    SECTION("valid msigdb")
+    {
+        auto input = std::make_unique<std::istringstream>("Set1 Gene1 Gene2\n"
+                                                          "Set2 Hello world\n"
+                                                          "Set1 Duplicate set\n"
+                                                          "Set3 Ok Gene1 on\n");
+        REQUIRE_NOTHROW(
+            region.test_load_msigdb(msigdb_list, std::move(input), set_idx));
+        // +3 because there is one duplicate
+
+        REQUIRE(set_idx == ori_idx + 3);
+        using record = std::tuple<std::string, std::vector<size_t>>;
+        std::vector<record> expected = {{"Gene1", {ori_idx, ori_idx + 2}},
+                                        {"Gene2", {ori_idx}},
+                                        {"Hello", {ori_idx + 1}},
+                                        {"world", {ori_idx + 1}},
+                                        {"Ok", {ori_idx + 2}},
+                                        {"on", {ori_idx + 2}}};
+
+        for (auto&& exp : expected)
+        {
+            auto res = msigdb_list.find(std::get<0>(exp));
+            REQUIRE(res != msigdb_list.end());
+            REQUIRE_THAT(res->second,
+                         Catch::Equals<size_t>({std::get<1>(exp)}));
+        }
+    }
+}
+
+
 TEST_CASE("Load snp sets")
 {
     std::vector<SNP> snp_list;
