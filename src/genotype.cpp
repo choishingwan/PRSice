@@ -154,10 +154,9 @@ std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
     return genotype_files;
 }
 
-void Genotype::add_flags(
-    const std::vector<IITree<size_t, size_t>>& gene_sets,
-    const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
-    const size_t num_sets, const bool genome_wide_background)
+void Genotype::add_flags(const std::vector<IITree<size_t, size_t>>& gene_sets,
+                         const size_t num_sets,
+                         const bool genome_wide_background)
 {
     const size_t num_snps = m_existed_snps.size();
     const size_t required_size = BITCT_TO_WORDCT(num_sets);
@@ -168,8 +167,8 @@ void Genotype::add_flags(
         auto&& snp = m_existed_snps[i];
         chr = snp.chr();
         bp = snp.loc();
-        construct_flag(snp.rs(), gene_sets, snp_in_sets, flag, required_size,
-                       chr, bp, genome_wide_background);
+        construct_flag(snp.rs(), gene_sets, flag, required_size, chr, bp,
+                       genome_wide_background);
         m_existed_snps[i].set_flag(num_sets, flag);
     }
 }

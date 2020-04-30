@@ -32,25 +32,23 @@ void Region::read_bed(std::unique_ptr<std::istream> bed,
     print_bed_strand_warning = false;
     std::string line;
     size_t column_size = 0, low_bound, upper_bound;
-    bool is_header = false;
     std::vector<std::string_view> range, boundary;
     size_t num_line = 0;
     while (std::getline(*bed, line))
     {
         ++num_line;
         misc::trim(line);
-        is_header = false;
         boundary = misc::tokenize(line);
         try
         {
-            is_bed_line(boundary, column_size, is_header);
+            // skip header
+            if (is_bed_header(boundary, column_size)) continue;
         }
         catch (const std::exception& ex)
         {
             throw std::runtime_error(std::string(ex.what())
                                      + "Problematic line: " + line);
         }
-        if (is_header) continue; // skip header
 
         if (boundary.size() <= +BED::STRAND && (wind_5 > 0 || wind_3 > 0)
             && (wind_5 != wind_3))
@@ -104,6 +102,7 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
     // file input is represented by the lack of :
     std::vector<std::string> range, boundary;
     bool dummy;
+    const bool ZERO_BASED = true;
     for (auto&& region : exclude_regions)
     {
         range = misc::split(region, ":");
@@ -123,13 +122,8 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
                     "Error: Invalid exclusion range format. "
                     "Should be chr:start, chr:start-end or a bed file\n");
             }
-            size_t low_bound, upper_bound;
-            start_end(boundary.front(), boundary.back(), false, low_bound,
-                      upper_bound);
-            // the library find overlap, which for SNP at 10
-            // the boundary should be defined as 10-11 when we read in the SNP
-            // here we do nothing but sainity check of the input
-            ++upper_bound;
+            auto [low_bound, upper_bound] =
+                start_end(boundary.front(), boundary.back(), !ZERO_BASED);
             if (chr >= 0 && chr < MAX_POSSIBLE_CHROM)
             {
                 // ignore any chromosome that we failed to parse, which

@@ -145,8 +145,7 @@ int main(int argc, char* argv[])
                 target_file->included_snps_idx(), target_file->included_snps(),
                 target_file->max_chr());
             std::vector<std::string> region_names = region.get_names();
-            target_file->add_flags(region.get_gene_sets(),
-                                   region.get_snp_sets(), num_regions,
+            target_file->add_flags(region.get_gene_sets(), num_regions,
                                    commander.get_set().full_as_background);
             // start processing other files before doing clumping
             PRSice prsice(commander.get_prs_instruction(),

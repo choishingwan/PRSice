@@ -211,14 +211,12 @@ protected:
     {
         return !(input != "." && input != "+" && input != "-");
     }
-    static void is_bed_line(const std::vector<std::string_view>& bed_line,
-                            size_t& column_size, bool& is_header)
+    static bool is_bed_header(const std::vector<std::string_view>& bed_line,
+                              size_t& column_size)
     {
-        if (bed_line.front() == "track" || bed_line.front() == "browser")
-        {
-            is_header = true;
-            return;
-        }
+        if (bed_line.front() == "track" || bed_line.front() == "browser"
+            || bed_line.front().at(0) == '#')
+        { return true; }
         if (bed_line.size() < 3)
         {
             throw std::runtime_error("Error: Malformed BED file. BED file "
@@ -243,6 +241,7 @@ protected:
                 + std::string(bed_line[+BED::STRAND])
                 + "\nValid strand characters are '.', '+' and '-'\n");
         }
+        return false;
     }
 
     bool in_feature(const std::string_view& in,
@@ -275,10 +274,17 @@ protected:
                         std::string& gene_name, bool& found_id,
                         bool& found_name)
     {
-        std::tie(gene_id, found_id) = parse_gene_id(substr, "gene_id");
-        if (found_name && found_id) return true;
-        std::tie(gene_name, found_name) = parse_gene_id(substr, "gene_name");
-        if (found_name && found_id) return true;
+        if (!found_id)
+        {
+            std::tie(gene_id, found_id) = parse_gene_id(substr, "gene_id");
+            if (found_name && found_id) return true;
+        }
+        if (!found_name)
+        {
+            std::tie(gene_name, found_name) =
+                parse_gene_id(substr, "gene_name");
+            if (found_name && found_id) return true;
+        }
         return false;
     }
 

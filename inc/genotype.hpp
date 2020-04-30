@@ -497,12 +497,12 @@ public:
 
     bool perform_freqs_and_inter(const QCFiltering& filter_info,
                                  const std::string& prefix, Genotype* target);
-    static void construct_flag(
-        const std::string& rs,
-        const std::vector<IITree<size_t, size_t>>& gene_sets,
-        const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
-        std::vector<uintptr_t>& flag, const size_t required_size,
-        const size_t chr, const size_t bp, const bool genome_wide_background)
+    static void
+    construct_flag(const std::string& rs,
+                   const std::vector<IITree<size_t, size_t>>& gene_sets,
+                   std::vector<uintptr_t>& flag, const size_t required_size,
+                   const size_t chr, const size_t bp,
+                   const bool genome_wide_background)
     {
         if (flag.size() != required_size) { flag.resize(required_size); }
         std::fill(flag.begin(), flag.end(), 0);
@@ -523,18 +523,10 @@ public:
                 SET_BIT(idx, flag.data());
             }
         }
-        if (snp_in_sets.empty() || rs.empty()) return;
-        auto&& snp_idx = snp_in_sets.find(rs);
-        if (snp_idx != snp_in_sets.end())
-        {
-            for (auto&& i : snp_idx->second) { SET_BIT(i, flag.data()); }
-        }
         return;
     }
-    void add_flags(
-        const std::vector<IITree<size_t, size_t>>& cr,
-        const std::unordered_map<std::string, std::vector<size_t>>& snp_in_sets,
-        const size_t num_sets, const bool genome_wide_background);
+    void add_flags(const std::vector<IITree<size_t, size_t>>& cr,
+                   const size_t num_sets, const bool genome_wide_background);
 
     // Refactoring
     Genotype& keep_nonfounder(bool keep)
