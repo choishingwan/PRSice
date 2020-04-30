@@ -146,18 +146,20 @@ TEST_CASE("Start end parsing")
     SECTION("invalid string input")
     {
         auto invalid = GENERATE("-123", "ABC", "0.05");
+        std::string_view invalid_in = invalid;
         auto valid = "12345";
+        std::string_view valid_in = valid;
         auto zero = GENERATE(true, false);
         SECTION("invalid start")
         {
             REQUIRE_THROWS_WITH(
-                mock_region::test_start_end(invalid, valid, zero),
+                mock_region::test_start_end(invalid_in, valid_in, zero),
                 Catch::Contains("start"));
         }
         SECTION("invalid end")
         {
             REQUIRE_THROWS_WITH(
-                mock_region::test_start_end(valid, invalid, zero),
+                mock_region::test_start_end(valid_in, invalid_in, zero),
                 Catch::Contains("end"));
         }
     }
@@ -165,22 +167,23 @@ TEST_CASE("Start end parsing")
     {
         auto zero = GENERATE(true, false);
         REQUIRE_THROWS_WITH(
-            mock_region::test_start_end("12345", "1234", zero),
+            mock_region::test_start_end(std::string("12345"),
+                                        std::string("1234"), zero),
             Catch::Contains("Error: Start coordinate should be smaller"));
     }
     SECTION("Zero based")
     {
-        auto start = "123", end = "12345";
+        std::string start = "123", end = "12345";
         auto [s, e] = mock_region::test_start_end(start, end, true);
         REQUIRE(s == 124);
-        REQUIRE(e == 12346);
+        REQUIRE(e == 12345);
     }
     SECTION("Not zero based")
     {
-        auto start = "123", end = "12345";
+        std::string start = "123", end = "12345";
         auto [s, e] = mock_region::test_start_end(start, end, false);
         REQUIRE(s == 123);
-        REQUIRE(e == 12346);
+        REQUIRE(e == 12345);
     }
 }
 
@@ -200,6 +203,13 @@ TEST_CASE("bed header check")
         REQUIRE(region.test_is_bed_header(token, column_size));
         // shouldn't update the column size
         REQUIRE(ori_csize == column_size);
+    }
+    SECTION("invalid bed file")
+    {
+        auto line = "A B";
+        auto token = misc::tokenize(line);
+        size_t column_size = 0;
+        REQUIRE_THROWS(region.test_is_bed_header(token, column_size));
     }
     SECTION("Not header")
     {

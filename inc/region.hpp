@@ -19,7 +19,6 @@
 #define REGION_H
 
 #include "IITree.h"
-#include "cgranges.h"
 #include "commander.hpp"
 #include "genotype.hpp"
 #include "gzstream.h"
@@ -137,7 +136,7 @@ protected:
         }
         try
         {
-            end = misc::convert<size_t>(end_str) + 1;
+            end = misc::convert<size_t>(end_str);
         }
         catch (...)
         {

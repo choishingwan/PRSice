@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vector>
 #include <algorithm>
+#include <unordered_set>
+#include <vector>
 
 /* Suppose there are N=2^(K+1)-1 sorted numbers in an array a[]. They
  * implicitly form a complete binary tree of height K+1. We consider leaves to
@@ -31,78 +32,138 @@
  * implement an interval tree on top of the idea. We only need to record, for
  * each node, the maximum value in the subtree descending from the node.
  */
-template<typename S, typename T> // "S" is a scalar type; "T" is the type of data associated with each interval
-class IITree {
-	struct StackCell {
-		size_t x; // node
-		int k, w; // k: level; w: 0 if left child hasn't been processed
-		StackCell() {};
-		StackCell(int k_, size_t x_, int w_) : x(x_), k(k_), w(w_) {};
-	};
-	struct Interval {
-		S st, en, max;
-		T data;
-		Interval(const S &s, const S &e, const T &d) : st(s), en(e), max(e), data(d) {};
-	};
-	struct IntervalLess {
-		bool operator()(const Interval &a, const Interval &b) const { return a.st < b.st; }
-	};
-	std::vector<Interval> a;
-	int max_level;
-	int index_core(std::vector<Interval> &a) {
-		size_t i, last_i; // last_i points to the rightmost node in the tree
-		S last; // last is the max value at node last_i
-		int k;
-		if (a.size() == 0) return -1;
-		for (i = 0; i < a.size(); i += 2) last_i = i, last = a[i].max = a[i].en; // leaves (i.e. at level 0)
-		for (k = 1; 1LL<<k <= a.size(); ++k) { // process internal nodes in the bottom-up order
-			size_t x = 1LL<<(k-1), i0 = (x<<1) - 1, step = x<<2; // i0 is the first node
-			for (i = i0; i < a.size(); i += step) { // traverse all nodes at level k
-				S el = a[i - x].max;                          // max value of the left child
-				S er = i + x < a.size()? a[i + x].max : last; // of the right child
-				S e = a[i].en;
-				e = e > el? e : el;
-				e = e > er? e : er;
-				a[i].max = e; // set the max value for node i
-			}
-			last_i = last_i>>k&1? last_i - x : last_i + x; // last_i now points to the parent of the original last_i
-			if (last_i < a.size() && a[last_i].max > last) // update last accordingly
-				last = a[last_i].max;
-		}
-		return k - 1;
-	}
+template <typename S, typename T> // "S" is a scalar type; "T" is the type of
+                                  // data associated with each interval
+class IITree
+{
+    struct StackCell
+    {
+        size_t x; // node
+        int k, w; // k: level; w: 0 if left child hasn't been processed
+        StackCell() {};
+        StackCell(int k_, size_t x_, int w_) : x(x_), k(k_), w(w_) {};
+    };
+    struct Interval
+    {
+        S st, en, max;
+        T data;
+        Interval(const S& s, const S& e, const T& d)
+            : st(s), en(e), max(e), data(d) {};
+    };
+    struct IntervalLess
+    {
+        bool operator()(const Interval& a, const Interval& b) const
+        {
+            return a.st < b.st;
+        }
+    };
+    std::vector<Interval> a;
+    int max_level;
+    int index_core(std::vector<Interval>& a)
+    {
+        size_t i, last_i; // last_i points to the rightmost node in the tree
+        S last;           // last is the max value at node last_i
+        int k;
+        if (a.size() == 0) return -1;
+        for (i = 0; i < a.size(); i += 2)
+            last_i = i, last = a[i].max = a[i].en; // leaves (i.e. at level 0)
+        for (k = 1; 1LL << k <= a.size(); ++k)
+        { // process internal nodes in the bottom-up order
+            size_t x = 1LL << (k - 1), i0 = (x << 1) - 1,
+                   step = x << 2; // i0 is the first node
+            for (i = i0; i < a.size(); i += step)
+            {                        // traverse all nodes at level k
+                S el = a[i - x].max; // max value of the left child
+                S er = i + x < a.size() ? a[i + x].max
+                                        : last; // of the right child
+                S e = a[i].en;
+                e = e > el ? e : el;
+                e = e > er ? e : er;
+                a[i].max = e; // set the max value for node i
+            }
+            last_i = last_i >> k & 1
+                         ? last_i - x
+                         : last_i + x; // last_i now points to the parent of the
+                                       // original last_i
+            if (last_i < a.size()
+                && a[last_i].max > last) // update last accordingly
+                last = a[last_i].max;
+        }
+        return k - 1;
+    }
+
 public:
-	void add(const S &s, const S &e, const T &d) { a.push_back(Interval(s, e, d)); }
-	void index(void) {
-		std::sort(a.begin(), a.end(), IntervalLess());
-		max_level = index_core(a);
-	}
-	void overlap(const S &st, const S &en, std::vector<size_t> &out) const {
-		int t = 0;
-		StackCell stack[64];
-		out.clear();
-		stack[t++] = StackCell(max_level, (1LL<<max_level) - 1, 0); // push the root; this is a top down traversal
-		while (t) { // the following guarantees that numbers in out[] are always sorted
-			StackCell z = stack[--t];
-			if (z.k <= 2) { // we are in a small subtree; traverse every node in this subtree
-				size_t i, i0 = z.x >> z.k << z.k, i1 = i0 + (1LL<<(z.k+1)) - 1;
-				if (i1 >= a.size()) i1 = a.size();
-				for (i = i0; i < i1; ++i)
-					if (a[i].st < en && st < a[i].en) // if overlap, append to out[]
-						out.push_back(i);
-			} else if (z.w == 0) { // if left child not processed
-				size_t y = z.x - (1LL<<(z.k-1)); // the left child of z.x; NB: y may be out of range (i.e. y>=a.size())
-				stack[t++] = StackCell(z.k, z.x, 1); // re-add node z.x, but mark the left child having been processed
-				if (y >= a.size() || a[y].max > st) // push the left child if y is out of range or may overlap with the query
-					stack[t++] = StackCell(z.k - 1, y, 0);
-			} else if (z.x < a.size() && a[z.x].st < en) { // need to push the right child
-				if (st < a[z.x].en) out.push_back(z.x); // test if z.x overlaps the query; if yes, append to out[]
-				stack[t++] = StackCell(z.k - 1, z.x + (1LL<<(z.k-1)), 0); // push the right child
-			}
-		}
-	}
-	size_t size(void) const { return a.size(); }
-	const S &start(size_t i) const { return a[i].st; }
-	const S &end(size_t i) const { return a[i].en; }
-	const T &data(size_t i) const { return a[i].data; }
+    void add(const S& s, const S& e, const T& d)
+    {
+        a.push_back(Interval(s, e, d));
+    }
+    void index(void)
+    {
+        std::sort(a.begin(), a.end(), IntervalLess());
+        max_level = index_core(a);
+    }
+    bool has_overlap(const S& st, std::vector<T>& out) const
+    {
+        out.clear();
+        std::vector<size_t> idx;
+        overlap(st - 1, st + 1, idx);
+        if (idx.empty()) { return false; }
+        else
+        {
+            std::unordered_set<T> s;
+            for (auto i : idx) { s.insert(data(i)); }
+            out.assign(s.begin(), s.end());
+            std::sort(out.begin(), out.end());
+            return true;
+        }
+    }
+    void overlap(const S& st, const S& en, std::vector<size_t>& out) const
+    {
+        int t = 0;
+        StackCell stack[64];
+        out.clear();
+        stack[t++] =
+            StackCell(max_level, (1LL << max_level) - 1,
+                      0); // push the root; this is a top down traversal
+        while (t)
+        { // the following guarantees that numbers in out[] are always sorted
+            StackCell z = stack[--t];
+            if (z.k <= 2)
+            { // we are in a small subtree; traverse every node in this subtree
+                size_t i, i0 = z.x >> z.k << z.k,
+                          i1 = i0 + (1LL << (z.k + 1)) - 1;
+                if (i1 >= a.size()) i1 = a.size();
+                for (i = i0; i < i1; ++i)
+                    if (a[i].st < en
+                        && st < a[i].en) // if overlap, append to out[]
+                        out.push_back(i);
+            }
+            else if (z.w == 0)
+            { // if left child not processed
+                size_t y =
+                    z.x
+                    - (1LL << (z.k - 1)); // the left child of z.x; NB: y may be
+                                          // out of range (i.e. y>=a.size())
+                stack[t++] =
+                    StackCell(z.k, z.x, 1); // re-add node z.x, but mark the
+                                            // left child having been processed
+                if (y >= a.size()
+                    || a[y].max > st) // push the left child if y is out of
+                                      // range or may overlap with the query
+                    stack[t++] = StackCell(z.k - 1, y, 0);
+            }
+            else if (z.x < a.size() && a[z.x].st < en)
+            { // need to push the right child
+                if (st < a[z.x].en)
+                    out.push_back(z.x); // test if z.x overlaps the query; if
+                                        // yes, append to out[]
+                stack[t++] = StackCell(z.k - 1, z.x + (1LL << (z.k - 1)),
+                                       0); // push the right child
+            }
+        }
+    }
+    size_t size(void) const { return a.size(); }
+    const S& start(size_t i) const { return a[i].st; }
+    const S& end(size_t i) const { return a[i].en; }
+    const T& data(size_t i) const { return a[i].data; }
 };

@@ -16,7 +16,6 @@
 
 
 #include "region.hpp"
-#include "genotype.hpp"
 
 // This is for exclusion region
 // end boundary is inclusive
@@ -80,7 +79,7 @@ void Region::read_bed(std::unique_ptr<std::istream> bed,
         }
         auto chr = Genotype::get_chrom_code(boundary[+BED::CHR]);
         if (chr >= 0 && chr < MAX_POSSIBLE_CHROM
-            && chr < static_cast<int32_t>(max_chr))
+            && chr <= static_cast<int32_t>(max_chr))
         {
             // ignore any chromosome that we failed to parse (chr < 0)
             // and sex chromosomes (chr > MAX_POSSIBLE_CHROM)

@@ -29,6 +29,12 @@ public:
     {
         return start_end(start_str, end_str, zero_based);
     }
+    static std::tuple<size_t, size_t> test_start_end(std::string_view start_str,
+                                                     std::string_view end_str,
+                                                     const bool zero_based)
+    {
+        return start_end(start_str, end_str, zero_based);
+    }
     std::tuple<std::string, std::string, bool>
     test_get_set_name(const std::string& input)
     {
@@ -63,6 +69,15 @@ public:
                               std::string& gene_id, std::string& gene_name)
     {
         parse_attribute(attribute_str, gene_id, gene_name);
+    }
+    void test_read_bed(std::unique_ptr<std::istream> bed,
+                       std::vector<IITree<size_t, size_t>>& cr,
+                       bool& print_bed_strand_warning, const size_t wind_5,
+                       const size_t wind_3, const size_t max_chr,
+                       const size_t set_idx, const bool ZERO_BASED)
+    {
+        read_bed(std::move(bed), cr, print_bed_strand_warning, wind_5, wind_3,
+                 max_chr, set_idx, ZERO_BASED);
     }
 };
 
