@@ -511,7 +511,7 @@ void Region::transverse_snp_file(
                 auto&& cur_snp = snp_list[snp_idx->second];
                 chr_num = cur_snp.chr();
                 low_bound = cur_snp.loc();
-                upper_bound = cur_snp.loc() + 1;
+                upper_bound = cur_snp.loc();
                 if (m_gene_sets.size() < chr_num + 1)
                 { m_gene_sets.resize(chr_num + 1); }
                 m_gene_sets[chr_num].add(low_bound, upper_bound, set_idx);

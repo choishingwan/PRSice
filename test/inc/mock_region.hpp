@@ -70,6 +70,14 @@ public:
     {
         parse_attribute(attribute_str, gene_id, gene_name);
     }
+    void test_load_snp_sets(
+        const std::unordered_map<std::string, size_t>& snp_list_idx,
+        const std::vector<SNP>& snp_list, const std::string& snp_file,
+        size_t& set_idx)
+    {
+        load_snp_sets(snp_list_idx, snp_list, snp_file, set_idx);
+        for (auto&& tree : m_gene_sets) { tree.index(); }
+    }
     void test_read_bed(std::unique_ptr<std::istream> bed,
                        std::vector<IITree<size_t, size_t>>& cr,
                        bool& print_bed_strand_warning, const size_t wind_5,
@@ -78,6 +86,15 @@ public:
     {
         read_bed(std::move(bed), cr, print_bed_strand_warning, wind_5, wind_3,
                  max_chr, set_idx, ZERO_BASED);
+    }
+    void test_transverse_snp_file(
+        const std::unordered_map<std::string, size_t>& snp_list_idx,
+        const std::vector<SNP>& snp_list, const bool is_set_file,
+        std::unique_ptr<std::istream> input, size_t& set_idx)
+    {
+        transverse_snp_file(snp_list_idx, snp_list, is_set_file,
+                            std::move(input), set_idx);
+        for (auto&& tree : m_gene_sets) { tree.index(); }
     }
 };
 
