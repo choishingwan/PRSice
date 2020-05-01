@@ -23,6 +23,112 @@ TEST_CASE("Load background")
     mock_region region;
     Reporter reporter("log", 60, true);
     region.set_reporter(&reporter);
+    std::vector<SNP> snp_list;
+    std::unordered_map<std::string, size_t> snp_list_idx;
+    // generate 1000 fake SNPs
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> chr(1, 22);
+    std::uniform_int_distribution<> bp(1, std::numeric_limits<int>::max());
+    for (size_t i = 0; i < 1000; ++i)
+    {
+        snp_list_idx[std::to_string(i)] = i;
+        snp_list.emplace_back(
+            SNP(std::to_string(i), chr(gen), bp(gen), "A", "C", 0, 1));
+    }
+    std::unordered_map<std::string, std::vector<size_t>> msigdb_list;
+    const size_t BACKGROUND_IDX = 1;
+    SECTION("malformed formats")
+    {
+        auto invalid = GENERATE("A:B:C", "A", "Set:gtf");
+        region.set_background(invalid);
+        REQUIRE_THROWS(region.test_load_background(snp_list_idx, snp_list, 22,
+                                                   msigdb_list));
+    }
+    SECTION("bed / range background")
+    {
+        size_t wind_5 = 2, wind_3 = 1;
+        region.set_wind(wind_5, wind_3);
+        std::ofstream bed_file("bed_bk.test");
+        bed_file << "chr6 456 459" << std::endl;
+        bed_file << "chr6 450 455" << std::endl;
+        bed_file.close();
+        auto zero_based = GENERATE(false, true);
+        if (zero_based) { region.set_background("bed_bk.test:bed"); }
+        else
+        {
+            region.set_background("bed_bk.test:range");
+        }
+        region.test_load_background(snp_list_idx, snp_list, 22, msigdb_list);
+        region.index();
+        REQUIRE(msigdb_list.empty());
+        auto gene_set = region.get_gene_sets();
+
+        std::vector<size_t> out;
+        for (size_t i = 450 - wind_5 + zero_based; i < 459 + wind_3; ++i)
+        {
+            REQUIRE(gene_set[6].has_overlap(i, out));
+            REQUIRE_THAT(out, Catch::Equals<size_t>({BACKGROUND_IDX}));
+        }
+        REQUIRE_FALSE(gene_set[6].has_overlap(449 - wind_5 + zero_based, out));
+        REQUIRE_FALSE(gene_set[6].has_overlap(460 + wind_3, out));
+    }
+    SECTION("gene background")
+    {
+        region.set_background("msig.bk:gene");
+        std::ofstream msig("msig.bk");
+        msig << "GeneA http" << std::endl;
+        msig << "Set2\tGeneB\tGeneC" << std::endl;
+        msig << "GeneD" << std::endl;
+        region.test_load_background(snp_list_idx, snp_list, 22, msigdb_list);
+        region.index();
+        auto gene_set = region.get_gene_sets();
+        REQUIRE(gene_set.empty());
+        std::vector<std::string> expected = {"GeneA", "http",  "Set2",
+                                             "GeneB", "GeneC", "GeneD"};
+
+        for (auto exp : expected)
+        {
+            auto f = msigdb_list.find(exp);
+            REQUIRE_FALSE(f == msigdb_list.end());
+            REQUIRE_THAT(f->second, Catch::Equals<size_t>({BACKGROUND_IDX}));
+        }
+    }
+    SECTION("SNP background")
+    {
+        region.set_background("snp.bk:SNP");
+        // messy format is ok
+        // randomly do three row
+        std::uniform_int_distribution<> snp_idx(0, 1000 - 1);
+        std::vector<size_t> idx;
+        std::ofstream snp("snp.bk");
+        // one column
+        idx.push_back(snp_idx(gen));
+        snp << idx.back() << std::endl;
+        // three column
+        idx.push_back(snp_idx(gen));
+        snp << idx.back();
+        idx.push_back(snp_idx(gen));
+        snp << " " << idx.back();
+        idx.push_back(snp_idx(gen));
+        snp << "\t" << idx.back() << std::endl;
+        // one column
+        idx.push_back(snp_idx(gen));
+        snp << idx.back() << std::endl;
+        snp.close();
+        region.test_load_background(snp_list_idx, snp_list, 22, msigdb_list);
+        REQUIRE(msigdb_list.empty());
+        region.index();
+        auto gene_sets = region.get_gene_sets();
+        std::vector<size_t> out;
+        for (auto&& i : idx)
+        {
+            auto&& cur_snp = snp_list[i];
+            REQUIRE(gene_sets.size() > cur_snp.chr());
+            REQUIRE(gene_sets[cur_snp.chr()].has_overlap(cur_snp.loc(), out));
+            REQUIRE_THAT(out, Catch::Equals<size_t>({BACKGROUND_IDX}));
+        }
+    }
 }
 TEST_CASE("Load GTF")
 {
@@ -278,7 +384,9 @@ TEST_CASE("load msigdb")
                                         {"world", {ori_idx + 1}},
                                         {"Ok", {ori_idx + 2}},
                                         {"on", {ori_idx + 2}}};
-
+        auto name = region.get_names();
+        REQUIRE_THAT(name,
+                     Catch::Equals<std::string>({"Set1", "Set2", "Set3"}));
         for (auto&& exp : expected)
         {
             auto res = msigdb_list.find(std::get<0>(exp));

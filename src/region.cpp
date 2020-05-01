@@ -260,6 +260,7 @@ void Region::load_background(
             "Error: Format of --background should be <File Name>:<File Type>");
     }
     // check if we know the format
+    misc::to_lower(user_type);
     auto&& type = file_type.find(user_type);
     if (type == file_type.end())
     {
@@ -271,14 +272,23 @@ void Region::load_background(
     auto input = misc::load_stream(file_name);
     std::string line;
     std::vector<std::string> token;
-    bool print_bed_warning;
     const size_t BACKGROUND_IDX = 1;
     if (type->second == 0 || type->second == 1)
     {
+        bool print_bed_warning;
         // this is either a range format or a bed file
         // the only difference is range is 1 based and bed is 0 based
         read_bed(std::move(input), m_gene_sets, print_bed_warning, m_window_5,
                  m_window_3, max_chr, BACKGROUND_IDX, type->second);
+        if (print_bed_warning)
+        {
+            m_reporter->report("Warning: " + file_name
+                               + " for background does not contain "
+                                 "strand information, we will assume all "
+                                 "regions are on the positive strand, "
+                                 "e.g. start coordinates always on the 5' "
+                                 "end");
+        }
     }
     else if (type->second == 2)
     {
@@ -319,8 +329,8 @@ void Region::load_background(
                     m_gene_sets[chr_num].add(start, end, BACKGROUND_IDX);
                 }
             }
-            input.reset();
         }
+        input.reset();
     }
 }
 

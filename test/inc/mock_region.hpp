@@ -121,6 +121,14 @@ public:
         return transverse_gtf(msigdb_list, file_length, max_chr, gz_input,
                               std::move(gtf_stream));
     }
+    void test_load_background(
+        const std::unordered_map<std::string, size_t>& snp_list_idx,
+        const std::vector<SNP>& snp_list, const size_t max_chr,
+        std::unordered_map<std::string, std::vector<size_t>>& msigdb_list)
+    {
+        return load_background(snp_list_idx, snp_list, max_chr, msigdb_list);
+    }
+    void set_background(const std::string& b) { m_background = b; }
     void set_gtf(const std::string& g) { m_gtf = g; }
     void set_feature(const std::vector<std::string>& in) { m_feature = in; }
     void set_gwas_bk(bool has_bk) { m_genome_wide_background = has_bk; }
