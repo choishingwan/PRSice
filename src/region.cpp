@@ -324,25 +324,13 @@ void Region::load_background(
     }
 }
 
-
-void Region::load_gtf(
+std::tuple<size_t, size_t, size_t> Region::transverse_gtf(
     const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
-    const size_t max_chr)
+    const std::streampos file_length, const size_t max_chr, const bool gz_input,
+    std::unique_ptr<std::istream> gtf_stream)
 {
-    // don't bother if there's no msigdb genes and we are using genome wide
-    // background
-    const bool provided_background = !m_background.empty();
-    if (msigdb_list.empty() && m_genome_wide_background) return;
-    bool gz_input = false;
-    auto stream = misc::load_stream(m_gtf);
-    std::streampos file_length = 0;
-    if (!gz_input)
-    {
-        stream->seekg(0, stream->end);
-        file_length = stream->tellg();
-        stream->clear();
-        stream->seekg(0, stream->beg);
-    }
+    const bool add_background =
+        !m_genome_wide_background && m_background.empty();
     std::vector<std::string_view> token(9), attribute, extract;
     std::string chr_str, name, id, line;
     int chr_code;
@@ -354,11 +342,11 @@ void Region::load_gtf(
     // this should ensure we will be reading either from the gz stream or
     // ifstream
     double progress, prev_progress = 0.0;
-    while (std::getline(*stream, line))
+    while (std::getline(*gtf_stream, line))
     {
         if (!gz_input)
         {
-            progress = static_cast<double>(stream->tellg())
+            progress = static_cast<double>(gtf_stream->tellg())
                        / static_cast<double>(file_length) * 100;
             if (!m_reporter->unit_testing() && progress - prev_progress > 0.01)
             {
@@ -376,73 +364,69 @@ void Region::load_gtf(
             throw std::runtime_error("Error: Malformed GTF file! GTF should "
                                      "always contain 9 columns!\n");
         }
-        else if (in_feature(token[+GTF::FEATURE], m_feature))
-        {
-            // convert chr string into consistent chr_coding
-            chr_code = Genotype::get_chrom_code(token[+GTF::CHR]);
-            chr = static_cast<size_t>(chr_code);
-            if (chr_code < 0 || chr_code >= MAX_POSSIBLE_CHROM || chr > max_chr)
-            {
-                ++chr_exclude;
-                continue;
-            }
-            try
-            {
-                std::tie(start, end) = start_end(token[+GTF::START],
-                                                 token[+GTF::END], !ZERO_BASED);
-            }
-            catch (const std::runtime_error& e)
-            {
-                throw std::runtime_error(std::string(e.what())
-                                         + "Will ignore the gtf file");
-            }
-            extend_region(token[+GTF::STRAND], m_window_5, m_window_3, start,
-                          end);
-
-            // Now extract the name
-            parse_attribute(token[+GTF::ATTRIBUTE], id, name);
-            if (id.empty())
-            {
-                // lack ID, but mandate
-                throw std::runtime_error(
-                    "Error: GTF file should contain the "
-                    "gene_id field. Please check if you have "
-                    "the correct file\n");
-            }
-            // add padding
-            // now check if we can find it in the MSigDB entry
-            if (m_gene_sets.size() <= chr + 1) { m_gene_sets.resize(chr + 1); }
-            auto&& id_search = msigdb_list.find(id);
-            if (id_search != msigdb_list.end())
-            {
-                for (auto&& idx : id_search->second)
-                { m_gene_sets[chr].add(start, end, idx); }
-            }
-            else if (!name.empty())
-            {
-                // only do name search if ID wasn't found
-                // we don't expect a mixed naming system in the msigdb file
-                // anyway (that will be too evil)
-                auto&& name_search = msigdb_list.find(name);
-                if (name_search != msigdb_list.end())
-                {
-                    for (auto&& idx : name_search->second)
-                    { m_gene_sets[chr].add(start, end, idx); }
-                }
-            }
-            if (!m_genome_wide_background && !provided_background)
-            {
-                // we want to generate the background from GTF
-                // but not when a background file is provided
-                // background index is 1
-                m_gene_sets[chr].add(start, end, BACKGROUND_IDX);
-            }
-        }
-        else
+        if (!in_feature(token[+GTF::FEATURE], m_feature))
         {
             ++exclude_feature;
+            continue;
         }
+        // convert chr string into consistent chr_coding
+        chr_code = Genotype::get_chrom_code(token[+GTF::CHR]);
+        chr = static_cast<size_t>(chr_code);
+        if (chr_code < 0 || chr_code >= MAX_POSSIBLE_CHROM || chr > max_chr)
+        {
+            ++chr_exclude;
+            continue;
+        }
+        try
+        {
+            std::tie(start, end) =
+                start_end(token[+GTF::START], token[+GTF::END], !ZERO_BASED);
+        }
+        catch (const std::runtime_error& e)
+        {
+            throw std::runtime_error(std::string(e.what())
+                                     + "Will ignore the gtf file");
+        }
+        extend_region(token[+GTF::STRAND], m_window_5, m_window_3, start, end);
+
+        // Now extract the name
+        parse_attribute(token[+GTF::ATTRIBUTE], id, name);
+        if (id.empty())
+        {
+            // lack ID, but mandate
+            throw std::runtime_error("Error: GTF file should contain the "
+                                     "gene_id field. Please check if you have "
+                                     "the correct file\n");
+        }
+        // now check if we can find it in the MSigDB entry
+        if (m_gene_sets.size() <= chr + 1) { m_gene_sets.resize(chr + 1); }
+        if (!add_gene_region_from_gtf(msigdb_list, id, chr, start, end))
+        { add_gene_region_from_gtf(msigdb_list, name, chr, start, end); }
+        if (add_background)
+        { m_gene_sets[chr].add(start, end, BACKGROUND_IDX); }
     }
+    return {num_line, exclude_feature, chr_exclude};
+}
+
+void Region::load_gtf(
+    const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+    const size_t max_chr)
+{
+    // don't bother if there's no msigdb genes and we are using genome wide
+    // background
+    if (msigdb_list.empty() && m_genome_wide_background) return;
+    bool gz_input = false;
+    auto stream = misc::load_stream(m_gtf, gz_input);
+    std::streampos file_length = 0;
+    if (!gz_input)
+    {
+        stream->seekg(0, stream->end);
+        file_length = stream->tellg();
+        stream->clear();
+        stream->seekg(0, stream->beg);
+    }
+    auto [num_line, exclude_feature, chr_exclude] = transverse_gtf(
+        msigdb_list, file_length, max_chr, gz_input, std::move(stream));
     if (!m_reporter->unit_testing())
     { fprintf(stderr, "\rReading %03.2f%%\n", 100.0); }
     if (!num_line)

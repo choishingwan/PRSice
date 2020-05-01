@@ -1,9 +1,9 @@
 #include "IITree.h"
 #include "catch.hpp"
+#include "gzstream.h"
 #include "mock_region.hpp"
 #include "region.hpp"
 #include "snp.hpp"
-
 
 TEST_CASE("Generate regions")
 {
@@ -29,12 +29,196 @@ TEST_CASE("Load GTF")
     mock_region region;
     Reporter reporter("log", 60, true);
     region.set_reporter(&reporter);
+    region.set_feature({"exon", "CDS", "gene"});
+    std::unordered_map<std::string, std::vector<size_t>> msigdb_list;
+    msigdb_list["DDX11L1"] = {GENERATE(take(1, random(1ul, 1025ul)))};
+    msigdb_list["ENSG00000187634"] = {GENERATE(take(1, random(1ul, 1025ul)))};
+    msigdb_list["ENSG00000175084"] = {GENERATE(take(1, random(1ul, 1025ul)))};
+    msigdb_list["MT-TP"] = {GENERATE(take(1, random(1ul, 1025ul)))};
+    size_t max_chr = 22;
+    SECTION("malformed gtf")
+    {
+        auto invalid = GENERATE(
+            "Space instead of tab though the size is "
+            "correct",
+            "Incorrect\tcolumn\tnumber",
+            "1\tpseudogene\tgene\t11869\t"
+            "14409\t.\t+\t.\tgene_name "
+            "\"DDX11L1\"; gene_source \"havana\"; "
+            "gene_biotype "
+            "\"pseudogene\";" /*No gene id, therefore invalid*/,
+            "1\tprocessed_transcript\texon\t-12613\t12721\t.\t+\t"
+            ".\tgene_id \"ENSG00000223972\"; transcript_id "
+            "\"ENST00000456328\"; "
+            "exon_number \"2\"; gene_name \"DDX11L1\"; gene_source "
+            "\"ensembl_havana\"; gene_biotype \"pseudogene\"; transcript_name "
+            "\"DDX11L1-002\"; transcript_source \"havana\"; exon_id "
+            "\"ENSE00003582793\";" /*Invalid start coordinate*/);
+        auto input = std::make_unique<std::istringstream>(invalid);
+        input->seekg(0, input->end);
+        auto file_length = input->tellg();
+        input->clear();
+        input->seekg(0, input->beg);
+        REQUIRE_THROWS(region.test_transverse_gtf(
+            msigdb_list, file_length, max_chr, false, std::move(input)));
+    }
+    SECTION("transverse check")
+    {
+        auto has_background = GENERATE(true, false);
+        auto BACKGROUND_IDX = 1ul;
+        region.set_gwas_bk(has_background);
+        // won't do gz here, can do it in the full file test where we can output
+        // the gz file using gzstream
+        auto input_str =
+            "#!genome-build GRCh37.p13\n"
+            "#!genome-version GRCh37\n"
+            "#!genome-date 2009-02\n"
+            "#!genome-build-accession NCBI:GCA_000001405.14\n"
+            "#!genebuild-last-updated 2013-09\n"
+            "1\tprocessed_transcript\texon\t12613\t12621\t.\t+\t.\tgene_id "
+            "\"ENSG00000223972\"; transcript_id "
+            "\"ENST00000456328\";exon_number \"2\"; gene_name \"DDX11L1\"; "
+            "gene_source \"ensembl_havana\"; gene_biotype \"pseudogene\"; "
+            "transcript_name \"DDX11L1-002\"; transcript_source "
+            "\"havana\"; "
+            "exon_id \"ENSE00003582793\";\n" /*chr1 12613 12621 DDX11L1*/
+            "1\tprotein_coding\tUTR\t861302\t861321\t.\t+\t.\tgene_id "
+            "\"ENSG00000187634\"; transcript_id \"ENST00000420190\"; "
+            "gene_name "
+            "\"SAMD11\"; gene_source \"ensembl_havana\"; gene_biotype "
+            "\"protein_coding\"; transcript_name \"SAMD11-011\"; "
+            "transcript_source \"havana\"; tag \"cds_end_NF\"; tag "
+            "\"mRNA_end_NF\";\n" /* Feature excluded*/
+            "2\tprotein_coding\tCDS\t220288499\t220288542\t.\t+\t1\tgene_"
+            "id "
+            "\"ENSG00000175084\"; transcript_id \"ENST00000373960\"; "
+            "exon_number \"7\"; gene_name \"DES\"; gene_source "
+            "\"ensembl_havana\"; gene_biotype \"protein_coding\"; "
+            "transcript_name \"DES-001\"; transcript_source "
+            "\"ensembl_havana\"; tag \"CCDS\"; ccds_id \"CCDS33383\"; "
+            "protein_id \"ENSP00000363071\";\n" /*chr2 220288499 220288542
+                                                   ENSG00000175084*/
+            "2\tprotein_coding\tCDS\t179497253\t179497299\t.\t-\t2\tgene_"
+            "id "
+            "\"ENSG00000155657\"; transcript_id \"ENST00000359218\"; "
+            "exon_number \"64\"; gene_name \"TTN\"; gene_source "
+            "\"ensembl_havana\"; gene_biotype \"protein_coding\"; "
+            "transcript_name \"TTN-202\"; transcript_source \"ensembl\"; "
+            "tag "
+            "\"CCDS\"; ccds_id \"CCDS54423\"; protein_id "
+            "\"ENSP00000352154\";\n" /*Not in msigdb*/
+            "MT\tMt_tRNA\tgene\t15956\t16023\t.\t-\t.\tgene_id "
+            "\"ENSG00000210196\"; gene_name \"MT-TP\"; gene_source "
+            "\"insdc\"; "
+            "gene_biotype \"Mt_tRNA\";" /* chr filtered */;
+        SECTION("direct call function")
+        {
+            auto input = std::make_unique<std::istringstream>(input_str);
+            input->seekg(0, input->end);
+            auto file_length = input->tellg();
+            input->clear();
+            input->seekg(0, input->beg);
+            auto [num_line, exclude, chr_exclude] = region.test_transverse_gtf(
+                msigdb_list, file_length, max_chr, false, std::move(input));
+            REQUIRE(num_line == 5);
+            REQUIRE(exclude == 1);
+            REQUIRE(chr_exclude == 1);
+            // check first gene is correctly set
+
+            region.index();
+            auto gene_set = region.get_gene_sets();
+            REQUIRE(gene_set.size() == 3);
+            auto idx = msigdb_list["DDX11L1"];
+            if (!has_background) idx.push_back(BACKGROUND_IDX);
+            std::vector<size_t> out;
+            for (size_t i = 12613; i < 12621; ++i)
+            {
+                REQUIRE(gene_set[1].has_overlap(i, out));
+                REQUIRE_THAT(out, Catch::UnorderedEquals<size_t>(idx));
+            }
+            REQUIRE_FALSE(gene_set[1].has_overlap(12612, out));
+            REQUIRE_FALSE(gene_set[1].has_overlap(12622, out));
+            idx = msigdb_list["ENSG00000175084"];
+            if (!has_background) idx.push_back(BACKGROUND_IDX);
+            for (size_t i = 220288499; i < 220288542; ++i)
+            {
+                REQUIRE(gene_set[2].has_overlap(i, out));
+                REQUIRE_THAT(out, Catch::UnorderedEquals<size_t>(idx));
+            }
+            REQUIRE_FALSE(gene_set[2].has_overlap(220288498, out));
+            REQUIRE_FALSE(gene_set[2].has_overlap(220288543, out));
+            if (!has_background)
+            {
+
+                for (size_t i = 179497253; i < 179497299; ++i)
+                {
+                    REQUIRE(gene_set[2].has_overlap(i, out));
+                    REQUIRE_THAT(out, Catch::UnorderedEquals<size_t>({1}));
+                }
+                REQUIRE_FALSE(gene_set[2].has_overlap(179497252, out));
+                REQUIRE_FALSE(gene_set[2].has_overlap(179497300, out));
+            }
+        }
+        SECTION("from load_gtf")
+        {
+            auto gz = GENERATE(true, false);
+            if (!gz)
+            {
+                std::ofstream gtf("gtf_check");
+                gtf << input_str << std::endl;
+                gtf.close();
+                region.set_gtf("gtf_check");
+            }
+            else
+            {
+                GZSTREAM_NAMESPACE::ogzstream gtf("gz_gtf_check");
+                gtf << input_str << std::endl;
+                gtf.close();
+                region.set_gtf("gz_gtf_check");
+            }
+            region.test_load_gtf(msigdb_list, 22);
+            region.index();
+            auto gene_set = region.get_gene_sets();
+            REQUIRE(gene_set.size() == 3);
+            auto idx = msigdb_list["DDX11L1"];
+            if (!has_background) idx.push_back(BACKGROUND_IDX);
+            std::vector<size_t> out;
+            for (size_t i = 12613; i < 12621; ++i)
+            {
+                REQUIRE(gene_set[1].has_overlap(i, out));
+                REQUIRE_THAT(out, Catch::UnorderedEquals<size_t>(idx));
+            }
+            REQUIRE_FALSE(gene_set[1].has_overlap(12612, out));
+            REQUIRE_FALSE(gene_set[1].has_overlap(12622, out));
+            idx = msigdb_list["ENSG00000175084"];
+            if (!has_background) idx.push_back(BACKGROUND_IDX);
+            for (size_t i = 220288499; i < 220288542; ++i)
+            {
+                REQUIRE(gene_set[2].has_overlap(i, out));
+                REQUIRE_THAT(out, Catch::UnorderedEquals<size_t>(idx));
+            }
+            REQUIRE_FALSE(gene_set[2].has_overlap(220288498, out));
+            REQUIRE_FALSE(gene_set[2].has_overlap(220288543, out));
+            if (!has_background)
+            {
+
+                for (size_t i = 179497253; i < 179497299; ++i)
+                {
+                    REQUIRE(gene_set[2].has_overlap(i, out));
+                    REQUIRE_THAT(out, Catch::UnorderedEquals<size_t>({1}));
+                }
+                REQUIRE_FALSE(gene_set[2].has_overlap(179497252, out));
+                REQUIRE_FALSE(gene_set[2].has_overlap(179497300, out));
+            }
+        }
+    }
 }
 TEST_CASE("Full load bed file")
 {
     mock_region region;
     Reporter reporter("log", 60, true);
     region.set_reporter(&reporter);
+    region.set_wind(1, 2);
     std::ofstream bed_file("full_bed.test");
     bed_file << "chr3 123 148" << std::endl;
     bed_file << "chr3 144 152" << std::endl;
@@ -53,13 +237,13 @@ TEST_CASE("Full load bed file")
     REQUIRE_THAT(name, Catch::Equals<std::string>({std::get<1>(input)}));
     auto set = region.get_gene_sets();
     std::vector<size_t> out;
-    for (size_t i = 124; i < 152; ++i)
+    for (size_t i = 123; i < 154; ++i)
     {
         REQUIRE(set[3].has_overlap(i, out));
         REQUIRE_THAT(out, Catch::Equals<size_t>({ori_idx}));
     }
-    REQUIRE_FALSE(set[3].has_overlap(123, out));
-    REQUIRE_FALSE(set[3].has_overlap(153, out));
+    REQUIRE_FALSE(set[3].has_overlap(122, out));
+    REQUIRE_FALSE(set[3].has_overlap(155, out));
 }
 TEST_CASE("load msigdb")
 {
@@ -139,9 +323,9 @@ TEST_CASE("Load snp sets")
             region.test_transverse_snp_file(snp_list_idx, snp_list, is_snp_set,
                                             std::move(input), set_idx);
 
-            // + 3 because the second Test are ignored (usually we also ignore
-            // base but as we haven;t gone through the proper generate_region
-            // function, that wasn't set up yet
+            // + 3 because the second Test are ignored (usually we also
+            // ignore base but as we haven;t gone through the proper
+            // generate_region function, that wasn't set up yet
             REQUIRE(set_idx == ori_idx + 3);
             auto names = region.get_names();
             REQUIRE_THAT(names,
@@ -160,9 +344,9 @@ TEST_CASE("Load snp sets")
                 auto&& cur_snp = snp_list[i];
                 REQUIRE(
                     gene_sets[cur_snp.chr()].has_overlap(cur_snp.loc(), out));
-                // don't test the not cases as we don't know if by chance there
-                // are other SNPs that were randomly selected are located in
-                // those space
+                // don't test the not cases as we don't know if by chance
+                // there are other SNPs that were randomly selected are
+                // located in those space
                 switch (i)
                 {
 
@@ -220,9 +404,9 @@ TEST_CASE("Load snp sets")
                     auto&& cur_snp = snp_list[i];
                     REQUIRE(gene_sets[cur_snp.chr()].has_overlap(cur_snp.loc(),
                                                                  out));
-                    // don't test the not cases as we don't know if by chance
-                    // there are other SNPs that were randomly selected are
-                    // located in those space
+                    // don't test the not cases as we don't know if by
+                    // chance there are other SNPs that were randomly
+                    // selected are located in those space
                     switch (i)
                     {
 
@@ -251,7 +435,8 @@ TEST_CASE("Load snp sets")
             }
             SECTION("invalid SNP set input format")
             {
-                // we don't allow user defined set name when snp set is provided
+                // we don't allow user defined set name when snp set is
+                // provided
                 REQUIRE_THROWS(region.test_load_snp_sets(
                     snp_list_idx, snp_list, "snp_set.test:Test", set_idx));
             }

@@ -152,10 +152,28 @@ protected:
         }
         return {start, end};
     }
-
+    bool add_gene_region_from_gtf(
+        const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        const std::string id, const size_t chr, const size_t start,
+        const size_t end)
+    {
+        if (id.empty()) return false;
+        auto&& id_search = msigdb_list.find(id);
+        if (id_search != msigdb_list.end())
+        {
+            for (auto&& idx : id_search->second)
+            { m_gene_sets[chr].add(start, end, idx); }
+            return true;
+        }
+        return false;
+    }
     void load_msigdb(
         std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
         std::unique_ptr<std::istream> input, size_t& set_idx);
+    std::tuple<size_t, size_t, size_t> transverse_gtf(
+        const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        const std::streampos file_length, const size_t max_chr,
+        const bool gz_input, std::unique_ptr<std::istream> gtf_stream);
     void load_gtf(
         const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
         const size_t max_chr);

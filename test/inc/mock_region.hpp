@@ -107,6 +107,23 @@ public:
     {
         return load_bed_regions(bed_file, set_idx, max_chr);
     }
+    void test_load_gtf(
+        const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        const size_t max_chr)
+    {
+        return load_gtf(msigdb_list, max_chr);
+    }
+    std::tuple<size_t, size_t, size_t> test_transverse_gtf(
+        const std::unordered_map<std::string, std::vector<size_t>>& msigdb_list,
+        const std::streampos file_length, const size_t max_chr,
+        const bool gz_input, std::unique_ptr<std::istream> gtf_stream)
+    {
+        return transverse_gtf(msigdb_list, file_length, max_chr, gz_input,
+                              std::move(gtf_stream));
+    }
+    void set_gtf(const std::string& g) { m_gtf = g; }
+    void set_feature(const std::vector<std::string>& in) { m_feature = in; }
+    void set_gwas_bk(bool has_bk) { m_genome_wide_background = has_bk; }
     void index()
     {
         for (auto&& tree : m_gene_sets) { tree.index(); }
@@ -114,6 +131,11 @@ public:
     void add_duplicated_set(const std::string& in)
     {
         m_processed_sets.insert(in);
+    }
+    void set_wind(const size_t w5, size_t w3)
+    {
+        m_window_5 = w5;
+        m_window_3 = w3;
     }
 };
 
