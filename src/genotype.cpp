@@ -89,17 +89,11 @@ void Genotype::build_clump_windows(const unsigned long long& clump_distance)
         }
         // we can safely assume current location always bigger than prev_loc
         // as we have sorted the vector
-        else if (cur_snp.loc() - prev_loc > clump_distance)
+        while (cur_snp.loc() - prev_loc > clump_distance
+               && low_bound < vector_index)
         {
-            // now the chromosome didn't change, and the distance of our current
-            // SNP is further away from the previous SNP than our required
-            // threshold
-            while (cur_snp.loc() - prev_loc > clump_distance
-                   && low_bound < vector_index)
-            {
-                ++low_bound;
-                prev_loc = m_existed_snps[low_bound].loc();
-            }
+            ++low_bound;
+            prev_loc = m_existed_snps[low_bound].loc();
         }
 
         // now low_bound should be the first SNP where the core index SNP need

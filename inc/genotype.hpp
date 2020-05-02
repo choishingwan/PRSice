@@ -105,10 +105,7 @@ public:
      * \brief Return the number of SNPs, use for unit test
      * \return reuturn the number of SNPs included
      */
-    std::vector<SNP>::size_type num_snps() const
-    {
-        return m_existed_snps.size();
-    }
+    size_t num_snps() const { return m_existed_snps.size(); }
     /*!
      * \brief Function to re-propagate the m_existed_snps_index after reading
      * the reference panel

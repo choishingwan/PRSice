@@ -132,6 +132,10 @@ void PRSice::pheno_check()
         auto pheno = misc::load_stream(m_pheno_info.pheno_file);
         parse_pheno_header(std::move(pheno));
     }
+    else
+    {
+        m_pheno_info.pheno_col = {"Phenotype"};
+    }
     assert(m_pheno_info.pheno_col_idx.size() == m_pheno_info.pheno_col.size());
     auto message = "There are a total of "
                    + std::to_string(m_pheno_info.pheno_col.size())

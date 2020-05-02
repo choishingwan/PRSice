@@ -37,6 +37,28 @@ void print_empty_region(
     const std::vector<std::vector<size_t>>& region_membership,
     std::vector<std::string>& region_names);
 
+void initialize_target(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    Genotype* target_file, Commander& commander, Reporter& reporter);
+void initialize_reference(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    Genotype* target_file, Genotype* reference_file, Commander& commander,
+    Reporter& reporter);
+
+std::tuple<std::vector<std::string>, size_t>
+add_gene_set_info(Commander& commander, Genotype* target_file,
+                  Reporter& reporter)
+{
+    Region region(commander.get_set(), &reporter);
+    const size_t num_regions = region.generate_regions(
+        target_file->included_snps_idx(), target_file->included_snps(),
+        target_file->max_chr());
+    target_file->add_flags(region.get_gene_sets(), num_regions,
+                           commander.get_set().full_as_background);
+    return {region.get_names(), num_regions};
+}
+
+
 int main(int argc, char* argv[])
 {
     const std::string separator =
@@ -59,13 +81,11 @@ int main(int argc, char* argv[])
         {
             return -1; // all error messages should have printed
         }
-        bool verbose = true;
         // parse the exclusion range and put it into the exclusion object
         // Generate the exclusion region
         std::vector<IITree<size_t, size_t>> exclusion_regions;
         Region::generate_exclusion(exclusion_regions,
                                    commander.exclusion_range());
-        bool init_ref = false;
         GenomeFactory factory;
         Genotype *target_file = nullptr, *reference_file = nullptr;
         try
@@ -74,109 +94,50 @@ int main(int argc, char* argv[])
             target_file = factory.createGenotype(commander.get_target(),
                                                  commander.get_pheno(),
                                                  commander.delim(), reporter);
-            target_file =
-                &target_file->keep_nonfounder(commander.nonfounders())
-                     .keep_ambig(commander.keep_ambig())
-                     .intermediate(commander.use_inter())
-                     .set_prs_instruction(commander.get_prs_instruction())
-                     .set_weight();
-            const std::string base_name = commander.get_base_name();
-            std::string message = "Start processing " + base_name + "\n";
-            message.append(separator);
-            reporter.report(message);
-            target_file->snp_extraction(commander.extract_file(),
-                                        commander.exclude_file());
-            auto [filter_count, dup_rs_id] = target_file->read_base(
-                commander.get_base(), commander.get_base_qc(),
-                commander.get_p_threshold(), exclusion_regions);
-            target_file->print_base_stat(filter_count, dup_rs_id,
-                                         commander.out(),
-                                         commander.get_base_qc().info_score);
-            // then we will read in the sample information
-            message = "Loading Genotype info from target\n";
-            message.append(separator);
-            reporter.report(message);
-            // Need to know if we use the reference
-            // When reference isn't used, we will need to generate the
-            // intermediate file for LD calculation if user used --allow-inter
-            // and --type bge
-            if (commander.use_ref()) target_file->expect_reference();
-            target_file->load_samples();
-            target_file->load_snps(commander.out(), exclusion_regions, verbose);
-            // now load the reference file
-            // initialize the memory map file
+            initialize_target(exclusion_regions, target_file, commander,
+                              reporter);
             if (commander.use_ref() && commander.need_ref())
             {
-                message = "Start processing reference\n";
-                reporter.report(message);
                 reference_file = factory.createGenotype(
                     commander.get_reference(), commander.get_pheno(),
                     commander.delim(), reporter);
-                reference_file = &reference_file->reference().intermediate(
-                    commander.use_inter());
-                init_ref = true;
-                message = "Loading Genotype info from reference\n";
-                message.append(separator);
-                reporter.report(message);
-                reference_file->load_samples();
-                // load the reference file
-                reference_file->load_snps(commander.out(), exclusion_regions,
-                                          verbose, target_file);
+                initialize_reference(exclusion_regions, target_file,
+                                     reference_file, commander, reporter);
             }
             exclusion_regions.clear();
-            // with the reference file read, we can start doing filtering and
-            // calculate relevent metric
-            // set the hard coding threshold and dosage threshold which are
-            // required for handling dosage
-            target_file->set_thresholds(commander.get_target_qc());
-            // only calculate the MAF if we need to
             target_file->calc_freqs_and_intermediate(commander.get_target_qc(),
                                                      commander.out(), true);
-            if (init_ref)
+            if (reference_file != nullptr)
             {
                 reference_file->set_thresholds(commander.get_ref_qc());
                 reference_file->calc_freqs_and_intermediate(
                     commander.get_ref_qc(), commander.out(), true, target_file);
             }
-            // now should get the correct MAF and should have filtered the
-            // SNPs accordingly Generate Region flag information
-            Region region(commander.get_set(), &reporter);
-            const size_t num_regions = region.generate_regions(
-                target_file->included_snps_idx(), target_file->included_snps(),
-                target_file->max_chr());
-            std::vector<std::string> region_names = region.get_names();
-            target_file->add_flags(region.get_gene_sets(), num_regions,
-                                   commander.get_set().full_as_background);
-            // start processing other files before doing clumping
+            if (target_file->num_snps() == 0)
+            {
+                reporter.report("No SNPs left for PRSice processing");
+                return -1;
+            }
+            auto [region_names, num_regions] =
+                add_gene_set_info(commander, target_file, reporter);
+
             PRSice prsice(commander.get_prs_instruction(),
                           commander.get_p_threshold(), commander.get_pheno(),
                           commander.get_perm(), commander.out(), &reporter);
-            // Do phenotype check. If phenotype info is wrong, don't bother to
-            // do clumping
             prsice.pheno_check();
-            // Store relevant parameters to the target object
+
             if (!commander.get_clump_info().no_clump)
             {
-                // now go through the snp vector an define the
-                // windows so that we can jump directly to the
-                // relevant SNPs immediately during clumping
                 target_file->build_clump_windows(
                     commander.get_clump_info().distance);
-                // get the sort by p index vector for target
-                // so that we can still find out the relative coordinates of
-                // each SNPs This is only required for clumping
-                if (!target_file->sort_by_p())
-                {
-                    reporter.report("No SNPs left for PRSice processing");
-                    return -1;
-                }
+                target_file->sort_by_p();
                 // now perform clumping
                 target_file->efficient_clumping(
                     commander.get_clump_info(),
                     commander.use_ref() ? *reference_file : *target_file);
-                // immediately free the memory
             }
-            if (init_ref) { delete reference_file; }
+            // immediately free the memory
+            if (reference_file != nullptr) { delete reference_file; }
             if (commander.ultra_aggressive())
             {
                 // we will do something ultra aggressive here: To load all SNP
@@ -343,4 +304,52 @@ void print_empty_region(
         }
     }
     if (has_empty_region) empty_region.close();
+}
+
+void initialize_reference(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    Genotype* target_file, Genotype* reference_file, Commander& commander,
+    Reporter& reporter)
+{
+    const std::string separator =
+        "==================================================";
+    reporter.report("Start processing reference\n");
+    reference_file =
+        &reference_file->reference().intermediate(commander.use_inter());
+    reporter.report("Loading Genotype info from reference\n" + separator);
+    reference_file->load_samples();
+    // load the reference file
+    const bool verbose = true;
+    reference_file->load_snps(commander.out(), exclusion_regions, verbose,
+                              target_file);
+    reference_file->set_thresholds(commander.get_ref_qc());
+}
+
+void initialize_target(
+    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
+    Genotype* target_file, Commander& commander, Reporter& reporter)
+{
+
+    const std::string separator =
+        "==================================================";
+    target_file = &target_file->keep_nonfounder(commander.nonfounders())
+                       .keep_ambig(commander.keep_ambig())
+                       .intermediate(commander.use_inter())
+                       .set_prs_instruction(commander.get_prs_instruction())
+                       .set_weight();
+    const std::string base_name = commander.get_base_name();
+    reporter.report("Start processing " + base_name + "\n" + separator);
+    target_file->snp_extraction(commander.extract_file(),
+                                commander.exclude_file());
+    auto [filter_count, dup_rs_id] =
+        target_file->read_base(commander.get_base(), commander.get_base_qc(),
+                               commander.get_p_threshold(), exclusion_regions);
+    target_file->print_base_stat(filter_count, dup_rs_id, commander.out(),
+                                 commander.get_base_qc().info_score);
+    reporter.report("Loading Genotype info from target\n" + separator);
+    if (commander.use_ref()) target_file->expect_reference();
+    target_file->load_samples();
+    const bool verbose = true;
+    target_file->load_snps(commander.out(), exclusion_regions, verbose);
+    target_file->set_thresholds(commander.get_target_qc());
 }
