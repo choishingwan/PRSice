@@ -18,15 +18,10 @@ src/bk/
 PRSice\.*
 *.gz
 site/
-test/data/bk/*
 test/data/*
 zlib*
 *.user*
-
 build_test/
-
 coverage/
-
 build_quick/
-
 mac_build/
