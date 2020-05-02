@@ -328,3 +328,75 @@ TEST_CASE("initialize masks")
             REQUIRE(geno.max_chr() == static_cast<uint32_t>(n_auto));
     }
 }
+
+TEST_CASE("Add flag")
+{
+    // ideally we have 65 gene sets or something like that
+    // doesn't matter what the genes are
+    // first, generate two SNPs
+    mockGenotype geno;
+    Reporter reporter("log", 60, true);
+    geno.set_reporter(&reporter);
+    geno.load_snp(SNP("rs1", 1, 123, "A", "T", 0, 0));
+    geno.load_snp(SNP("rs3", 2, 235, "A", "T", 0, 0));
+    // now generate the gene sets
+    std::vector<IITree<size_t, size_t>> gene_sets;
+    gene_sets.resize(3);
+    auto num_sets = GENERATE(range(124ul, 126ul));
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<size_t> set_idx(2, num_sets - 1);
+    // give first SNP 60 gene sets and second 20 gene sets
+    std::unordered_set<size_t> snp1, snp2;
+    for (size_t i = 0; i < 60; ++i)
+    {
+        auto set = set_idx(gen);
+        while (snp1.find(set) != snp1.end()) { set = set_idx(gen); }
+        snp1.insert(set);
+        gene_sets[1].add(123, 123, set);
+    }
+    for (size_t i = 0; i < 20; ++i)
+    {
+        auto set = set_idx(gen);
+        while (snp2.find(set) != snp1.end()) { set = set_idx(gen); }
+        snp2.insert(set);
+        gene_sets[2].add(235, 235, set);
+    }
+    // now index the gene_set
+    for (auto&& tree : gene_sets) tree.index();
+    auto gwas_background = GENERATE(true, false);
+    geno.add_flags(gene_sets, num_sets, gwas_background);
+    auto snp_list = geno.existed_snps();
+    //  just to make sure we have not forgot to initialize the snp list
+    REQUIRE(snp_list.size() == 2);
+    auto first_snp = snp_list.front();
+    auto second_snp = snp_list.back();
+    // must be in base
+    REQUIRE(first_snp.in(0));
+    REQUIRE(second_snp.in(0));
+    if (gwas_background)
+    {
+        // must be in background
+        REQUIRE(first_snp.in(1));
+        REQUIRE(second_snp.in(1));
+    }
+    else
+    {
+        // we haven't set background, so it mustn't be here
+        REQUIRE_FALSE(first_snp.in(1));
+        REQUIRE_FALSE(second_snp.in(1));
+    }
+    for (size_t i = 2; i < num_sets; ++i)
+    {
+        if (snp1.find(i) != snp1.end()) { REQUIRE(first_snp.in(i)); }
+        else
+        {
+            REQUIRE_FALSE(first_snp.in(i));
+        }
+        if (snp2.find(i) != snp2.end()) { REQUIRE(second_snp.in(i)); }
+        else
+        {
+            REQUIRE_FALSE(second_snp.in(i));
+        }
+    }
+}

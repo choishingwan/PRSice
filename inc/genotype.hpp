@@ -498,33 +498,22 @@ public:
     bool perform_freqs_and_inter(const QCFiltering& filter_info,
                                  const std::string& prefix, Genotype* target);
     static void
-    construct_flag(const std::string& rs,
-                   const std::vector<IITree<size_t, size_t>>& gene_sets,
-                   std::vector<uintptr_t>& flag, const size_t required_size,
-                   const size_t chr, const size_t bp,
-                   const bool genome_wide_background)
+    construct_flag(const std::vector<IITree<size_t, size_t>>& gene_sets,
+                   const size_t required_size,
+                   const bool genome_wide_background, SNP* snp)
     {
+        auto& flag = snp->get_flag();
         if (flag.size() != required_size) { flag.resize(required_size); }
         std::fill(flag.begin(), flag.end(), 0);
         SET_BIT(0, flag.data());
         if (genome_wide_background) { SET_BIT(1, flag.data()); }
-        // because the chromosome number is undefined. It will not be
-        // presented in any of the region (we filter out any region with
-        // undefined chr)
-        if (!gene_sets.empty())
-        {
-            std::vector<size_t> out;
-            if (chr >= gene_sets.size()) return;
-            gene_sets[chr].overlap(bp - 1, bp + 1, out);
-            size_t idx;
-            for (auto&& j : out)
-            {
-                idx = gene_sets[chr].data(j);
-                SET_BIT(idx, flag.data());
-            }
-        }
-        return;
+        if (gene_sets.empty()) return;
+        if (snp->chr() >= gene_sets.size()) return;
+        std::vector<size_t> out;
+        if (!gene_sets[snp->chr()].has_overlap(snp->loc(), out)) return;
+        for (auto&& idx : out) { SET_BIT(idx, flag.data()); }
     }
+
     void add_flags(const std::vector<IITree<size_t, size_t>>& cr,
                    const size_t num_sets, const bool genome_wide_background);
 

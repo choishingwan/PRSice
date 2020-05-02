@@ -29,6 +29,7 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/region_basic.cpp
     ${TEST_SRC_DIR}/region_exclusion.cpp
     ${TEST_SRC_DIR}/region_process.cpp
+    ${TEST_SRC_DIR}/prsice_pheno.cpp
     )
 target_link_libraries(tests PUBLIC
     Catch

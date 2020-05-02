@@ -244,17 +244,11 @@ public:
      */
     inline bool in(size_t i) const
     {
-        if (i / BITCT >= m_clump_info.max_flag_idx)
+        if (i / BITCT >= m_clump_info.flags.size())
             throw std::out_of_range("Out of range for flag");
         return (IS_SET(m_clump_info.flags.data(), i));
     }
-
-    void set_flag(const size_t num_region, const std::vector<uintptr_t>& flags)
-    {
-        m_clump_info.max_flag_idx = BITCT_TO_WORDCT(num_region);
-        m_clump_info.flags = flags;
-        m_clump_info.clumped = false;
-    }
+    std::vector<uintptr_t>& get_flag() { return m_clump_info.flags; }
 
     /*!
      * \brief Set the SNP to be clumped such that it will no longer be

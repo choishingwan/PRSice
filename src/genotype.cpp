@@ -158,18 +158,10 @@ void Genotype::add_flags(const std::vector<IITree<size_t, size_t>>& gene_sets,
                          const size_t num_sets,
                          const bool genome_wide_background)
 {
-    const size_t num_snps = m_existed_snps.size();
     const size_t required_size = BITCT_TO_WORDCT(num_sets);
-    size_t chr, bp;
-    std::vector<uintptr_t> flag(required_size, 0);
-    for (size_t i = 0; i < num_snps; ++i)
+    for (auto&& snp : m_existed_snps)
     {
-        auto&& snp = m_existed_snps[i];
-        chr = snp.chr();
-        bp = snp.loc();
-        construct_flag(snp.rs(), gene_sets, flag, required_size, chr, bp,
-                       genome_wide_background);
-        m_existed_snps[i].set_flag(num_sets, flag);
+        construct_flag(gene_sets, required_size, genome_wide_background, &snp);
     }
 }
 
