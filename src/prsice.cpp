@@ -18,200 +18,124 @@
 #include "prsice.hpp"
 
 std::mutex PRSice::lock_guard;
+std::tuple<size_t, bool>
+PRSice::get_pheno_idx(const std::vector<std::string_view>& column,
+                      const std::string& pheno)
+{
+    if (pheno.empty()) return {1 + !m_pheno_info.ignore_fid, false};
+    // there should not be nay duplicated column in the pheno_col
+    bool duplicated_file_column = false;
+    size_t col_idx = 0;
+    // don't start from 0 as we expect those to be the FID / IID
+    for (size_t i_col = 1 + !m_pheno_info.ignore_fid; i_col < column.size();
+         ++i_col)
+    {
+        if (column[i_col] == pheno)
+        {
+            if (duplicated_file_column)
+            {
+                throw std::runtime_error(
+                    "Error: Multiple column in the phenotype file mataches "
+                    "with the require pehnotyp name: "
+                    + pheno);
+            }
+            duplicated_file_column = true;
+            col_idx = i_col;
+        }
+    }
+    return {col_idx, duplicated_file_column};
+}
+void PRSice::parse_pheno_header(std::unique_ptr<std::istream> pheno_file)
+{
+    std::string line;
+    std::getline(*pheno_file, line);
+    if (line.empty())
+    {
+        throw std::runtime_error(
+            "Error: First line of phenotype file cannot be empty");
+    }
+    pheno_file.reset();
+    misc::trim(line);
+    std::vector<std::string_view> col = misc::tokenize(line);
+    if (col.size() < 2ul + !m_pheno_info.ignore_fid)
+    {
+        throw std::runtime_error(
+            "Error: Not enough column in Phenotype file. "
+            "If the phenotype does not contain the FID, use --ignore-fid");
+    }
+    std::string message = "";
+    std::string sample_id = std::string(col[0]);
+    if (!m_pheno_info.ignore_fid)
+    { sample_id.append("+" + std::string(col[1])); }
+    message.append("Phenotype file: " + m_pheno_info.pheno_file + "\n");
+    message.append("Column Name of Sample ID: " + sample_id + "\n");
+    message.append("Note: If the phenotype file does not contain a header, "
+                   "the column name will be displayed as the Sample ID "
+                   "which is expected.\n");
+    // no user input
+    if (m_pheno_info.pheno_col.empty())
+    {
+        m_pheno_info.pheno_col_idx.push_back(1 + !m_pheno_info.ignore_fid);
+        m_pheno_info.pheno_col = {
+            std::string(col[1 + !m_pheno_info.ignore_fid])};
+        if (isdigit(col[1 + !m_pheno_info.ignore_fid].at(0)))
+        { m_pheno_info.pheno_col = {"Phenotype"}; }
+        m_pheno_info.skip_pheno = {false};
+    }
+    else
+    {
+        m_pheno_info.skip_pheno.resize(m_pheno_info.pheno_col.size());
+        bool has_valid_pheno = false;
+        for (size_t i_pheno = 0; i_pheno < m_pheno_info.pheno_col.size();
+             ++i_pheno)
+        {
+            auto [idx, found] =
+                get_pheno_idx(col, m_pheno_info.pheno_col[i_pheno]);
+            if (found) { has_valid_pheno = true; }
+            else
+            {
+                message.append("Warning: Phenotype: "
+                               + m_pheno_info.pheno_col[i_pheno]
+                               + " cannot be found in the phenotype file\n");
+                m_pheno_info.skip_pheno[i_pheno] = true;
+            }
+            m_pheno_info.pheno_col_idx.push_back(idx);
+        }
+        if (!has_valid_pheno)
+        {
+            message.append("Error: None of the phenotype(s) can be found "
+                           "in the phenotype file!\n");
+            throw std::runtime_error(message);
+        }
+    }
+    m_reporter->report(message);
+}
+
 void PRSice::pheno_check()
 {
     // don't bother to check anything, just add a place holder in binary
     if (m_prs_info.no_regress)
     {
-        if (m_pheno_info.binary.empty()) m_pheno_info.binary.push_back(true);
+        m_pheno_info.binary = {true};
+        m_pheno_info.pheno_col = {"PlaceHolder"};
+        m_pheno_info.skip_pheno = {false};
+        return;
     }
     if (m_pheno_info.binary.empty())
     { throw std::runtime_error("Error: No phenotype provided"); }
-    std::string message = "";
-    // want to update the binary and prevalence vector by removing phenotypes
-    // not found / duplicated
+
+    // want to update the binary and prevalence vector by removing
+    // phenotypes not found / duplicated
     m_pheno_info.skip_pheno.resize(m_pheno_info.binary.size(), false);
-    bool pheno_update = false;
-    if (m_pheno_info.pheno_file.empty()) {}
-    else
+    if (!m_pheno_info.pheno_file.empty())
     {
-        // user provided the phenotype file
-        std::ifstream pheno;
-        pheno.open(m_pheno_info.pheno_file.c_str());
-        if (!pheno.is_open())
-        {
-            throw std::runtime_error("Cannot open phenotype file: "
-                                     + m_pheno_info.pheno_file);
-        }
-        std::string line;
-        // read in the header line to check if the phenotype is here
-        std::getline(pheno, line);
-        if (line.empty())
-        {
-            throw std::runtime_error(
-                "Cannot have empty header line for phenotype file!");
-        }
-        pheno.close();
-        misc::trim(line);
-        std::vector<std::string> col = misc::split(line);
-        // we need at least 2 columns (IID + Phenotype)
-        // or 3 if m_ignore_fid != T
-        if (col.size() < static_cast<size_t>(2 + !m_pheno_info.ignore_fid))
-        {
-            throw std::runtime_error(
-                "Error: Not enough column in Phenotype file. "
-                "Have you use the --ignore-fid option");
-        }
-        // the first column must be considered as the ID
-        std::string sample_id = col[0];
-        // if we should not ignore the fid, we should then use both the
-        // first and second column as our sample ID
-        if (!m_pheno_info.ignore_fid && col.size() > 1)
-            sample_id.append("+" + col[1]);
-        message.append("Check Phenotype file: " + m_pheno_info.pheno_file
-                       + "\n");
-        message.append("Column Name of Sample ID: " + sample_id + "\n");
-        message.append("Note: If the phenotype file does not contain a header, "
-                       "the column name will be displayed as the Sample ID "
-                       "which is ok.\n");
-        bool found = false;
-        // now we want to check if the file contain the phenotype header
-        if (m_pheno_info.pheno_col.size() == 0)
-        {
-            // The index of the phenotype will be 1 (IID Phenotype) or 2
-            // (FID IID Pheno)
-            m_pheno_info.pheno_col_idx.push_back(1 + !m_pheno_info.ignore_fid);
-            // And we will use the default name (as file without header is
-            // still consider as a valid input)
-            // if the column starts with number, we will use Phenotype as a
-            // place holder name. This is to avoid using the phenotype
-            // number as a name The following is mainly to account for
-            // situation where the file contain a header but user did not
-            // provide it. So we will try to read it from the file
-            if (isdigit(col[1 + !m_pheno_info.ignore_fid].at(0)))
-            { m_pheno_info.pheno_col.push_back("Phenotype"); }
-            else
-            {
-                m_pheno_info.pheno_col.push_back(
-                    col[1 + !m_pheno_info.ignore_fid]);
-            }
-
-            message.append("Phenotype Name: " + m_pheno_info.pheno_col.back()
-                           + "\n");
-        }
-        else
-        {
-            // if user provide the phenotype names, we will go through the
-            // phenotype header and try to identify the corresponding
-            // phenotype index
-            std::unordered_set<std::string> dup_col;
-            bool has_valid_column = false;
-            for (size_t i_pheno = 0; i_pheno < m_pheno_info.pheno_col.size();
-                 ++i_pheno)
-            {
-                if (dup_col.find(m_pheno_info.pheno_col[i_pheno])
-                    == dup_col.end())
-                {
-                    // we will ignore any duplicate phenotype input.
-                    // it should still be ok as the binary_target should
-                    // have the same length as the phenotype column name and
-                    // we will store the binary target information
-                    found = false;
-                    dup_col.insert(m_pheno_info.pheno_col[i_pheno]);
-                    // start from 1+!m_ignore_fid to skip the iid and fid
-                    // part
-                    for (size_t i_column = 1 + !m_pheno_info.ignore_fid;
-                         i_column < col.size(); ++i_column)
-                    {
-                        // now go through each column of the input file to
-                        // identify the index
-                        // NOTE: If there are multiple column with the same
-                        // column name that the user required, we will
-                        // terminate as we don't know which one to use
-                        if (col[i_column] == (m_pheno_info.pheno_col[i_pheno]))
-                        {
-                            if (found)
-                            {
-                                throw std::runtime_error(
-                                    "Error: Multiple Column of your "
-                                    "phenotype "
-                                    "file matches with the required "
-                                    "phenotype "
-                                    "name: "
-                                    + m_pheno_info.pheno_col[i_pheno]);
-                            }
-                            found = true;
-                            // store the column index
-                            m_pheno_info.pheno_col_idx.push_back(i_column);
-                            has_valid_column = true;
-                        }
-                    }
-                    if (!found)
-                    {
-                        message.append(
-                            "Phenotype: " + m_pheno_info.pheno_col[i_pheno]
-                            + " cannot be found in phenotype file\n");
-                        m_pheno_info.skip_pheno[i_pheno] = true;
-                        pheno_update = true;
-                    }
-                }
-                else
-                {
-                    // duplicated phenotype name
-                    m_pheno_info.skip_pheno[i_pheno] = true;
-                    // that is, if they have the same phenotype, but different
-                    // prevalence / binary, we will still ignore subsequent
-                    // inputs
-                    message.append("Duplicate phenotype column name: "
-                                   + m_pheno_info.pheno_col[i_pheno]
-                                   + ". Only the first instance are used\n");
-                    pheno_update = true;
-                }
-            }
-            if (!has_valid_column)
-            {
-                message.append("Error: None of the phenotype(s) can be found "
-                               "in the phenotype file!\n");
-                throw std::runtime_error(message);
-            }
-        }
+        auto pheno = misc::load_stream(m_pheno_info.pheno_file);
+        parse_pheno_header(std::move(pheno));
     }
-    // update phenotype
-    if (m_pheno_info.binary.size() > 1)
-    {
-        Phenotype tmp_pheno = m_pheno_info;
-        size_t binary_idx = 0;
-        m_pheno_info.binary.clear();
-        m_pheno_info.pheno_col.clear();
-        m_pheno_info.prevalence.clear();
-        m_pheno_info.pheno_col_idx.clear();
-        for (size_t idx = 0; idx < tmp_pheno.binary.size(); ++idx)
-        {
-            if (!tmp_pheno.skip_pheno[idx])
-            {
-                m_pheno_info.binary.push_back(tmp_pheno.binary[idx]);
-                m_pheno_info.pheno_col.push_back(tmp_pheno.pheno_col[idx]);
-                m_pheno_info.pheno_col_idx.push_back(
-                    tmp_pheno.pheno_col_idx[idx]);
-                if (tmp_pheno.binary[idx] && !tmp_pheno.prevalence.empty())
-                {
-                    m_pheno_info.prevalence.push_back(
-                        tmp_pheno.prevalence[binary_idx]);
-                    ++binary_idx;
-                }
-            }
-            else if (tmp_pheno.binary[idx] && !tmp_pheno.prevalence.empty())
-            {
-                ++binary_idx;
-            }
-        }
-        assert(m_pheno_info.binary.size() == m_pheno_info.pheno_col.size());
-        assert(m_pheno_info.binary.size() == m_pheno_info.pheno_col_idx.size());
-    }
-
-    message.append("There are a total of "
-                   + std::to_string(m_pheno_info.binary.size())
-                   + " phenotype to process\n");
+    assert(m_pheno_info.pheno_col_idx.size() == m_pheno_info.pheno_col.size());
+    auto message = "There are a total of "
+                   + std::to_string(m_pheno_info.pheno_col.size())
+                   + " phenotype to process\n";
     m_reporter->report(message);
 }
 
@@ -233,10 +157,10 @@ void PRSice::new_phenotype(Genotype& target)
     m_sample_with_phenotypes.clear();
     target.reset_in_regression_flag();
     target.reset_std_flag();
-    // As m_sample_with_phenotypes is empty, we won't go into the for loop with
-    // update to the regression flag or the exclude_std flag, and we will not
-    // need the delimitor (as none will be found anyway), so we only need to
-    // give the target file to calculate the FID and IID length
+    // As m_sample_with_phenotypes is empty, we won't go into the for loop
+    // with update to the regression flag or the exclude_std flag, and we
+    // will not need the delimitor (as none will be found anyway), so we
+    // only need to give the target file to calculate the FID and IID length
     if (m_prs_info.no_regress) { update_sample_included("", false, target); }
 }
 void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
@@ -334,7 +258,8 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
                 m_matrix_index.push_back(i_sample);
                 // the in regression flag is only use for output
                 target.set_in_regression(i_sample);
-                // so only standardize samples if they are with valid phenotype
+                // so only standardize samples if they are with valid
+                // phenotype
                 if (ctrl_std
                     && !misc::logically_equal(
                         m_phenotype[static_cast<Eigen::Index>(
@@ -1728,20 +1653,20 @@ void PRSice::prep_output(const Genotype& target,
                 }
                 m_quick_best = num_region <= 2;
             }
-            // the safetest way to calculate the length we need to skip is to
-            // directly count the number of byte involved
+            // the safetest way to calculate the length we need to skip is
+            // to directly count the number of byte involved
             const long long begin_byte = m_best_out.tellp();
             m_best_out << header_line << "\n";
             const long long end_byte = m_best_out.tellp();
-            // we now know the exact number of byte the header contain and can
-            // correctly skip it acordingly
+            // we now know the exact number of byte the header contain and
+            // can correctly skip it acordingly
             assert(end_byte >= begin_byte);
             m_best_file.header_length = end_byte - begin_byte;
             // we will set the processed_threshold information to 0
             m_best_file.processed_threshold = 0;
 
-            // each numeric output took 12 spaces, then for each output, there
-            // is one space next to each
+            // each numeric output took 12 spaces, then for each output,
+            // there is one space next to each
             m_best_file.line_width =
                 m_max_fid_length /* FID */ + 1LL           /* space */
                 + m_max_iid_length                         /* IID */

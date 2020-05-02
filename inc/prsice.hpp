@@ -92,6 +92,10 @@ public:
      * \param reporter is the logger
      */
     void pheno_check();
+    bool pheno_skip(size_t idx) const
+    {
+        return m_pheno_info.skip_pheno.at(idx);
+    }
     // init_matrix whenever phenotype changes
     /*!
      * \brief init_matrix will initialize the independent and dependent matrix
@@ -247,7 +251,11 @@ public:
                     const size_t pheno_index);
 
 protected:
-private:
+    void parse_pheno_header(std::unique_ptr<std::istream> pheno_file);
+    std::tuple<size_t, bool>
+    get_pheno_idx(const std::vector<std::string_view>& column,
+                  const std::string& pheno);
+
     struct prsice_result
     {
         double threshold;

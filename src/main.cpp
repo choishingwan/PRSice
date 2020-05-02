@@ -212,8 +212,16 @@ int main(int argc, char* argv[])
             const size_t num_pheno = prsice.num_phenotype();
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
-                fprintf(stderr, "Processing the %zu th phenotype\n",
-                        i_pheno + 1);
+                if (prsice.pheno_skip(i_pheno))
+                {
+                    reporter.simple_report("Skipping the "
+                                           + std::to_string(i_pheno + 1)
+                                           + " th phenotype");
+                    continue;
+                }
+                reporter.simple_report("Processing the "
+                                       + std::to_string(i_pheno + 1)
+                                       + " th phenotype");
                 prsice.new_phenotype(*target_file);
                 if (!commander.get_prs_instruction().no_regress)
                 {
