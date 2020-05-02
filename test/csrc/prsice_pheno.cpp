@@ -17,6 +17,7 @@ TEST_CASE("Simple Phenotype check")
         SECTION("Phenotyep not found in header")
         {
             auto [idx, found] = prsice.test_get_pheno_idx(col_sv, "ANX");
+            REQUIRE(idx == 0);
             REQUIRE_FALSE(found);
         }
         SECTION("Phenotype found")
