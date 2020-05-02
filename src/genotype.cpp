@@ -72,50 +72,41 @@ void Genotype::build_clump_windows(const unsigned long long& clump_distance)
     // we do it here such that the m_existed_snps is sorted correctly
     // low_bound is where the current snp should read from and last_snp is where
     // the last_snp in the vector which doesn't have the up_bound set
-    size_t low_bound = 0, last_snp = 0, prev_loc = 0, vector_index = 0,
-           diff = 0;
+    size_t low_bound = 0, prev_loc = 0, cur_dist;
     size_t prev_chr = ~size_t(0);
     bool first_snp = true;
     m_max_window_size = 0;
     // now we iterate thorugh all the SNPs to define the clumping window
-    for (auto&& cur_snp : m_existed_snps)
+    for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
     {
+        auto&& cur_snp = m_existed_snps[i_snp];
         if (first_snp || prev_chr != cur_snp.chr())
         {
+            if (prev_chr != cur_snp.chr())
+            {
+                for (size_t i = low_bound; i < i_snp; ++i)
+                { m_existed_snps[i].set_up_bound(i_snp); }
+            }
             prev_chr = cur_snp.chr();
             prev_loc = cur_snp.loc();
-            low_bound = vector_index;
+            low_bound = i_snp;
             first_snp = false;
         }
-        // we can safely assume current location always bigger than prev_loc
-        // as we have sorted the vector
-        while (cur_snp.loc() - prev_loc > clump_distance
-               && low_bound < vector_index)
+        // new chr will not go into following loop
+        cur_dist = cur_snp.loc() - prev_loc;
+        while (cur_dist > clump_distance && low_bound < i_snp)
         {
+            if (m_max_window_size < cur_dist) m_max_window_size = cur_dist;
+            m_existed_snps[low_bound].set_up_bound(i_snp);
+            // go to next SNP
             ++low_bound;
             prev_loc = m_existed_snps[low_bound].loc();
         }
-
         // now low_bound should be the first SNP where the core index SNP need
         // to read from
         cur_snp.set_low_bound(low_bound);
         // set the end of the vector as the default up bound
         cur_snp.set_up_bound(m_existed_snps.size());
-        // update all previous SNPs that are out bounud
-        while ((m_existed_snps[last_snp].chr() != cur_snp.chr())
-               || (cur_snp.loc() - m_existed_snps[last_snp].loc()
-                   > clump_distance))
-        {
-            // if the last SNP is on a differenet chromosome or it is to far
-            // from the current SNP
-            diff = vector_index - m_existed_snps[last_snp].low_bound();
-            // we will set the up bound of that SNP to the current SNP
-            m_existed_snps[last_snp].set_up_bound(vector_index);
-            ++last_snp;
-            if (m_max_window_size < diff) { m_max_window_size = diff; }
-        }
-        // assign the index
-        ++vector_index;
     }
     size_t idx = m_existed_snps.size() - 1;
     while (true)
@@ -128,6 +119,7 @@ void Genotype::build_clump_windows(const unsigned long long& clump_distance)
         --idx;
     }
 }
+
 // std::mutex Genotype::m_mutex;
 std::vector<std::string> Genotype::set_genotype_files(const std::string& prefix)
 {

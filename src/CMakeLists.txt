@@ -64,6 +64,7 @@ target_include_directories(regression PUBLIC
     ${CMAKE_SOURCE_DIR}/inc)
 target_include_directories(regression SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/lib)
+target_link_libraries(regression PUBLIC plink)
 
 
 add_library(prsice_lib
