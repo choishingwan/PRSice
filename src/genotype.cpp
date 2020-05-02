@@ -101,6 +101,7 @@ void Genotype::build_clump_windows(const unsigned long long& clump_distance)
             // go to next SNP
             ++low_bound;
             prev_loc = m_existed_snps[low_bound].loc();
+            cur_dist = cur_snp.loc() - prev_loc;
         }
         // now low_bound should be the first SNP where the core index SNP need
         // to read from

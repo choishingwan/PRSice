@@ -62,6 +62,8 @@ public:
     {
         m_target.name_idx = idx;
         m_target.byte_pos = byte_pos;
+        m_reference.name_idx = idx;
+        m_reference.byte_pos = byte_pos;
     }
 
     virtual ~SNP();
