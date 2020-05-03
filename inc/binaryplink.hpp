@@ -67,6 +67,7 @@ protected:
         Genotype* genotype);
     std::unordered_set<std::string>
     get_founder_info(std::unique_ptr<std::istream>& famfile);
+
     inline void read_genotype(uintptr_t* __restrict genotype,
                               const std::streampos byte_pos,
                               const size_t& file_idx)
@@ -78,14 +79,15 @@ protected:
             get_final_mask(static_cast<uint32_t>(m_founder_ct));
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-
+        auto&& load_target = (m_unfiltered_sample_ct == m_founder_ct)
+                                 ? genotype
+                                 : m_tmp_genotype.data();
         // now we start reading / parsing the binary from the file
         assert(unfiltered_sample_ct);
-
         m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
                              unfiltered_sample_ct4,
-                             reinterpret_cast<char*>(m_tmp_genotype.data()));
-        if (m_unfiltered_sample_ct == m_founder_ct)
+                             reinterpret_cast<char*>(load_target));
+        if (m_unfiltered_sample_ct != m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
                 m_tmp_genotype.data(), m_sample_for_ld.data(),
@@ -94,11 +96,6 @@ protected:
         }
         else
         {
-            // not sure why the genotype = m_tmp_genotype.data() worked before
-            // but not now.
-            for (size_t i = 0; i < m_tmp_genotype.size(); ++i)
-            { *genotype++ = m_tmp_genotype[i]; }
-            // genotype = m_tmp_genotype.data();
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
     }
