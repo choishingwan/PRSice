@@ -278,7 +278,7 @@ public:
         // and the index SNP will get all membership (or) from the clumped
         if (use_proxy && r2 > proxy)
         {
-            for (size_t i_flag = 0; i_flag < m_clump_info.max_flag_idx;
+            for (size_t i_flag = 0; i_flag < target.m_clump_info.flags.size();
                  ++i_flag)
             {
                 m_clump_info.flags[i_flag] |= target.m_clump_info.flags[i_flag];
@@ -287,7 +287,7 @@ public:
         }
         else
         {
-            for (size_t i_flag = 0; i_flag < m_clump_info.max_flag_idx;
+            for (size_t i_flag = 0; i_flag < target.m_clump_info.flags.size();
                  ++i_flag)
             {
                 // For normal clumping, we will remove set identity from the
@@ -307,14 +307,7 @@ public:
                 target_clumped &= (target.m_clump_info.flags[i_flag] == 0);
             }
         }
-        if (target_clumped)
-        {
-            // if the target SNP no longer represent any gene set, it is
-            // considered as clumped and can be removed
-            target.set_clumped();
-        }
-        m_clump_info.clumped = true;
-        // protect from other SNPs tempering its flags
+        if (target_clumped) { target.set_clumped(); }
     }
 
     /*!

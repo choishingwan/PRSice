@@ -295,3 +295,85 @@ TEST_CASE("set function return")
         }
     }
 }
+TEST_CASE("SNP Clump")
+{
+    SNP index, target;
+    auto num_set = GENERATE(range(127ul, 128ul));
+    const auto required_size = BITCT_TO_WORDCT(num_set);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> set_idx(0, num_set - 1);
+    auto&& index_flag = index.get_flag();
+    auto&& target_flag = target.get_flag();
+    index_flag.resize(required_size, 0);
+    target_flag.resize(required_size, 0);
+    std::unordered_set<size_t> index_set, target_set;
+    // randomly assign 80 sets to index
+    // randomly assign 80 sets to target
+    for (size_t i = 0; i < 80; ++i)
+    {
+        auto idx = set_idx(gen);
+        while (index_set.find(idx) != index_set.end()) { idx = set_idx(gen); }
+        index_set.insert(idx);
+        SET_BIT(idx, index_flag.data());
+        idx = set_idx(gen);
+        while (target_set.find(idx) != target_set.end()) { idx = set_idx(gen); }
+        target_set.insert(idx);
+        SET_BIT(idx, target_flag.data());
+    }
+    auto ori_index = index_flag;
+    auto ori_target = target_flag;
+    SECTION("Target was clumped")
+    {
+        target.set_clumped();
+        index.clump(target, 1, false);
+        // won't do clumping here
+        REQUIRE_THAT(index.get_flag(), Catch::Equals<uintptr_t>(ori_index));
+        REQUIRE_THAT(target.get_flag(), Catch::Equals<uintptr_t>(ori_target));
+    }
+    SECTION("Target not clumped yet")
+    {
+        using record = std::tuple<bool, double, double, bool>;
+        auto instruction = GENERATE(table<bool, double, double, bool>(
+            {record {false, 2, 0.5, false}, record {true, 0.4, 0.6, false},
+             record {true, 0.4, 0.3, true}}));
+        auto want_proxy_clump = std::get<0>(instruction);
+        auto r2 = std::get<1>(instruction);
+        auto proxy_thres = std::get<2>(instruction);
+        auto used_proxy_clump = std::get<3>(instruction);
+        index.clump(target, r2, want_proxy_clump, proxy_thres);
+        if (!used_proxy_clump)
+        {
+            // when we didn't use proxy clump, we don't expect index to change
+            // at all
+            REQUIRE_THAT(index.get_flag(), Catch::Equals<uintptr_t>(ori_index));
+            std::vector<uintptr_t> expected(required_size, 0);
+            // and we expect target to lost anything found in index
+            auto&& cur_target = target.get_flag();
+            for (size_t i = 0; i < num_set; ++i)
+            {
+                if (target_set.find(i) != target_set.end())
+                {
+                    if (index_set.find(i) == index_set.end())
+                    { SET_BIT(i, expected.data()); }
+                }
+            }
+            REQUIRE_THAT(cur_target, Catch::Equals<uintptr_t>(expected));
+        }
+        else
+        {
+            // when proxy clumped, we simply set the target to clumped
+            REQUIRE(target.clumped());
+            // and then index will become the combination of both
+            auto&& cur_index = index.get_flag();
+            std::vector<uintptr_t> expected(required_size, 0);
+            for (size_t i = 0; i < num_set; ++i)
+            {
+                if (index_set.find(i) != index_set.end()
+                    || target_set.find(i) != target_set.end())
+                { SET_BIT(i, expected.data()); }
+            }
+            REQUIRE_THAT(cur_index, Catch::Equals<uintptr_t>(expected));
+        }
+    }
+}
