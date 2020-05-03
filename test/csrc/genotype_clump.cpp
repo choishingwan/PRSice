@@ -2,6 +2,31 @@
 #include "genotype.hpp"
 #include "mock_genotype.hpp"
 
+TEST_CASE("Sort by p")
+{
+    mockGenotype geno;
+    Reporter reporter("log", 60, true);
+    geno.set_reporter(&reporter);
+    std::vector<SNP> input = {SNP("rs4567", 1, 1000, "A", "C", 0, 0.06, 0, 0),
+                              SNP("rs3456", 2, 1000, "A", "C", 0, 0.05, 0, 0),
+                              SNP("rs3455", 2, 1000, "A", "C", 0, 0.06, 0, 0),
+                              SNP("rs3452", 2, 1003, "A", "C", 0, 0.06, 0, 0),
+                              SNP("rs3457", 2, 1003, "A", "C", 0, 0.06, 0, 0)
+
+    };
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(input.begin(), input.end(), g);
+    for (auto&& snp : input) { geno.load_snp(snp); }
+    REQUIRE_NOTHROW(geno.sort_by_p());
+    auto idx = geno.sorted_p_index();
+    std::vector<std::string> expected_order = {"rs4567", "rs3456", "rs3455",
+                                               "rs3452", "rs3457"};
+    auto res = geno.existed_snps();
+    REQUIRE(res.size() == expected_order.size());
+    for (size_t i = 0; i < res.size(); ++i)
+    { REQUIRE(res[idx[i]].rs() == expected_order[i]); }
+}
 TEST_CASE("Build Clump window")
 {
     mockGenotype geno;

@@ -35,9 +35,6 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
         {
             if (misc::logically_equal(input[i1].m_p_value, input[i2].m_p_value))
             {
-                // in theory, we can also add in the stat and se,
-                // but as they are double, there might be problem
-                // (have tried to use stat and that cause seg fault)
                 if (input[i1].m_loc == input[i2].m_loc)
                     return input[i1].m_rs < input[i2].m_rs;
                 return input[i1].m_loc < input[i2].m_loc;

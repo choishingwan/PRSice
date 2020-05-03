@@ -14,6 +14,7 @@ public:
     {
         return initialize(geno, pheno, delim, type, reporter);
     }
+    std::vector<size_t> sorted_p_index() const { return m_sort_by_p_index; }
     std::vector<std::string>
     test_load_genotype_prefix(std::unique_ptr<std::istringstream> in)
     {
