@@ -206,6 +206,80 @@ TEST_CASE("Clump")
     }
 }
 
+TEST_CASE("Test automatic reference copy over")
+{
+    mockCommander commander;
+    auto bgen = GENERATE("--type bed", "--type bgen");
+    REQUIRE(
+        commander.parse_command_wrapper("--target name --maf 0.05 --geno 0.01 "
+                                        "--hard-thres 0.2 --dose-thres 0.9 "
+                                        "--keep A --remove B --info "
+                                        "0.8 --info-type mach "
+                                        + std::string(bgen)));
+    // command, copy over
+    SECTION("Test need target as reference function")
+    {
+        using record = std::tuple<std::string, bool, bool>;
+        auto input = GENERATE(table<std::string, bool, bool>(
+            {record {"--ld-maf 0.2", true, false},
+             record {"--ld-maf 0.05", false, false},
+             record {"--ld-geno 0.2", true, false},
+             record {"--ld-geno 0.01", false, false},
+             record {"--ld-hard-thres 0.3", true, true},
+             record {"--ld-hard-thres 0.2", false, true},
+             record {"--ld-dose-thres 0.8", true, true},
+             record {"--ld-dose-thres 0.9", false, true},
+             record {"--ld-info 0.2", true, true},
+             record {"--ld-info 0.8", false, true},
+             record {"--ld-keep C", true, false},
+             record {"--ld-keep A", false, false},
+             record {"--ld-remove C", true, false},
+             record {"--ld-remove B", false, false}}));
+        REQUIRE(commander.parse_command_wrapper(std::get<0>(input)));
+        if (std::get<2>(input))
+        {
+            // bgen only
+            if (std::string(bgen) == "--type bgen")
+            {
+                REQUIRE(commander.test_need_target_as_reference()
+                        == std::get<1>(input));
+            }
+            else
+            {
+                // don't need the bgen related parameter, so won't copy over
+                REQUIRE_FALSE(commander.test_need_target_as_reference());
+            }
+        }
+        else
+        {
+            REQUIRE(commander.test_need_target_as_reference()
+                    == std::get<1>(input));
+        }
+        SECTION("Combine with reference validation")
+        {
+            REQUIRE(commander.ref_check_wrapper());
+            if (std::get<2>(input))
+            {
+                // bgen only
+                if (std::string(bgen) == "--type bgen")
+                {
+                    REQUIRE(commander.has_parameter("ld")
+                            == std::get<1>(input));
+                }
+                else
+                {
+                    // don't need the bgen related parameter, so won't copy over
+                    REQUIRE_FALSE(commander.has_parameter("ld"));
+                }
+            }
+            else
+            {
+                REQUIRE(commander.has_parameter("ld") == std::get<1>(input));
+            }
+        }
+    }
+}
+
 TEST_CASE("Reference validation")
 {
     mockCommander commander;

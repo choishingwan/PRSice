@@ -1205,6 +1205,50 @@ bool Commander::clump_check()
     return !error;
 }
 
+bool Commander::need_target_as_reference()
+{
+    // default type is bed, won't be empty
+    const bool not_provided = m_reference.type == "bed"
+                              && m_reference.file_list.empty()
+                              && m_reference.file_name.empty();
+    if (!not_provided) return false;
+    bool require_ref = false;
+    // check maf
+    require_ref |=
+        !(misc::logically_equal(m_ref_filter.maf, 0.0)
+          || misc::logically_equal(m_ref_filter.maf, m_target_filter.maf));
+    // check geno
+    require_ref |=
+        !(misc::logically_equal(m_ref_filter.geno, 1.0)
+          || misc::logically_equal(m_ref_filter.geno, m_target_filter.geno));
+    // check sample selection
+    require_ref |=
+        !(m_reference.keep.empty() || m_reference.keep == m_target.keep);
+    require_ref |=
+        !(m_reference.remove.empty() || m_reference.remove == m_target.remove);
+    // still don't need reference, but target isn't plink
+    if (!require_ref && m_target.type != "bed")
+    {
+        // check info score
+        require_ref |= !(misc::logically_equal(m_ref_filter.info_score, 0.0)
+                         || misc::logically_equal(m_ref_filter.info_score,
+                                                  m_target_filter.info_score));
+        // check dose threshold
+        require_ref |=
+            !(misc::logically_equal(m_ref_filter.dose_threshold, 0.0)
+              || misc::logically_equal(m_ref_filter.dose_threshold,
+                                       m_target_filter.dose_threshold));
+        // check hard threshold
+        require_ref |=
+            !(misc::logically_equal(m_ref_filter.hard_threshold, 0.1)
+              || misc::logically_equal(m_ref_filter.hard_threshold,
+                                       m_target_filter.hard_threshold));
+        return require_ref;
+    }
+    else
+        return require_ref;
+}
+
 
 bool Commander::ref_check()
 {
@@ -1216,6 +1260,18 @@ bool Commander::ref_check()
                                "--remove but not both\n");
     }
 
+    if (need_target_as_reference())
+    {
+        // assign name over
+        m_reference.file_list = m_target.file_list;
+        if (!m_reference.file_list.empty())
+        { m_parameter_log["ld-list"] = m_reference.file_list; }
+        m_reference.file_name = m_target.file_name;
+        if (!m_reference.file_name.empty())
+        { m_parameter_log["ld"] = m_reference.file_name; }
+        m_reference.type = m_target.type;
+        m_parameter_log["ld-type"] = m_reference.type;
+    }
     if (!m_reference.type.empty())
     {
         if (std::find(supported_types.begin(), supported_types.end(),
@@ -1242,6 +1298,7 @@ bool Commander::ref_check()
         m_error_message.append("Error: You can only use --ld or --ld-list "
                                "but not both\n");
     }
+
     if (m_reference.type == "bgen"
         || (m_reference.file_name.empty() && !m_reference.file_list.empty()
             && m_target.type == "bgen"))

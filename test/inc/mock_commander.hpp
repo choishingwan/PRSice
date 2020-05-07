@@ -122,7 +122,10 @@ public:
             return false;
         }
     }
-
+    bool has_parameter(const std::string& in) const
+    {
+        return m_parameter_log.find(in) != m_parameter_log.end();
+    }
     bool no_default() const { return m_user_no_default; }
     bool target_check_wrapper() { return target_check(); }
     bool prsice_check_wrapper() { return prsice_check(); }
@@ -172,6 +175,7 @@ public:
     {
         return process_factor_cov(included, ref_index, ori_input);
     }
+    bool test_need_target_as_reference() { return need_target_as_reference(); }
 };
 
 #endif // MOCK_COMMANDER_H

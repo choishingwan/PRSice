@@ -150,7 +150,7 @@ protected:
                        Reporter& reporter);
 
     void set_help_message();
-
+    bool need_target_as_reference();
     bool clump_check();
     bool ref_check();
     bool covariate_check();
@@ -550,7 +550,7 @@ protected:
             m_target_filter.info_type = INFO::MACH;
             break;
         case 'i':
-            input = "impute2";
+            input = "impute";
             m_target_filter.info_type = INFO::IMPUTE2;
             break;
         default:
