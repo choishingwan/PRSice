@@ -48,6 +48,8 @@ TEST_CASE("Build Clump window")
     auto res = geno.existed_snps();
     std::vector<std::string> expected_order = {"rs1",  "rs5", "rs3", "rs4",
                                                "rs10", "rs6", "rs7", "rs8"};
+    // window size only need to cover # SNP before
+    REQUIRE(geno.max_window() == 4);
     REQUIRE(res.size() == expected_order.size());
     for (size_t i = 0; i < res.size(); ++i)
     {
@@ -83,3 +85,10 @@ TEST_CASE("Build Clump window")
         }
     }
 }
+
+// Things that we need to test
+// Read_Genotype function for both binaryplink and binarygen
+// update_index_tot function (might need to use plink and predefined data)
+// get_r2 function (again, might need to use predefined data and reference to
+// plink)
+// clump from SNP

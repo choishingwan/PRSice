@@ -1,4 +1,4 @@
-﻿// This file is part of PRSice-2, copyright (C) 2016-2019
+// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -92,17 +92,20 @@ void Genotype::build_clump_windows(const unsigned long long& clump_distance)
             low_bound = i_snp;
             first_snp = false;
         }
+        auto snp_distance = i_snp - low_bound;
+        if (m_max_window_size < snp_distance) m_max_window_size = snp_distance;
         // new chr will not go into following loop
         cur_dist = cur_snp.loc() - prev_loc;
         while (cur_dist > clump_distance && low_bound < i_snp)
         {
-            if (m_max_window_size < cur_dist) m_max_window_size = cur_dist;
+            snp_distance = i_snp - low_bound;
             m_existed_snps[low_bound].set_up_bound(i_snp);
             // go to next SNP
             ++low_bound;
             prev_loc = m_existed_snps[low_bound].loc();
             cur_dist = cur_snp.loc() - prev_loc;
         }
+        if (m_max_window_size < snp_distance) m_max_window_size = snp_distance;
         // now low_bound should be the first SNP where the core index SNP need
         // to read from
         cur_snp.set_low_bound(low_bound);
