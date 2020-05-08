@@ -51,9 +51,13 @@ public:
             unfiltered_sample_ct4, bed_offset, std::move(bim), duplicated_snps,
             processed_snps, retain_snp, chr_error, sex_error, genotype);
     }
-    void gen_fake_bed(const std::vector<size_t>& geno, const std::string& name)
+    void test_read_genotype(uintptr_t* genotype, SNP& snp)
     {
-        // it is a real bed file, but without the header
+        read_genotype(genotype, snp);
+    }
+    void gen_fake_bed(const std::vector<std::vector<size_t>>& geno,
+                      const std::string& name)
+    { // it is a real bed file, but without the header
         std::ofstream plink(name + ".bed", std::ios::binary);
         m_existed_snps.clear();
         m_existed_snps.push_back(SNP("rs", 1, 1, "A", "T", 0, 3));
@@ -61,8 +65,6 @@ public:
         m_genotype_file_names.push_back(name);
         std::bitset<8> b;
         char ch[1];
-        size_t c = 0;
-        size_t i = 0;
         // generate header so we can use plink to validate our file
 
         b.reset();
@@ -83,29 +85,38 @@ public:
         b.set(0);
         ch[0] = static_cast<char>(b.to_ulong());
         plink.write(ch, 1);
-        while (i < geno.size())
+        for (auto&& g : geno)
         {
-            c = 0;
-            b.reset();
-            while (c < 8 && i < geno.size())
+            size_t c = 0;
+            size_t i = 0;
+            while (i < g.size())
             {
-                switch (geno[i])
+                c = 0;
+                b.reset();
+                while (c < 8 && i < g.size())
                 {
-                case 2:
-                    b.set(c);
-                    b.set(c + 1);
-                    break;
-                case 1: b.set(c + 1); break;
-                case 0: break;
-                case 3: b.set(c); break;
+                    switch (g[i])
+                    {
+                    case 2:
+                        b.set(c);
+                        b.set(c + 1);
+                        break;
+                    case 1: b.set(c + 1); break;
+                    case 0: break;
+                    case 3: b.set(c); break;
+                    }
+                    c += 2;
+                    ++i;
                 }
-                c += 2;
-                ++i;
+                ch[0] = static_cast<char>(b.to_ulong());
+                plink.write(ch, 1);
             }
-            ch[0] = static_cast<char>(b.to_ulong());
-            plink.write(ch, 1);
         }
         plink.close();
+    }
+    void gen_fake_bed(const std::vector<size_t>& geno, const std::string& name)
+    {
+        gen_fake_bed(std::vector<std::vector<size_t>> {geno}, name);
     }
     void set_sample_vector(const size_t n_sample)
     {

@@ -298,6 +298,7 @@ public:
                                    m_founder_include2.data());
     }
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
+    void clumping_no_store(const Clumping& clump_info, Genotype& reference);
     void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression
@@ -1142,8 +1143,7 @@ protected:
      * as indicate in the thrid parameter
      */
     virtual inline void read_genotype(uintptr_t* /*genotype*/,
-                                      const std::streampos /*byte_pos*/,
-                                      const size_t& /*file_index*/)
+                                      const SNP& /*snp*/)
     {
     }
     virtual void

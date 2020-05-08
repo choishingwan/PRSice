@@ -68,10 +68,9 @@ protected:
     std::unordered_set<std::string>
     get_founder_info(std::unique_ptr<std::istream>& famfile);
 
-    inline void read_genotype(uintptr_t* __restrict genotype,
-                              const std::streampos byte_pos,
-                              const size_t& file_idx)
+    inline void read_genotype(uintptr_t* __restrict genotype, const SNP& snp)
     {
+        auto [file_idx, byte_pos] = snp.get_file_info(true);
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
         // that there'll be trailling bytes that we don't want

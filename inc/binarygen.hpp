@@ -90,11 +90,9 @@ protected:
         std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
         Genotype* genotype);
 
-
-    inline void read_genotype(uintptr_t* genotype,
-                              const std::streampos byte_pos,
-                              const size_t& file_idx)
+    inline void read_genotype(uintptr_t* genotype, const SNP& snp)
     {
+        auto [file_idx, byte_pos] = snp.get_file_info(true);
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
         if (m_ref_plink)

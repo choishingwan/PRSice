@@ -20,6 +20,7 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/genotype_read_sample.cpp
     ${TEST_SRC_DIR}/genotype_load_snp.cpp
     ${TEST_SRC_DIR}/snp_test.cpp
+    ${TEST_SRC_DIR}/binaryplink_read.cpp
     ${TEST_SRC_DIR}/binaryplink_sample_load.cpp
     ${TEST_SRC_DIR}/binaryplink_snp_load.cpp
     ${TEST_SRC_DIR}/binaryplink_filtering.cpp

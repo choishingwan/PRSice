@@ -221,6 +221,12 @@ public:
         idx = from.name_idx;
         byte_pos = from.byte_pos;
     }
+    std::tuple<size_t, std::streampos> get_file_info(bool is_ref = false) const
+    {
+        auto&& from = is_ref ? m_reference : m_target;
+        return {from.name_idx, from.byte_pos};
+    }
+
     size_t get_file_idx(bool is_ref = false) const
     {
         return is_ref ? m_reference.name_idx : m_target.name_idx;
@@ -400,6 +406,11 @@ public:
     {
         m_genotype = genotype;
     }
+    void assign_genotype(const uintptr_t* genotype, const size_t size)
+    {
+        m_genotype.insert(m_genotype.begin(), genotype, genotype + size);
+    }
+
     std::vector<uintptr_t> get_genotype() const { return m_genotype; }
     static std::string complement(const std::string& allele)
     {
