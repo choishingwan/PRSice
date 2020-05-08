@@ -857,7 +857,7 @@ bool Genotype::perform_freqs_and_inter(const QCFiltering& filter_info,
         && (misc::logically_equal(filter_info.geno, 1.0)
             || filter_info.geno > 1.0)
         && (misc::logically_equal(filter_info.maf, 0.0)
-            || filter_info.maf > 0.0)
+            || filter_info.maf > 1.0)
         && (misc::logically_equal(filter_info.info_score, 0.0)
             || filter_info.info_score < 0.0))
     { return false; }
