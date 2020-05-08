@@ -55,6 +55,60 @@ public:
     {
         read_genotype(genotype, snp);
     }
+    void gen_fake_bed_from_int(const std::vector<std::vector<uintptr_t>>& geno,
+                               const std::string& name,
+                               const size_t sample_size)
+    {
+        std::ofstream plink(name + ".bed", std::ios::binary);
+        m_existed_snps.clear();
+        m_existed_snps.push_back(SNP("rs", 1, 1, "A", "T", 0, 3));
+        m_genotype_file_names.clear();
+        m_genotype_file_names.push_back(name);
+        std::bitset<8> b;
+        char ch[1];
+        // generate header so we can use plink to validate our file
+
+        b.reset();
+        b.set(2);
+        b.set(3);
+        b.set(5);
+        b.set(6);
+        ch[0] = static_cast<char>(b.to_ulong());
+        plink.write(ch, 1);
+        b.reset();
+        b.set(0);
+        b.set(1);
+        b.set(3);
+        b.set(4);
+        ch[0] = static_cast<char>(b.to_ulong());
+        plink.write(ch, 1);
+        b.reset();
+        b.set(0);
+        ch[0] = static_cast<char>(b.to_ulong());
+        plink.write(ch, 1);
+        for (auto&& g : geno)
+        {
+            size_t c = 0;
+            size_t i = 0;
+            size_t idx = 0;
+            while (i < g.size() && idx < sample_size * 2)
+            {
+                c = 0;
+                b.reset();
+                while (c < 8 && idx < sample_size * 2)
+                {
+                    if (IS_SET(g.data(), idx)) { b.set(c); }
+                    ++c;
+                    ++idx;
+                    i = idx / BITCT;
+                }
+                ch[0] = static_cast<char>(b.to_ulong());
+                plink.write(ch, 1);
+            }
+        }
+        plink.close();
+    }
+
     void gen_fake_bed(const std::vector<std::vector<size_t>>& geno,
                       const std::string& name)
     { // it is a real bed file, but without the header
@@ -114,6 +168,7 @@ public:
         }
         plink.close();
     }
+
     void gen_fake_bed(const std::vector<size_t>& geno, const std::string& name)
     {
         gen_fake_bed(std::vector<std::vector<size_t>> {geno}, name);
