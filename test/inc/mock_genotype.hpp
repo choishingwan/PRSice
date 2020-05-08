@@ -237,6 +237,26 @@ public:
     size_t max_window() const { return m_max_window_size; }
     std::vector<uintptr_t> sample_for_ld() const { return m_sample_for_ld; }
     std::vector<uintptr_t> calculate_prs() const { return m_calculate_prs; }
+    void test_update_index_tot(const uintptr_t founder_ctl2,
+                               const uintptr_t founder_ctv2,
+                               const uintptr_t founder_count,
+                               std::vector<uintptr_t>& index_data,
+                               std::vector<uintptr_t>& index_tots,
+                               std::vector<uintptr_t>& founder_include2,
+                               uintptr_t* index_genotype)
+    {
+        update_index_tot(founder_ctl2, founder_ctv2, founder_count, index_data,
+                         index_tots, founder_include2, index_genotype);
+    }
+
+    double test_get_r2(const uintptr_t founder_ctl2,
+                       const uintptr_t founder_ctv2, uintptr_t* window_data_ptr,
+                       std::vector<uintptr_t>& index_data,
+                       std::vector<uintptr_t>& index_tots)
+    {
+        return get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
+                      index_tots);
+    }
 };
 
 #endif // MOCK_GENOTYPE_H
