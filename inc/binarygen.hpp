@@ -101,7 +101,7 @@ protected:
                                  unfiltered_sample_ct4,
                                  reinterpret_cast<char*>(genotype));
         }
-        else if (load_and_collapse_incl(byte_pos, file_idx, genotype))
+        else if (!load_and_collapse_incl(byte_pos, file_idx, genotype))
         {
             throw std::runtime_error("Error: Cannot read the bgen file!");
         }
@@ -111,7 +111,6 @@ protected:
                                 const size_t& file_idx,
                                 uintptr_t* __restrict mainbuf)
     {
-
         assert(m_unfiltered_sample_ct);
         try
         {

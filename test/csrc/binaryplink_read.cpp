@@ -2,7 +2,7 @@
 #include "mock_binaryplink.hpp"
 #include "plink_common.hpp"
 
-TEST_CASE("read_genotype")
+TEST_CASE("read plink genotype for LD")
 {
     // first generate two object, the target and the reference
     Reporter reporter("log", 60, true);

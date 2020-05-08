@@ -434,6 +434,9 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     // we initialize the plink converter with the sample inclusion vector
     // and also the tempory genotype vector list. We also provide the hard
     // coding threshold
+    // TODO: This isn't correct if there are non-founder samples in our datas
+    // and if we account for ref and target, we also need to consider situation
+    // where we use target as reference.
     PLINK_generator setter(&m_calculate_prs, m_tmp_genotype.data(),
                            m_hard_threshold, m_dose_threshold);
     // now consider if we are generating the intermediate file
