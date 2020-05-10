@@ -1,7 +1,9 @@
+#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include "catch.hpp"
 #include "genotype.hpp"
 #include "mock_binaryplink.hpp"
 #include "mock_genotype.hpp"
+
 
 TEST_CASE("Sort by p")
 {
@@ -91,7 +93,6 @@ TEST_CASE("Build Clump window")
 // update_index_tot function (might need to use plink and predefined data)
 // get_r2 function (again, might need to use predefined data and reference to
 // plink)
-
 TEST_CASE("R2 calculation")
 {
     // can just use plink format as we know the bgen read is correct (when there
@@ -246,9 +247,53 @@ TEST_CASE("R2 calculation")
         {9.4607e-05, 0.000500084, 0.00171468},
         {0.637221, 0.00036831},
         {0.0286916}};
-    // mock_binaryplink plink;
-    // plink.gen_fake_bed_from_int(dummy_input, "ld_check", n_sample);
+    SECTION("Test full clumping routine")
+    {
+        // first, write the file
+        mock_binaryplink plink;
+        plink.gen_fake_bed_from_int(dummy_input, "ld_check", n_sample);
+        mockGenotype geno;
+        Reporter reporter("log", 60, true);
+        geno.set_reporter(&reporter);
+        geno.add_file_name("ld_check");
+        const uintptr_t unfiltered_sample_ct4 = (n_sample + 3) / 4;
+        geno.set_sample(n_sample);
+        geno.init_sample_vectors();
+        geno.set_sample(n_sample);
+        geno.set_founder_vector(n_sample);
+        geno.test_post_sample_read_init();
+        std::random_device rnd_device;
+        std::mt19937 mersenne_engine {rnd_device()};
+        std::uniform_real_distribution<double> dist {0.0, 1};
+        auto p = [&dist, &mersenne_engine]() { return dist(mersenne_engine); };
+        // then generate the SNP data
+        auto&& snps = geno.modify_existed_snps();
+        for (size_t i = 0; i < dummy_input.size(); ++i)
+        {
+            auto byte_pos =
+                static_cast<std::streampos>(3 + (i * (unfiltered_sample_ct4)));
+            snps.push_back(
+                SNP("rs" + std::to_string(i), 1, i, "A", "C", 1.96, p(), 0, 0));
+            snps.back().update_file(0, byte_pos, true);
+        }
+        Clumping clump_info;
+        clump_info.r2 = GENERATE(take(5, random(1.45889e-07, 9.90366e-04)),
+                                 take(5, random(1.03383e-03, 1.03383e-03)));
+        geno.build_clump_windows(10000000);
+        geno.sort_by_p();
+        Genotype* reference = &geno;
 
+#if defined(CATCH_CONFIG_ENABLE_BENCHMARKING)
+        BENCHMARK("Clump with temporary")
+        {
+            return geno.efficient_clumping(clump_info, *reference);
+        };
+        BENCHMARK("Clump without temporary")
+        {
+            return geno.clumping_no_store(clump_info, *reference);
+        };
+#endif
+    }
     SECTION("Test R2 calculation")
     {
         mockGenotype geno;

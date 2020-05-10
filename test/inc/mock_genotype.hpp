@@ -105,6 +105,7 @@ public:
         return (base_filter_by_value(token, base_file, threshold, filter_count,
                                      type, index));
     }
+    void test_post_sample_read_init() { post_sample_read_init(); }
     bool test_parse_rs_id(const std::vector<std::string_view>& token,
                           const BaseFile& base_file,
                           std::unordered_set<std::string>& processed_rs,
@@ -203,6 +204,7 @@ public:
         m_existed_snps_index[snp.rs()] = m_existed_snps.size();
         m_existed_snps.emplace_back(snp);
     }
+    std::vector<SNP>& modify_existed_snps() { return m_existed_snps; }
     uint32_t num_auto() const { return m_autosome_ct; }
     std::vector<int32_t> xymt_codes() const { return m_xymt_codes; }
     std::vector<uintptr_t> haploid_mask() const { return m_haploid_mask; }
@@ -210,6 +212,10 @@ public:
     std::vector<std::string> genotype_file_names() const
     {
         return m_genotype_file_names;
+    }
+    void add_file_name(const std::string& in)
+    {
+        m_genotype_file_names.push_back(in);
     }
     std::vector<SNP> existed_snps() const { return m_existed_snps; }
     std::unordered_map<std::string, size_t> existed_snps_idx() const
@@ -256,6 +262,29 @@ public:
     {
         return get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
                       index_tots);
+    }
+    void set_sample_vector(const size_t n_sample)
+    {
+        for (size_t i = 0; i < n_sample; ++i)
+        { SET_BIT(i, m_calculate_prs.data()); }
+        m_sample_ct = n_sample;
+    }
+    void set_founder_vector(const size_t n_sample)
+    {
+        for (size_t i = 0; i < n_sample; ++i)
+        { SET_BIT(i, m_sample_for_ld.data()); }
+        m_founder_ct = n_sample;
+    }
+    void set_founder_vector(const std::vector<bool>& founder)
+    {
+        for (size_t i = 0; i < founder.size(); ++i)
+        {
+            if (founder[i])
+            {
+                SET_BIT(i, m_sample_for_ld.data());
+                ++m_founder_ct;
+            }
+        }
     }
 };
 
