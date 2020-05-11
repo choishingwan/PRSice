@@ -283,16 +283,19 @@ TEST_CASE("R2 calculation")
         geno.sort_by_p();
         Genotype* reference = &geno;
 
-#if defined(CATCH_CONFIG_ENABLE_BENCHMARKING)
-        BENCHMARK("Clump with temporary")
+        //#if defined(CATCH_CONFIG_ENABLE_BENCHMARKING)
+        //        BENCHMARK("Clump with temporary")
+        SECTION("Clump with temporary")
         {
-            return geno.efficient_clumping(clump_info, *reference);
-        };
-        BENCHMARK("Clump without temporary")
+            // return geno.efficient_clumping(clump_info, *reference);
+            geno.efficient_clumping(clump_info, *reference);
+        } //;
+        // BENCHMARK("Clump without temporary")
+        SECTION("Clump without temporary")
         {
-            return geno.clumping_no_store(clump_info, *reference);
-        };
-#endif
+            /*return*/ geno.clumping_no_store(clump_info, *reference);
+        } //;
+          //#endif
     }
     SECTION("Test R2 calculation")
     {

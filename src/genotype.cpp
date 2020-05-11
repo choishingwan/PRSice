@@ -1134,7 +1134,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
             prev_progress = progress;
         }
         auto&& core_snp_idx = m_sort_by_p_index[i_snp];
-        auto&& core_snp = m_existed_snps.at(core_snp_idx);
+        auto&& core_snp = m_existed_snps[core_snp_idx];
         if (core_snp.clumped() || core_snp.p_value() > clump_info.pvalue)
         { continue; }
         const size_t clump_start_idx = core_snp.low_bound();
@@ -1144,22 +1144,21 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
-            auto&& clump_snp = m_existed_snps.at(clump_idx);
+            auto&& clump_snp = m_existed_snps[clump_idx];
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
             { continue; }
             if (clump_snp.current_genotype() == nullptr)
             {
-                auto clump_geno = genotype_pool.alloc();
-                reference.read_genotype(clump_geno->get_geno(), clump_snp);
-                clump_snp.set_genotype_storage(clump_geno);
+                clump_snp.set_genotype_storage(genotype_pool.alloc());
+                reference.read_genotype(clump_snp.current_genotype(),
+                                        clump_snp);
             }
         }
         if (core_snp.current_genotype() == nullptr)
         {
-            auto core_geno = genotype_pool.alloc();
-            core_snp.set_genotype_storage(core_geno);
+            core_snp.set_genotype_storage(genotype_pool.alloc());
+            reference.read_genotype(core_snp.current_genotype(), core_snp);
         }
-        reference.read_genotype(core_snp.current_genotype(), core_snp);
         update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
                          index_data, index_tots, founder_include2,
                          core_snp.current_genotype());
@@ -1168,8 +1167,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
-            auto&& clump_snp = m_existed_snps.at(clump_idx);
-
+            auto&& clump_snp = m_existed_snps[clump_idx];
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
             { continue; }
             r2 = get_r2(founder_ctl2, founder_ctv2,
@@ -1191,10 +1189,10 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                 continue;
             if (clump_snp.current_genotype() == nullptr)
             {
-                auto clump_geno = genotype_pool.alloc();
-                clump_snp.set_genotype_storage(clump_geno);
+                clump_snp.set_genotype_storage(genotype_pool.alloc());
+                reference.read_genotype(clump_snp.current_genotype(),
+                                        clump_snp);
             }
-            reference.read_genotype(clump_snp.current_genotype(), clump_snp);
             r2 = get_r2(founder_ctl2, founder_ctv2,
                         clump_snp.current_genotype(), index_data, index_tots);
             if (r2 >= min_r2)
@@ -1206,7 +1204,6 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
             }
         }
         core_snp.set_clumped();
-
         // we set the remain_core to true so that we will keep it at the end
         remain_snps[core_snp_idx] = true;
         ++num_core_snps;
