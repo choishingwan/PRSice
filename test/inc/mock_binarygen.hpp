@@ -381,18 +381,15 @@ public:
         };
         double sum_prob = 0.0, impute_sum = 0.0;
         misc::RunningStat statistic;
-        bool missing = false;
         size_t geno_idx = 0;
         for (size_t i = 0; i < n_sample; ++i)
         {
-            missing = false;
             double exp = 0.0, tmp = 0.0;
             expected_geno[i] = 3;
             if (missing_prob())
             {
                 if (founder[i])
                 {
-                    missing = true;
                     ++miss_ct;
                     SET_BIT(geno_idx, plink_genotype.data());
                     geno_idx += 2;
