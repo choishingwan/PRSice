@@ -1116,6 +1116,11 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                       founder_include2.data());
     // available memory size
     std::vector<bool> remain_snps(m_existed_snps.size(), false);
+    auto max_size = m_max_window_size > std::floor(m_existed_snps.size() * 0.1)
+                        ? m_max_window_size
+                        : std::floor(m_existed_snps.size() * 0.1);
+    GenotypePool genotype_pool(max_size, unfiltered_sample_ctv2);
+    /*
     std::vector<uintptr_t> geno_storage;
     try
     {
@@ -1126,11 +1131,11 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
     catch (...)
     {
         throw std::runtime_error("Error: Not enough memory for clumping");
-    };
+    };*/
     double prev_progress = -1.0, progress;
     const auto num_snp = m_existed_snps.size();
     double r2 = -1.0;
-    uintptr_t* clump_geno_idx = nullptr;
+    // uintptr_t* clump_geno_idx = nullptr;
     size_t num_core_snps = 0;
     for (size_t i_snp = 0; i_snp < num_snp; ++i_snp)
     {
@@ -1149,38 +1154,56 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         const size_t clump_end_idx = core_snp.up_bound();
         // the reason this is a two part process is so that we can reduce the
         // number of fseek
-        clump_geno_idx = geno_storage.data();
+        // clump_geno_idx = geno_storage.data();
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
             auto&& clump_snp = m_existed_snps[clump_idx];
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue
-                || clump_snp.stored_genotype())
+                //|| clump_snp.stored_genotype())
+            )
             { continue; }
-            clump_geno_idx[founder_ctv2 - 2] = 0;
-            clump_geno_idx[founder_ctv2 - 1] = 0;
-            reference.read_genotype(clump_geno_idx, clump_snp);
-            clump_geno_idx = &(clump_geno_idx[founder_ctv2]);
+            // clump_geno_idx[founder_ctv2 - 2] = 0;
+            // clump_geno_idx[founder_ctv2 - 1] = 0;
+            if (clump_snp.current_genotype() == nullptr)
+            {
+                auto clump_geno = genotype_pool.alloc();
+                // reference.read_genotype(clump_geno_idx, clump_snp);
+                reference.read_genotype(clump_geno->get_geno(), clump_snp);
+                clump_snp.set_genotype_storage(clump_geno);
+            }
+            // clump_geno_idx = &(clump_geno_idx[founder_ctv2]);
         }
+        if (core_snp.current_genotype() == nullptr)
+        {
+            auto core_geno = genotype_pool.alloc();
+            core_snp.set_genotype_storage(core_geno);
+        }
+        reference.read_genotype(core_snp.current_genotype(), core_snp);
+        update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
+                         index_data, index_tots, founder_include2,
+                         core_snp.current_genotype());
+        core_snp.freed_geno_storage(genotype_pool);
         // now read in core snp
+        /*
         if (!core_snp.stored_genotype())
         {
             clump_geno_idx[founder_ctv2 - 2] = 0;
             clump_geno_idx[founder_ctv2 - 1] = 0;
             reference.read_genotype(clump_geno_idx, core_snp);
-            update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
-                             index_data, index_tots, founder_include2,
+            update_index_tot(founder_ctl2, founder_ctv2,
+        reference.m_founder_ct, index_data, index_tots, founder_include2,
                              clump_geno_idx);
         }
         else
         {
             auto core_geno = core_snp.mod_genotype();
-            update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
-                             index_data, index_tots, founder_include2,
+            update_index_tot(founder_ctl2, founder_ctv2,
+        reference.m_founder_ct, index_data, index_tots, founder_include2,
                              core_geno.data());
-        }
+        }*/
 
-        clump_geno_idx = geno_storage.data();
+        // clump_geno_idx = geno_storage.data();
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
@@ -1188,7 +1211,16 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
 
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
             { continue; }
-            auto stored_genotype = clump_snp.stored_genotype();
+            r2 = get_r2(founder_ctl2, founder_ctv2,
+                        clump_snp.current_genotype(), index_data, index_tots);
+            if (r2 >= min_r2)
+            {
+                core_snp.clump(clump_snp, r2, clump_info.use_proxy,
+                               clump_info.proxy);
+                if (clump_snp.clumped())
+                { clump_snp.freed_geno_storage(genotype_pool); }
+            }
+            /*auto stored_genotype = clump_snp.stored_genotype();
             if (!stored_genotype)
             {
                 r2 = get_r2(founder_ctl2, founder_ctv2, clump_geno_idx,
@@ -1211,20 +1243,36 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                 clump_snp.assign_genotype(clump_geno_idx, founder_ctv2);
             }
             if (!stored_genotype)
-            { clump_geno_idx = &(clump_geno_idx[unfiltered_sample_ctv2]); }
+            { clump_geno_idx = &(clump_geno_idx[unfiltered_sample_ctv2]); }*/
         }
         // now we can read the SNPs that come after the index SNP in the file
         for (size_t clump_idx = core_snp_idx + 1; clump_idx < clump_end_idx;
              ++clump_idx)
         {
-            clump_geno_idx = geno_storage.data();
+            // clump_geno_idx = geno_storage.data();
             auto&& clump_snp = m_existed_snps[clump_idx];
-            auto stored_genotype = clump_snp.stored_genotype();
+            // auto stored_genotype = clump_snp.stored_genotype();
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
                 continue;
-            clump_geno_idx[founder_ctv2 - 2] = 0;
-            clump_geno_idx[founder_ctv2 - 1] = 0;
+            // clump_geno_idx[founder_ctv2 - 2] = 0;
+            // clump_geno_idx[founder_ctv2 - 1] = 0;
+            if (clump_snp.current_genotype() == nullptr)
+            {
+                auto clump_geno = genotype_pool.alloc();
+                clump_snp.set_genotype_storage(clump_geno);
+            }
+            reference.read_genotype(clump_snp.current_genotype(), clump_snp);
+            r2 = get_r2(founder_ctl2, founder_ctv2,
+                        clump_snp.current_genotype(), index_data, index_tots);
+            if (r2 >= min_r2)
+            {
+                core_snp.clump(clump_snp, r2, clump_info.use_proxy,
+                               clump_info.proxy);
+                if (clump_snp.clumped())
+                { clump_snp.freed_geno_storage(genotype_pool); }
+            }
             // read in the genotype information
+            /*
             if (!stored_genotype)
             {
                 reference.read_genotype(clump_geno_idx, clump_snp);
@@ -1247,6 +1295,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
             {
                 clump_snp.assign_genotype(clump_geno_idx, founder_ctv2);
             }
+            */
         }
         core_snp.set_clumped();
         // we set the remain_core to true so that we will keep it at the end

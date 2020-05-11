@@ -20,6 +20,7 @@
 
 #include "IITree.h"
 #include "commander.hpp"
+#include "genotype_pool.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
 #include "reporter.hpp"

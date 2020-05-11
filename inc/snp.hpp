@@ -19,6 +19,7 @@
 #define SNP_H
 
 #include "commander.hpp"
+#include "genotype_pool.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
 #include "storage.hpp"
@@ -27,6 +28,7 @@
 #include <numeric>
 #include <stdexcept>
 #include <string>
+
 static_assert(
     sizeof(std::streamsize) <= sizeof(unsigned long long),
     "streampos larger than unsigned long long, don't know how to proceed. "
@@ -424,6 +426,20 @@ public:
             return allele; // Cannot flip, so will just return it as is
     }
     std::vector<uintptr_t>& mod_genotype() { return m_genotype; }
+    void set_genotype_storage(IndividualGenotype* geno)
+    {
+        m_genotype_storage = geno;
+    }
+    uintptr_t* current_genotype()
+    {
+        if (m_genotype_storage == nullptr) return nullptr;
+        return m_genotype_storage->get_geno();
+    }
+    void freed_geno_storage(GenotypePool& pool)
+    {
+        pool.free(m_genotype_storage);
+        m_genotype_storage = nullptr;
+    }
 
 private:
     /*static std::string g_separator;
@@ -434,6 +450,7 @@ private:
     FileInfo m_target;
     FileInfo m_reference;
     SNPClump m_clump_info;
+    IndividualGenotype* m_genotype_storage;
     std::vector<uintptr_t> m_genotype;
     std::string m_alt;
     std::string m_ref;

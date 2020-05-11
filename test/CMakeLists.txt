@@ -44,9 +44,9 @@ target_link_libraries(tests PUBLIC
 
 add_test(NAME unitTest COMMAND tests)
 
-add_custom_command(
-     TARGET tests
-     COMMENT "Run tests"
-     POST_BUILD
-     COMMAND tests
-)
+#add_custom_command(
+#     TARGET tests
+#     COMMENT "Run tests"
+#     POST_BUILD
+#     COMMAND tests
+#)
