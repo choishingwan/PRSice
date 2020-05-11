@@ -1120,22 +1120,9 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                         ? m_max_window_size
                         : std::floor(m_existed_snps.size() * 0.1);
     GenotypePool genotype_pool(max_size, unfiltered_sample_ctv2);
-    /*
-    std::vector<uintptr_t> geno_storage;
-    try
-    {
-        geno_storage.resize(static_cast<size_t>((m_max_window_size + 1)
-                                                * unfiltered_sample_ctv2),
-                            0);
-    }
-    catch (...)
-    {
-        throw std::runtime_error("Error: Not enough memory for clumping");
-    };*/
     double prev_progress = -1.0, progress;
     const auto num_snp = m_existed_snps.size();
     double r2 = -1.0;
-    // uintptr_t* clump_geno_idx = nullptr;
     size_t num_core_snps = 0;
     for (size_t i_snp = 0; i_snp < num_snp; ++i_snp)
     {
@@ -1154,25 +1141,18 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         const size_t clump_end_idx = core_snp.up_bound();
         // the reason this is a two part process is so that we can reduce the
         // number of fseek
-        // clump_geno_idx = geno_storage.data();
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
             auto&& clump_snp = m_existed_snps[clump_idx];
-            if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue
-                //|| clump_snp.stored_genotype())
-            )
+            if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
             { continue; }
-            // clump_geno_idx[founder_ctv2 - 2] = 0;
-            // clump_geno_idx[founder_ctv2 - 1] = 0;
             if (clump_snp.current_genotype() == nullptr)
             {
                 auto clump_geno = genotype_pool.alloc();
-                // reference.read_genotype(clump_geno_idx, clump_snp);
                 reference.read_genotype(clump_geno->get_geno(), clump_snp);
                 clump_snp.set_genotype_storage(clump_geno);
             }
-            // clump_geno_idx = &(clump_geno_idx[founder_ctv2]);
         }
         if (core_snp.current_genotype() == nullptr)
         {
@@ -1184,26 +1164,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                          index_data, index_tots, founder_include2,
                          core_snp.current_genotype());
         core_snp.freed_geno_storage(genotype_pool);
-        // now read in core snp
-        /*
-        if (!core_snp.stored_genotype())
-        {
-            clump_geno_idx[founder_ctv2 - 2] = 0;
-            clump_geno_idx[founder_ctv2 - 1] = 0;
-            reference.read_genotype(clump_geno_idx, core_snp);
-            update_index_tot(founder_ctl2, founder_ctv2,
-        reference.m_founder_ct, index_data, index_tots, founder_include2,
-                             clump_geno_idx);
-        }
-        else
-        {
-            auto core_geno = core_snp.mod_genotype();
-            update_index_tot(founder_ctl2, founder_ctv2,
-        reference.m_founder_ct, index_data, index_tots, founder_include2,
-                             core_geno.data());
-        }*/
 
-        // clump_geno_idx = geno_storage.data();
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
@@ -1220,42 +1181,14 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                 if (clump_snp.clumped())
                 { clump_snp.freed_geno_storage(genotype_pool); }
             }
-            /*auto stored_genotype = clump_snp.stored_genotype();
-            if (!stored_genotype)
-            {
-                r2 = get_r2(founder_ctl2, founder_ctv2, clump_geno_idx,
-                            index_data, index_tots);
-            }
-            else
-            {
-                auto clump_geno = clump_snp.mod_genotype();
-                r2 = get_r2(founder_ctl2, founder_ctv2, clump_geno.data(),
-                            index_data, index_tots);
-            }
-            if (r2 >= min_r2)
-            {
-                core_snp.clump(clump_snp, r2, clump_info.use_proxy,
-                               clump_info.proxy);
-            }
-            else if (!stored_genotype)
-            {
-                // not clumped, but not stored, store it
-                clump_snp.assign_genotype(clump_geno_idx, founder_ctv2);
-            }
-            if (!stored_genotype)
-            { clump_geno_idx = &(clump_geno_idx[unfiltered_sample_ctv2]); }*/
         }
         // now we can read the SNPs that come after the index SNP in the file
         for (size_t clump_idx = core_snp_idx + 1; clump_idx < clump_end_idx;
              ++clump_idx)
         {
-            // clump_geno_idx = geno_storage.data();
             auto&& clump_snp = m_existed_snps[clump_idx];
-            // auto stored_genotype = clump_snp.stored_genotype();
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
                 continue;
-            // clump_geno_idx[founder_ctv2 - 2] = 0;
-            // clump_geno_idx[founder_ctv2 - 1] = 0;
             if (clump_snp.current_genotype() == nullptr)
             {
                 auto clump_geno = genotype_pool.alloc();
@@ -1271,33 +1204,9 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
                 if (clump_snp.clumped())
                 { clump_snp.freed_geno_storage(genotype_pool); }
             }
-            // read in the genotype information
-            /*
-            if (!stored_genotype)
-            {
-                reference.read_genotype(clump_geno_idx, clump_snp);
-                r2 = get_r2(founder_ctl2, founder_ctv2, clump_geno_idx,
-                            index_data, index_tots);
-            }
-            else
-            {
-                auto clump_geno = clump_snp.mod_genotype();
-                r2 = get_r2(founder_ctl2, founder_ctv2, clump_geno.data(),
-                            index_data, index_tots);
-            }
-
-            if (r2 >= min_r2)
-            {
-                core_snp.clump(clump_snp, r2, clump_info.use_proxy,
-                               clump_info.proxy);
-            }
-            else if (!stored_genotype)
-            {
-                clump_snp.assign_genotype(clump_geno_idx, founder_ctv2);
-            }
-            */
         }
         core_snp.set_clumped();
+
         // we set the remain_core to true so that we will keep it at the end
         remain_snps[core_snp_idx] = true;
         ++num_core_snps;
@@ -1446,273 +1355,6 @@ void Genotype::clumping_no_store(const Clumping& clump_info,
                        + misc::to_string(m_existed_snps.size()));
 }
 
-void Genotype::plink_clumping(const Clumping& clump_info, Genotype& reference)
-{
-    // the m_existed_snp must be sorted before coming into this equation
-    m_reporter->report("Start performing clumping");
-    // we want to initialize the vectors with size correspond to the sample in
-    // the reference panel. Need to use the unfiltered sample size
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(reference.m_unfiltered_sample_ct);
-    // again, we want to initialize the vector containing the founder
-    // membership, which require us to know the number of founders in the
-    // reference panel
-    const uint32_t founder_ctv3 =
-        BITCT_TO_ALIGNED_WORDCT(static_cast<uint32_t>(reference.m_founder_ct));
-    const uint32_t founder_ctsplit = 3 * founder_ctv3;
-    const uintptr_t founder_ctl2 = QUATERCT_TO_WORDCT(reference.m_founder_ct);
-    const uintptr_t founder_ctv2 =
-        QUATERCT_TO_ALIGNED_WORDCT(reference.m_founder_ct);
-
-    // We only want to perform clumping if our R2 is higher than a minimum
-    // threshold. Depending on whethre we do proxy clumping or not, the minimum
-    // threshold can be the clump_p or clump_proxy parameter
-    const double min_r2 = (clump_info.use_proxy)
-                              ? std::min(clump_info.proxy, clump_info.r2)
-                              : clump_info.r2;
-
-    // when we read in the genotype, the genotype is stored in byte represented
-    // by uintptr_t. Then we will use the PLINK 2 functions to obtain the R2
-    // As this vector can be big, we will only initialize it once (memory
-    // allocation can be expensive)
-    std::vector<uintptr_t> genotype_vector(unfiltered_sample_ctl * 2);
-    // We need a vector to indicate which SNPs are remaining after clumping to
-    // remove any clumped SNPs. This is achieved by using this boolean vector
-    std::vector<bool> remain_core(m_existed_snps.size(), false);
-    // next few parameters are used to store the intermediate output from PLINK
-    // function, corresponding to the count of different genotypes
-
-    // and this is the storage to result R2
-    double r2 = -1.0;
-    // The following two vectors are used for storing the intermediate output.
-    // Again, put memory allocation at the beginning
-    std::vector<uintptr_t> index_data(3 * founder_ctsplit + founder_ctv3);
-    std::vector<uintptr_t> index_tots(6);
-    // This is a data mask used by PLINK in the calculation of R2. Preallocate
-    // to speed up
-    std::vector<uintptr_t> founder_include2(founder_ctv2, 0);
-    fill_quatervec_55(static_cast<uint32_t>(reference.m_founder_ct),
-                      founder_include2.data());
-    // one way to speed things up as in PLINK 2 is to pre-allocate the memory
-    // space for what we need to do next. The following code did precisely that
-    // (borrow from PLINK2)
-
-    intptr_t malloc_size_mb = cal_avail_memory(founder_ctv2);
-    // now allocate the memory into a pointer
-
-    // window data is the pointer walking through the allocated memory
-    size_t max_window_size, num_core_snps = 0;
-    unsigned char* bigstack_ua = nullptr; // ua = unaligned
-    unsigned char* bigstack_initial_base;
-    bigstack_ua = reinterpret_cast<unsigned char*>(malloc(
-        static_cast<uintptr_t>(malloc_size_mb) * 1048576 * sizeof(char)));
-    // if fail, return nullptr which will then get into the while loop
-    if (!bigstack_ua)
-    { throw std::runtime_error("Failed to allocate required memory"); }
-    else
-    {
-        m_reporter->report("Allocated " + misc::to_string(malloc_size_mb)
-                           + " MB successfully");
-    }
-    // force 64-byte align to make cache line sensitivity work (from PLINK, not
-    // familiar with computer programming to know this...)
-    bigstack_initial_base = reinterpret_cast<unsigned char*>(
-        round_up_pow2(reinterpret_cast<uintptr_t>(bigstack_ua), CACHELINE));
-
-    // window data is the pointer walking through the allocated memory
-    unsigned char* g_bigstack_end = &(
-        bigstack_initial_base[(static_cast<uintptr_t>(malloc_size_mb) * 1048576
-                               - static_cast<uintptr_t>(bigstack_initial_base
-                                                        - bigstack_ua))
-                              & (~(CACHELINE - ONELU))]);
-
-    // and max_window_size is the number of windows we can handle in one round
-    // given the memory that we have. 1 window = 1 SNP
-    max_window_size = ((reinterpret_cast<uintptr_t>(g_bigstack_end))
-                       - (reinterpret_cast<uintptr_t>(bigstack_initial_base)))
-                      / (founder_ctv2 * sizeof(intptr_t));
-
-    g_bigstack_end = nullptr;
-    uintptr_t* window_data =
-        reinterpret_cast<uintptr_t*>(bigstack_initial_base);
-    if (!max_window_size)
-    { throw std::runtime_error("Error: Not enough memory for clumping!"); }
-    uintptr_t* window_data_ptr = nullptr;
-
-    // a counter to count how many windows have we read
-    uintptr_t cur_window_size = 0;
-    // if max_window size is 0, it means we don't have enough memory for
-    // clumping
-
-    double prev_progress = -1.0;
-    const auto num_snp = m_existed_snps.size();
-    for (size_t i_snp = 0; i_snp < num_snp; ++i_snp)
-    {
-        // now start iterate through each SNP
-        double progress =
-            static_cast<double>(i_snp) / static_cast<double>(num_snp) * 100;
-        if (progress - prev_progress > 0.01)
-        {
-            fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
-            prev_progress = progress;
-        }
-        // get the index on target.m_existed_snp to the i_th most significant
-        // SNP
-        auto&& cur_snp_index = m_sort_by_p_index[i_snp];
-        // read in the current SNP
-        auto&& cur_target_snp = m_existed_snps[cur_snp_index];
-        if (cur_target_snp.clumped()
-            || cur_target_snp.p_value() > clump_info.pvalue)
-        {
-            // ignore any SNP that are clumped or that has a p-value higher than
-            // the clump-p threshold
-            continue;
-        }
-        // Any SNP with p-value less than clump-p will be ignored
-        // because they can never be an index SNP and thus are not of our
-        // interested
-
-        // this is the first SNP we should read from
-        const size_t start = cur_target_snp.low_bound();
-        // this is the first SNP we should ignore
-        const size_t end = cur_target_snp.up_bound();
-        // reset our pointer to the start of the memory stack as we are working
-        // on a new core SNP
-        window_data_ptr = window_data;
-        cur_window_size = 0;
-        // transversing on TARGET
-        // now we will transverse any SNP that comes before the index SNP in the
-        // file
-        for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++)
-        {
-
-            // the start and end correspond to index on m_existed_snps instead
-            // of m_sort_by_p, so we can skip reading from m_sort_by_p
-            // the current SNP
-            auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > clump_info.pvalue)
-            {
-                // ignore SNP that are clumped or that has higher p-value than
-                // threshold
-                continue;
-            }
-            // Something PLINK does. I suspect this is to reset the content of
-            // the pointer to 0
-            window_data_ptr[founder_ctv2 - 2] = 0;
-            window_data_ptr[founder_ctv2 - 1] = 0;
-            if (++cur_window_size == max_window_size)
-            { throw std::runtime_error("Error: Out of memory!"); }
-            // read in the genotype data from the memory
-            // this depends on the type of the reference.
-            // Most important information is the ref_byte_pos (reference byte
-            // position for reading) and ref_file_name (which reference file
-            // should we read from)
-
-            reference.read_genotype(window_data_ptr, pair_target_snp);
-            // we then move the pointer forward to the next space in the memory
-            window_data_ptr = &(window_data_ptr[founder_ctv2]);
-        }
-
-        if (++cur_window_size == max_window_size)
-        { throw std::runtime_error("Error: Out of memory!"); }
-        // now we want to read in the index / core SNP
-        // reset the content of the pointer again
-        window_data_ptr[founder_ctv2 - 2] = 0;
-        window_data_ptr[founder_ctv2 - 1] = 0;
-        // then we can read in the genotype from the reference panel
-        // note the use of cur_target_snp
-        reference.read_genotype(window_data_ptr, cur_target_snp);
-        // reset the index_data information
-        std::fill(index_data.begin(), index_data.end(), 0);
-        // generate the required data mask
-        // Disclaimer: For the next few lines, they are from PLINK and I don't
-        // fully understand what they are doing
-        // then populate the index_tots
-        update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
-                         index_data, index_tots, founder_include2,
-                         window_data_ptr);
-        // we have finished reading the index and stored the necessary
-        // inforamtion, we can now calculate the R2 between the index and
-        // previous SNPs
-        // move back to the front of the memory (we don't need to read the SNP
-        // again as the info is stored in the memory)
-        window_data_ptr = window_data;
-        for (size_t i_pair = start; i_pair < cur_snp_index; i_pair++)
-        {
-            auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > clump_info.pvalue)
-                // Again, ignore unwanted SNP
-                continue;
-            r2 = get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
-                        index_tots);
-            if (r2 >= min_r2)
-            {
-                // if the R2 between two SNP is higher than the minim threshold,
-                // we will perform clumping
-                // use the core SNP to clump the pair_target_snp
-                cur_target_snp.clump(pair_target_snp, r2, clump_info.use_proxy,
-                                     clump_info.proxy);
-            }
-            // travel to the next snp
-            window_data_ptr = &(window_data_ptr[founder_ctv2]);
-        }
-        // now we can read the SNPs that come after the index SNP in the file
-
-        for (size_t i_pair = cur_snp_index + 1; i_pair < end; ++i_pair)
-        {
-            // we don't need to store the SNP information, as we can process
-            // each SNP immediately. Always reset the pointer to the beginning
-            // of the stack
-            window_data_ptr = window_data;
-            // read in the SNP information from teh target
-            auto&& pair_target_snp = m_existed_snps[i_pair];
-            if (pair_target_snp.clumped()
-                || pair_target_snp.p_value() > clump_info.pvalue)
-                // skip if not required
-                continue;
-            // reset data
-            window_data_ptr[founder_ctv2 - 2] = 0;
-            window_data_ptr[founder_ctv2 - 1] = 0;
-            // read in the genotype information
-            reference.read_genotype(window_data_ptr, pair_target_snp);
-            r2 = get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
-                        index_tots);
-            // now perform clumping if required
-            if (r2 >= min_r2)
-            {
-                cur_target_snp.clump(pair_target_snp, r2, clump_info.use_proxy,
-                                     clump_info.proxy);
-            }
-        }
-        // we set the core SNP to be "clumped" so that it will no longer be
-        // considered by other SNP
-        cur_target_snp.set_clumped();
-        // we set the remain_core to true so that we will keep it at the end
-        remain_core[cur_snp_index] = true;
-        ++num_core_snps;
-        // we also get the p-value threshold of the SNP so that we know what
-        // thresholds are included in our analysis. This information is vital
-        // for the generation of all score file
-    }
-    fprintf(stderr, "\rClumping Progress: %03.2f%%\n\n", 100.0);
-    // now we release the memory stack
-    free(bigstack_ua);
-    window_data = nullptr;
-    window_data_ptr = nullptr;
-    bigstack_initial_base = nullptr;
-    bigstack_ua = nullptr;
-    /*
-    if (num_core_snps != m_existed_snps.size())
-    { shrink_snp_vector(remain_core); }
-    */
-    // we no longer require the index. might as well clear it (and hope it will
-    // release the memory)
-    m_existed_snps_index.clear();
-    m_reporter->report("Number of variant(s) after clumping : "
-                       + misc::to_string(m_existed_snps.size()));
-}
 void Genotype::recalculate_categories(const PThresholding& p_info)
 { // need to loop through the SNPs to check
     std::sort(begin(m_existed_snps), end(m_existed_snps),

@@ -23,7 +23,7 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/binaryplink_read.cpp
     ${TEST_SRC_DIR}/binaryplink_sample_load.cpp
     ${TEST_SRC_DIR}/binaryplink_snp_load.cpp
-    #${TEST_SRC_DIR}/binaryplink_filtering.cpp
+    ${TEST_SRC_DIR}/binaryplink_filtering.cpp
     ${TEST_SRC_DIR}/binarygen_sample_load.cpp
     ${TEST_SRC_DIR}/binarygen_snp_load.cpp
     ${TEST_SRC_DIR}/binarygen_read.cpp
@@ -44,9 +44,9 @@ target_link_libraries(tests PUBLIC
 
 add_test(NAME unitTest COMMAND tests)
 
-#add_custom_command(
-#     TARGET tests
-#     COMMENT "Run tests"
-#     POST_BUILD
-#     COMMAND tests
-#)
+add_custom_command(
+     TARGET tests
+     COMMENT "Run tests"
+     POST_BUILD
+     COMMAND tests
+)

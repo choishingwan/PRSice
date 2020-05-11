@@ -450,7 +450,7 @@ private:
     FileInfo m_target;
     FileInfo m_reference;
     SNPClump m_clump_info;
-    IndividualGenotype* m_genotype_storage;
+    IndividualGenotype* m_genotype_storage = nullptr;
     std::vector<uintptr_t> m_genotype;
     std::string m_alt;
     std::string m_ref;
