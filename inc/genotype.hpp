@@ -20,6 +20,7 @@
 
 #include "IITree.h"
 #include "commander.hpp"
+#include "genotype_pool.hpp"
 #include "misc.hpp"
 #include "plink_common.hpp"
 #include "reporter.hpp"
@@ -299,12 +300,12 @@ public:
     }
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
     void clumping_no_store(const Clumping& clump_info, Genotype& reference);
-    void plink_clumping(const Clumping& clump_info, Genotype& reference);
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression
      * flag to false and propagate it later on to indicate if the sample is
      * used in the regression model
      */
+
     void reset_in_regression_flag()
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
