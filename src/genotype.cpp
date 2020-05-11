@@ -1134,7 +1134,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
             prev_progress = progress;
         }
         auto&& core_snp_idx = m_sort_by_p_index[i_snp];
-        auto&& core_snp = m_existed_snps[core_snp_idx];
+        auto&& core_snp = m_existed_snps.at(core_snp_idx);
         if (core_snp.clumped() || core_snp.p_value() > clump_info.pvalue)
         { continue; }
         const size_t clump_start_idx = core_snp.low_bound();
@@ -1144,7 +1144,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
-            auto&& clump_snp = m_existed_snps[clump_idx];
+            auto&& clump_snp = m_existed_snps.at(clump_idx);
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
             { continue; }
             if (clump_snp.current_genotype() == nullptr)
@@ -1168,7 +1168,7 @@ void Genotype::efficient_clumping(const Clumping& clump_info,
         for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
              ++clump_idx)
         {
-            auto&& clump_snp = m_existed_snps[clump_idx];
+            auto&& clump_snp = m_existed_snps.at(clump_idx);
 
             if (clump_snp.clumped() || clump_snp.p_value() > clump_info.pvalue)
             { continue; }

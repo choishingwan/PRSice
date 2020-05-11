@@ -2,6 +2,7 @@
 #define GenotypePool_HPP
 #include <cstddef>
 #include <cstdint>
+#include <plink_common.hpp>
 #include <vector>
 // modified based on https://thinkingeek.com/2017/11/19/simple-memory-pool/
 class IndividualGenotype
@@ -31,9 +32,8 @@ private:
     class MemoryPool
     {
         // actual memory storage
-        uintptr_t* m_genotypes alignas(alignof(uintptr_t));
-        // std::vector<uintptr_t>
-        //    m_genotype_collections alignas(alignof(uintptr_t));
+        std::unique_ptr<uintptr_t[]> m_genotypes alignas(alignof(uintptr_t));
+        // std::vector<uintptr_t> m_genotypes alignas(alignof(uintptr_t));
         // storing the pointer location as a linked list, this allow us to find
         // the next empty space
         std::unique_ptr<IndividualGenotype[]> m_genotype_list;
@@ -41,20 +41,22 @@ private:
         std::unique_ptr<MemoryPool> m_next;
 
     public:
-        ~MemoryPool() { delete[] m_genotypes; }
+        ~MemoryPool()
+        { /*delete[] m_genotypes;*/
+        }
         MemoryPool(const size_t num_snps, const size_t memory_per_snp)
             : m_genotypes(new uintptr_t[num_snps * memory_per_snp])
             , m_genotype_list(new IndividualGenotype[num_snps])
 
         {
-
-            // m_genotype_collections.resize(num_snps * memory_per_snp, 0);
+            // m_genotypes.resize(num_snps * memory_per_snp, 0);
             // initialize the linked list
-            m_genotype_list[0].set_start_location(m_genotypes);
+            m_genotype_list[0].set_start_location(m_genotypes.get());
+            // m_genotype_list[0].set_start_location(m_genotypes.data());
             for (size_t i = 1; i < num_snps; ++i)
             {
                 m_genotype_list[i - 1].set_next_item(&m_genotype_list[i]);
-                m_genotype_list[i].set_start_location(m_genotypes
+                m_genotype_list[i].set_start_location(m_genotypes.get()
                                                       + i * memory_per_snp);
             }
             m_genotype_list[num_snps - 1].set_next_item(nullptr);
@@ -77,7 +79,7 @@ private:
 public:
     GenotypePool(size_t num_snps, size_t memory_per_snp)
         : m_num_snps(num_snps)
-        , m_memory_per_snp(memory_per_snp)
+        , m_memory_per_snp(round_up_pow2(memory_per_snp, CACHELINE))
         , m_memory_pool(new MemoryPool(m_num_snps, m_memory_per_snp))
         , m_free_list(m_memory_pool->get_genotypes())
     {
