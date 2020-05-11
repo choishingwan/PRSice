@@ -45,6 +45,7 @@ add_library(genotyping
     ${CMAKE_SOURCE_DIR}/src/binarygen.cpp
     ${CMAKE_SOURCE_DIR}/src/binaryplink.cpp
     ${CMAKE_SOURCE_DIR}/src/genotype.cpp
+    ${CMAKE_SOURCE_DIR}/src/genotype_pool.cpp
     ${CMAKE_SOURCE_DIR}/src/snp.cpp)
 target_include_directories(genotyping PUBLIC
     ${CMAKE_SOURCE_DIR}/inc)

@@ -305,6 +305,7 @@ public:
      * flag to false and propagate it later on to indicate if the sample is
      * used in the regression model
      */
+
     void reset_in_regression_flag()
     {
         std::fill(m_in_regression.begin(), m_in_regression.end(), 0);
