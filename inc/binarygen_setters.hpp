@@ -251,7 +251,7 @@ public:
 
 struct PLINK_generator
 {
-    PLINK_generator(std::vector<uintptr_t>* sample, uintptr_t* genotype,
+    PLINK_generator(uintptr_t* sample, uintptr_t* genotype,
                     double hard_threshold, double dose_threshold)
         : m_sample(sample)
         , m_genotype(genotype)
@@ -290,7 +290,7 @@ struct PLINK_generator
         m_missing = false;
         // then we determine if we want to include sample using by
         // consulting the flag on m_sample
-        return IS_SET(m_sample->data(), m_sample_i);
+        return IS_SET(m_sample, m_sample_i);
     }
     void set_number_of_entries(std::size_t, std::size_t,
                                genfile::OrderType phased, genfile::ValueType)
@@ -392,15 +392,16 @@ struct PLINK_generator
             m_shift = 0;
         }
 
-        double exp_value = m_geno_prob[1]+m_geno_prob[2]*2.0;
-        double impute2_tmp = m_geno_prob[1]+m_geno_prob[2]*4.0;
+        double exp_value = m_geno_prob[1] + m_geno_prob[2] * 2.0;
+        double impute2_tmp = m_geno_prob[1] + m_geno_prob[2] * 4.0;
         // we can now push in the expected value for this sample. This
         // can then use for the calculation of the info score
         // only calculate for included samples
-        if (IS_SET(m_sample->data(), m_sample_i)&&!m_missing) {
-                statistic.push(exp_value);
-                m_impute2 -= impute2_tmp - exp_value * exp_value;
-                for(auto && g: m_geno_prob) m_total_probability+=g;
+        if (IS_SET(m_sample, m_sample_i) && !m_missing)
+        {
+            statistic.push(exp_value);
+            m_impute2 -= impute2_tmp - exp_value * exp_value;
+            for (auto&& g : m_geno_prob) m_total_probability += g;
         }
     }
     double info_score(const INFO type) const
@@ -410,7 +411,7 @@ struct PLINK_generator
         if (type == INFO::MACH) { return (statistic.var() / p_all); }
         else if (type == INFO::IMPUTE2)
         {
-            return 1.0 + ((m_impute2/p_all) / m_total_probability);
+            return 1.0 + ((m_impute2 / p_all) / m_total_probability);
         }
         throw std::runtime_error("Error: Undefined info score type");
     }
@@ -435,10 +436,10 @@ struct PLINK_generator
 
 private:
     // the sample inclusion vector, if bit is set, sample is required
-    std::vector<uintptr_t>* m_sample;
     std::vector<double> m_prob;
     std::vector<double> m_geno_prob;
     // is the genotype vector
+    uintptr_t* m_sample;
     uintptr_t* m_genotype;
     misc::RunningStat statistic;
     double m_hard_threshold = 0.0;

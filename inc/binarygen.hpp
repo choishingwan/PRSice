@@ -59,14 +59,15 @@ protected:
      * \brief Generate the sample vector
      * \return Vector containing the sample information
      */
-    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector() override;
     void handle_pheno_header(std::unique_ptr<std::istream>& sample);
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const std::string& out_prefix, Genotype* target = nullptr);
+                   const std::string& out_prefix,
+                   Genotype* target = nullptr) override;
     bool calc_freq_gen_inter(const QCFiltering& filter_info,
                              const std::string& prefix,
-                             Genotype* genotype = nullptr);
+                             Genotype* genotype = nullptr) override;
 
     genfile::bgen::Context get_context(const size_t& idx);
     size_t get_sex_col(const std::string& header,
@@ -89,38 +90,37 @@ protected:
         std::unordered_set<std::string>& processed_snps,
         std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
         Genotype* genotype);
-    inline void read_genotype(FileRead& genotype_file, uintptr_t* tmp_genotype,
-                              uintptr_t* genotype, const SNP& snp)
+    inline void read_genotype(const SNP& snp, const uintptr_t /*selected_size*/,
+                              FileRead& genotype_file,
+                              uintptr_t* __restrict /*tmp_genotype*/,
+                              uintptr_t* __restrict genotype,
+                              uintptr_t* __restrict subset_mask,
+                              bool is_ref = false) override
     {
-        auto [file_idx, byte_pos] = snp.get_file_info(true);
+        auto [file_idx, byte_pos] = snp.get_file_info(is_ref);
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        if (m_ref_plink)
+        if ((m_ref_plink && is_ref) || (!is_ref && m_target_plink))
         {
             genotype_file.read(m_genotype_file_names[file_idx], byte_pos,
                                unfiltered_sample_ct4,
                                reinterpret_cast<char*>(genotype));
         }
-        else if (!load_and_collapse_incl(byte_pos, file_idx, genotype,
-                                         genotype_file))
+        else if (!load_and_collapse_incl(byte_pos, file_idx, genotype_file,
+                                         genotype, subset_mask))
         {
             throw std::runtime_error("Error: Cannot read the bgen file!");
         }
     }
-    inline void read_genotype(uintptr_t* genotype, const SNP& snp)
-    {
-        read_genotype(m_genotype_file, m_tmp_genotype.data(), genotype, snp);
-    }
-
     bool load_and_collapse_incl(const std::streampos byte_pos,
-                                const size_t& file_idx,
+                                const size_t& file_idx, FileRead& genotype_file,
                                 uintptr_t* __restrict mainbuf,
-                                FileRead& genotype_file)
+                                uintptr_t* __restrict subset_mask)
     {
         assert(m_unfiltered_sample_ct);
         try
         {
-            PLINK_generator setter(&m_sample_for_ld, mainbuf, m_hard_threshold,
+            PLINK_generator setter(subset_mask, mainbuf, m_hard_threshold,
                                    m_dose_threshold);
             genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
                 genotype_file, m_genotype_file_names[file_idx] + ".bgen",
@@ -134,14 +134,15 @@ protected:
         return true;
     }
 
+    void count_and_read_genotype(SNP&) override;
     void read_score(std::vector<PRS>& prs_list,
                     const std::vector<size_t>::const_iterator& start_idx,
                     const std::vector<size_t>::const_iterator& end_idx,
-                    bool reset_zero, bool ultra = false);
+                    bool reset_zero) override;
     void hard_code_score(std::vector<PRS>& prs_list,
                          const std::vector<size_t>::const_iterator& start_idx,
                          const std::vector<size_t>::const_iterator& end_idx,
-                         bool reset_zero, bool ultra = false);
+                         bool reset_zero);
     void dosage_score(std::vector<PRS>& prs_list,
                       const std::vector<size_t>::const_iterator& start_idx,
                       const std::vector<size_t>::const_iterator& end_idx,

@@ -1,4 +1,4 @@
-﻿// This file is part of PRSice-2, copyright (C) 2016-2019
+// This file is part of PRSice-2, copyright (C) 2016-2019
 // Shing Wan Choi, Paul F. O’Reilly
 //
 // This program is free software: you can redistribute it and/or modify
@@ -437,14 +437,19 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
     // TODO: This isn't correct if there are non-founder samples in our datas
     // and if we account for ref and target, we also need to consider situation
     // where we use target as reference.
-    PLINK_generator setter(&m_calculate_prs, m_tmp_genotype.data(),
+    PLINK_generator setter(m_calculate_prs.data(), m_tmp_genotype.data(),
                            m_hard_threshold, m_dose_threshold);
     // now consider if we are generating the intermediate file
     std::ofstream inter_out;
     if (m_intermediate)
     {
         auto flag = std::ios::binary;
-        if (m_target_plink && m_is_ref) { flag |= std::ios::app; }
+        if (m_is_ref)
+        {
+            // always append with reference as worst case will be target
+            // generating an empty file
+            flag |= std::ios::app;
+        }
         inter_out.open(intermediate_name.c_str(), flag);
     }
     // now start processing the bgen file
@@ -500,7 +505,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
             // expected to use hard_coding
             tmp_byte_pos = inter_out.tellp();
             inter_out.write(reinterpret_cast<char*>(m_tmp_genotype.data()),
-                            m_tmp_genotype.size() * sizeof(m_tmp_genotype[0]));
+                            m_tmp_genotype.size() * sizeof(uintptr_t));
             if (!m_is_ref)
             {
                 // target file
@@ -610,13 +615,8 @@ void BinaryGen::dosage_score(
 void BinaryGen::hard_code_score(
     std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    bool read_only)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
 {
-    // we need to calculate the size of possible vectors
-    const uintptr_t unfiltered_sample_ctl =
-        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
-    const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     // genotype counts
     uint32_t homrar_ct = 0;
     uint32_t missing_ct = 0;
@@ -637,14 +637,13 @@ void BinaryGen::hard_code_score(
     // check if we need to reset the sample's PRS
     bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
-    std::streampos byte_pos;
     // initialize the data structure for storing the genotype
-    std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
+    // std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     genfile::bgen::Context context;
-    PLINK_generator setter(&m_calculate_prs, genotype.data(), m_hard_threshold,
-                           m_dose_threshold);
+    PLINK_generator setter(m_calculate_prs.data(), m_tmp_genotype.data(),
+                           m_hard_threshold, m_dose_threshold);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
-    size_t idx;
+    uintptr_t* genotype_ptr;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
@@ -653,24 +652,25 @@ void BinaryGen::hard_code_score(
         // an intermediate file
         // if it has the intermediate file, then we should have already
         // calculated the counts
-        if (!cur_snp.stored_genotype())
+        if (cur_snp.current_genotype() == nullptr)
         {
-            cur_snp.get_file_info(idx, byte_pos, m_is_ref);
-
-            auto&& file_name = m_genotype_file_names[idx];
-            if (m_intermediate
-                && cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                      m_prs_calculation.use_ref_maf))
+            auto [idx, byte_pos] = cur_snp.get_file_info(m_is_ref);
+            if (m_intermediate)
             {
+                if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct,
+                                        missing_ct,
+                                        m_prs_calculation.use_ref_maf))
+                {
+                    throw std::logic_error(
+                        "Error: Sam has a logic error in bgen");
+                }
                 // Have intermediate file and have the counts
                 // read in the genotype information to the genotype vector
-                m_genotype_file.read(file_name, byte_pos, unfiltered_sample_ct4,
-                                     reinterpret_cast<char*>(genotype.data()));
-            }
-            else if (m_intermediate)
-            {
-                // Have intermediate file but not have the counts
-                throw std::logic_error("Error: Sam has a logic error in bgen");
+                const uintptr_t unfiltered_sample_ct4 =
+                    (m_unfiltered_sample_ct + 3) / 4;
+                m_genotype_file.read(
+                    m_genotype_file_names[idx], byte_pos, unfiltered_sample_ct4,
+                    reinterpret_cast<char*>(m_tmp_genotype.data()));
             }
             else
             {
@@ -678,18 +678,18 @@ void BinaryGen::hard_code_score(
                 context = m_context_map[idx];
                 // start performing the parsing
                 genfile::bgen::read_and_parse_genotype_data_block<
-                    PLINK_generator>(m_genotype_file, file_name + ".bgen",
-                                     context, setter, &m_buffer1, &m_buffer2,
-                                     byte_pos);
+                    PLINK_generator>(
+                    m_genotype_file, m_genotype_file_names[idx] + ".bgen",
+                    context, setter, &m_buffer1, &m_buffer2, byte_pos);
                 setter.get_count(homcom_ct, het_ct, homrar_ct, missing_ct);
             }
-            if (read_only) cur_snp.assign_genotype(genotype);
+            genotype_ptr = m_tmp_genotype.data();
         }
         else
         {
-            genotype = cur_snp.get_genotype();
             cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                m_prs_calculation.use_ref_maf);
+            genotype_ptr = cur_snp.current_genotype();
         }
         // TODO: if we haven't got the count from the genotype matrix, we
         // will need to calculate that, we might not need to do the counting
@@ -722,23 +722,54 @@ void BinaryGen::hard_code_score(
             miss_score = ploidy * stat * maf;
         }
         // start reading the genotype
-        if (!read_only)
-        {
-            read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
-                     miss_count, homcom_weight, het_weight, homrar_weight,
-                     not_first);
-        }
+        read_prs(genotype_ptr, prs_list, ploidy, stat, adj_score, miss_score,
+                 miss_count, homcom_weight, het_weight, homrar_weight,
+                 not_first);
         // we've finish processing the first SNP no longer need to reset the
         // PRS
         not_first = true;
     }
 }
 
+void BinaryGen::count_and_read_genotype(SNP& snp)
+{
+    auto [file_idx, byte_pos] = snp.get_file_info(false);
+    auto&& genotype = snp.current_genotype();
+    // load into memory is useless for dosage score
+    if (!m_hard_coded) return;
+
+    if (m_intermediate)
+    {
+        // this is the intermediate
+        uint32_t homrar_ct = 0;
+        uint32_t missing_ct = 0;
+        uint32_t het_ct = 0;
+        uint32_t homcom_ct = 0;
+        if (!snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                            m_prs_calculation.use_ref_maf))
+        { throw std::logic_error("Error: Sam has a logic error in bgen"); }
+        const uintptr_t unfiltered_sample_ct4 =
+            (m_unfiltered_sample_ct + 3) / 4;
+        m_genotype_file.read(m_genotype_file_names[file_idx], byte_pos,
+                             unfiltered_sample_ct4,
+                             reinterpret_cast<char*>(genotype));
+    }
+    else
+    {
+
+        // start performing the parsing
+        PLINK_generator setter(m_calculate_prs.data(), genotype,
+                               m_hard_threshold, m_dose_threshold);
+        genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
+            m_genotype_file, m_genotype_file_names[file_idx] + ".bgen",
+            m_context_map[file_idx], setter, &m_buffer1, &m_buffer2, byte_pos);
+    }
+}
 
 void BinaryGen::read_score(std::vector<PRS>& prs_list,
                            const std::vector<size_t>::const_iterator& start_idx,
                            const std::vector<size_t>::const_iterator& end_idx,
-                           bool reset_zero, bool ultra)
+                           bool reset_zero)
 {
     // because I don't want to touch the code in dosage_score, we will reset
     // the sample here reset_sample_prs();
@@ -746,7 +777,7 @@ void BinaryGen::read_score(std::vector<PRS>& prs_list,
     {
         // for hard coded, we need to check if intermediate file is used
         // instead
-        hard_code_score(prs_list, start_idx, end_idx, reset_zero, ultra);
+        hard_code_score(prs_list, start_idx, end_idx, reset_zero);
     }
     else
     {

@@ -54,9 +54,17 @@ public:
             }
         }
     }
+    void test_read_genotype(const SNP& snp, const uintptr_t sample_size,
+                            uintptr_t* genotype, bool is_ref)
+    {
+        read_genotype(snp, sample_size, m_genotype_file, m_tmp_genotype.data(),
+                      genotype, m_sample_for_ld.data(), is_ref);
+    }
+    void set_hard_code(bool hard_coded) { m_hard_coded = hard_coded; }
     void test_read_genotype(uintptr_t* genotype, SNP& snp)
     {
-        read_genotype(genotype, snp);
+        read_genotype(snp, m_founder_ct, m_genotype_file, m_tmp_genotype.data(),
+                      genotype, m_sample_for_ld.data(), true);
     }
     void add_select_sample(const std::string& in)
     {
@@ -121,7 +129,7 @@ public:
                          const std::streampos& bytepos)
     {
         auto cur_idx = 0ul;
-        PLINK_generator setter(&m_calculate_prs, m_tmp_genotype.data(),
+        PLINK_generator setter(m_calculate_prs.data(), m_tmp_genotype.data(),
                                m_hard_threshold, m_dose_threshold);
         // we use tellg to get the location of the variant info, so don't need
         // to do offset jump
@@ -305,13 +313,27 @@ public:
             }
         }
     }
-
     static void generate_samples(
         const size_t n_entries, const size_t n_sample, const QCFiltering qc,
         std::vector<uintptr_t>& plink_genotype, std::vector<double>& data_prob,
         std::vector<bool>& founder, genfile::bgen::Layout version,
         genfile::OrderType phasing, double& exp_mach, double& exp_impute,
         uint32_t& ref_ct, uint32_t& het_ct, uint32_t& alt_ct, uint32_t& miss_ct)
+    {
+        std::vector<uintptr_t> tmp_genotype;
+        generate_samples(n_entries, n_sample, qc, plink_genotype, tmp_genotype,
+                         data_prob, founder, version, phasing, exp_mach,
+                         exp_impute, ref_ct, het_ct, alt_ct, miss_ct);
+    }
+    static void
+    generate_samples(const size_t n_entries, const size_t n_sample,
+                     const QCFiltering qc,
+                     std::vector<uintptr_t>& plink_genotype,
+                     std::vector<uintptr_t>& no_filter_genotype,
+                     std::vector<double>& data_prob, std::vector<bool>& founder,
+                     genfile::bgen::Layout version, genfile::OrderType phasing,
+                     double& exp_mach, double& exp_impute, uint32_t& ref_ct,
+                     uint32_t& het_ct, uint32_t& alt_ct, uint32_t& miss_ct)
     {
         ref_ct = 0;
         het_ct = 0;
@@ -324,6 +346,7 @@ public:
         const uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(n_sample);
         const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
         plink_genotype.resize(unfiltered_sample_ctv2, 0);
+        no_filter_genotype.resize(unfiltered_sample_ctv2, 0);
         std::vector<size_t> expected_geno(n_sample, 0);
         std::vector<double> cur_geno_prob(3, 0.0), hap_prob(4, 0.0);
         std::random_device rnd_device;
@@ -381,13 +404,15 @@ public:
         };
         double sum_prob = 0.0, impute_sum = 0.0;
         misc::RunningStat statistic;
-        size_t geno_idx = 0;
+        size_t geno_idx = 0, mem_idx = 0;
         for (size_t i = 0; i < n_sample; ++i)
         {
             double exp = 0.0, tmp = 0.0;
             expected_geno[i] = 3;
             if (missing_prob())
             {
+                SET_BIT(geno_idx, no_filter_genotype.data());
+                mem_idx += 2;
                 if (founder[i])
                 {
                     ++miss_ct;
@@ -463,6 +488,17 @@ public:
                     }
                     geno_idx += 2;
                 }
+                switch (expected_geno[i])
+                {
+                case 0: break;
+                case 1: SET_BIT(mem_idx + 1, no_filter_genotype.data()); break;
+                case 2:
+                    SET_BIT(mem_idx, no_filter_genotype.data());
+                    SET_BIT(mem_idx + 1, no_filter_genotype.data());
+                    break;
+                case 3: SET_BIT(mem_idx, no_filter_genotype.data()); break;
+                }
+                mem_idx += 2;
             }
         }
         double p = statistic.mean() / 2.0;
@@ -470,9 +506,11 @@ public:
         exp_mach = statistic.var() / p_all;
         exp_impute = 1.0 + ((impute_sum / p_all) / sum_prob);
     }
+
     static void generate_samples(const size_t n_entries, const size_t n_sample,
                                  const QCFiltering qc,
                                  std::vector<uintptr_t>& plink_genotype,
+                                 std::vector<uintptr_t>& no_filter,
                                  std::vector<double>& data_prob,
                                  std::vector<bool>& founder,
                                  genfile::bgen::Layout version,
@@ -480,9 +518,9 @@ public:
     {
         double exp_mach, exp_impute;
         uint32_t ref_ct, het_ct, alt_ct, miss_ct;
-        generate_samples(n_entries, n_sample, qc, plink_genotype, data_prob,
-                         founder, version, phasing, exp_mach, exp_impute,
-                         ref_ct, het_ct, alt_ct, miss_ct);
+        generate_samples(n_entries, n_sample, qc, plink_genotype, no_filter,
+                         data_prob, founder, version, phasing, exp_mach,
+                         exp_impute, ref_ct, het_ct, alt_ct, miss_ct);
     }
 };
 

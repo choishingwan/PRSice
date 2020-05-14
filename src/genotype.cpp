@@ -1232,7 +1232,7 @@ void Genotype::threaded_clumping(
     size_t num_processed = 0, prev_processed = 0;
     double local_progress = 0.0, prev_progress = 0.0;
     size_t local_num_core = 0;
-
+    auto&& sample_for_ld = reference.m_sample_for_ld.data();
     for (auto&& range : snp_range)
     {
         for (size_t i_snp = std::get<0>(range); i_snp < std::get<1>(range);
@@ -1267,15 +1267,18 @@ void Genotype::threaded_clumping(
                 {
                     clump_snp.set_genotype_storage(genotype_pool.alloc());
                     reference.read_genotype(
-                        genotype_file, tmp_genotype->get_geno(),
-                        clump_snp.current_genotype(), clump_snp);
+                        clump_snp, reference.m_founder_ct, genotype_file,
+                        tmp_genotype->get_geno(), clump_snp.current_genotype(),
+                        sample_for_ld, true);
                 }
             }
             if (core_snp.current_genotype() == nullptr)
             {
                 core_snp.set_genotype_storage(genotype_pool.alloc());
-                reference.read_genotype(genotype_file, tmp_genotype->get_geno(),
-                                        core_snp.current_genotype(), core_snp);
+                reference.read_genotype(core_snp, reference.m_founder_ct,
+                                        genotype_file, tmp_genotype->get_geno(),
+                                        core_snp.current_genotype(),
+                                        sample_for_ld, true);
             }
             update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
                              index_data, index_tots, founder_include2,
@@ -1314,8 +1317,9 @@ void Genotype::threaded_clumping(
                 {
                     clump_snp.set_genotype_storage(genotype_pool.alloc());
                     reference.read_genotype(
-                        genotype_file, tmp_genotype->get_geno(),
-                        clump_snp.current_genotype(), clump_snp);
+                        clump_snp, reference.m_founder_ct, genotype_file,
+                        tmp_genotype->get_geno(), clump_snp.current_genotype(),
+                        sample_for_ld, true);
                 }
                 r2 = get_r2(founder_ctl2, founder_ctv2,
                             clump_snp.current_genotype(), index_data,
@@ -1501,10 +1505,18 @@ void Genotype::get_null_score(std::vector<PRS>& prs_list,
         || m_prs_calculation.scoring_method == SCORING::CONTROL_STD)
     { standardize_prs(); }
 }
-
 void Genotype::load_genotype_to_memory()
 {
-    // first, sort the SNPs for easy reading
+
+    // don't reserve memory if we don't need to run hard coding
+    if (!m_hard_coded) { return; }
+    // this is use for initialize the array sizes
+    const uintptr_t unfiltered_sample_ctl =
+        BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+    const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
+    std::streampos cur_line;
+    m_genotype_pool =
+        GenotypePool(m_existed_snps.size(), unfiltered_sample_ctv2);
     std::sort(begin(m_existed_snps), end(m_existed_snps),
               [](SNP const& t1, SNP const& t2) {
                   if (t1.get_file_idx() == t2.get_file_idx())
@@ -1512,12 +1524,13 @@ void Genotype::load_genotype_to_memory()
                   else
                       return t1.get_file_idx() < t2.get_file_idx();
               });
-    // now iterate and read each SNP one by one, get the counts too
-    std::vector<size_t> idx(m_existed_snps.size());
-    std::iota(std::begin(idx), std::end(idx), 0);
-    read_score(idx.begin(), idx.end(), true, true);
-    m_genotype_stored = true;
+    for (auto&& snp : m_existed_snps)
+    {
+        snp.set_genotype_storage(m_genotype_pool.alloc());
+        this->count_and_read_genotype(snp);
+    }
 }
+
 
 bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
                          const std::vector<size_t>::const_iterator& end_index,
