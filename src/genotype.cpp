@@ -1118,7 +1118,7 @@ void Genotype::clumping(const Clumping& clump_info, Genotype& reference,
 {
     m_reporter->report("Start performing clumping");
     std::vector<std::atomic<bool>> remain_snps(m_existed_snps.size());
-    for (auto&& s : remain_snps) { s = 0; }
+    for (auto&& s : remain_snps) { s = false; }
     std::atomic<size_t> num_core = 0;
     using range = std::pair<size_t, size_t>;
     if (threads == 1)
