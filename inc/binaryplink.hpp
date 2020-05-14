@@ -67,8 +67,9 @@ protected:
         Genotype* genotype);
     std::unordered_set<std::string>
     get_founder_info(std::unique_ptr<std::istream>& famfile);
-
-    inline void read_genotype(uintptr_t* __restrict genotype, const SNP& snp)
+    inline void read_genotype(FileRead& genotype_file,
+                              uintptr_t* __restrict tmp_genotype,
+                              uintptr_t* __restrict genotype, const SNP& snp)
     {
         auto [file_idx, byte_pos] = snp.get_file_info(true);
         // first, generate the mask to mask out the last few byte that we don't
@@ -78,18 +79,17 @@ protected:
             get_final_mask(static_cast<uint32_t>(m_founder_ct));
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        auto&& load_target = (m_unfiltered_sample_ct == m_founder_ct)
-                                 ? genotype
-                                 : m_tmp_genotype.data();
+        auto&& load_target =
+            (m_unfiltered_sample_ct == m_founder_ct) ? genotype : tmp_genotype;
         // now we start reading / parsing the binary from the file
         assert(unfiltered_sample_ct);
-        m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
-                             unfiltered_sample_ct4,
-                             reinterpret_cast<char*>(load_target));
+        genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
+                           unfiltered_sample_ct4,
+                           reinterpret_cast<char*>(load_target));
         if (m_unfiltered_sample_ct != m_founder_ct)
         {
             copy_quaterarr_nonempty_subset(
-                m_tmp_genotype.data(), m_sample_for_ld.data(),
+                tmp_genotype, m_sample_for_ld.data(),
                 static_cast<uint32_t>(m_unfiltered_sample_ct),
                 static_cast<uint32_t>(m_founder_ct), genotype);
         }
@@ -97,6 +97,10 @@ protected:
         {
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
+    }
+    inline void read_genotype(uintptr_t* __restrict genotype, const SNP& snp)
+    {
+        read_genotype(m_genotype_file, m_tmp_genotype.data(), genotype, snp);
     }
 
     virtual void

@@ -2,6 +2,7 @@
 #define MOCK_BINARYPLINK_HPP
 #include "binaryplink.hpp"
 #include "genotype.hpp"
+#include "mock_genotype.hpp"
 #include <bitset>
 
 class mock_binaryplink : public ::BinaryPlink
@@ -31,7 +32,12 @@ public:
         m_existed_snps_index[cur.rs()] = m_existed_snps.size();
         m_existed_snps.emplace_back(cur);
     }
-    std::vector<SNP> existed_snps() const { return m_existed_snps; }
+    std::vector<std::pair<size_t, size_t>> test_get_chrom_boundary()
+    {
+        return get_chrom_boundary();
+    }
+    std::vector<size_t> sorted_p_index() { return m_sort_by_p_index; }
+    std::vector<SNP>& existed_snps() { return m_existed_snps; }
     void set_sample(uintptr_t n_sample) { m_unfiltered_sample_ct = n_sample; }
     void set_reporter(Reporter* reporter) { m_reporter = reporter; }
     void test_post_sample_read_init() { post_sample_read_init(); }
@@ -60,8 +66,6 @@ public:
                                const size_t sample_size)
     {
         std::ofstream plink(name + ".bed", std::ios::binary);
-        m_existed_snps.clear();
-        m_existed_snps.push_back(SNP("rs", 1, 1, "A", "T", 0, 3));
         m_genotype_file_names.clear();
         m_genotype_file_names.push_back(name);
         std::bitset<8> b;
@@ -108,7 +112,21 @@ public:
         }
         plink.close();
     }
-
+    void test_init_chr(int num_auto = 22, bool no_x = false, bool no_y = false,
+                       bool no_xy = false, bool no_mt = false)
+    {
+        init_chr(num_auto, no_x, no_y, no_xy, no_mt);
+    }
+    void add_file_name(const std::string& in)
+    {
+        m_genotype_file_names.push_back(in);
+    }
+    void set_founder_vector(const size_t n_sample)
+    {
+        for (size_t i = 0; i < n_sample; ++i)
+        { SET_BIT(i, m_sample_for_ld.data()); }
+        m_founder_ct = n_sample;
+    }
     void gen_fake_bed(const std::vector<std::vector<size_t>>& geno,
                       const std::string& name)
     { // it is a real bed file, but without the header
@@ -181,6 +199,7 @@ public:
     }
     void set_founder_vector(const std::vector<bool>& founder)
     {
+        m_founder_ct = 0;
         for (size_t i = 0; i < founder.size(); ++i)
         {
             if (founder[i])

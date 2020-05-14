@@ -438,8 +438,6 @@ void PRSice::run_competitive(
     }
     else
     {
-        // alternatively, if we only got one thread, we will use the no
-        // thread function to reduce threading overhead
         dummy_reporter<size_t> dummy(*this);
         subject_set_perm(dummy, target,
                          std::vector<size_t>(bk_start_idx, bk_end_idx),

@@ -89,27 +89,33 @@ protected:
         std::unordered_set<std::string>& processed_snps,
         std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
         Genotype* genotype);
-
-    inline void read_genotype(uintptr_t* genotype, const SNP& snp)
+    inline void read_genotype(FileRead& genotype_file, uintptr_t* tmp_genotype,
+                              uintptr_t* genotype, const SNP& snp)
     {
         auto [file_idx, byte_pos] = snp.get_file_info(true);
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
         if (m_ref_plink)
         {
-            m_genotype_file.read(m_genotype_file_names[file_idx], byte_pos,
-                                 unfiltered_sample_ct4,
-                                 reinterpret_cast<char*>(genotype));
+            genotype_file.read(m_genotype_file_names[file_idx], byte_pos,
+                               unfiltered_sample_ct4,
+                               reinterpret_cast<char*>(genotype));
         }
-        else if (!load_and_collapse_incl(byte_pos, file_idx, genotype))
+        else if (!load_and_collapse_incl(byte_pos, file_idx, genotype,
+                                         genotype_file))
         {
             throw std::runtime_error("Error: Cannot read the bgen file!");
         }
     }
+    inline void read_genotype(uintptr_t* genotype, const SNP& snp)
+    {
+        read_genotype(m_genotype_file, m_tmp_genotype.data(), genotype, snp);
+    }
 
     bool load_and_collapse_incl(const std::streampos byte_pos,
                                 const size_t& file_idx,
-                                uintptr_t* __restrict mainbuf)
+                                uintptr_t* __restrict mainbuf,
+                                FileRead& genotype_file)
     {
         assert(m_unfiltered_sample_ct);
         try
@@ -117,7 +123,7 @@ protected:
             PLINK_generator setter(&m_sample_for_ld, mainbuf, m_hard_threshold,
                                    m_dose_threshold);
             genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
-                m_genotype_file, m_genotype_file_names[file_idx] + ".bgen",
+                genotype_file, m_genotype_file_names[file_idx] + ".bgen",
                 m_context_map[file_idx], setter, &m_buffer1, &m_buffer2,
                 byte_pos);
         }

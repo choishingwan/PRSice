@@ -105,6 +105,10 @@ public:
         return (base_filter_by_value(token, base_file, threshold, filter_count,
                                      type, index));
     }
+    std::vector<std::pair<size_t, size_t>> test_get_chrom_boundary()
+    {
+        return get_chrom_boundary();
+    }
     void test_post_sample_read_init() { post_sample_read_init(); }
     bool test_parse_rs_id(const std::vector<std::string_view>& token,
                           const BaseFile& base_file,
@@ -269,6 +273,7 @@ public:
         { SET_BIT(i, m_calculate_prs.data()); }
         m_sample_ct = n_sample;
     }
+
     void set_founder_vector(const size_t n_sample)
     {
         for (size_t i = 0; i < n_sample; ++i)

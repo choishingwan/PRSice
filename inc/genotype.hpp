@@ -26,6 +26,7 @@
 #include "reporter.hpp"
 #include "snp.hpp"
 #include "storage.hpp"
+#include "thread_queue.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cctype>
@@ -298,6 +299,15 @@ public:
                                    m_unfiltered_sample_ct,
                                    m_founder_include2.data());
     }
+    void clumping(const Clumping& clump_info, Genotype& reference,
+                  size_t threads);
+    std::vector<std::pair<size_t, size_t>> get_chrom_boundary();
+    template <typename T>
+    void
+    threaded_clumping(const std::vector<std::pair<size_t, size_t>> snp_range,
+                      const Clumping& clump_info, T& progress_observer,
+                      std::vector<std::atomic<bool>>& remained_snps,
+                      std::atomic<size_t>& num_core, Genotype& reference);
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
     void clumping_no_store(const Clumping& clump_info, Genotype& reference);
     /*!
@@ -545,6 +555,36 @@ public:
     }
     void snp_extraction(const std::string& extract_snps,
                         const std::string& exclude_snps);
+    void clump_progress_observer(Thread_Queue<size_t>& progress_observer,
+                                 size_t total_snp, size_t num_thread,
+                                 bool verbose);
+    class dummy_reporter
+    {
+        bool m_completed = false;
+        bool m_verbose = true;
+        size_t m_total_snp = 0;
+        size_t m_processed = 0;
+        double m_prev_progress = 0;
+
+    public:
+        dummy_reporter(size_t total, bool verbose = true)
+            : m_verbose(verbose), m_total_snp(total)
+        {
+        }
+        void emplace(size_t&& item)
+        {
+            m_processed += item;
+            auto progress = (static_cast<double>(m_processed)
+                             / static_cast<double>(m_total_snp))
+                            * 100;
+            if (m_verbose && progress - m_prev_progress > 0.01)
+            {
+                fprintf(stderr, "\rClumping Progress: %03.2f%%", progress);
+                m_prev_progress = progress;
+            }
+        }
+        void completed() { m_completed = true; }
+    };
 
     Genotype& set_weight()
     {
@@ -986,6 +1026,9 @@ protected:
                           uintptr_t* index_genotype)
     {
         // reset the index_data information
+        if (index_genotype == nullptr)
+        { throw std::runtime_error("Error: Genotype is null!"); }
+        assert(index_genotype != nullptr);
         std::fill(index_data.begin(), index_data.end(), 0);
         vec_datamask(founder_count, 0, index_genotype, founder_include2.data(),
                      index_data.data());
@@ -1147,6 +1190,12 @@ protected:
                                       const SNP& /*snp*/)
     {
     }
+    virtual inline void read_genotype(FileRead& /*genotype_file*/,
+                                      uintptr_t* /*tmp_store*/,
+                                      uintptr_t* /*genotype*/,
+                                      const SNP& /*snp*/)
+    {
+    }
     virtual void
     read_score(std::vector<PRS>& /*prs_list*/,
                const std::vector<size_t>::const_iterator& /*start*/,
@@ -1192,6 +1241,16 @@ protected:
                 std::unordered_set<std::string>& duplicated_snps,
                 std::vector<bool>& retain_snp, Genotype* genotype);
     void shrink_snp_vector(const std::vector<bool>& retain)
+    {
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&retain, this](const SNP& s) {
+                               return !retain[(&s - &*begin(m_existed_snps))];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
+    }
+    void shrink_snp_vector(const std::vector<std::atomic<bool>>& retain)
     {
         m_existed_snps.erase(
             std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),

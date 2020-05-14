@@ -132,9 +132,14 @@ int main(int argc, char* argv[])
                     commander.get_clump_info().distance);
                 target_file->sort_by_p();
                 // now perform clumping
+                /*
                 target_file->efficient_clumping(
                     commander.get_clump_info(),
-                    commander.use_ref() ? *reference_file : *target_file);
+                    commander.use_ref() ? *reference_file : *target_file);*/
+                target_file->clumping(commander.get_clump_info(),
+                                      commander.use_ref() ? *reference_file
+                                                          : *target_file,
+                                      commander.get_prs_instruction().thread);
             }
             // immediately free the memory
             if (reference_file != nullptr) { delete reference_file; }

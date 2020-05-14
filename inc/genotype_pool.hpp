@@ -5,6 +5,7 @@
 #include <plink_common.hpp>
 #include <vector>
 // modified based on https://thinkingeek.com/2017/11/19/simple-memory-pool/
+
 class IndividualGenotype
 {
 private:
@@ -41,9 +42,7 @@ private:
         std::unique_ptr<MemoryPool> m_next;
 
     public:
-        ~MemoryPool()
-        { /*delete[] m_genotypes;*/
-        }
+        ~MemoryPool() {}
         MemoryPool(const size_t num_snps, const size_t memory_per_snp)
             : m_genotypes(new uintptr_t[num_snps * memory_per_snp])
             , m_genotype_list(new IndividualGenotype[num_snps])
@@ -63,7 +62,11 @@ private:
         }
         // return pointer to the start of the linked list, can be used to
         // appoint to the free list pointer
-        IndividualGenotype* get_genotypes() { return m_genotype_list.get(); }
+        IndividualGenotype* get_genotype_location()
+        {
+            return m_genotype_list.get();
+        }
+        uintptr_t* get_genotype_storage() { return m_genotypes.get(); }
         // connect the new memory pool to the current memory pool
         void set_next_collection(std::unique_ptr<MemoryPool>&& n)
         {
@@ -81,7 +84,7 @@ public:
         : m_num_snps(num_snps)
         , m_memory_per_snp(round_up_pow2(memory_per_snp, CACHELINE))
         , m_memory_pool(new MemoryPool(m_num_snps, m_memory_per_snp))
-        , m_free_list(m_memory_pool->get_genotypes())
+        , m_free_list(m_memory_pool->get_genotype_location())
     {
     }
     IndividualGenotype* alloc()
@@ -92,18 +95,21 @@ public:
                 new MemoryPool(m_num_snps, m_memory_per_snp));
             new_pool->set_next_collection(std::move(m_memory_pool));
             m_memory_pool.reset(new_pool.release());
-            m_free_list = m_memory_pool->get_genotypes();
+            m_free_list = m_memory_pool->get_genotype_location();
         }
         IndividualGenotype* current_item = m_free_list;
         // Update the free list to the next free item.
         m_free_list = current_item->get_next_item();
         // Get the storage for T.
+        assert(current_item != nullptr);
         return current_item;
     }
     void free(IndividualGenotype* t)
     {
         // Convert this pointer to T to its enclosing pointer of an item of the
         // arena.
+        if (t == nullptr)
+        { throw std::runtime_error("Error: Can't free null pointer!"); }
         IndividualGenotype* current_item = std::move(t);
         t = nullptr;
         // Add the item at the beginning of the free list.
