@@ -51,4 +51,4 @@ script:
   #- gprof ../bin/PRSice > gprof.log
   #- head gprof.log -n 100
   - cd ../
-  - coveralls --build-root build --gcov-options '\-lp' -e test -e src/dcdflib.cpp -e src/plink_common.cpp -e src/gzstream.cpp -e lib -e build/googletest-src -e build/CMakeFiles > log 
+  - coveralls --build-root build --gcov-options '\-lp' -e test -e src/dcdflib.cpp -e src/plink_common.cpp -e src/gzstream.cpp -e lib -e build/googletest-src -e  src/cgranges.cpp -e build/CMakeFiles > log 
