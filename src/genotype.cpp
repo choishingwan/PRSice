@@ -1117,7 +1117,7 @@ void Genotype::clumping(const Clumping& clump_info, Genotype& reference,
                         size_t threads)
 {
     m_reporter->report("Start performing clumping");
-    std::vector<std::atomic<int>> remain_snps(m_existed_snps.size());
+    std::vector<std::atomic<bool>> remain_snps(m_existed_snps.size());
     for (auto&& s : remain_snps) { s = 0; }
     std::atomic<size_t> num_core = 0;
     using range = std::pair<size_t, size_t>;
@@ -1162,7 +1162,12 @@ void Genotype::clumping(const Clumping& clump_info, Genotype& reference,
     }
     if (!m_reporter->unit_testing())
     { fprintf(stderr, "\rClumping Progress: %03.2f%%\n", 100.0); }
-    if (num_core != m_existed_snps.size()) { shrink_snp_vector(remain_snps); }
+
+    std::vector<bool> non_atomic_remain(m_existed_snps.size());
+    for (size_t i = 0; i < remain_snps.size(); ++i)
+    { non_atomic_remain[i] = remain_snps[i]; }
+    if (num_core != m_existed_snps.size())
+    { shrink_snp_vector(non_atomic_remain); }
     m_existed_snps_index.clear();
     m_reporter->report("Number of variant(s) after clumping : "
                        + misc::to_string(m_existed_snps.size()));
@@ -1191,7 +1196,7 @@ template <typename T>
 void Genotype::threaded_clumping(
     const std::vector<std::pair<size_t, size_t>> snp_range,
     const Clumping& clump_info, T& progress_observer,
-    std::vector<std::atomic<int>>& remain_snps, std::atomic<size_t>& num_core,
+    std::vector<std::atomic<bool>>& remain_snps, std::atomic<size_t>& num_core,
     Genotype& reference)
 {
     const double min_r2 = clump_info.use_proxy
@@ -1327,7 +1332,7 @@ void Genotype::threaded_clumping(
             }
             core_snp.set_clumped();
             // we set the remain_core to true so that we will keep it at the end
-            ++remain_snps[core_snp_idx];
+            remain_snps[core_snp_idx] = true;
             ++num_processed;
             ++local_num_core;
         }

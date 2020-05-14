@@ -306,7 +306,7 @@ public:
     void
     threaded_clumping(const std::vector<std::pair<size_t, size_t>> snp_range,
                       const Clumping& clump_info, T& progress_observer,
-                      std::vector<std::atomic<int>>& remained_snps,
+                      std::vector<std::atomic<bool>>& remained_snps,
                       std::atomic<size_t>& num_core, Genotype& reference);
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
 
@@ -1246,17 +1246,6 @@ protected:
             std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
                            [&retain, this](const SNP& s) {
                                return !retain[(&s - &*begin(m_existed_snps))];
-                           }),
-            m_existed_snps.end());
-        m_existed_snps.shrink_to_fit();
-    }
-    void shrink_snp_vector(const std::vector<std::atomic<int>>& removed)
-    {
-        m_existed_snps.erase(
-            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&removed, this](const SNP& s) {
-                               return removed[(&s - &*begin(m_existed_snps))]
-                                      == 0;
                            }),
             m_existed_snps.end());
         m_existed_snps.shrink_to_fit();
