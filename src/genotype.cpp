@@ -1162,12 +1162,11 @@ void Genotype::clumping(const Clumping& clump_info, Genotype& reference,
     }
     if (!m_reporter->unit_testing())
     { fprintf(stderr, "\rClumping Progress: %03.2f%%\n", 100.0); }
-
-    std::vector<bool> non_atomic_remain(m_existed_snps.size());
-    for (size_t i = 0; i < remain_snps.size(); ++i)
-    { non_atomic_remain[i] = remain_snps[i]; }
-    if (num_core != m_existed_snps.size())
-    { shrink_snp_vector(non_atomic_remain); }
+    /*
+        std::vector<bool> non_atomic_remain(m_existed_snps.size());
+        for (size_t i = 0; i < remain_snps.size(); ++i)
+        { non_atomic_remain[i] = remain_snps[i]; }*/
+    if (num_core != m_existed_snps.size()) { shrink_snp_vector(remain_snps); }
     m_existed_snps_index.clear();
     m_reporter->report("Number of variant(s) after clumping : "
                        + misc::to_string(m_existed_snps.size()));

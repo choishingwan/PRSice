@@ -29,6 +29,7 @@
 #include "thread_queue.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <cstdio>
 #include <cstring>
@@ -1241,6 +1242,16 @@ protected:
                 std::unordered_set<std::string>& duplicated_snps,
                 std::vector<bool>& retain_snp, Genotype* genotype);
     void shrink_snp_vector(const std::vector<bool>& retain)
+    {
+        m_existed_snps.erase(
+            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
+                           [&retain, this](const SNP& s) {
+                               return !retain[(&s - &*begin(m_existed_snps))];
+                           }),
+            m_existed_snps.end());
+        m_existed_snps.shrink_to_fit();
+    }
+    void shrink_snp_vector(const std::vector<std::atomic<bool>>& retain)
     {
         m_existed_snps.erase(
             std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
