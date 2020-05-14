@@ -309,7 +309,6 @@ public:
                       const Clumping& clump_info, T& progress_observer,
                       std::vector<std::atomic<bool>>& remained_snps,
                       std::atomic<size_t>& num_core, Genotype& reference);
-    void efficient_clumping(const Clumping& clump_info, Genotype& reference);
 
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression
