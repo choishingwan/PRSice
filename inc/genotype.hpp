@@ -1250,13 +1250,13 @@ protected:
             m_existed_snps.end());
         m_existed_snps.shrink_to_fit();
     }
-    void shrink_snp_vector(const std::vector<std::atomic<bool>>& retain)
+    void shrink_snp_vector(const std::vector<std::atomic<bool>>& removed)
     {
         m_existed_snps.erase(
             std::remove_if(
                 m_existed_snps.begin(), m_existed_snps.end(),
-                [&retain, this](const SNP& s) {
-                    return !retain[(&s - &*begin(m_existed_snps))].load();
+                [&removed, this](const SNP& s) {
+                    return removed[(&s - &*begin(m_existed_snps))].load();
                 }),
             m_existed_snps.end());
         m_existed_snps.shrink_to_fit();
