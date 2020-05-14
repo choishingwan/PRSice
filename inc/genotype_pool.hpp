@@ -80,6 +80,7 @@ private:
     IndividualGenotype* m_free_list;
 
 public:
+    GenotypePool() {};
     GenotypePool(size_t num_snps, size_t memory_per_snp)
         : m_num_snps(num_snps)
         , m_memory_per_snp(round_up_pow2(memory_per_snp, CACHELINE))

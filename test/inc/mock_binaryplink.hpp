@@ -57,9 +57,15 @@ public:
             unfiltered_sample_ct4, bed_offset, std::move(bim), duplicated_snps,
             processed_snps, retain_snp, chr_error, sex_error, genotype);
     }
+    void test_read_genotype(const SNP& snp, uintptr_t* genotype, bool is_ref)
+    {
+        read_genotype(snp, m_founder_ct, m_genotype_file, m_tmp_genotype.data(),
+                      genotype, m_sample_for_ld.data(), is_ref);
+    }
     void test_read_genotype(uintptr_t* genotype, SNP& snp)
     {
-        read_genotype(genotype, snp);
+        read_genotype(snp, m_founder_ct, m_genotype_file, m_tmp_genotype.data(),
+                      genotype, m_sample_for_ld.data());
     }
     void gen_fake_bed_from_int(const std::vector<std::vector<uintptr_t>>& geno,
                                const std::string& name,

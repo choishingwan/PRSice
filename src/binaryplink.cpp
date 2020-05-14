@@ -24,6 +24,7 @@ BinaryPlink::BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
     if (m_sample_file.empty())
     { m_sample_file = m_genotype_file_names.front() + ".fam"; }
     m_reporter->report(message);
+    m_hard_coded = true; // technically true
 }
 
 std::unordered_set<std::string>
@@ -355,12 +356,10 @@ void BinaryPlink::check_bed(const std::string& bed_name, size_t num_marker,
 }
 
 BinaryPlink::~BinaryPlink() {}
-
 void BinaryPlink::read_score(
     std::vector<PRS>& prs_list,
     const std::vector<size_t>::const_iterator& start_idx,
-    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero,
-    bool read_only)
+    const std::vector<size_t>::const_iterator& end_idx, bool reset_zero)
 {
     // for removing unwanted bytes from the end of the genotype vector
     const uintptr_t final_mask =
@@ -370,14 +369,12 @@ void BinaryPlink::read_score(
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     const uintptr_t unfiltered_sample_ct4 = (m_unfiltered_sample_ct + 3) / 4;
     const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
-    uint32_t ll_ct, lh_ct, hh_ct;
-    uint32_t ll_ctf, lh_ctf, hh_ctf;
+
     // for storing the count of each observation
     uint32_t homrar_ct = 0;
     uint32_t missing_ct = 0;
     uint32_t het_ct = 0;
     uint32_t homcom_ct = 0;
-    uint32_t tmp_total = 0;
     // currently hard code ploidy to 2. Will keep it this way unil we know how
     // to properly handly non-diploid chromosomes in human and other organisms
     const size_t ploidy = 2;
@@ -403,29 +400,19 @@ void BinaryPlink::read_score(
     // the PRS to zero instead of addint it up
     bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
-    // m_cur_file = ""; // just close it
-    // if (m_bed_file.is_open()) { m_bed_file.close(); }
     // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
-    std::streampos cur_line;
-    std::string file_name;
-    size_t file_idx;
+    uintptr_t* genotype_ptr;
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        if (!cur_snp.stored_genotype())
+        if (cur_snp.current_genotype() == nullptr)
         {
-            cur_snp.get_file_info(file_idx, cur_line, false);
-            file_name = m_genotype_file_names[file_idx] + ".bed";
-            // we now read the genotype from the file by calling
-            // load_and_collapse_incl
-            // important point to note here is the use of m_sample_include and
-            // m_sample_ct instead of using the m_founder m_founder_info as the
-            // founder vector is for LD calculation whereas the sample_include
-            // is for PRS
+            auto [file_idx, byte_pos] = cur_snp.get_file_info(false);
             m_genotype_file.read(
-                file_name, cur_line, unfiltered_sample_ct4,
+                m_genotype_file_names[file_idx] + ".bed", byte_pos,
+                unfiltered_sample_ct4,
                 reinterpret_cast<char*>(m_tmp_genotype.data()));
             if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                     m_prs_calculation.use_ref_maf))
@@ -433,14 +420,13 @@ void BinaryPlink::read_score(
                 // we need to calculate the MA
                 // if we want to use reference, we will always have calculated
                 // the MAF
+                uint32_t ll_ct, lh_ct, hh_ct;
+                uint32_t tmp_total = 0;
                 single_marker_freqs_and_hwe(
                     unfiltered_sample_ctv2, m_tmp_genotype.data(),
                     m_sample_include2.data(), m_founder_include2.data(),
-                    m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct, &ll_ctf,
-                    &lh_ctf, &hh_ctf);
-                homcom_ct = ll_ctf;
-                het_ct = lh_ctf;
-                homrar_ct = hh_ctf;
+                    m_sample_ct, &ll_ct, &lh_ct, &hh_ct, m_founder_ct,
+                    &homcom_ct, &het_ct, &homrar_ct);
                 tmp_total = (homcom_ct + het_ct + homrar_ct);
                 assert(m_founder_ct >= tmp_total);
                 missing_ct = m_founder_ct - tmp_total;
@@ -459,11 +445,11 @@ void BinaryPlink::read_score(
                 genotype = m_tmp_genotype;
                 genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
             }
-            if (read_only) { cur_snp.assign_genotype(genotype); }
+            genotype_ptr = genotype.data();
         }
         else
         {
-            genotype = cur_snp.get_genotype();
+            genotype_ptr = cur_snp.current_genotype();
             cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
                                m_prs_calculation.use_ref_maf);
         }
@@ -493,12 +479,9 @@ void BinaryPlink::read_score(
         miss_score = 0;
         if (mean_impute) { miss_score = ploidy * stat * maf; }
         // now we go through the SNP vector
-        if (!read_only)
-        {
-            read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
-                     miss_count, homcom_weight, het_weight, homrar_weight,
-                     not_first);
-        }
+        read_prs(genotype_ptr, prs_list, ploidy, stat, adj_score, miss_score,
+                 miss_count, homcom_weight, het_weight, homrar_weight,
+                 not_first);
         // indicate that we've already read in the first SNP and no longer need
         // to reset the PRS
         not_first = true;

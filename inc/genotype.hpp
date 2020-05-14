@@ -637,6 +637,7 @@ protected:
     // vector storing all the genotype files
     // std::vector<Sample> m_sample_names;
     FileRead m_genotype_file;
+    GenotypePool m_genotype_pool;
     std::vector<SNP> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
@@ -1110,12 +1111,11 @@ protected:
         sample_prs.prs = scores[geno];
     }
     template <class T>
-    void process_sample_prs(std::vector<uintptr_t>& genotype,
-                            std::vector<PRS>& prs_list,
+    void process_sample_prs(uintptr_t* genotype, std::vector<PRS>& prs_list,
                             const std::vector<double>& scores,
                             const std::vector<size_t>& counts, T load_prs)
     {
-        uintptr_t* lbptr = genotype.data();
+        uintptr_t* lbptr = genotype;
         uintptr_t ulii;
         uint32_t uii;
         uint32_t ujj;
@@ -1155,7 +1155,7 @@ protected:
         } while (uii < m_sample_ct);
     }
 
-    void read_prs(std::vector<uintptr_t>& genotype, std::vector<PRS>& prs_list,
+    void read_prs(uintptr_t* genotype, std::vector<PRS>& prs_list,
                   const size_t ploidy, const double stat,
                   const double adj_score, const double miss_score,
                   const size_t miss_count, const double homcom_weight,
@@ -1178,36 +1178,27 @@ protected:
         }
     }
 
-    /*!
-     * \brief Function to read in the genotype in PLINK binary format. Any
-     * subclass must implement this function to assist the processing of
-     * their specific file type. The first argument is the genotype vector
-     * use to store the PLINK binary whereas the second parameter is the
-     * streampos, allowing us to seekg to the specific location of the file
-     * as indicate in the thrid parameter
-     */
-    virtual inline void read_genotype(uintptr_t* /*genotype*/,
-                                      const SNP& /*snp*/)
-    {
-    }
-    virtual inline void read_genotype(FileRead& /*genotype_file*/,
-                                      uintptr_t* /*tmp_store*/,
-                                      uintptr_t* /*genotype*/,
-                                      const SNP& /*snp*/)
+
+    virtual inline void count_and_read_genotype(SNP& /* snp*/) {}
+    virtual inline void
+    read_genotype(const SNP& /*snp*/, const uintptr_t /* selected_size*/,
+                  FileRead& /*genotype_file*/, uintptr_t* /*tmp_store*/,
+                  uintptr_t* /*genotype*/, uintptr_t* /* subset_mask*/,
+                  bool is_ref = false)
     {
     }
     virtual void
     read_score(std::vector<PRS>& /*prs_list*/,
                const std::vector<size_t>::const_iterator& /*start*/,
                const std::vector<size_t>::const_iterator& /*end*/,
-               bool /*reset_zero*/, bool ultra = false)
+               bool /*reset_zero*/)
     {
     }
     void read_score(const std::vector<size_t>::const_iterator& start,
                     const std::vector<size_t>::const_iterator& end,
-                    bool reset_zero, bool ultra = false)
+                    bool reset_zero)
     {
-        read_score(m_prs_info, start, end, reset_zero, ultra);
+        read_score(m_prs_info, start, end, reset_zero);
     }
     void standardize_prs();
     // for loading the sample inclusion / exclusion set

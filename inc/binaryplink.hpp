@@ -40,7 +40,7 @@ public:
      * (F)
      * \param reporter is the logger
      */
-    BinaryPlink() {}
+    BinaryPlink() { m_hard_coded = true; }
     BinaryPlink(const GenoFile& geno, const Phenotype& pheno,
                 const std::string& delim, Reporter* reporter);
     ~BinaryPlink();
@@ -48,12 +48,13 @@ public:
 protected:
     std::vector<uintptr_t> m_sample_mask;
     std::streampos m_prev_loc = 0;
-    std::vector<Sample_ID> gen_sample_vector();
+    std::vector<Sample_ID> gen_sample_vector() override;
     void
     gen_snp_vector(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const std::string& out_prefix, Genotype* target = nullptr);
+                   const std::string& out_prefix,
+                   Genotype* target = nullptr) override;
     bool calc_freq_gen_inter(const QCFiltering& filter_info, const std::string&,
-                             Genotype* target = nullptr);
+                             Genotype* target = nullptr) override;
     void check_bed(const std::string& bed_name, size_t num_marker,
                    uintptr_t& bed_offset);
     size_t transverse_bed_for_snp(
@@ -67,47 +68,94 @@ protected:
         Genotype* genotype);
     std::unordered_set<std::string>
     get_founder_info(std::unique_ptr<std::istream>& famfile);
-    inline void read_genotype(FileRead& genotype_file,
-                              uintptr_t* __restrict tmp_genotype,
-                              uintptr_t* __restrict genotype, const SNP& snp)
+    inline void count_and_read_genotype(SNP& snp) override
     {
-        auto [file_idx, byte_pos] = snp.get_file_info(true);
+        // false because we only use this for target
+        auto [file_idx, byte_pos] = snp.get_file_info(false);
+        const uintptr_t unfiltered_sample_ct4 =
+            (m_unfiltered_sample_ct + 3) / 4;
+        auto&& snp_genotype = snp.current_genotype();
+        auto&& load_target = (m_unfiltered_sample_ct == m_sample_ct)
+                                 ? snp_genotype
+                                 : m_tmp_genotype.data();
+        m_genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
+                             unfiltered_sample_ct4,
+                             reinterpret_cast<char*>(load_target));
+        uint32_t homrar_ct = 0;
+        uint32_t missing_ct = 0;
+        uint32_t het_ct = 0;
+        uint32_t homcom_ct = 0;
+        if (!snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                            m_prs_calculation.use_ref_maf))
+        {
+            const uintptr_t unfiltered_sample_ctl =
+                BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+            const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
+            uint32_t tmp_total = 0;
+            uint32_t ll_ct, lh_ct, hh_ct;
+            single_marker_freqs_and_hwe(
+                unfiltered_sample_ctv2, load_target, m_sample_include2.data(),
+                m_founder_include2.data(), m_sample_ct, &ll_ct, &lh_ct, &hh_ct,
+                m_founder_ct, &homcom_ct, &het_ct, &homrar_ct);
+            tmp_total = (homcom_ct + het_ct + homrar_ct);
+            assert(m_founder_ct >= tmp_total);
+            missing_ct = m_founder_ct - tmp_total;
+            snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct, false);
+        }
+        if (m_unfiltered_sample_ct != m_sample_ct)
+        {
+            copy_quaterarr_nonempty_subset(
+                m_tmp_genotype.data(), m_calculate_prs.data(),
+                static_cast<uint32_t>(m_unfiltered_sample_ct),
+                static_cast<uint32_t>(m_sample_ct), snp_genotype);
+        }
+        else
+        {
+            const uintptr_t final_mask =
+                get_final_mask(static_cast<uint32_t>(m_sample_ct));
+            snp_genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
+        }
+    }
+
+    inline void read_genotype(const SNP& snp, const uintptr_t selected_size,
+                              FileRead& genotype_file,
+                              uintptr_t* __restrict tmp_genotype,
+                              uintptr_t* __restrict genotype,
+                              uintptr_t* __restrict subset_mask,
+                              bool is_ref = false) override
+    {
+        auto [file_idx, byte_pos] = snp.get_file_info(is_ref);
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
         // that there'll be trailling bytes that we don't want
         const uintptr_t final_mask =
-            get_final_mask(static_cast<uint32_t>(m_founder_ct));
+            get_final_mask(static_cast<uint32_t>(selected_size));
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
         auto&& load_target =
-            (m_unfiltered_sample_ct == m_founder_ct) ? genotype : tmp_genotype;
+            (m_unfiltered_sample_ct == selected_size) ? genotype : tmp_genotype;
         // now we start reading / parsing the binary from the file
         assert(unfiltered_sample_ct);
         genotype_file.read(m_genotype_file_names[file_idx] + ".bed", byte_pos,
                            unfiltered_sample_ct4,
                            reinterpret_cast<char*>(load_target));
-        if (m_unfiltered_sample_ct != m_founder_ct)
+        if (m_unfiltered_sample_ct != selected_size)
         {
             copy_quaterarr_nonempty_subset(
-                tmp_genotype, m_sample_for_ld.data(),
+                tmp_genotype, subset_mask,
                 static_cast<uint32_t>(m_unfiltered_sample_ct),
-                static_cast<uint32_t>(m_founder_ct), genotype);
+                static_cast<uint32_t>(selected_size), genotype);
         }
         else
         {
             genotype[(m_unfiltered_sample_ct - 1) / BITCT2] &= final_mask;
         }
     }
-    inline void read_genotype(uintptr_t* __restrict genotype, const SNP& snp)
-    {
-        read_genotype(m_genotype_file, m_tmp_genotype.data(), genotype, snp);
-    }
-
     virtual void
     read_score(std::vector<PRS>& prs_list,
                const std::vector<size_t>::const_iterator& start_idx,
                const std::vector<size_t>::const_iterator& end_idx,
-               bool reset_zero, bool ultra = false);
+               bool reset_zero) override;
 
     // modified version of the
     // single_marker_freqs_and_hwe function from PLINK (plink_filter.c)
