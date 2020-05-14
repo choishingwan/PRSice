@@ -309,7 +309,7 @@ public:
                       std::vector<std::atomic<bool>>& remained_snps,
                       std::atomic<size_t>& num_core, Genotype& reference);
     void efficient_clumping(const Clumping& clump_info, Genotype& reference);
-    void clumping_no_store(const Clumping& clump_info, Genotype& reference);
+
     /*!
      * \brief Before each run of PRSice, we need to reset the in regression
      * flag to false and propagate it later on to indicate if the sample is
@@ -1253,10 +1253,11 @@ protected:
     void shrink_snp_vector(const std::vector<std::atomic<bool>>& retain)
     {
         m_existed_snps.erase(
-            std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&retain, this](const SNP& s) {
-                               return !retain[(&s - &*begin(m_existed_snps))];
-                           }),
+            std::remove_if(
+                m_existed_snps.begin(), m_existed_snps.end(),
+                [&retain, this](const SNP& s) {
+                    return !retain[(&s - &*begin(m_existed_snps))].load();
+                }),
             m_existed_snps.end());
         m_existed_snps.shrink_to_fit();
     }
@@ -1345,6 +1346,7 @@ protected:
                        double known22, double center_ct_d, double freq11,
                        double freq12, double freq21, double freq22,
                        double half_hethet_share, double freq11_incr);
+    std::mutex m_clump_mutex;
 };
 
 #endif /* SRC_GENOTYPE_HPP_ */
