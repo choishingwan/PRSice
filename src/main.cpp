@@ -94,11 +94,10 @@ int main(int argc, char* argv[])
             }
             const auto [region_names, num_regions] =
                 add_gene_set_info(commander, target_file, reporter);
-
-            PRSice prsice(commander.get_prs_instruction(),
-                          commander.get_p_threshold(), commander.get_pheno(),
-                          commander.get_perm(), commander.out(), &reporter);
-            prsice.pheno_check();
+            auto prs_instruction = commander.get_prs_instruction();
+            auto pheno_info = commander.get_pheno();
+            PRSice::pheno_check(prs_instruction.no_regress, pheno_info,
+                                reporter);
 
             if (!commander.get_clump_info().no_clump)
             {
@@ -140,11 +139,16 @@ int main(int argc, char* argv[])
             // one progress bar per phenotype
             // one extra progress bar for competitive permutation
             assert(target_file->get_set_thresholds().size() == num_regions);
-            prsice.init_progress_count(target_file->get_set_thresholds());
-            const size_t num_pheno = prsice.num_phenotype();
+
+
+            const size_t num_pheno = pheno_info.pheno_col_idx.size();
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
-                prsice.reset_progress();
+                PRSice prsice(commander.get_prs_instruction(),
+                              commander.get_p_threshold(), pheno_info,
+                              commander.get_perm(), commander.out(), &reporter);
+                prsice.init_progress_count(target_file->get_set_thresholds());
+
                 if (prsice.pheno_skip(i_pheno))
                 {
                     reporter.simple_report("Skipping the "
@@ -195,11 +199,13 @@ int main(int argc, char* argv[])
                     }
                 }
             }
-            prsice.print_progress(true);
-            fprintf(stderr, "\n");
+            // prsice.print_progress(true);
+            // fprintf(stderr, "\n");
+            /*
             if (!commander.get_prs_instruction().no_regress)
                 // now generate the summary file
                 prsice.summarize();
+                */
         }
         catch (const std::invalid_argument& ia)
         {

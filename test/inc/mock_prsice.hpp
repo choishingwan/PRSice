@@ -15,15 +15,17 @@ public:
     }
     void set_reporter(Reporter* reporter) { m_reporter = reporter; }
 
-    std::tuple<size_t, bool>
+    static std::tuple<size_t, bool>
     test_get_pheno_idx(const std::vector<std::string_view>& column,
-                       const std::string& pheno)
+                       const Phenotype& pheno_info, const std::string& pheno)
     {
-        return get_pheno_idx(column, pheno);
+        return PRSice::get_pheno_idx(column, pheno_info, pheno);
     }
-    void test_parse_pheno_header(std::unique_ptr<std::istream> pheno_file)
+    static void
+    test_parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
+                            Phenotype& pheno_info, Reporter& reporter)
     {
-        parse_pheno_header(std::move(pheno_file));
+        parse_pheno_header(std::move(pheno_file), pheno_info, reporter);
     }
     Phenotype get_pheno_info() const { return m_pheno_info; }
     std::tuple<size_t, size_t> get_progress()

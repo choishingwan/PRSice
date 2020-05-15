@@ -91,7 +91,8 @@ public:
      * \param is the column name of the desired phenotypes
      * \param reporter is the logger
      */
-    void pheno_check();
+    static void pheno_check(const bool no_regress, Phenotype& pheno,
+                            Reporter& reporter);
     bool pheno_skip(size_t idx) const
     {
         return m_pheno_info.skip_pheno.at(idx);
@@ -251,10 +252,11 @@ public:
                     const size_t pheno_index);
 
 protected:
-    void parse_pheno_header(std::unique_ptr<std::istream> pheno_file);
-    std::tuple<size_t, bool>
+    static void parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
+                                   Phenotype& pheno_info, Reporter& reporter);
+    static std::tuple<size_t, bool>
     get_pheno_idx(const std::vector<std::string_view>& column,
-                  const std::string& pheno);
+                  const Phenotype& pheno_info, const std::string& pheno);
 
     struct prsice_result
     {
