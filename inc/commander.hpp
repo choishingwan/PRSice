@@ -43,7 +43,7 @@
 #endif
 
 const std::string version = "2.2.14";
-const std::string date = "2020-04-25";
+const std::string date = "2020-05-15";
 class Commander
 {
 public:

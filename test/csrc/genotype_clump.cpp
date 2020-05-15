@@ -26,8 +26,10 @@ TEST_CASE("Sort by p")
                                                "rs3452", "rs3457"};
     auto res = geno.existed_snps();
     REQUIRE(res.size() == expected_order.size());
+    std::vector<std::string> observed;
     for (size_t i = 0; i < res.size(); ++i)
-    { REQUIRE(res[idx[i]].rs() == expected_order[i]); }
+    { observed.push_back(res[idx[i]].rs()); }
+    REQUIRE_THAT(observed, Catch::Equals<std::string>(expected_order));
 }
 TEST_CASE("Build Clump window")
 {

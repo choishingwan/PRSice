@@ -42,6 +42,15 @@ public:
         const std::string& ref_allele, const std::string& alt_allele,
         const double& stat, const double& p_value,
         const unsigned long long category, const double p_threshold)
+        : SNP(rs_id, chr, loc, ref_allele, alt_allele, ~size_t(0), 0, stat,
+              p_value, category, p_threshold)
+    {
+    }
+    SNP(const std::string& rs_id, const size_t chr, const size_t loc,
+        const std::string& ref_allele, const std::string& alt_allele,
+        const size_t& idx, const std::streampos byte_pos, const double& stat,
+        const double& p_value, const unsigned long long category,
+        const double p_threshold)
         : m_alt(alt_allele)
         , m_ref(ref_allele)
         , m_rs(rs_id)
@@ -52,20 +61,18 @@ public:
         , m_loc(loc)
         , m_category(category)
     {
-    }
-    SNP(const std::string& rs_id, const size_t chr, const size_t loc,
-        const std::string& ref_allele, const std::string& alt_allele,
-        const size_t& idx, const std::streampos byte_pos)
-        : m_alt(alt_allele)
-        , m_ref(ref_allele)
-        , m_rs(rs_id)
-        , m_chr(chr)
-        , m_loc(loc)
-    {
         m_target.name_idx = idx;
         m_target.byte_pos = byte_pos;
         m_reference.name_idx = idx;
         m_reference.byte_pos = byte_pos;
+    }
+
+    SNP(const std::string& rs_id, const size_t chr, const size_t loc,
+        const std::string& ref_allele, const std::string& alt_allele,
+        const size_t& idx, const std::streampos byte_pos)
+        : SNP(rs_id, chr, loc, ref_allele, alt_allele, idx, byte_pos, 0, 0, 0,
+              0)
+    {
     }
 
     virtual ~SNP();
@@ -166,7 +173,12 @@ public:
     size_t chr() const { return m_chr; }
     size_t loc() const { return m_loc; }
     unsigned long long category() const { return m_category; }
-
+    void set_category(const unsigned long long& category, const double& p_thres)
+    {
+        m_category = category;
+        m_p_threshold = p_thres;
+        return;
+    }
     void set_category(unsigned long long& cur_category, double& cur_p_start,
                       const double& upper, const double& inter, bool& warning)
     {

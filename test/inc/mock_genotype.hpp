@@ -291,6 +291,7 @@ public:
             }
         }
     }
+    void set_very_small_thresholds() { m_very_small_thresholds = true; }
 };
 
 #endif // MOCK_GENOTYPE_H

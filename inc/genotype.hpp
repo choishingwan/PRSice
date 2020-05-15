@@ -333,7 +333,7 @@ public:
      * m_existed_snp vector according to their p-value.
      * \return True if there are SNPs to process
      */
-    bool prepare_prsice(const PThresholding& m_p_info);
+    bool prepare_prsice();
     /*!
      * \brief This function will return the sample ID
      * \param i is the index of the sample

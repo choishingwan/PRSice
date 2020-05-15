@@ -1383,22 +1383,46 @@ void Genotype::recalculate_categories(const PThresholding& p_info)
         }
     }
 }
-bool Genotype::prepare_prsice(const PThresholding& p_info)
+bool Genotype::prepare_prsice()
 {
     if (m_existed_snps.size() == 0) return false;
-    if (m_very_small_thresholds) { recalculate_categories(p_info); }
-    std::sort(begin(m_existed_snps), end(m_existed_snps),
-              [](SNP const& t1, SNP const& t2) {
-                  if (t1.category() == t2.category())
-                  {
-                      if (t1.get_file_idx() == t2.get_file_idx())
-                      { return t1.get_byte_pos() < t2.get_byte_pos(); }
+    if (m_very_small_thresholds)
+    {
+        // simply run it SNP by SNP
+        std::sort(begin(m_existed_snps), end(m_existed_snps),
+                  [](SNP const& t1, SNP const& t2) {
+                      if (misc::logically_equal(t1.p_value(), t2.p_value()))
+                      {
+                          if (t1.get_file_idx() == t2.get_file_idx())
+                          { return t1.get_byte_pos() < t2.get_byte_pos(); }
+                          else
+                              return t1.get_file_idx() < t2.get_file_idx();
+                      }
                       else
-                          return t1.get_file_idx() < t2.get_file_idx();
-                  }
-                  else
-                      return t1.category() < t2.category();
-              });
+                          return t1.p_value() < t2.p_value();
+                  });
+        unsigned long long idx = 0;
+        for (auto&& snp : m_existed_snps)
+        {
+            snp.set_category(idx, snp.p_value());
+            ++idx;
+        }
+    }
+    else
+    {
+        std::sort(begin(m_existed_snps), end(m_existed_snps),
+                  [](SNP const& t1, SNP const& t2) {
+                      if (t1.category() == t2.category())
+                      {
+                          if (t1.get_file_idx() == t2.get_file_idx())
+                          { return t1.get_byte_pos() < t2.get_byte_pos(); }
+                          else
+                              return t1.get_file_idx() < t2.get_file_idx();
+                      }
+                      else
+                          return t1.category() < t2.category();
+                  });
+    }
     return true;
 }
 

@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
             // Column = set, row = SNPs (because EIGEN is column major)
             // need to also know the number of threshold included
             std::vector<std::vector<size_t>> region_membership;
-            target_file->prepare_prsice(commander.get_p_threshold());
+            target_file->prepare_prsice();
             // from now on, we are not allow to sort the m_existed_snps
             target_file->build_membership_matrix(region_membership, num_regions,
                                                  commander.out(), region_names,
