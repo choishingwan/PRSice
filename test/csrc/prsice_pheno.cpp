@@ -579,6 +579,17 @@ TEST_CASE("gen_pheno_vec")
                     == Approx(misc::convert<double>(samples[i].pheno)));
         }
     }
+    SECTION("From fam")
+    {
+        REQUIRE_NOTHROW(
+            prsice.test_gen_pheno_vec("", pheno_name, " ", 2, false, geno));
+        Eigen::VectorXd res = prsice.phenotype_matrix();
+        for (size_t i = 0; i < samples.size(); ++i)
+        {
+            REQUIRE(res(i, 0)
+                    == Approx(misc::convert<double>(samples[i].pheno)));
+        }
+    }
 }
 TEST_CASE("Print Phenotype log")
 {

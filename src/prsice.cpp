@@ -169,7 +169,13 @@ void PRSice::new_phenotype(Genotype& target)
     if (m_prs_info.no_regress) { update_sample_included("", false, target); }
 }
 
-
+void PRSice::init_matrix(const std::string& file_name,
+                         const std::string& pheno_name,
+                         const std::string& delim, const size_t file_idx,
+                         const bool ignore_fid, Genotype& target)
+{
+    gen_pheno_vec(file_name, pheno_name, delim, file_idx, ignore_fid, target);
+}
 void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
                          Genotype& target)
 {
@@ -178,7 +184,8 @@ void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
 
     // read in phenotype vector
     gen_pheno_vec(m_pheno_info.pheno_file, m_pheno_info.pheno_col[pheno_index],
-                  delim, pheno_index, m_pheno_info.ignore_fid, target);
+                  delim, m_pheno_info.pheno_col_idx[pheno_index],
+                  m_pheno_info.ignore_fid, target);
     // now that we've got the phenotype, we can start processing the more
     // complicated covariate
     gen_cov_matrix(delim);
@@ -538,8 +545,9 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
 
 void PRSice::gen_pheno_vec(const std::string& pheno_file,
                            const std::string& pheno_name,
-                           const std::string& delim, const size_t pheno_idx,
-                           const bool ignore_fid, Genotype& target)
+                           const std::string& delim,
+                           const size_t pheno_file_idx, const bool ignore_fid,
+                           Genotype& target)
 {
     // we will first store the phenotype into the double vector and then
     // later use this to construct the matrix
@@ -551,8 +559,8 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file,
     if (!pheno_file.empty()) // use phenotype file
     {
         std::tie(pheno_store, num_not_found, invalid_pheno, max_pheno_code) =
-            process_phenotype_file(pheno_file, delim, pheno_idx, ignore_fid,
-                                   target);
+            process_phenotype_file(pheno_file, delim, pheno_file_idx,
+                                   ignore_fid, target);
     }
     else
     {
@@ -574,9 +582,8 @@ bool PRSice::validate_covariate(const std::string& covariate,
 
 )
 {
-    if (covariate == "NA")
+    if (covariate == "NA" || covariate == "NAN")
     {
-        // this sample has a missing covariate
         ++missing_count[idx];
         return false;
     }
@@ -692,6 +699,7 @@ void PRSice::update_sample_matrix(
         static_cast<Eigen::Index>(valid_sample_index.size()), 1);
 }
 
+
 void PRSice::process_cov_file(
     std::vector<size_t>& cov_start_index,
     std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
@@ -755,8 +763,7 @@ void PRSice::process_cov_file(
             factor_level_index = 0;
             for (auto&& header : m_pheno_info.col_index_of_cov)
             {
-                std::transform(token[header].begin(), token[header].end(),
-                               token[header].begin(), ::toupper);
+                misc::to_upper(token[header]);
                 valid &= validate_covariate(token[header], num_factors, header,
                                             factor_level_index, missing_count);
             }
@@ -853,7 +860,18 @@ void PRSice::process_cov_file(
     { update_sample_matrix(missing_count, valid_sample_index); }
     num_column = total_column;
 }
-
+/*
+void PRSice::gen_cov_matrix(const std::string& cov_file,
+                            const std::string& delim)
+{
+    Eigen::Index num_sample =
+        static_cast<Eigen::Index>(m_sample_with_phenotypes.size());
+    if (cov_file.empty())
+    {
+        m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
+        return;
+    }
+}*/
 void PRSice::gen_cov_matrix(const std::string& delim)
 {
     // The size of the map should be informative of the number of sample

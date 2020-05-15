@@ -97,15 +97,10 @@ public:
     static void pheno_check(const bool no_regress, Phenotype& pheno,
                             Reporter& reporter);
 
-    // init_matrix whenever phenotype changes
-    /*!
-     * \brief init_matrix will initialize the independent and dependent matrix
-     * \param c_commander contains all user input
-     * \param pheno_index is the index of the phenotype we are currently
-     * processing
-     * \param target is the target genotype. Provide the sample ID information
-     * \param reporter is the logger
-     */
+    void init_matrix(const std::string& file_name,
+                     const std::string& pheno_name, const std::string& delim,
+                     const size_t file_idx, const bool ignore_fid,
+                     Genotype& target);
     void init_matrix(const size_t pheno_index, const std::string& delim,
                      Genotype& target);
     void new_phenotype(Genotype& target);
@@ -349,7 +344,7 @@ protected:
 
     void gen_pheno_vec(const std::string& pheno_file,
                        const std::string& pheno_name, const std::string& delim,
-                       const size_t pheno_idx, const bool ignore_fid,
+                       const size_t pheno_file_idx, const bool ignore_fid,
                        Genotype& target);
     std::tuple<std::vector<double>, size_t, size_t, int> process_phenotype_file(
         const std::string& file_name, const std::string& delim,
