@@ -177,7 +177,8 @@ void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
     // don't need to do anything if we don't need to do regression
 
     // read in phenotype vector
-    gen_pheno_vec(target, pheno_index, delim);
+    gen_pheno_vec(m_pheno_info.pheno_file, m_pheno_info.pheno_col[pheno_index],
+                  delim, pheno_index, m_pheno_info.ignore_fid, target);
     // now that we've got the phenotype, we can start processing the more
     // complicated covariate
     gen_cov_matrix(delim);
@@ -535,23 +536,23 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
     m_reporter->report(message);
 }
 
-void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
-                           const std::string& delim)
+void PRSice::gen_pheno_vec(const std::string& pheno_file,
+                           const std::string& pheno_name,
+                           const std::string& delim, const size_t pheno_idx,
+                           const bool ignore_fid, Genotype& target)
 {
     // we will first store the phenotype into the double vector and then
     // later use this to construct the matrix
-    const std::string pheno_name = m_pheno_info.pheno_col[pheno_index];
     const size_t sample_ct = target.num_sample();
-    const bool ignore_fid = m_pheno_info.ignore_fid;
     size_t num_not_found = 0;
     size_t invalid_pheno = 0;
     int max_pheno_code = 0;
     std::vector<double> pheno_store;
-    if (!m_pheno_info.pheno_file.empty()) // use phenotype file
+    if (!pheno_file.empty()) // use phenotype file
     {
         std::tie(pheno_store, num_not_found, invalid_pheno, max_pheno_code) =
-            process_phenotype_file(m_pheno_info.pheno_file, delim, pheno_index,
-                                   ignore_fid, target);
+            process_phenotype_file(pheno_file, delim, pheno_idx, ignore_fid,
+                                   target);
     }
     else
     {

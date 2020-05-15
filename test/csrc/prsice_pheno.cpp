@@ -234,7 +234,7 @@ TEST_CASE("load_pheno_map")
         }
     }
 }
-TEST_CASE("gen_pheno_vec")
+TEST_CASE("test phenotype file processes")
 {
 
     Reporter reporter("log", 60, true);
@@ -538,7 +538,48 @@ TEST_CASE("Parse phenotype")
         }
     }
 }
+TEST_CASE("gen_pheno_vec")
+{
 
+    auto pheno_name = "Phenotype";
+    const size_t sample_size = 100;
+    std::vector<Sample_ID> samples;
+    samples.reserve(sample_size);
+    std::random_device rnd_device;
+    std::mt19937 mersenne_engine {rnd_device()};
+    std::uniform_real_distribution<double> dist {-1.0, 1.0};
+
+    auto gen = [&dist, &mersenne_engine]() { return dist(mersenne_engine); };
+    for (size_t i = 0; i < sample_size; ++i)
+    {
+        samples.emplace_back(Sample_ID(std::to_string(i), std::to_string(i),
+                                       std::to_string(gen()), true));
+    }
+    mockGenotype geno;
+    std::shuffle(samples.begin(), samples.end(), mersenne_engine);
+    for (auto&& s : samples) { geno.add_sample(s); }
+    geno.set_sample(samples.size());
+    Reporter reporter("log", 60, true);
+    mock_prsice prsice(false, &reporter);
+    SECTION("From file")
+    {
+        std::ofstream pheno_file("pheno_full_load");
+        for (auto&& s : samples)
+        {
+            pheno_file << s.FID << "\t" << s.IID << "\t" << s.pheno
+                       << std::endl;
+        }
+        pheno_file.close();
+        REQUIRE_NOTHROW(prsice.test_gen_pheno_vec("pheno_full_load", pheno_name,
+                                                  " ", 2, false, geno));
+        Eigen::VectorXd res = prsice.phenotype_matrix();
+        for (size_t i = 0; i < samples.size(); ++i)
+        {
+            REQUIRE(res(i, 0)
+                    == Approx(misc::convert<double>(samples[i].pheno)));
+        }
+    }
+}
 TEST_CASE("Print Phenotype log")
 {
     auto ignore_fid = GENERATE(true, false);

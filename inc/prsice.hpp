@@ -346,17 +346,11 @@ protected:
     void update_sample_included(const std::string& delim, const bool binary,
                                 Genotype& target);
     void slow_print_best(Genotype& target, const size_t pheno_index);
-    /*!
-     * \brief gen_pheno_vec is the function responsible for generating the
-     * phenotype vector
-     * \param target is the target genotype object, providing information on
-     * FID, IID and also phenotype (e.g. from fam file)
-     * \param pheno_file_name contains the name of the phenotype file
-     * \param pheno_index contain the index of the current phenotype
-     * \param reporter is the logger
-     */
-    void gen_pheno_vec(Genotype& target, const size_t pheno_index,
-                       const std::string& delim);
+
+    void gen_pheno_vec(const std::string& pheno_file,
+                       const std::string& pheno_name, const std::string& delim,
+                       const size_t pheno_idx, const bool ignore_fid,
+                       Genotype& target);
     std::tuple<std::vector<double>, size_t, size_t, int> process_phenotype_file(
         const std::string& file_name, const std::string& delim,
         const std::size_t pheno_idx, const bool ignore_fid, Genotype& target);

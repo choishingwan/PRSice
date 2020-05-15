@@ -103,6 +103,15 @@ public:
         print_pheno_log(name, sample_ct, num_not_found, invalid_pheno,
                         max_pheno_code, ignore_fid, pheno_store);
     }
+    void test_gen_pheno_vec(const std::string& pheno_file,
+                            const std::string& pheno_name,
+                            const std::string& delim, const size_t pheno_idx,
+                            const bool ignore_fid, Genotype& target)
+    {
+        gen_pheno_vec(pheno_file, pheno_name, delim, pheno_idx, ignore_fid,
+                      target);
+    }
+    Eigen::VectorXd& phenotype_matrix() { return m_phenotype; }
 };
 
 #endif // MOCK_PRSICE_HPP
