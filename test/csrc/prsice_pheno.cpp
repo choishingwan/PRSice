@@ -234,233 +234,307 @@ TEST_CASE("load_pheno_map")
         }
     }
 }
+TEST_CASE("gen_pheno_vec")
+{
 
-TEST_CASE("Generate pheno vector")
+    Reporter reporter("log", 60, true);
+    auto ignore_fid = GENERATE(true, false);
+    mockGenotype geno;
+    SECTION("binary trait")
+    {
+        // two case, two control, one invalid pheno, one -9, one nan, one NA
+        // all with regression = true
+        std::vector<Sample_ID> samples {
+            Sample_ID("Case1", "Case1", "1", true),
+            Sample_ID("Case2", "Case2", "1", true),
+            Sample_ID("Control1", "Control1", "0", true),
+            Sample_ID("Case3", "Case3", "1", true),
+            Sample_ID("Control2", "Control2", "0", true),
+            Sample_ID("Missing", "Missing", "-9", true),
+            Sample_ID("na1", "na1", "nan", true),
+            Sample_ID("invalid", "invalid", "string", true),
+            Sample_ID("na2", "na2", "NA", true)};
+
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(samples.begin(), samples.end(), g);
+        for (auto&& s : samples) { geno.add_sample(s); }
+        geno.set_sample(samples.size());
+        mock_prsice prsice(true, &reporter);
+        SECTION("From phenotype file")
+        {
+            // also need one not found
+            std::ofstream pheno_file("pheno_test");
+            for (auto&& s : samples)
+            {
+                if (s.FID != "Control2")
+                {
+                    pheno_file << s.FID << "\t" << s.IID << "\t" << s.pheno
+                               << std::endl;
+                }
+            }
+            pheno_file << "NotFound\tNotFound\t1" << std::endl;
+            pheno_file.close();
+            auto [pheno_store, num_not_found, invalid, max_code] =
+                prsice.test_process_phenotype_file("pheno_test", " ", 2,
+                                                   ignore_fid, geno);
+            REQUIRE(num_not_found == 1);
+            REQUIRE(invalid == 1);
+            REQUIRE(max_code == 1);
+            auto pheno_map = prsice.sample_with_phenotypes();
+            size_t valid_idx = 0;
+            std::vector<double> expected;
+            for (size_t i = 0; i < samples.size(); ++i)
+            {
+                if (samples[i].FID != "Missing" && samples[i].FID != "na1"
+                    && samples[i].FID != "na2" && samples[i].FID != "invalid"
+                    && samples[i].FID != "Control2")
+                {
+                    auto id = ignore_fid
+                                  ? samples[i].IID
+                                  : samples[i].FID + " " + samples[i].IID;
+                    auto loc = pheno_map.find(id);
+                    REQUIRE(loc != pheno_map.end());
+                    REQUIRE(loc->second == valid_idx);
+                    expected.push_back(misc::convert<double>(samples[i].pheno));
+                    ++valid_idx;
+                }
+            }
+            REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
+        }
+        SECTION("Directly from fam")
+        {
+            auto [pheno_store, invalid, max_code] =
+                prsice.test_process_phenotype_info(" ", ignore_fid, geno);
+            REQUIRE(invalid == 1);
+            REQUIRE(max_code == 1);
+            auto pheno_map = prsice.sample_with_phenotypes();
+            size_t valid_idx = 0;
+            std::vector<double> expected;
+            for (size_t i = 0; i < samples.size(); ++i)
+            {
+                if (samples[i].FID != "Missing" && samples[i].FID != "na1"
+                    && samples[i].FID != "na2" && samples[i].FID != "invalid")
+                {
+                    auto id = ignore_fid
+                                  ? samples[i].IID
+                                  : samples[i].FID + " " + samples[i].IID;
+                    auto loc = pheno_map.find(id);
+                    REQUIRE(loc != pheno_map.end());
+                    REQUIRE(loc->second == valid_idx);
+                    expected.push_back(misc::convert<double>(samples[i].pheno));
+                    ++valid_idx;
+                }
+            }
+            REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
+        }
+    }
+    SECTION("quantitative trait")
+    {
+
+        // 4 valid , one invalid pheno, one -9, one nan, one NA
+        // all with regression = true
+        std::vector<Sample_ID> samples {
+            Sample_ID("ID1", "ID1", "1", true),
+            Sample_ID("ID2", "ID2", "2", true),
+            Sample_ID("ID3", "ID3", "3", true),
+            Sample_ID("ID4", "ID4", "4", true),
+            Sample_ID("Missing", "Missing", "-9", true),
+            Sample_ID("na1", "na1", "nan", true),
+            Sample_ID("invalid", "invalid", "string", true),
+            Sample_ID("na2", "na2", "NA", true)};
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(samples.begin(), samples.end(), g);
+        for (auto&& s : samples) { geno.add_sample(s); }
+        geno.set_sample(samples.size());
+
+        mock_prsice prsice(false, &reporter);
+        SECTION("Directly from fam")
+        {
+            auto [pheno_store, invalid, max_code] =
+                prsice.test_process_phenotype_info(" ", ignore_fid, geno);
+            REQUIRE(invalid == 1);
+            // doesn't matter with max code
+            auto pheno_map = prsice.sample_with_phenotypes();
+            size_t valid_idx = 0;
+            std::vector<double> expected;
+            for (size_t i = 0; i < samples.size(); ++i)
+            {
+                if (samples[i].FID != "na1" && samples[i].FID != "na2"
+                    && samples[i].FID != "invalid")
+                {
+                    auto id = ignore_fid
+                                  ? samples[i].IID
+                                  : samples[i].FID + " " + samples[i].IID;
+                    auto loc = pheno_map.find(id);
+                    REQUIRE(loc != pheno_map.end());
+                    REQUIRE(loc->second == valid_idx);
+                    expected.push_back(misc::convert<double>(samples[i].pheno));
+                    ++valid_idx;
+                }
+            }
+            REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
+        }
+
+        SECTION("From phenotype file")
+        {
+            // also need one not found
+            std::ofstream pheno_file("pheno_test");
+            for (auto&& s : samples)
+            {
+                if (s.FID != "ID4")
+                {
+                    pheno_file << s.FID << "\t" << s.IID << "\t" << s.pheno
+                               << std::endl;
+                }
+            }
+            pheno_file << "NotFound\tNotFound\t1" << std::endl;
+            pheno_file.close();
+            auto [pheno_store, num_not_found, invalid, max_code] =
+                prsice.test_process_phenotype_file("pheno_test", " ", 2,
+                                                   ignore_fid, geno);
+            REQUIRE(num_not_found == 1);
+            REQUIRE(invalid == 1);
+            auto pheno_map = prsice.sample_with_phenotypes();
+            size_t valid_idx = 0;
+            std::vector<double> expected;
+            for (size_t i = 0; i < samples.size(); ++i)
+            {
+                if (samples[i].FID != "na1" && samples[i].FID != "na2"
+                    && samples[i].FID != "invalid" && samples[i].FID != "ID4")
+                {
+                    auto id = ignore_fid
+                                  ? samples[i].IID
+                                  : samples[i].FID + " " + samples[i].IID;
+                    auto loc = pheno_map.find(id);
+                    REQUIRE(loc != pheno_map.end());
+                    REQUIRE(loc->second == valid_idx);
+                    expected.push_back(misc::convert<double>(samples[i].pheno));
+                    ++valid_idx;
+                }
+            }
+            REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
+        }
+    }
+}
+TEST_CASE("Phenotype checking")
 {
     Reporter reporter("log", 60, true);
-    SECTION("gen_pheno_vec")
+
+    std::vector<double> pheno_store;
+    SECTION("Quantitative trait")
     {
-        mockGenotype geno;
-        SECTION("binary trait")
+        mock_prsice prsice(false, &reporter);
+        SECTION("One phenotype only")
         {
-            // two case, two control, one invalid pheno, one -9, one nan, one NA
-            // all with regression = true
-            std::vector<Sample_ID> samples {
-                Sample_ID("Case1", "Case1", "1", true),
-                Sample_ID("Case2", "Case2", "1", true),
-                Sample_ID("Control1", "Control1", "0", true),
-                Sample_ID("Case3", "Case3", "1", true),
-                Sample_ID("Control2", "Control2", "0", true),
-                Sample_ID("Missing", "Missing", "-9", true),
-                Sample_ID("na1", "na1", "nan", true),
-                Sample_ID("invalid", "invalid", "string", true),
-                Sample_ID("na2", "na2", "NA", true)};
-
-            std::random_device rd;
-            std::mt19937 g(rd());
-            std::shuffle(samples.begin(), samples.end(), g);
-            for (auto&& s : samples) { geno.add_sample(s); }
-            geno.set_sample(samples.size());
-            SECTION("From phenotype file")
-            {
-                // also need one not found
-            }
-            SECTION("Directly from fam")
-            {
-                mock_prsice prsice(true, &reporter);
-                auto [pheno_store, invalid, max_code] =
-                    prsice.test_process_phenotype_info(" ", geno);
-                REQUIRE(invalid == 1);
-                REQUIRE(max_code == 1);
-                auto pheno_map = prsice.sample_with_phenotypes();
-                size_t valid_idx = 0;
-                std::vector<double> expected;
-                for (size_t i = 0; i < samples.size(); ++i)
-                {
-                    if (samples[i].FID != "Missing" && samples[i].FID != "na1"
-                        && samples[i].FID != "na2"
-                        && samples[i].FID != "invalid")
-                    {
-                        auto loc = pheno_map.find(samples[i].FID + " "
-                                                  + samples[i].IID);
-                        REQUIRE(loc != pheno_map.end());
-                        REQUIRE(loc->second == valid_idx);
-                        expected.push_back(
-                            misc::convert<double>(samples[i].pheno));
-                        ++valid_idx;
-                    }
-                }
-                REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
-            }
+            pheno_store.resize(1000, -9);
+            REQUIRE_FALSE(prsice.test_quantitative_pheno_is_valid(pheno_store));
         }
-        SECTION("quantitative trait")
+        SECTION("Valid")
         {
+            std::random_device rnd_device;
+            std::mt19937 mersenne_engine {rnd_device()};
+            std::uniform_real_distribution<double> dist {-1.0, 1.0};
 
-            // 4 valid , one invalid pheno, one -9, one nan, one NA
-            // all with regression = true
-            std::vector<Sample_ID> samples {
-                Sample_ID("ID1", "ID1", "1", true),
-                Sample_ID("ID2", "ID2", "2", true),
-                Sample_ID("ID3", "ID3", "3", true),
-                Sample_ID("ID4", "ID4", "4", true),
-                Sample_ID("Missing", "Missing", "-9", true),
-                Sample_ID("na1", "na1", "nan", true),
-                Sample_ID("invalid", "invalid", "string", true),
-                Sample_ID("na2", "na2", "NA", true)};
-            std::random_device rd;
-            std::mt19937 g(rd());
-            std::shuffle(samples.begin(), samples.end(), g);
-            for (auto&& s : samples) { geno.add_sample(s); }
-            geno.set_sample(samples.size());
-
-            SECTION("Directly from fam")
-            {
-                mock_prsice prsice(false, &reporter);
-                auto [pheno_store, invalid, max_code] =
-                    prsice.test_process_phenotype_info(" ", geno);
-                REQUIRE(invalid == 1);
-                // doesn't matter with max code
-                auto pheno_map = prsice.sample_with_phenotypes();
-                size_t valid_idx = 0;
-                std::vector<double> expected;
-                for (size_t i = 0; i < samples.size(); ++i)
-                {
-                    if (samples[i].FID != "Missing" && samples[i].FID != "na1"
-                        && samples[i].FID != "na2"
-                        && samples[i].FID != "invalid")
-                    {
-                        auto loc = pheno_map.find(samples[i].FID + " "
-                                                  + samples[i].IID);
-                        REQUIRE(loc != pheno_map.end());
-                        REQUIRE(loc->second == valid_idx);
-                        expected.push_back(
-                            misc::convert<double>(samples[i].pheno));
-                        ++valid_idx;
-                    }
-                }
-                REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
-            }
+            auto gen = [&dist, &mersenne_engine]() {
+                return dist(mersenne_engine);
+            };
+            pheno_store.resize(1000);
+            std::generate(std::begin(pheno_store), std::end(pheno_store), gen);
+            REQUIRE(prsice.test_quantitative_pheno_is_valid(pheno_store));
         }
     }
-    SECTION("Check phenotype")
+    SECTION("Binary trait")
     {
-        std::vector<double> pheno_store;
-        SECTION("Quantitative trait")
+        mock_prsice prsice(false, &reporter);
+        SECTION("Invalid pheno ")
         {
-            mock_prsice prsice(false, &reporter);
-            SECTION("One phenotype only")
-            {
-                pheno_store.resize(1000, -9);
-                REQUIRE_FALSE(
-                    prsice.test_quantitative_pheno_is_valid(pheno_store));
-            }
-            SECTION("Valid")
-            {
-                std::random_device rnd_device;
-                std::mt19937 mersenne_engine {rnd_device()};
-                std::uniform_real_distribution<double> dist {-1.0, 1.0};
+            // mixing 0 1 2
+            std::random_device rnd_device;
+            std::mt19937 mersenne_engine {rnd_device()};
+            std::uniform_int_distribution<size_t> dist {0, 2};
 
-                auto gen = [&dist, &mersenne_engine]() {
-                    return dist(mersenne_engine);
-                };
-                pheno_store.resize(1000);
-                std::generate(std::begin(pheno_store), std::end(pheno_store),
-                              gen);
-                REQUIRE(prsice.test_quantitative_pheno_is_valid(pheno_store));
-            }
+            auto gen = [&dist, &mersenne_engine]() {
+                return dist(mersenne_engine);
+            };
+            pheno_store.resize(1000);
+            std::generate(std::begin(pheno_store), std::end(pheno_store), gen);
+            auto [valid, ncase, ncontrol] =
+                prsice.test_binary_pheno_is_valid(2, pheno_store);
+            REQUIRE_FALSE(valid);
+            // don't need to check case and control
         }
-        SECTION("Binary trait")
+        SECTION("Valid")
         {
-            mock_prsice prsice(false, &reporter);
-            SECTION("Invalid pheno ")
-            {
-                // mixing 0 1 2
-                std::random_device rnd_device;
-                std::mt19937 mersenne_engine {rnd_device()};
-                std::uniform_int_distribution<size_t> dist {0, 2};
+            // just 1 and 2 or 0 /1
+            auto base = GENERATE(0ul, 1ul);
+            std::random_device rnd_device;
+            std::mt19937 mersenne_engine {rnd_device()};
+            std::uniform_int_distribution<size_t> dist {0, 1};
 
-                auto gen = [&dist, &mersenne_engine]() {
-                    return dist(mersenne_engine);
-                };
-                pheno_store.resize(1000);
-                std::generate(std::begin(pheno_store), std::end(pheno_store),
-                              gen);
-                auto [valid, ncase, ncontrol] =
-                    prsice.test_binary_pheno_is_valid(2, pheno_store);
-                REQUIRE_FALSE(valid);
-                // don't need to check case and control
-            }
-            SECTION("Valid")
+            auto gen = [&dist, &mersenne_engine]() {
+                return dist(mersenne_engine);
+            };
+            pheno_store.resize(1000);
+            std::generate(std::begin(pheno_store), std::end(pheno_store), gen);
+            std::vector<double> expected = pheno_store;
+            auto expect_case =
+                std::count(expected.begin(), expected.end(), 1.0);
+            auto expect_control =
+                std::count(expected.begin(), expected.end(), 0.0);
+            if (base == 1)
             {
-                // just 1 and 2 or 0 /1
-                auto base = GENERATE(0ul, 1ul);
-                std::random_device rnd_device;
-                std::mt19937 mersenne_engine {rnd_device()};
-                std::uniform_int_distribution<size_t> dist {0, 1};
-
-                auto gen = [&dist, &mersenne_engine]() {
-                    return dist(mersenne_engine);
-                };
-                pheno_store.resize(1000);
-                std::generate(std::begin(pheno_store), std::end(pheno_store),
-                              gen);
-                std::vector<double> expected = pheno_store;
-                auto expect_case =
-                    std::count(expected.begin(), expected.end(), 1.0);
-                auto expect_control =
-                    std::count(expected.begin(), expected.end(), 0.0);
-                if (base == 1)
-                {
-                    for (auto&& p : pheno_store) ++p;
-                }
-                auto [valid, ncase, ncontrol] =
-                    prsice.test_binary_pheno_is_valid(1 + base, pheno_store);
-                REQUIRE(valid);
-                REQUIRE(ncase == Approx(expect_case));
-                REQUIRE(ncontrol == Approx(expect_control));
-                REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
-                // don't need to check case and control
+                for (auto&& p : pheno_store) ++p;
             }
+            auto [valid, ncase, ncontrol] =
+                prsice.test_binary_pheno_is_valid(1 + base, pheno_store);
+            REQUIRE(valid);
+            REQUIRE(ncase == Approx(expect_case));
+            REQUIRE(ncontrol == Approx(expect_control));
+            REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
+            // don't need to check case and control
         }
     }
-    SECTION("Parse phenotype")
+}
+TEST_CASE("Parse phenotype")
+{
+    std::vector<double> pheno_store;
+    Reporter reporter("log", 60, true);
+    int max_pheno = 0;
+    SECTION("bianry trait")
     {
-        std::vector<double> pheno_store;
-        int max_pheno = 0;
-        SECTION("bianry trait")
+        // should have filtered out na nan and -9 before
+        mock_prsice prsice(true, &reporter);
+        SECTION("Invalid inputs")
         {
-            // should have filtered out na nan and -9 before
-            mock_prsice prsice(true, &reporter);
-            SECTION("Invalid inputs")
-            {
-                std::string pheno = GENERATE("3", "String", "Case", "Control");
-                REQUIRE_THROWS(
-                    prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
-            }
-            SECTION("Valid inputs")
-            {
-                std::string pheno = GENERATE("0", "1", "2");
-                REQUIRE_NOTHROW(
-                    prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
-                REQUIRE(max_pheno == pheno_store.back());
-            }
+            std::string pheno = GENERATE("3", "String", "Case", "Control");
+            REQUIRE_THROWS(
+                prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
         }
-        SECTION("Quantitative trait")
+        SECTION("Valid inputs")
         {
-            mock_prsice prsice(false, &reporter);
-            SECTION("Valid inputs")
-            {
-                std::string pheno = GENERATE("-1.96", "0", "1", "2");
-                REQUIRE_NOTHROW(
-                    prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
-                REQUIRE(misc::convert<double>(pheno) == pheno_store.back());
-            }
-            SECTION("Invalid input")
-            {
-                std::string pheno = GENERATE("string", "nan");
-                REQUIRE_THROWS(
-                    prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
-            }
+            std::string pheno = GENERATE("0", "1", "2");
+            REQUIRE_NOTHROW(
+                prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
+            REQUIRE(max_pheno == pheno_store.back());
+        }
+    }
+    SECTION("Quantitative trait")
+    {
+        mock_prsice prsice(false, &reporter);
+        SECTION("Valid inputs")
+        {
+            std::string pheno = GENERATE("-1.96", "0", "1", "2");
+            REQUIRE_NOTHROW(
+                prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
+            REQUIRE(misc::convert<double>(pheno) == pheno_store.back());
+        }
+        SECTION("Invalid input")
+        {
+            std::string pheno = GENERATE("string", "nan");
+            REQUIRE_THROWS(
+                prsice.test_parse_pheno(pheno, pheno_store, max_pheno));
         }
     }
 }

@@ -361,7 +361,8 @@ bool PRSice::quantitative_pheno_is_valid(const std::vector<double>& pheno_store)
     return false;
 }
 std::tuple<std::vector<double>, size_t, int>
-PRSice::process_phenotype_info(const std::string& delim, Genotype& target)
+PRSice::process_phenotype_info(const std::string& delim, const bool ignore_fid,
+                               Genotype& target)
 {
     const size_t sample_ct = target.num_sample();
     std::vector<double> pheno_store;
@@ -371,14 +372,15 @@ PRSice::process_phenotype_info(const std::string& delim, Genotype& target)
     int max_pheno_code = 0;
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
-        if (target.pheno_is_na(i_sample) || target.pheno(i_sample) == "-9"
-            || !target.in_regression(i_sample))
+        if (target.pheno_is_na(i_sample) || !target.in_regression(i_sample)
+            || (m_binary_trait && target.pheno(i_sample) == "-9"))
         { continue; }
         try
         {
             parse_pheno(target.pheno(i_sample), pheno_store, max_pheno_code);
-            m_sample_with_phenotypes[target.sample_id(i_sample, delim)] =
-                sample_index_ct;
+            auto id = ignore_fid ? target.iid(i_sample)
+                                 : target.sample_id(i_sample, delim);
+            m_sample_with_phenotypes[id] = sample_index_ct;
             ++sample_index_ct;
         }
         catch (const std::runtime_error&)
@@ -409,21 +411,28 @@ PRSice::process_phenotype_file(const std::string& file_name,
     pheno_store.reserve(sample_ct);
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
-        id = target.sample_id(i_sample, delim);
-        auto pheno_tmp = phenotype_info[id];
-        misc::to_lower(pheno_tmp);
-        if (phenotype_info.find(id) != phenotype_info.end() && pheno_tmp != "na"
-            && phenotype_info[id] != "nan" && target.in_regression(i_sample))
+        id = (ignore_fid) ? target.iid(i_sample)
+                          : target.sample_id(i_sample, delim);
+        auto pheno_in_file = phenotype_info.find(id);
+        if (pheno_in_file != phenotype_info.end())
         {
-            try
+            auto pheno_tmp = pheno_in_file->second;
+            misc::to_lower(pheno_tmp);
+            if (pheno_tmp != "na" && phenotype_info[id] != "nan"
+                && target.in_regression(i_sample)
+                && !(m_binary_trait && target.pheno(i_sample) == "-9"))
             {
-                parse_pheno(phenotype_info[id], pheno_store, max_pheno_code);
-                m_sample_with_phenotypes[id] = sample_index_ct;
-                ++sample_index_ct;
-            }
-            catch (...)
-            {
-                ++invalid_pheno;
+                try
+                {
+                    parse_pheno(phenotype_info[id], pheno_store,
+                                max_pheno_code);
+                    m_sample_with_phenotypes[id] = sample_index_ct;
+                    ++sample_index_ct;
+                }
+                catch (...)
+                {
+                    ++invalid_pheno;
+                }
             }
         }
         else
@@ -551,7 +560,7 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         // No phenotype file is provided
         // Use information from the fam file directly
         std::tie(pheno_store, invalid_pheno, max_pheno_code) =
-            process_phenotype_info(delim, target);
+            process_phenotype_info(delim, ignore_fid, target);
     }
     print_pheno_log(pheno_name, sample_ct, num_not_found, invalid_pheno,
                     max_pheno_code, ignore_fid, pheno_store);

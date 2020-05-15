@@ -75,9 +75,10 @@ public:
 
 
     std::tuple<std::vector<double>, size_t, int>
-    test_process_phenotype_info(const std::string& delim, Genotype& target)
+    test_process_phenotype_info(const std::string& delim, const bool ignore_fid,
+                                Genotype& target)
     {
-        return process_phenotype_info(delim, target);
+        return process_phenotype_info(delim, ignore_fid, target);
     }
     std::unordered_map<std::string, size_t>& sample_with_phenotypes()
     {
