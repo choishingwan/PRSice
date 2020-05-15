@@ -151,12 +151,16 @@ int main(int argc, char* argv[])
             // Use sparse matrix for space and speed
             // Column = set, row = SNPs (because EIGEN is column major)
             // need to also know the number of threshold included
-            std::vector<std::vector<size_t>> region_membership;
             target_file->prepare_prsice();
             // from now on, we are not allow to sort the m_existed_snps
-            target_file->build_membership_matrix(region_membership, num_regions,
-                                                 commander.out(), region_names,
-                                                 commander.print_snp());
+
+            auto snp_file = commander.print_snp()
+                                ? misc::load_ostream(commander.out() + ".snp")
+                                : nullptr;
+            auto region_membership = target_file->build_membership_matrix(
+                num_regions, region_names, commander.print_snp(),
+                *snp_file.get());
+
             // we can now quickly check if any of the region are empty
             try
             {

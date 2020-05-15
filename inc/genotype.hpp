@@ -477,11 +477,10 @@ public:
                          const std::string& out, const double info_score);
     void build_clump_windows(const unsigned long long& clump_distance);
     intptr_t cal_avail_memory(const uintptr_t founder_ctv2);
-    void
-    build_membership_matrix(std::vector<std::vector<size_t>>& region_membership,
-                            const size_t num_sets, const std::string& out,
+    std::vector<std::vector<size_t>>
+    build_membership_matrix(const size_t num_sets,
                             const std::vector<std::string>& region_name,
-                            const bool print_snps);
+                            const bool print_snps, std::ostream& out);
     size_t num_threshold(size_t idx) const
     {
         return m_set_thresholds[idx].size();

@@ -270,6 +270,10 @@ public:
             throw std::out_of_range("Out of range for flag");
         return (IS_SET(m_clump_info.flags.data(), i));
     }
+    const std::vector<uintptr_t>& get_flag() const
+    {
+        return m_clump_info.flags;
+    }
     std::vector<uintptr_t>& get_flag() { return m_clump_info.flags; }
 
     /*!

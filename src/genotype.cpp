@@ -1427,57 +1427,55 @@ bool Genotype::prepare_prsice()
 }
 
 // TODO: This function is likely to have bug (2019-12-09 It does)
-void Genotype::build_membership_matrix(
-    std::vector<std::vector<size_t>>& region_membership, const size_t num_sets,
-    const std::string& out, const std::vector<std::string>& region_name,
-    const bool print_snps)
+std::vector<std::vector<size_t>>
+Genotype::build_membership_matrix(const size_t num_sets,
+                                  const std::vector<std::string>& region_name,
+                                  const bool print_snps, std::ostream& out)
 {
     // set_thresholds contain the thresholds in each set.
+    if (print_snps && !out.good())
+    { throw std::runtime_error("Error: Cannot open snp file to write"); }
+    if (num_sets != region_name.size())
+    {
+        throw std::runtime_error("Error: Number of set(s) does not match the "
+                                 "number of region name!");
+    }
     // Structure = std::vector<std::set<double>>
     m_set_thresholds.resize(num_sets);
-    std::vector<size_t> idx;
-    std::ofstream snp_out;
-    const std::string snp_name = out + ".snp";
+
     const bool is_prset = (num_sets != 2);
     if (print_snps)
     {
-        snp_out.open(snp_name.c_str());
-        if (!snp_out.is_open())
-        {
-            throw std::runtime_error("Error: Cannot open file: " + snp_name
-                                     + " to write!\n");
-        }
-        snp_out << "CHR\tSNP\tBP\tP";
+        out << "CHR\tSNP\tBP\tP";
         for (size_t i = 0; i < region_name.size() - !is_prset; ++i)
-        { snp_out << "\t" << region_name[i]; }
-        snp_out << "\n";
+        { out << "\t" << region_name[i]; }
+        out << "\n";
     }
     bool has_snp = false;
-    std::vector<bool> membership(num_sets);
     // temporary storage is a 2D vector. For each Set, what are the SNP idx in
     // this set
-    region_membership.resize(num_sets);
+    std::vector<std::vector<size_t>> region_membership(num_sets);
     for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
     {
         auto&& snp = m_existed_snps[i_snp];
-        std::fill(membership.begin(), membership.end(), false);
+        auto&& flags = snp.get_flag();
+
+        if (print_snps)
+        {
+            out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc() << "\t"
+                << snp.p_value();
+        }
         for (size_t s = 0; s < num_sets; ++s)
         {
-            if (snp.in(s))
+            if (print_snps) out << "\t" << IS_SET(flags.data(), s);
+            if (IS_SET(flags.data(), s))
             {
                 m_set_thresholds[s].insert(snp.get_threshold());
-                membership[s] = true;
                 has_snp = true;
                 region_membership[s].push_back(i_snp);
             }
         }
-        if (print_snps)
-        {
-            snp_out << snp.chr() << "\t" << snp.rs() << "\t" << snp.loc()
-                    << "\t" << snp.p_value();
-            for (auto m : membership) { snp_out << "\t" << m; }
-            snp_out << "\n";
-        }
+        if (print_snps) out << "\n";
     }
     if (!has_snp)
     {
@@ -1488,7 +1486,9 @@ void Genotype::build_membership_matrix(
             "containing Entrez ID with GTF files that uses the Ensembl "
             "gene ID?\n");
     }
+    return region_membership;
 }
+
 void Genotype::standardize_prs()
 {
     misc::RunningStat rs;

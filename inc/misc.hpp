@@ -1187,7 +1187,15 @@ load_stream(const std::string& filepath,
     { throw std::runtime_error("Error: Cannot open file: " + filepath); }
     return std::unique_ptr<std::istream>(*file ? std::move(file) : nullptr);
 }
-
+inline std::unique_ptr<std::ostream>
+load_ostream(const std::string& filepath,
+             std::ios_base::openmode mode = std::ios_base::out)
+{
+    auto file = std::make_unique<std::ofstream>(filepath.c_str(), mode);
+    if (!file->is_open())
+    { throw std::runtime_error("Error: Cannot open file: " + filepath); }
+    return std::unique_ptr<std::ostream>(*file ? std::move(file) : nullptr);
+}
 inline std::unique_ptr<std::istream> load_stream(const std::string& filepath,
                                                  bool& gz_input)
 {
