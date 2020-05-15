@@ -538,3 +538,100 @@ TEST_CASE("Parse phenotype")
         }
     }
 }
+
+TEST_CASE("Print Phenotype log")
+{
+    auto ignore_fid = GENERATE(true, false);
+    auto sample_ct = 1000ul;
+    auto pheno_name = "Phenotype";
+
+    Reporter reporter("log", 60, true);
+
+    std::vector<double> pheno_store(sample_ct);
+    SECTION("Empty pheno_store")
+    {
+        pheno_store.clear();
+        mock_prsice prsice(true, &reporter);
+        REQUIRE_THROWS_WITH(prsice.test_print_pheno_log(pheno_name, sample_ct,
+                                                        0, 0, 1, ignore_fid,
+                                                        pheno_store),
+                            Catch::Contains("No phenotype presented"));
+    }
+    SECTION("All not found")
+    {
+        std::string expected_message =
+            ignore_fid
+                ? "Maybe the first column of your phenotype file "
+                  "is the FID?"
+                : "Maybe your phenotype file doesn not contain the FID?\n"
+                  "Might want to consider using --ignore-fid\n";
+        mock_prsice prsice(true, &reporter);
+        REQUIRE_THROWS_WITH(
+            prsice.test_print_pheno_log(pheno_name, sample_ct, sample_ct, 0, 1,
+                                        ignore_fid, pheno_store),
+            Catch::Contains("Error: No sample left")
+                && Catch::Contains(expected_message));
+    }
+    SECTION("All invalid")
+    {
+        mock_prsice prsice(true, &reporter);
+        REQUIRE_THROWS_WITH(
+            prsice.test_print_pheno_log(pheno_name, sample_ct, 0, sample_ct, 1,
+                                        ignore_fid, pheno_store),
+            Catch::Contains("Error: No sample left")
+                && Catch::Contains("All sample has invalid phenotypes"));
+    }
+    SECTION("Problematic Binary trait ")
+    {
+        mock_prsice prsice(true, &reporter);
+        SECTION("Singluar situation")
+        {
+            using record = std::tuple<size_t, std::string>;
+            auto input = GENERATE(table<size_t, std::string>(
+                {record {0, "cases"}, record {1, "control samples"}}));
+            std::fill(pheno_store.begin(), pheno_store.end(),
+                      std::get<0>(input));
+            REQUIRE_THROWS_WITH(
+                prsice.test_print_pheno_log(pheno_name, sample_ct, 0, 0, 1,
+                                            ignore_fid, pheno_store),
+                Catch::Contains("There are no " + std::get<1>(input)));
+        }
+        SECTION("Mixed encoding")
+        {
+            std::random_device rnd_device;
+            std::mt19937 mersenne_engine {rnd_device()};
+            std::uniform_int_distribution<size_t> dist {0, 2};
+            auto gen = [&dist, &mersenne_engine]() {
+                return dist(mersenne_engine);
+            };
+            std::generate(std::begin(pheno_store), std::end(pheno_store), gen);
+            int max_pheno_code = GENERATE(1, 2);
+            REQUIRE_THROWS_WITH(prsice.test_print_pheno_log(
+                                    pheno_name, sample_ct, 0, 0, max_pheno_code,
+                                    ignore_fid, pheno_store),
+                                Catch::Contains("Mixed encoding"));
+        }
+    }
+    SECTION("Single Quantitative trait")
+    {
+        mock_prsice prsice(false, &reporter);
+        SECTION("All -9")
+        {
+            std::fill(pheno_store.begin(), pheno_store.end(), -9);
+            REQUIRE_THROWS_WITH(
+                prsice.test_print_pheno_log(pheno_name, sample_ct, 0, 0, 2,
+                                            ignore_fid, pheno_store),
+                Catch::Contains("they are all -9")
+                    && Catch::Contains("Not enough valid phenotype"));
+        }
+        SECTION("Not -9")
+        {
+            std::fill(pheno_store.begin(), pheno_store.end(), 1.96);
+            REQUIRE_THROWS_WITH(
+                prsice.test_print_pheno_log(pheno_name, sample_ct, 0, 0, 2,
+                                            ignore_fid, pheno_store),
+                !Catch::Contains("they are all -9")
+                    && Catch::Contains("Not enough valid phenotype"));
+        }
+    }
+}

@@ -340,7 +340,7 @@ PRSice::binary_pheno_is_valid(const int max_pheno_code,
     bool valid = true;
     for (auto&& pheno : pheno_store)
     {
-        if (pheno < min_pheno)
+        if (pheno < min_pheno || pheno > max_pheno_code)
         {
             valid = false;
             break;
@@ -483,14 +483,12 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
                        "phenotype information "
                        " and you did not use "
                        "--nonfounders?\n");
-        m_reporter->report(message);
-        throw std::runtime_error("Error: No sample left");
+        throw std::runtime_error(message + "Error: No sample left");
     }
     if (invalid_pheno == sample_ct)
     {
-        message.append("Error: All sample has invalid phenotypes!");
-        m_reporter->report(message);
-        throw std::runtime_error("Error: No sample left");
+        throw std::runtime_error("Error: All sample has invalid phenotypes!\n"
+                                 "Error: No sample left");
     }
     if (pheno_store.empty())
     { throw std::runtime_error("No phenotype presented"); }

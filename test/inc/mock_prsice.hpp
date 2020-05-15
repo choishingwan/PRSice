@@ -94,6 +94,15 @@ public:
         return process_phenotype_file(file_name, delim, pheno_idx, ignore_fid,
                                       target);
     }
+    void test_print_pheno_log(const std::string& name, const size_t sample_ct,
+                              const size_t num_not_found,
+                              const size_t invalid_pheno,
+                              const int max_pheno_code, const bool ignore_fid,
+                              std::vector<double>& pheno_store)
+    {
+        print_pheno_log(name, sample_ct, num_not_found, invalid_pheno,
+                        max_pheno_code, ignore_fid, pheno_store);
+    }
 };
 
 #endif // MOCK_PRSICE_HPP
