@@ -1,9 +1,9 @@
 #include "catch.hpp"
+#include "mock_genotype.hpp"
 #include "mock_prsice.hpp"
 #include "prsice.hpp"
 #include <algorithm>
 #include <functional>
-
 TEST_CASE("Simple Phenotype check")
 {
     Reporter reporter("log", 60, true);
@@ -238,6 +238,7 @@ TEST_CASE("load_pheno_map")
 TEST_CASE("Generate pheno vector")
 {
     Reporter reporter("log", 60, true);
+    SECTION("Phenotype from file") { mockGenotype geno; }
     SECTION("Check phenotype")
     {
         std::vector<double> pheno_store;
@@ -365,6 +366,4 @@ TEST_CASE("Generate pheno vector")
             }
         }
     }
-    SECTION("Quantitative trait") {}
-    SECTION("Binary trait") {}
 }

@@ -194,6 +194,11 @@ public:
         m_snp_selection_list.insert(in);
         m_exclude_snp = exclude;
     }
+    void add_sample(const Sample_ID& sample)
+    {
+        m_sample_id.push_back(sample);
+        ++m_sample_ct;
+    }
     void set_keep_nonfounder(bool keep_nonfounder)
     {
         m_keep_nonfounder = keep_nonfounder;
