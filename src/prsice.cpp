@@ -168,6 +168,8 @@ void PRSice::new_phenotype(Genotype& target)
     // only need to give the target file to calculate the FID and IID length
     if (m_prs_info.no_regress) { update_sample_included("", false, target); }
 }
+
+
 void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
                          Genotype& target)
 {
@@ -219,12 +221,6 @@ void PRSice::init_matrix(const size_t pheno_index, const std::string& delim,
 void PRSice::update_sample_included(const std::string& delim, const bool binary,
                                     Genotype& target)
 {
-    // this is a bit tricky. The reason we need to calculate the max fid and
-    // iid length is so that we can generate the best file and all score
-    // file vertically by replacing pre-placed space characters with the
-    // desired number
-    m_max_fid_length = 3;
-    m_max_iid_length = 3;
     // we also want to avoid always having to search from
     // m_sample_with_phenotypes. Therefore, we push in the sample index to
     // m_matrix_index
@@ -234,7 +230,6 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
     // correspond to the phenotype vector and covariance matrix's order
     // correctly
     m_matrix_index.clear();
-    long long fid_length, iid_length;
     const bool ctrl_std =
         binary && m_prs_info.scoring_method == SCORING::CONTROL_STD;
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
@@ -249,10 +244,6 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
             throw std::runtime_error(
                 "Error: FID / IID are pathologically long");
         }
-        fid_length = static_cast<long long>(target.fid(i_sample).length());
-        iid_length = static_cast<long long>(target.iid(i_sample).length());
-        if (m_max_fid_length < fid_length) m_max_fid_length = fid_length;
-        if (m_max_iid_length < iid_length) m_max_iid_length = iid_length;
         // update the in regression flag according to covariate
         if (!m_sample_with_phenotypes.empty())
         {
@@ -279,27 +270,18 @@ void PRSice::update_sample_included(const std::string& delim, const bool binary,
     }
 }
 
-void PRSice::parse_pheno(const bool binary, const std::string& pheno,
-                         std::vector<double>& pheno_store, double& first_pheno,
-                         bool& more_than_one_pheno, size_t& num_case,
-                         size_t& num_control, int& max_pheno_code)
+void PRSice::parse_pheno(const std::string& pheno,
+                         std::vector<double>& pheno_store, int& max_pheno_code)
 {
-    if (binary)
+    if (m_binary_trait)
     {
-        // if trait is binary
-        // we first convert it to a temporary
         int temp = misc::convert<int>(pheno);
-        // so taht we can check if the input is valid
         if (temp >= 0 && temp <= 2)
         {
             pheno_store.push_back(temp);
             if (max_pheno_code < temp) max_pheno_code = temp;
-            if (temp == 1)
-                ++num_case;
-            else
-                ++num_control;
         }
-        else
+        else if (temp != -9)
         {
             throw std::runtime_error("Invalid binary phenotype format!");
         }
@@ -307,48 +289,34 @@ void PRSice::parse_pheno(const bool binary, const std::string& pheno,
     else
     {
         pheno_store.push_back(misc::convert<double>(pheno));
-        if (pheno_store.size() == 1) { first_pheno = pheno_store[0]; }
-        else if (!more_than_one_pheno
-                 && !misc::logically_equal(first_pheno, pheno_store.back()))
-        {
-            more_than_one_pheno = true;
-        }
     }
 }
 
 std::unordered_map<std::string, std::string>
-PRSice::load_pheno_map(const size_t idx, const std::string& delim)
+PRSice::load_pheno_map(const std::string& delim, const size_t idx,
+                       const bool ignore_fid,
+                       std::unique_ptr<std::istream> pheno_file)
 {
-    const size_t pheno_col_index = m_pheno_info.pheno_col_idx[idx];
-    std::ifstream pheno_file;
-    pheno_file.open(m_pheno_info.pheno_file.c_str());
-    if (!pheno_file.is_open())
-    {
-        throw std::runtime_error("Cannot open phenotype file: "
-                                 + m_pheno_info.pheno_file);
-    }
-    // we first store everything into a map. This allow the phenotype and
-    // genotype file to have completely different ordering and allow
-    // different samples to be included in each file
     std::unordered_map<std::string, std::string> phenotype_info;
-    std::vector<std::string> token;
+    std::vector<std::string_view> token;
     std::string line, id;
-    while (std::getline(pheno_file, line))
+    while (std::getline(*pheno_file, line))
     {
         misc::trim(line);
         if (line.empty()) continue;
-        token = misc::split(line);
+        token = misc::tokenize(line);
         // Check if we have the minimal required column number
-        if (token.size() < pheno_col_index + 1)
+        if (token.size() < idx + 1)
         {
             throw std::runtime_error(
                 "Malformed pheno file, should contain at least "
-                + misc::to_string(pheno_col_index + 1)
+                + misc::to_string(idx + 1)
                 + " columns. "
                   "Have you use the --ignore-fid option?");
         }
-        id = (m_pheno_info.ignore_fid) ? token[0] : token[0] + delim + token[1];
-        // and store the information into the map
+        id = (ignore_fid)
+                 ? std::string(token[0])
+                 : std::string(token[0]) + delim + std::string(token[1]);
         if (phenotype_info.find(id) != phenotype_info.end())
         {
             throw std::runtime_error("Error: Duplicated sample ID in "
@@ -357,95 +325,123 @@ PRSice::load_pheno_map(const size_t idx, const std::string& delim)
                                      + ". Please "
                                        "check if your input is correct!");
         }
-        phenotype_info[id] = token[pheno_col_index];
+        phenotype_info[id] = std::string(token[idx]);
     }
-    pheno_file.close();
+    pheno_file.reset();
     return phenotype_info;
 }
-void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
-                           const std::string& delim)
+std::tuple<bool, size_t, size_t>
+PRSice::binary_pheno_is_valid(const int max_pheno_code,
+                              std::vector<double>& pheno_store)
 {
-    const bool binary = m_pheno_info.binary[pheno_index];
-    const size_t sample_ct = target.num_sample();
-    std::string line;
-    int max_pheno_code = 0;
+    size_t min_pheno = max_pheno_code == 1 ? 0 : 1;
     size_t num_case = 0;
     size_t num_control = 0;
+    bool valid = true;
+    for (auto&& pheno : pheno_store)
+    {
+        if (pheno < min_pheno)
+        {
+            valid = false;
+            break;
+        }
+        pheno -= min_pheno;
+        misc::logically_equal(pheno, 1) ? ++num_case : ++num_control;
+    }
+    return {valid, num_case, num_control};
+}
+bool PRSice::quantitative_pheno_is_valid(const std::vector<double>& pheno_store)
+{
+    // assume pheno_store is valid
+    double prev = pheno_store.front();
+    for (auto&& p : pheno_store)
+    {
+        if (!misc::logically_equal(p, prev)) { return true; }
+    }
+    return false;
+}
+void PRSice::process_phenotype_info(const std::string& pheno_name,
+                                    const std::string& delim,
+                                    const bool ignore_fid, Genotype& target)
+{
+    const size_t sample_ct = target.num_sample();
+    std::vector<double> pheno_store;
+    pheno_store.reserve(sample_ct);
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
     size_t sample_index_ct = 0;
-    // we will first store the phenotype into the double vector and then
-    // later use this to construct the matrix
-    std::vector<double> pheno_store;
-    pheno_store.reserve(sample_ct);
-    std::string pheno_name = "Phenotype";
-    std::string id;
-
-    // check if input is sensible
-    double first_pheno = 0.0;
-    bool more_than_one_pheno = false;
-
-    if (!m_pheno_info.pheno_file.empty()) // use phenotype file
+    int max_pheno_code = 0;
+    for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
-        // read in the phenotype index
-        pheno_name = m_pheno_info.pheno_col[pheno_index];
-        std::unordered_map<std::string, std::string> phenotype_info =
-            load_pheno_map(pheno_index, delim);
-        for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
+        if (target.pheno_is_na(i_sample) || !target.in_regression(i_sample))
+        { continue; }
+        try
         {
-            id = target.sample_id(i_sample, delim);
-            if (phenotype_info.find(id) != phenotype_info.end()
-                && phenotype_info[id] != "NA" && target.in_regression(i_sample))
-            {
-                try
-                {
-                    parse_pheno(binary, phenotype_info[id], pheno_store,
-                                first_pheno, more_than_one_pheno, num_case,
-                                num_control, max_pheno_code);
-                    m_sample_with_phenotypes[id] = sample_index_ct;
-                    ++sample_index_ct;
-                }
-                catch (...)
-                {
-                    ++invalid_pheno;
-                }
-            }
-            else
-            {
-                ++num_not_found;
-            }
+            parse_pheno(target.pheno(i_sample), pheno_store, max_pheno_code);
+            m_sample_with_phenotypes[target.sample_id(i_sample, delim)] =
+                sample_index_ct;
+            ++sample_index_ct;
+        }
+        catch (const std::runtime_error&)
+        {
+            ++invalid_pheno;
         }
     }
-    else
+    print_pheno_log(pheno_name, sample_ct, num_not_found, invalid_pheno,
+                    max_pheno_code, ignore_fid, pheno_store);
+}
+void PRSice::process_phenotype_file(const std::string& file_name,
+                                    const std::string& pheno_name,
+                                    const std::string& delim,
+                                    const std::size_t pheno_idx,
+                                    const bool ignore_fid, Genotype& target)
+{
+    auto pheno_stream = misc::load_stream(file_name);
+    auto phenotype_info =
+        load_pheno_map(delim, pheno_idx, ignore_fid, std::move(pheno_stream));
+    const size_t sample_ct = target.num_sample();
+    std::string id;
+    int max_pheno_code = 0;
+    size_t invalid_pheno = 0;
+    size_t num_not_found = 0;
+    size_t sample_index_ct = 0;
+    std::vector<double> pheno_store;
+    pheno_store.reserve(sample_ct);
+    for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
-        // No phenotype file is provided
-        // Use information from the fam file directly
-        for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
+        id = target.sample_id(i_sample, delim);
+        auto pheno_tmp = phenotype_info[id];
+        misc::to_lower(pheno_tmp);
+        if (phenotype_info.find(id) != phenotype_info.end() && pheno_tmp != "na"
+            && phenotype_info[id] != "nan" && target.in_regression(i_sample))
         {
-            if (target.pheno_is_na(i_sample) || !target.in_regression(i_sample))
-            {
-                // it is ok to skip NA as default = sample.has_pheno = false
-                continue;
-            }
             try
             {
-                parse_pheno(binary, target.pheno(i_sample), pheno_store,
-                            first_pheno, more_than_one_pheno, num_case,
-                            num_control, max_pheno_code);
-                m_sample_with_phenotypes[target.sample_id(i_sample, delim)] =
-                    sample_index_ct;
+                parse_pheno(phenotype_info[id], pheno_store, max_pheno_code);
+                m_sample_with_phenotypes[id] = sample_index_ct;
                 ++sample_index_ct;
             }
-            catch (const std::runtime_error&)
+            catch (...)
             {
                 ++invalid_pheno;
             }
         }
+        else
+        {
+            ++num_not_found;
+        }
     }
-
-    std::string message = "";
-    message = pheno_name + " is a ";
-    if (binary) { message.append("binary phenotype\n"); }
+    print_pheno_log(pheno_name, sample_ct, num_not_found, invalid_pheno,
+                    max_pheno_code, ignore_fid, pheno_store);
+}
+void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
+                             const size_t num_not_found,
+                             const size_t invalid_pheno,
+                             const int max_pheno_code, const bool ignore_fid,
+                             std::vector<double>& pheno_store)
+{
+    std::string message = name + " is a ";
+    if (m_binary_trait) { message.append("binary phenotype\n"); }
     else
     {
         message.append("continuous phenotype\n");
@@ -460,12 +456,11 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         message.append(std::to_string(invalid_pheno)
                        + " sample(s) with invalid phenotype\n");
     }
-
     if (num_not_found == sample_ct)
     {
         message.append("None of the target samples were found in the "
                        "phenotype file. ");
-        if (m_pheno_info.ignore_fid)
+        if (ignore_fid)
         {
             message.append("Maybe the first column of your phenotype file "
                            "is the FID?");
@@ -473,11 +468,12 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         else
         {
             message.append(
-                "Maybe your phenotype file doesn not contain the FID?\n");
-            message.append("Might want to consider using --ignore-fid\n");
+                "Maybe your phenotype file doesn not contain the FID?\n"
+                "Might want to consider using --ignore-fid\n");
         }
-        message.append("Or it is possible that only non-founder sample contain "
-                       "the phenotype information and you did not use "
+        message.append("Or it is possible that only non-founder sample have "
+                       "phenotype information "
+                       " and you did not use "
                        "--nonfounders?\n");
         m_reporter->report(message);
         throw std::runtime_error("Error: No sample left");
@@ -488,57 +484,68 @@ void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
         m_reporter->report(message);
         throw std::runtime_error("Error: No sample left");
     }
-    if (!binary && !more_than_one_pheno)
+    if (pheno_store.empty())
+    { throw std::runtime_error("No phenotype presented"); }
+    if (m_binary_trait)
     {
-        message.append("Only one phenotype value detected");
-        if (misc::logically_equal(first_pheno, -9))
-        { message.append(" and they are all -9"); }
-        m_reporter->report(message);
-        throw std::runtime_error("Not enough valid phenotype");
-    }
-    // finished basic logs
-    // we now check if the binary encoding is correct
-    bool error = false;
-    if (max_pheno_code > 1 && binary)
-    {
-        num_case = 0;
-        num_control = 0;
-        for (auto&& pheno : pheno_store)
+        auto [valid, num_case, num_control] =
+            binary_pheno_is_valid(max_pheno_code, pheno_store);
+        if (!valid)
         {
-            --pheno;
-            if (pheno < 0) { error = true; }
-            else
-                (misc::logically_equal(pheno, 1)) ? ++num_case : ++num_control;
+            throw std::runtime_error(
+                "Mixed encoding! Both 0/1 and 1/2 encoding found!");
         }
-    }
-    if (error)
-    {
-        m_reporter->report(message);
-        throw std::runtime_error(
-            "Mixed encoding! Both 0/1 and 1/2 encoding found!");
-    }
-    if (pheno_store.size() == 0)
-    {
-        m_reporter->report(message);
-        throw std::runtime_error("No phenotype presented");
-    }
-    // now store the vector into the m_phenotype vector
-    m_phenotype = Eigen::Map<Eigen::VectorXd>(
-        pheno_store.data(), static_cast<Eigen::Index>(pheno_store.size()));
-    if (binary)
-    {
         message.append(std::to_string(num_control) + " control(s)\n");
         message.append(std::to_string(num_case) + " case(s)\n");
         if (num_control == 0)
+        {
+            m_reporter->report(message);
             throw std::runtime_error("There are no control samples");
-        if (num_case == 0) throw std::runtime_error("There are no cases");
+        }
+        if (num_case == 0)
+        {
+            m_reporter->report(message);
+            throw std::runtime_error("There are no cases");
+        }
     }
     else
     {
-        message.append(std::to_string(m_phenotype.rows())
-                       + " sample(s) with valid phenotype\n");
+        bool valid = quantitative_pheno_is_valid(pheno_store);
+        if (!valid)
+        {
+            m_reporter->report(message);
+            std::string error_message = "Only one phenotype value detected";
+            if (misc::logically_equal(pheno_store.front(), -9))
+            { error_message.append(" and they are all -9"); }
+            throw std::runtime_error(error_message
+                                     + ". Not enough valid phenotype");
+        }
+        else
+        {
+            message.append(std::to_string(m_phenotype.rows())
+                           + " sample(s) with valid phenotype\n");
+        }
     }
     m_reporter->report(message);
+}
+void PRSice::gen_pheno_vec(Genotype& target, const size_t pheno_index,
+                           const std::string& delim)
+{
+    // we will first store the phenotype into the double vector and then
+    // later use this to construct the matrix
+    if (!m_pheno_info.pheno_file.empty()) // use phenotype file
+    {
+        process_phenotype_file(m_pheno_info.pheno_file,
+                               m_pheno_info.pheno_col[pheno_index], delim,
+                               pheno_index, m_pheno_info.ignore_fid, target);
+    }
+    else
+    {
+        // No phenotype file is provided
+        // Use information from the fam file directly
+        process_phenotype_info(m_pheno_info.pheno_col[pheno_index], delim,
+                               m_pheno_info.ignore_fid, target);
+    }
 }
 
 bool PRSice::validate_covariate(const std::string& covariate,

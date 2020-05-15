@@ -100,7 +100,10 @@ public:
     void load_snps(const std::string& out,
                    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                    bool verbose, Genotype* target = nullptr);
-
+    std::tuple<size_t, size_t> get_max_id_length() const
+    {
+        return {m_max_fid_length, m_max_iid_length};
+    }
     void calc_freqs_and_intermediate(const QCFiltering& filter_info,
                                      const std::string& prefix, bool verbose,
                                      Genotype* target = nullptr);
@@ -685,6 +688,8 @@ protected:
     size_t m_num_female = 0;
     size_t m_num_ambig_sex = 0;
     size_t m_num_non_founder = 0;
+    size_t m_max_fid_length = 3;
+    size_t m_max_iid_length = 3;
     uintptr_t m_unfiltered_sample_ct = 0; // number of unfiltered samples
     uintptr_t m_unfiltered_marker_ct = 0;
     uintptr_t m_sample_ct = 0;

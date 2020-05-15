@@ -72,14 +72,17 @@ class PRSice
 public:
     PRSice() {}
     PRSice(const CalculatePRS& prs_info, const PThresholding& p_info,
-           const Phenotype& pheno, const Permutations& perm,
-           const std::string& output, Reporter* reporter)
+           const Permutations& perm, const std::string& output,
+           const size_t max_fid, const size_t max_iid, const bool binary,
+           Reporter* reporter)
         : m_prefix(output)
+        , m_max_fid_length(max_fid)
+        , m_max_iid_length(max_iid)
+        , m_binary_trait(binary)
         , m_reporter(reporter)
         , m_prs_info(prs_info)
         , m_p_info(p_info)
         , m_perm_info(perm)
-        , m_pheno_info(pheno)
     {
     }
 
@@ -93,10 +96,7 @@ public:
      */
     static void pheno_check(const bool no_regress, Phenotype& pheno,
                             Reporter& reporter);
-    bool pheno_skip(size_t idx) const
-    {
-        return m_pheno_info.skip_pheno.at(idx);
-    }
+
     // init_matrix whenever phenotype changes
     /*!
      * \brief init_matrix will initialize the independent and dependent matrix
@@ -108,15 +108,6 @@ public:
      */
     void init_matrix(const size_t pheno_index, const std::string& delim,
                      Genotype& target);
-    /*!
-     * \brief Return the total number of phenotype involved
-     * \return the total number of phenotype to process
-     */
-    size_t num_phenotype() const { return m_pheno_info.binary.size(); }
-    std::string pheno_name(const size_t i) const
-    {
-        return m_pheno_info.pheno_col.at(i);
-    }
     void new_phenotype(Genotype& target);
     bool run_prsice(const size_t pheno_index, const size_t region_index,
                     const std::vector<std::vector<size_t>>& region_membership,
@@ -191,9 +182,6 @@ public:
         // now calculate the number of competitive permutation we need
         // we only use the best threshold for set based permutation
         m_total_competitive_process = (num_region - 2) * num_set_perm;
-    }
-    void reset_progress()
-    {
         m_analysis_done = 0;
         m_total_competitive_perm_done = 0;
     }
@@ -231,14 +219,6 @@ public:
                     const std::vector<size_t>::const_iterator& bk_start_idx,
                     const std::vector<size_t>::const_iterator& bk_end_idx,
                     const size_t pheno_index);
-    bool valid_pheno(const size_t idx) const
-    {
-        return !m_pheno_info.skip_pheno.at(idx);
-    }
-    std::vector<double> get_prevalence() const
-    {
-        return m_pheno_info.prevalence;
-    }
 
     /*!
      * \brief Function responsible to generate the best score file
@@ -295,18 +275,22 @@ protected:
             processed_threshold = 0;
         }
     };
-    //    struct Pheno_Info
-    //    {
-    //        std::vector<int> col;
-    //        std::vector<std::string> name;
-    //        std::vector<int> order;
-    //        std::vector<bool> binary;
-    //        bool use_pheno = false;
-    //    } m_pheno_info;
 
     // store the number of non-sig, margin sig, and sig pathway & phenotype
     static std::mutex lock_guard;
-
+    // As R has a default precision of 7, we will go a bit
+    // higher to ensure we use up all precision
+    const std::string m_prefix;
+    const long long m_precision = 9;
+    // the 7 are:
+    // 1 for sign
+    // 1 for dot
+    // 2 for e- (scientific)
+    // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
+    const long long m_numeric_width = m_precision + 7;
+    const size_t m_max_fid_length = 3;
+    const size_t m_max_iid_length = 3;
+    const bool m_binary_trait = true;
     Eigen::MatrixXd m_independent_variables;
     // TODO: Use other method for faster best output
     Eigen::MatrixXd m_fast_best_output;
@@ -334,21 +318,10 @@ protected:
     uint32_t m_num_snp_included = 0;
     uint32_t m_analysis_done = 0;
 
-    // As R has a default precision of 7, we will go a bit
-    // higher to ensure we use up all precision
-    const long long m_precision = 9;
-    // the 7 are:
-    // 1 for sign
-    // 1 for dot
-    // 2 for e- (scientific)
-    // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
-    const long long m_numeric_width = m_precision + 7;
-    long long m_max_fid_length = 3;
-    long long m_max_iid_length = 3;
+
     int m_best_index = -1;
     bool m_quick_best = true;
     bool m_printed_warning = false;
-    const std::string m_prefix;
     Reporter* m_reporter;
     CalculatePRS m_prs_info;
     PThresholding m_p_info;
@@ -384,6 +357,22 @@ protected:
      */
     void gen_pheno_vec(Genotype& target, const size_t pheno_index,
                        const std::string& delim);
+    void process_phenotype_file(const std::string& file_name,
+                                const std::string& pheno_name,
+                                const std::string& delim,
+                                const std::size_t pheno_idx,
+                                const bool ignore_fid, Genotype& target);
+    void process_phenotype_info(const std::string& pheno_name,
+                                const std::string& delim, const bool ignore_fid,
+                                Genotype& target);
+    std::tuple<bool, size_t, size_t>
+    binary_pheno_is_valid(const int max_pheno_code,
+                          std::vector<double>& pheno_store);
+    bool quantitative_pheno_is_valid(const std::vector<double>& pheno_store);
+    void print_pheno_log(const std::string& name, const size_t sample_ct,
+                         const size_t num_not_found, const size_t invalid_pheno,
+                         const int max_pheno_code, const bool ignore_fid,
+                         std::vector<double>& pheno_store);
     /*!
      * \brief Function to generate the m_independent_variable matrix
      * \param c_cov_file is the name of the covariate file
@@ -542,13 +531,14 @@ protected:
             Pmat,
         const Eigen::MatrixXd& R, const bool run_glm);
 
-    void parse_pheno(const bool binary, const std::string& pheno,
-                     std::vector<double>& pheno_store, double& first_pheno,
-                     bool& more_than_one_pheno, size_t& num_case,
-                     size_t& num_control, int& max_pheno_code);
+    void parse_pheno(const std::string& pheno, std::vector<double>& pheno_store,
+                     int& max_pheno_code);
 
     std::unordered_map<std::string, std::string>
-    load_pheno_map(const size_t idx, const std::string& delim);
+    load_pheno_map(const std::string& delim, const size_t idx,
+                   const bool ignore_fid,
+                   std::unique_ptr<std::istream> pheno_file);
+
     void reset_result_containers(const Genotype& target,
                                  const size_t region_idx);
 

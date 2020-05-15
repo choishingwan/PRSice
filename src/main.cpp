@@ -140,16 +140,11 @@ int main(int argc, char* argv[])
             // one extra progress bar for competitive permutation
             assert(target_file->get_set_thresholds().size() == num_regions);
 
-
+            const auto [max_fid, max_iid] = target_file->get_max_id_length();
             const size_t num_pheno = pheno_info.pheno_col_idx.size();
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
-                PRSice prsice(commander.get_prs_instruction(),
-                              commander.get_p_threshold(), pheno_info,
-                              commander.get_perm(), commander.out(), &reporter);
-                prsice.init_progress_count(target_file->get_set_thresholds());
-
-                if (prsice.pheno_skip(i_pheno))
+                if (pheno_info.skip_pheno[i_pheno])
                 {
                     reporter.simple_report("Skipping the "
                                            + std::to_string(i_pheno + 1)
@@ -159,6 +154,11 @@ int main(int argc, char* argv[])
                 reporter.simple_report("Processing the "
                                        + std::to_string(i_pheno + 1)
                                        + " th phenotype");
+                PRSice prsice(commander.get_prs_instruction(),
+                              commander.get_p_threshold(), commander.get_perm(),
+                              commander.out(), max_fid, max_iid,
+                              pheno_info.binary[i_pheno], &reporter);
+                prsice.init_progress_count(target_file->get_set_thresholds());
                 prsice.new_phenotype(*target_file);
                 if (!commander.get_prs_instruction().no_regress)
                 {

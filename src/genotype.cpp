@@ -575,6 +575,11 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     const std::string fid = (m_ignore_fid) ? "" : token[fid_idx];
     const std::string id =
         (m_ignore_fid) ? token[iid_idx] : fid + m_delim + token[iid_idx];
+    if (m_max_fid_length < token[fid_idx].length())
+        m_max_fid_length = token[fid_idx].length();
+    if (m_max_iid_length < token[iid_idx].length())
+        m_max_iid_length = token[iid_idx].length();
+
     // end immediately if duplicated samples are found
     if (sample_in_file.find(id) != sample_in_file.end())
     {
