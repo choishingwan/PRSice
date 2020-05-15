@@ -26,6 +26,19 @@ public:
         parse_pheno_header(std::move(pheno_file));
     }
     Phenotype get_pheno_info() const { return m_pheno_info; }
+    std::tuple<size_t, size_t> get_progress()
+    {
+        return {m_total_process, m_total_competitive_process};
+    }
+    std::tuple<size_t, size_t> get_current_progress()
+    {
+        return {m_analysis_done, m_total_competitive_perm_done};
+    }
+    void set_progress(size_t analysis_done, size_t competitive_done)
+    {
+        m_analysis_done = analysis_done;
+        m_total_competitive_perm_done = competitive_done;
+    }
 };
 
 #endif // MOCK_PRSICE_HPP

@@ -172,29 +172,29 @@ public:
      * \param num_region the number of region to process
      * \param num_thresholds the number of thresholds to process
      */
-    void init_progress_count(const size_t num_region,
-                             const std::vector<std::set<double>>& thresholds)
+    void init_progress_count(const std::vector<std::set<double>>& thresholds)
     {
-        const size_t num_perm = m_perm_info.num_permutation;
-        const bool perm = m_perm_info.run_perm;
+        const size_t num_region = thresholds.size();
         const bool set_perm = m_perm_info.run_set_perm;
-        // total number of non-permutation processes
+        const bool perm = m_perm_info.run_perm;
+        // competitive p-value calculation will have its own progress counts
+        const size_t num_pheno_perm =
+            set_perm ? 1 : (perm) ? m_perm_info.num_permutation + 1 : 1;
+        const size_t num_set_perm = set_perm ? m_perm_info.num_permutation : 0;
         m_total_process = 0;
         for (size_t i = 0; i < thresholds.size(); ++i)
         {
-            if (i == 1) continue;
-            m_total_process += thresholds[i].size();
+            if (i == 1) continue; // ignore background
+            m_total_process += thresholds[i].size() * num_pheno_perm;
         }
-        // then repeat for each phenotype
-        m_total_process *= num_phenotype();
-        // for empirical p, we just repeat the whole process num_perm time
-        if (perm) { m_total_process *= (num_perm + 1); }
-        else if (set_perm)
-        {
-            // for set p, we just repeat the best threshold for each set
-            // num_perm time and we skip the base and background
-            m_total_process += num_phenotype() * (num_region - 2) * num_perm;
-        }
+        // now calculate the number of competitive permutation we need
+        // we only use the best threshold for set based permutation
+        m_total_competitive_process = (num_region - 2) * num_set_perm;
+    }
+    void reset_progress()
+    {
+        m_analysis_done = 0;
+        m_total_competitive_perm_done = 0;
     }
 
     PRSice(const PRSice&) = delete;            // disable copying
@@ -327,6 +327,8 @@ protected:
     double m_null_se = 0.0;
     double m_null_coeff = 0.0;
     size_t m_total_process = 0;
+    size_t m_total_competitive_process = 0;
+    size_t m_total_competitive_perm_done = 0;
     uint32_t m_num_snp_included = 0;
     uint32_t m_analysis_done = 0;
 

@@ -485,7 +485,7 @@ public:
     {
         return m_set_thresholds[idx].size();
     }
-    std::vector<std::set<double>> get_set_thresholds() const
+    const std::vector<std::set<double>>& get_set_thresholds() const
     {
         return m_set_thresholds;
     }

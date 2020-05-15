@@ -20,6 +20,7 @@
 #include "commander.hpp"
 #include "genotype.hpp"
 #include "genotypefactory.hpp"
+#include "pipeline_functions.hpp"
 #include "plink_common.hpp"
 #include "prsice.hpp"
 #include "region.hpp"
@@ -30,33 +31,6 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
-
-
-void print_empty_region(
-    const std::string& out,
-    const std::vector<std::vector<size_t>>& region_membership,
-    std::vector<std::string>& region_names);
-
-void initialize_target(
-    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    Genotype* target_file, Commander& commander, Reporter& reporter);
-void initialize_reference(
-    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    Genotype* target_file, Genotype* reference_file, Commander& commander,
-    Reporter& reporter);
-
-std::tuple<std::vector<std::string>, size_t>
-add_gene_set_info(Commander& commander, Genotype* target_file,
-                  Reporter& reporter)
-{
-    Region region(commander.get_set(), &reporter);
-    const size_t num_regions = region.generate_regions(
-        target_file->included_snps_idx(), target_file->included_snps(),
-        target_file->max_chr());
-    target_file->add_flags(region.get_gene_sets(), num_regions,
-                           commander.get_set().full_as_background);
-    return {region.get_names(), num_regions};
-}
 
 
 int main(int argc, char* argv[])
@@ -94,15 +68,15 @@ int main(int argc, char* argv[])
             target_file = factory.createGenotype(commander.get_target(),
                                                  commander.get_pheno(),
                                                  commander.delim(), reporter);
-            initialize_target(exclusion_regions, target_file, commander,
+            initialize_target(exclusion_regions, commander, target_file,
                               reporter);
             if (commander.use_ref() && commander.need_ref())
             {
                 reference_file = factory.createGenotype(
                     commander.get_reference(), commander.get_pheno(),
                     commander.delim(), reporter);
-                initialize_reference(exclusion_regions, target_file,
-                                     reference_file, commander, reporter);
+                initialize_reference(exclusion_regions, commander, target_file,
+                                     reference_file, reporter);
             }
             exclusion_regions.clear();
             target_file->calc_freqs_and_intermediate(commander.get_target_qc(),
@@ -118,7 +92,7 @@ int main(int argc, char* argv[])
                 reporter.report("No SNPs left for PRSice processing");
                 return -1;
             }
-            auto [region_names, num_regions] =
+            const auto [region_names, num_regions] =
                 add_gene_set_info(commander, target_file, reporter);
 
             PRSice prsice(commander.get_prs_instruction(),
@@ -140,27 +114,17 @@ int main(int argc, char* argv[])
             // immediately free the memory
             if (reference_file != nullptr) { delete reference_file; }
             if (commander.ultra_aggressive())
-            {
-                // we will do something ultra aggressive here: To load all SNP
-                // information into memory (does not work for bgen if hard
-                // coding isn't used)
-                target_file->load_genotype_to_memory();
-            }
-
-            // can do the update structure here
-            // Use sparse matrix for space and speed
-            // Column = set, row = SNPs (because EIGEN is column major)
-            // need to also know the number of threshold included
+            { target_file->load_genotype_to_memory(); }
             target_file->prepare_prsice();
             // from now on, we are not allow to sort the m_existed_snps
-
             auto snp_file = commander.print_snp()
                                 ? misc::load_ostream(commander.out() + ".snp")
                                 : nullptr;
+            // vector containing the index for each SNP in each set
+            // structure is [vec of Set][vec of SNP]
             auto region_membership = target_file->build_membership_matrix(
                 num_regions, region_names, commander.print_snp(),
                 *snp_file.get());
-
             // we can now quickly check if any of the region are empty
             try
             {
@@ -173,11 +137,14 @@ int main(int argc, char* argv[])
                 return -1;
             }
             // Initialize the progress bar
-            prsice.init_progress_count(num_regions,
-                                       target_file->get_set_thresholds());
+            // one progress bar per phenotype
+            // one extra progress bar for competitive permutation
+            assert(target_file->get_set_thresholds().size() == num_regions);
+            prsice.init_progress_count(target_file->get_set_thresholds());
             const size_t num_pheno = prsice.num_phenotype();
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
+                prsice.reset_progress();
                 if (prsice.pheno_skip(i_pheno))
                 {
                     reporter.simple_report("Skipping the "
@@ -201,8 +168,9 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "\nStart Processing\n");
                 for (size_t i_region = 0; i_region < num_regions; ++i_region)
                 {
-                    // always skip background region
-                    if (i_region == 1) continue;
+                    // always skip background region and empty regions
+                    if (i_region == 1 || region_membership[i_region].empty())
+                        continue;
                     if (!prsice.run_prsice(i_pheno, i_region, region_membership,
                                            commander.all_scores(),
                                            *target_file))
@@ -276,85 +244,4 @@ int main(int argc, char* argv[])
         reporter.report(error_message);
     }
     return 0;
-}
-
-void print_empty_region(
-    const std::string& out,
-    const std::vector<std::vector<size_t>>& region_membership,
-    std::vector<std::string>& region_names)
-{
-    bool has_empty_region = false;
-    std::ofstream empty_region;
-    std::string empty_region_name = out + ".xregion";
-    // region_start_idx size always = num_regions
-    // check regions to see if there are any empty regions
-    for (size_t region_idx = 2; region_idx < region_membership.size();
-         ++region_idx)
-    {
-        if (region_membership[region_idx].empty())
-        {
-            if (!has_empty_region)
-            {
-                empty_region.open(empty_region_name.c_str());
-                if (!empty_region.is_open())
-                {
-                    throw std::runtime_error("Error: Cannot open file: "
-                                             + empty_region_name
-                                             + " to write!");
-                }
-                has_empty_region = true;
-            }
-            empty_region << region_names[region_idx] << std::endl;
-            region_names[region_idx] = "";
-        }
-    }
-    if (has_empty_region) empty_region.close();
-}
-
-void initialize_reference(
-    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    Genotype* target_file, Genotype* reference_file, Commander& commander,
-    Reporter& reporter)
-{
-    const std::string separator =
-        "==================================================";
-    reporter.report("Start processing reference\n");
-    reference_file =
-        &reference_file->reference().intermediate(commander.use_inter());
-    reporter.report("Loading Genotype info from reference\n" + separator);
-    reference_file->load_samples();
-    // load the reference file
-    const bool verbose = true;
-    reference_file->load_snps(commander.out(), exclusion_regions, verbose,
-                              target_file);
-    reference_file->set_thresholds(commander.get_ref_qc());
-}
-
-void initialize_target(
-    const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-    Genotype* target_file, Commander& commander, Reporter& reporter)
-{
-
-    const std::string separator =
-        "==================================================";
-    target_file = &target_file->keep_nonfounder(commander.nonfounders())
-                       .keep_ambig(commander.keep_ambig())
-                       .intermediate(commander.use_inter())
-                       .set_prs_instruction(commander.get_prs_instruction())
-                       .set_weight();
-    const std::string base_name = commander.get_base_name();
-    reporter.report("Start processing " + base_name + "\n" + separator);
-    target_file->snp_extraction(commander.extract_file(),
-                                commander.exclude_file());
-    auto [filter_count, dup_rs_id] =
-        target_file->read_base(commander.get_base(), commander.get_base_qc(),
-                               commander.get_p_threshold(), exclusion_regions);
-    target_file->print_base_stat(filter_count, dup_rs_id, commander.out(),
-                                 commander.get_base_qc().info_score);
-    reporter.report("Loading Genotype info from target\n" + separator);
-    if (commander.use_ref()) target_file->expect_reference();
-    target_file->load_samples();
-    const bool verbose = true;
-    target_file->load_snps(commander.out(), exclusion_regions, verbose);
-    target_file->set_thresholds(commander.get_target_qc());
 }

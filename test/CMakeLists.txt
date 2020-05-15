@@ -15,6 +15,7 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/command_loading.cpp
     ${TEST_SRC_DIR}/command_validation.cpp
     ${TEST_SRC_DIR}/misc_test.cpp
+    ${TEST_SRC_DIR}/main_check.cpp
     ${TEST_SRC_DIR}/genotype_basic.cpp
     ${TEST_SRC_DIR}/genotype_read_base.cpp
     ${TEST_SRC_DIR}/genotype_read_sample.cpp
@@ -33,6 +34,7 @@ add_executable(tests ${TEST_SOURCES}
     ${TEST_SRC_DIR}/region_exclusion.cpp
     ${TEST_SRC_DIR}/region_process.cpp
     ${TEST_SRC_DIR}/prsice_pheno.cpp
+    ${TEST_SRC_DIR}/prsice_prs.cpp
     ${TEST_SRC_DIR}/genotype_clump.cpp
     )
 target_link_libraries(tests PUBLIC
