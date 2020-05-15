@@ -2,7 +2,6 @@
 #define MOCK_BINARYPLINK_HPP
 #include "binaryplink.hpp"
 #include "genotype.hpp"
-#include "mock_genotype.hpp"
 #include <bitset>
 
 class mock_binaryplink : public ::BinaryPlink

@@ -72,6 +72,27 @@ public:
     {
         return binary_pheno_is_valid(max_pheno_code, pheno_store);
     }
+
+
+    std::tuple<std::vector<double>, size_t, int>
+    test_process_phenotype_info(const std::string& delim, Genotype& target)
+    {
+        return process_phenotype_info(delim, target);
+    }
+    std::unordered_map<std::string, size_t>& sample_with_phenotypes()
+    {
+        return m_sample_with_phenotypes;
+    }
+
+    std::tuple<std::vector<double>, size_t, size_t, int>
+    test_process_phenotype_file(const std::string& file_name,
+                                const std::string& delim,
+                                const std::size_t pheno_idx,
+                                const bool ignore_fid, Genotype& target)
+    {
+        return process_phenotype_file(file_name, delim, pheno_idx, ignore_fid,
+                                      target);
+    }
 };
 
 #endif // MOCK_PRSICE_HPP

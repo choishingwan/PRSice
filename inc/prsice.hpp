@@ -357,14 +357,11 @@ protected:
      */
     void gen_pheno_vec(Genotype& target, const size_t pheno_index,
                        const std::string& delim);
-    void process_phenotype_file(const std::string& file_name,
-                                const std::string& pheno_name,
-                                const std::string& delim,
-                                const std::size_t pheno_idx,
-                                const bool ignore_fid, Genotype& target);
-    void process_phenotype_info(const std::string& pheno_name,
-                                const std::string& delim, const bool ignore_fid,
-                                Genotype& target);
+    std::tuple<std::vector<double>, size_t, size_t, int> process_phenotype_file(
+        const std::string& file_name, const std::string& delim,
+        const std::size_t pheno_idx, const bool ignore_fid, Genotype& target);
+    std::tuple<std::vector<double>, size_t, int>
+    process_phenotype_info(const std::string& delim, Genotype& target);
     std::tuple<bool, size_t, size_t>
     binary_pheno_is_valid(const int max_pheno_code,
                           std::vector<double>& pheno_store);

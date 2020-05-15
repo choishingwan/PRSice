@@ -386,7 +386,12 @@ public:
      * \param i is the sample ID
      * \return true if the phenotype is NA
      */
-    bool pheno_is_na(size_t i) const { return m_sample_id[i].pheno == "NA"; }
+    bool pheno_is_na(size_t i) const
+    {
+        auto pheno = m_sample_id[i].pheno;
+        misc::to_lower(pheno);
+        return pheno == "na" || pheno == "nan";
+    }
     /*!
      * \brief Return the fid of the i th sample
      * \param i is the sample index
