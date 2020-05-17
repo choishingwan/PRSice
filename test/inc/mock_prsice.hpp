@@ -162,6 +162,13 @@ public:
                                      std::move(cov_file));
     }
     Eigen::MatrixXd& get_independent() { return m_independent_variables; }
+    void init_independent(size_t sample, size_t col)
+    {
+        m_independent_variables = Eigen::MatrixXd::Zero(
+            static_cast<Eigen::Index>(sample), static_cast<Eigen::Index>(col));
+        m_independent_variables.col(0).setOnes();
+        m_independent_variables.col(1).setOnes();
+    }
 };
 
 #endif // MOCK_PRSICE_HPP

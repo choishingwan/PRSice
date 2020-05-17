@@ -904,18 +904,6 @@ void PRSice::process_cov_file(
     { update_sample_matrix(missing_count, valid_sample_index); }
     num_column = total_column;
 }
-/*
-void PRSice::gen_cov_matrix(const std::string& cov_file,
-                            const std::string& delim)
-{
-    Eigen::Index num_sample =
-        static_cast<Eigen::Index>(m_sample_with_phenotypes.size());
-    if (cov_file.empty())
-    {
-        m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
-        return;
-    }
-}*/
 
 bool PRSice::is_valid_covariate(const std::set<size_t>& factor_idx,
                                 const std::vector<size_t>& cov_idx,
@@ -1157,9 +1145,13 @@ void PRSice::propagate_independent_matrix(
                     // -1 so that the first non-reference level will start at
                     // the first column
                     auto cur_factor_level =
-                        factor_levels[i_factor].at(token[cur_cov_idx]) - 1;
-                    m_independent_variables(
-                        row_idx, cov_start[i_col] + cur_factor_level) = 1;
+                        factor_levels[i_factor].at(token[cur_cov_idx]);
+                    if (cur_factor_level != 0)
+                    {
+                        --cur_factor_level;
+                        m_independent_variables(
+                            row_idx, cov_start[i_col] + cur_factor_level) = 1;
+                    }
                     ++i_factor;
                 }
                 else
@@ -1179,7 +1171,6 @@ void PRSice::gen_cov_matrix(const std::vector<std::string>& cov_names,
                             const std::string& delim, const bool ignore_fid,
                             Genotype& target)
 {
-
     Eigen::Index num_sample =
         static_cast<Eigen::Index>(m_sample_with_phenotypes.size());
     if (cov_file_name.empty())

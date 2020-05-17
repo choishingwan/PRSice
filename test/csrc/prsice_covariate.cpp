@@ -62,7 +62,7 @@ TEST_CASE("covarience check and factor level count")
     std::uniform_int_distribution<size_t> sex_dist {0, 1};
     std::uniform_int_distribution<size_t> batch_dist {0, 100};
     auto valid = [&dist, &mersenne_engine]() {
-        return dist(mersenne_engine) > 7;
+        return dist(mersenne_engine) > 3;
     };
     auto batch = [&batch_dist, &mersenne_engine] {
         return "b" + std::to_string(batch_dist(mersenne_engine));
@@ -333,4 +333,93 @@ TEST_CASE("Get covariate start position")
     REQUIRE_THAT(cov_start, Catch::Equals<size_t>(expected_start));
 }
 
-TEST_CASE("Propaage independent matrix") {}
+TEST_CASE("Propaage independent matrix")
+{
+    // need to get the number of column, number of covariate start the factor
+    // levels and a cov file
+    size_t num_sample = 1000;
+    // one numeric covariate and one factor
+    std::random_device rnd_device;
+    std::mt19937 mersenne_engine {rnd_device()};
+    std::uniform_int_distribution<size_t> dist {1, 4};
+    std::uniform_int_distribution<size_t> valid_cov {1, 10};
+    std::normal_distribution pheno_dist;
+    auto pheno = [&pheno_dist, &mersenne_engine] {
+        return pheno_dist(mersenne_engine);
+    };
+    auto is_valid = [&valid_cov, &mersenne_engine] {
+        return valid_cov(mersenne_engine) > 3;
+    };
+    auto factor = [&dist, &mersenne_engine] {
+        return "b" + std::to_string(dist(mersenne_engine));
+    };
+    const std::string cov_header = "FID IID PC1 Batch\n";
+    std::vector<std::string> cov_input;
+    mock_prsice prsice;
+    Reporter reporter("log", 60, true);
+    prsice.set_reporter(&reporter);
+    auto&& sample_with_pheno = prsice.sample_with_phenotypes();
+    auto ignore_fid = GENERATE(true, false);
+    const std::string delim = " ";
+    std::unordered_set<std::string> valid_factor;
+    size_t valid_idx = 0;
+    for (size_t i = 0; i < num_sample; ++i)
+    {
+        auto cur_pheno = pheno();
+        auto cur_factor = factor();
+
+        auto id = std::to_string(i);
+        cov_input.push_back(id + " " + id + " " + std::to_string(cur_pheno)
+                            + " " + cur_factor + "\n");
+
+        if (is_valid())
+        {
+            if (!ignore_fid) { id.append(delim + std::to_string(i)); }
+            sample_with_pheno[id] = valid_idx++;
+            valid_factor.insert(cur_factor);
+        }
+    }
+    std::shuffle(cov_input.begin(), cov_input.end(), mersenne_engine);
+    size_t num_factor = valid_factor.size();
+    Eigen::MatrixXd expected_independent =
+        Eigen::MatrixXd::Zero(sample_with_pheno.size(), 2 + num_factor);
+    expected_independent.col(0).setOnes();
+    expected_independent.col(1).setOnes();
+    std::string cov_input_str = cov_header;
+    std::vector<std::string> token;
+    std::vector<std::unordered_map<std::string, size_t>> factor_level(1);
+    auto cur_level = factor_level.front();
+    size_t num_level = 0;
+    std::set<size_t> is_factor = {3};
+    std::vector<size_t> cov_idx = {2, 3};
+    for (size_t i = 0; i < cov_input.size(); ++i)
+    {
+        cov_input_str.append(cov_input[i]);
+        misc::trim(cov_input[i]);
+        token = misc::split(cov_input[i]);
+        auto id = token[0];
+        if (!ignore_fid) id.append(delim + token[1]);
+        auto idx = sample_with_pheno[id];
+        expected_independent(idx, 2) = misc::convert<double>(token[2]);
+        if (factor_level[0].find(token[3]) != factor_level[0].end())
+        {
+            if (factor_level[0][token[3]] != 0)
+                expected_independent(idx, 2 + factor_level[0][token[3]]) = 1;
+        }
+        else
+        {
+            factor_level[0][token[3]] = num_level++;
+            if (factor_level[0][token[3]] != 0)
+                expected_independent(idx, 2 + factor_level[0][token[3]]) = 1;
+        }
+    }
+    prsice.init_independent(valid_idx, num_factor + 2);
+    std::unique_ptr<std::istream> cov_file =
+        std::make_unique<std::istringstream>(cov_input_str);
+    std::vector<size_t> cov_start = {2, 3};
+    prsice.test_propagate_independent_matrix(factor_level, is_factor, cov_idx,
+                                             cov_start, delim, ignore_fid,
+                                             std::move(cov_file));
+    Eigen::MatrixXd result = prsice.get_independent();
+    REQUIRE(result == expected_independent);
+}
