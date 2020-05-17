@@ -162,8 +162,13 @@ int main(int argc, char* argv[])
                 prsice.new_phenotype(*target_file);
                 if (!commander.get_prs_instruction().no_regress)
                 {
-                    prsice.init_matrix(i_pheno, commander.delim(),
-                                       *target_file);
+                    prsice.init_matrix(
+                        pheno_info.cov_colname, pheno_info.col_index_of_cov,
+                        pheno_info.col_index_of_factor_cov,
+                        pheno_info.pheno_file, pheno_info.cov_file,
+                        pheno_info.pheno_col[i_pheno], commander.delim(),
+                        pheno_info.pheno_col_idx[i_pheno],
+                        pheno_info.ignore_fid, *target_file);
                 }
                 fprintf(stderr, "Preparing Output Files\n");
                 prsice.prep_output(*target_file, region_names, i_pheno,

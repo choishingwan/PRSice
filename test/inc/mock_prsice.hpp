@@ -122,9 +122,12 @@ public:
     }
     Eigen::VectorXd& phenotype_matrix() { return m_phenotype; }
     void test_update_phenotype_matrix(const std::vector<bool>& valid_samples,
-                                      const size_t num_valid, Genotype& target)
+                                      const std::string& delim,
+                                      const size_t num_valid,
+                                      const bool ignore_fid, Genotype& target)
     {
-        update_phenotype_matrix(valid_samples, num_valid, target);
+        update_phenotype_matrix(valid_samples, delim, num_valid, ignore_fid,
+                                target);
     }
     std::vector<std::unordered_map<std::string, size_t>>
     test_cov_check_and_factor_level_count(
@@ -138,6 +141,27 @@ public:
                                                 delim, ignore_fid, cov_file,
                                                 target);
     }
+    std::tuple<std::vector<size_t>, size_t> test_get_cov_start(
+        const std::vector<std::unordered_map<std::string, size_t>>&
+            factor_levels,
+        const std::set<size_t>& is_factor, const std::vector<size_t>& cov_idx)
+    {
+        return get_cov_start(
+
+            factor_levels, is_factor, cov_idx);
+    }
+    void test_propagate_independent_matrix(
+        const std::vector<std::unordered_map<std::string, size_t>>&
+            factor_levels,
+        const std::set<size_t>& is_factor, const std::vector<size_t>& cov_idx,
+        const std::vector<size_t>& cov_start, const std::string& delim,
+        const bool ignore_fid, std::unique_ptr<std::istream> cov_file)
+    {
+        propagate_independent_matrix(factor_levels, is_factor, cov_idx,
+                                     cov_start, delim, ignore_fid,
+                                     std::move(cov_file));
+    }
+    Eigen::MatrixXd& get_independent() { return m_independent_variables; }
 };
 
 #endif // MOCK_PRSICE_HPP

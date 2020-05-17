@@ -284,6 +284,7 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(max_code == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
             std::vector<double> expected;
+            size_t valid_idx = 0;
             auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < res_sample.size(); ++i)
             {
@@ -297,7 +298,8 @@ TEST_CASE("test phenotype file processes")
                                   : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == i);
+                    REQUIRE(loc->second == valid_idx);
+                    ++valid_idx;
                     REQUIRE(res_sample[i].in_regression);
                     expected.push_back(
                         misc::convert<double>(res_sample[i].pheno));
@@ -317,6 +319,7 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(max_code == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
             std::vector<double> expected;
+            size_t valid_idx = 0;
             auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < samples.size(); ++i)
             {
@@ -329,7 +332,8 @@ TEST_CASE("test phenotype file processes")
                                   : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == i);
+                    REQUIRE(loc->second == valid_idx);
+                    ++valid_idx;
                     REQUIRE(res_sample[i].in_regression);
                     expected.push_back(misc::convert<double>(samples[i].pheno));
                 }
@@ -369,6 +373,7 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(invalid == 1);
             // doesn't matter with max code
             auto pheno_map = prsice.sample_with_phenotypes();
+            size_t valid_idx = 0;
             std::vector<double> expected;
             auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < res_sample.size(); ++i)
@@ -381,7 +386,8 @@ TEST_CASE("test phenotype file processes")
                                   : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == i);
+                    REQUIRE(loc->second == valid_idx);
+                    ++valid_idx;
                     REQUIRE(res_sample[i].in_regression);
                     expected.push_back(
                         misc::convert<double>(res_sample[i].pheno));
@@ -414,6 +420,7 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(num_not_found == 1);
             REQUIRE(invalid == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
+            size_t valid_idx = 0;
             std::vector<double> expected;
             auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < res_sample.size(); ++i)
@@ -427,7 +434,8 @@ TEST_CASE("test phenotype file processes")
                                   : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == i);
+                    REQUIRE(loc->second == valid_idx);
+                    ++valid_idx;
                     REQUIRE(res_sample[i].in_regression);
                     expected.push_back(
                         misc::convert<double>(res_sample[i].pheno));

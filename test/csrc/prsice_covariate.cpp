@@ -186,7 +186,7 @@ TEST_CASE("covarience check and factor level count")
             REQUIRE(sex_factor.find(s.first) != sex_factor.end());
             REQUIRE(sex_factor[s.first] == s.second);
         }
-        auto pheno_matrix = prsice.phenotype_matrix();
+        Eigen::VectorXd pheno_matrix = prsice.phenotype_matrix();
         REQUIRE(static_cast<size_t>(pheno_matrix.rows())
                 == expected_pheno.size());
         for (size_t i = 0; i < expected_pheno.size(); ++i)
@@ -272,6 +272,9 @@ TEST_CASE("Update valid samples from m_phenotype")
     std::vector<bool> valid_after_covariate(num_sample, false);
     size_t num_cov_valid = 0;
     std::vector<double> expected_pheno;
+    const std::string delim = " ";
+    auto ignore_fid = GENERATE(true, false);
+    std::unordered_map<std::string, size_t> expected_id_map;
     for (size_t i = 0; i < num_sample; ++i)
     {
         auto cur_pheno = pheno();
@@ -284,6 +287,9 @@ TEST_CASE("Update valid samples from m_phenotype")
             valid_after_covariate[i] = valid();
             if (valid_after_covariate[i])
             {
+                auto id = std::to_string(i);
+                if (!ignore_fid) id.append(delim + std::to_string(i));
+                expected_id_map[id] = num_cov_valid;
                 expected_pheno.push_back(cur_pheno);
                 ++num_cov_valid;
             }
@@ -293,10 +299,38 @@ TEST_CASE("Update valid samples from m_phenotype")
     mock_prsice prsice;
     prsice.phenotype_matrix() = Eigen::Map<Eigen::VectorXd>(
         sample_pheno.data(), static_cast<Eigen::Index>(sample_pheno.size()));
-    prsice.test_update_phenotype_matrix(valid_after_covariate, num_cov_valid,
-                                        geno);
-    auto res = prsice.phenotype_matrix();
+    prsice.test_update_phenotype_matrix(valid_after_covariate, delim,
+                                        num_cov_valid, ignore_fid, geno);
+    Eigen::VectorXd res = prsice.phenotype_matrix();
     REQUIRE(static_cast<size_t>(res.rows()) == expected_pheno.size());
     for (size_t i = 0; i < expected_pheno.size(); ++i)
     { REQUIRE(res(i, 0) == Approx(expected_pheno[i])); }
+    auto sample_map = prsice.sample_with_phenotypes();
+    REQUIRE(sample_map.size() == expected_id_map.size());
+    for (auto&& id : expected_id_map)
+    {
+        auto loc = sample_map.find(id.first);
+        REQUIRE(loc != sample_map.end());
+        REQUIRE(loc->second == id.second);
+    }
 }
+
+TEST_CASE("Get covariate start position")
+{
+    mock_prsice prsice;
+    Reporter reporter("log", 60, true);
+    prsice.set_reporter(&reporter);
+    std::vector<std::unordered_map<std::string, size_t>> factor_levels = {
+        {{"A", 0}, {"B", 1}, {"C", 2}, {"D", 3}, {"E", 4}},
+        {{"M", 0}, {"F", 1}},
+        {{"batch1", 0}, {"batch3", 1}, {"batch2", 2}}};
+    std::set<size_t> is_factor = {3, 4, 9};
+    std::vector<size_t> cov_idx = {1, 3, 4, 5, 6, 9};
+    auto [cov_start, num_col] =
+        prsice.test_get_cov_start(factor_levels, is_factor, cov_idx);
+    REQUIRE(num_col == 12);
+    std::vector<size_t> expected_start = {2, 3, 7, 8, 9, 10};
+    REQUIRE_THAT(cov_start, Catch::Equals<size_t>(expected_start));
+}
+
+TEST_CASE("Propaage independent matrix") {}

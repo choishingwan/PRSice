@@ -96,7 +96,12 @@ public:
      */
     static void pheno_check(const bool no_regress, Phenotype& pheno,
                             Reporter& reporter);
-
+    void gen_cov_matrix(const std::vector<std::string>& cov_names,
+                        const std::vector<size_t>& cov_idx,
+                        const std::vector<size_t>& factor_idx,
+                        const std::string& cov_file_name,
+                        const std::string& delim, const bool ignore_fid,
+                        Genotype& target);
     bool is_valid_covariate(const std::set<size_t>& factor_idx,
                             const std::vector<size_t>& cov_idx,
                             std::vector<std::string>& cov_line,
@@ -106,6 +111,17 @@ public:
                                const std::vector<size_t>& cov_idx,
                                const std::vector<size_t>& factor_levels,
                                const std::vector<size_t>& missing_count);
+    std::tuple<std::vector<size_t>, size_t>
+    get_cov_start(const std::vector<std::unordered_map<std::string, size_t>>&
+                      factor_levels,
+                  const std::set<size_t>& is_factor,
+                  const std::vector<size_t>& cov_idx);
+    void propagate_independent_matrix(
+        const std::vector<std::unordered_map<std::string, size_t>>&
+            factor_levels,
+        const std::set<size_t>& is_factor, const std::vector<size_t>& cov_idx,
+        const std::vector<size_t>& cov_start, const std::string& delim,
+        const bool ignore_fid, std::unique_ptr<std::istream> cov_file);
     std::vector<std::unordered_map<std::string, size_t>>
     cov_check_and_factor_level_count(const std::set<size_t>& factor_idx,
                                      const std::vector<std::string>& cov_names,
@@ -114,7 +130,11 @@ public:
                                      const bool ignore_fid,
                                      std::unique_ptr<std::istream>& cov_file,
                                      Genotype& target);
-    void init_matrix(const std::string& file_name,
+    void init_matrix(const std::vector<std::string>& cov_names,
+                     const std::vector<size_t>& cov_idx,
+                     const std::vector<size_t>& factor_idx,
+                     const std::string& file_name,
+                     const std::string& cov_file_name,
                      const std::string& pheno_name, const std::string& delim,
                      const size_t file_idx, const bool ignore_fid,
                      Genotype& target);
@@ -377,18 +397,7 @@ protected:
                          const size_t num_not_found, const size_t invalid_pheno,
                          const int max_pheno_code, const bool ignore_fid,
                          std::vector<double>& pheno_store);
-    /*!
-     * \brief Function to generate the m_independent_variable matrix
-     * \param c_cov_file is the name of the covariate file
-     * \param cov_header_name is a string vector containing the name of each
-     * covaraites
-     * \param cov_header_index is a vector of int containing the column index of
-     * each covariates
-     * \param factor_cov_index is a vector of int containing the column index of
-     * each factor covariates
-     * \param reporter is the logger
-     */
-    void gen_cov_matrix(const std::string& delim);
+
     void adjustment_factor(const double prevalence, double& top,
                            double& bottom);
     void print_na(const std::string& region_name, const double threshold,
@@ -420,7 +429,9 @@ protected:
                             size_t& factor_level_idx,
                             std::vector<size_t>& missing_count);
     void update_phenotype_matrix(const std::vector<bool>& valid_samples,
-                                 const size_t num_valid, Genotype& target);
+                                 const std::string& delim,
+                                 const size_t num_valid, const bool ignore_fid,
+                                 Genotype& target);
     void update_sample_matrix(
         const std::vector<size_t>& missing_count,
         std::vector<std::pair<std::string, size_t>>& valid_sample_index);
