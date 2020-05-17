@@ -392,6 +392,18 @@ public:
         misc::to_lower(pheno);
         return pheno == "na" || pheno == "nan";
     }
+    void update_valid_sample(size_t idx, bool in_regression)
+    {
+        m_sample_id.at(idx).in_regression = in_regression;
+    }
+    bool sample_selected_for_prs(size_t idx)
+    {
+        return IS_SET(m_calculate_prs.data(), idx);
+    }
+    bool sample_valid_for_regress(size_t idx)
+    {
+        return m_sample_id.at(idx).in_regression;
+    }
     /*!
      * \brief Return the fid of the i th sample
      * \param i is the sample index

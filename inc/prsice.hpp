@@ -97,6 +97,23 @@ public:
     static void pheno_check(const bool no_regress, Phenotype& pheno,
                             Reporter& reporter);
 
+    bool is_valid_covariate(const std::set<size_t>& factor_idx,
+                            const std::vector<size_t>& cov_idx,
+                            std::vector<std::string>& cov_line,
+                            std::vector<size_t>& missing_count);
+    std::string output_missing(const std::set<size_t>& factor_idx,
+                               const std::vector<std::string>& cov_names,
+                               const std::vector<size_t>& cov_idx,
+                               const std::vector<size_t>& factor_levels,
+                               const std::vector<size_t>& missing_count);
+    std::vector<std::unordered_map<std::string, size_t>>
+    cov_check_and_factor_level_count(const std::set<size_t>& factor_idx,
+                                     const std::vector<std::string>& cov_names,
+                                     const std::vector<size_t>& cov_idx,
+                                     const std::string& delim,
+                                     const bool ignore_fid,
+                                     std::unique_ptr<std::istream>& cov_file,
+                                     Genotype& target);
     void init_matrix(const std::string& file_name,
                      const std::string& pheno_name, const std::string& delim,
                      const size_t file_idx, const bool ignore_fid,
@@ -402,6 +419,8 @@ protected:
                             const size_t num_factors, const size_t idx,
                             size_t& factor_level_idx,
                             std::vector<size_t>& missing_count);
+    void update_phenotype_matrix(const std::vector<bool>& valid_samples,
+                                 const size_t num_valid, Genotype& target);
     void update_sample_matrix(
         const std::vector<size_t>& missing_count,
         std::vector<std::pair<std::string, size_t>>& valid_sample_index);

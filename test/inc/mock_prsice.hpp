@@ -111,7 +111,33 @@ public:
         gen_pheno_vec(pheno_file, pheno_name, delim, pheno_idx, ignore_fid,
                       target);
     }
+    static bool test_is_valid_covariate(const std::set<size_t>& factor_idx,
+                                        const std::vector<size_t>& cov_idx,
+                                        std::vector<std::string>& cov_line,
+                                        std::vector<size_t>& missing_count)
+    {
+        PRSice prsice;
+        return prsice.is_valid_covariate(factor_idx, cov_idx, cov_line,
+                                         missing_count);
+    }
     Eigen::VectorXd& phenotype_matrix() { return m_phenotype; }
+    void test_update_phenotype_matrix(const std::vector<bool>& valid_samples,
+                                      const size_t num_valid, Genotype& target)
+    {
+        update_phenotype_matrix(valid_samples, num_valid, target);
+    }
+    std::vector<std::unordered_map<std::string, size_t>>
+    test_cov_check_and_factor_level_count(
+        const std::set<size_t>& factor_idx,
+        const std::vector<std::string>& cov_names,
+        const std::vector<size_t>& cov_idx, const std::string& delim,
+        const bool ignore_fid, std::unique_ptr<std::istream>& cov_file,
+        Genotype& target)
+    {
+        return cov_check_and_factor_level_count(factor_idx, cov_names, cov_idx,
+                                                delim, ignore_fid, cov_file,
+                                                target);
+    }
 };
 
 #endif // MOCK_PRSICE_HPP

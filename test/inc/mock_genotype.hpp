@@ -199,6 +199,7 @@ public:
         m_sample_id.push_back(sample);
         ++m_sample_ct;
     }
+    std::vector<Sample_ID>& get_sample_vec() { return m_sample_id; }
     void set_keep_nonfounder(bool keep_nonfounder)
     {
         m_keep_nonfounder = keep_nonfounder;
@@ -274,6 +275,9 @@ public:
     }
     void set_sample_vector(const size_t n_sample)
     {
+        m_unfiltered_sample_ct = n_sample;
+        const uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(n_sample);
+        m_calculate_prs.resize(unfiltered_sample_ctl, 0);
         for (size_t i = 0; i < n_sample; ++i)
         { SET_BIT(i, m_calculate_prs.data()); }
         m_sample_ct = n_sample;

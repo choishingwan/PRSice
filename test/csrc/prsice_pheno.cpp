@@ -260,6 +260,7 @@ TEST_CASE("test phenotype file processes")
         std::shuffle(samples.begin(), samples.end(), g);
         for (auto&& s : samples) { geno.add_sample(s); }
         geno.set_sample(samples.size());
+        geno.set_sample_vector(samples.size());
         mock_prsice prsice(true, &reporter);
         SECTION("From phenotype file")
         {
@@ -282,22 +283,28 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(invalid == 1);
             REQUIRE(max_code == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
-            size_t valid_idx = 0;
             std::vector<double> expected;
-            for (size_t i = 0; i < samples.size(); ++i)
+            auto res_sample = geno.get_sample_vec();
+            for (size_t i = 0; i < res_sample.size(); ++i)
             {
-                if (samples[i].FID != "Missing" && samples[i].FID != "na1"
-                    && samples[i].FID != "na2" && samples[i].FID != "invalid"
-                    && samples[i].FID != "Control2")
+                if (res_sample[i].FID != "Missing" && res_sample[i].FID != "na1"
+                    && res_sample[i].FID != "na2"
+                    && res_sample[i].FID != "invalid"
+                    && res_sample[i].FID != "Control2")
                 {
                     auto id = ignore_fid
-                                  ? samples[i].IID
-                                  : samples[i].FID + " " + samples[i].IID;
+                                  ? res_sample[i].IID
+                                  : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == valid_idx);
-                    expected.push_back(misc::convert<double>(samples[i].pheno));
-                    ++valid_idx;
+                    REQUIRE(loc->second == i);
+                    REQUIRE(res_sample[i].in_regression);
+                    expected.push_back(
+                        misc::convert<double>(res_sample[i].pheno));
+                }
+                else
+                {
+                    REQUIRE_FALSE(res_sample[i].in_regression);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -309,21 +316,26 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(invalid == 1);
             REQUIRE(max_code == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
-            size_t valid_idx = 0;
             std::vector<double> expected;
+            auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < samples.size(); ++i)
             {
-                if (samples[i].FID != "Missing" && samples[i].FID != "na1"
-                    && samples[i].FID != "na2" && samples[i].FID != "invalid")
+                if (res_sample[i].FID != "Missing" && res_sample[i].FID != "na1"
+                    && res_sample[i].FID != "na2"
+                    && res_sample[i].FID != "invalid")
                 {
                     auto id = ignore_fid
-                                  ? samples[i].IID
-                                  : samples[i].FID + " " + samples[i].IID;
+                                  ? res_sample[i].IID
+                                  : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == valid_idx);
+                    REQUIRE(loc->second == i);
+                    REQUIRE(res_sample[i].in_regression);
                     expected.push_back(misc::convert<double>(samples[i].pheno));
-                    ++valid_idx;
+                }
+                else
+                {
+                    REQUIRE_FALSE(res_sample[i].in_regression);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -348,7 +360,7 @@ TEST_CASE("test phenotype file processes")
         std::shuffle(samples.begin(), samples.end(), g);
         for (auto&& s : samples) { geno.add_sample(s); }
         geno.set_sample(samples.size());
-
+        geno.set_sample_vector(samples.size());
         mock_prsice prsice(false, &reporter);
         SECTION("Directly from fam")
         {
@@ -357,21 +369,26 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(invalid == 1);
             // doesn't matter with max code
             auto pheno_map = prsice.sample_with_phenotypes();
-            size_t valid_idx = 0;
             std::vector<double> expected;
-            for (size_t i = 0; i < samples.size(); ++i)
+            auto res_sample = geno.get_sample_vec();
+            for (size_t i = 0; i < res_sample.size(); ++i)
             {
-                if (samples[i].FID != "na1" && samples[i].FID != "na2"
-                    && samples[i].FID != "invalid")
+                if (res_sample[i].FID != "na1" && res_sample[i].FID != "na2"
+                    && res_sample[i].FID != "invalid")
                 {
                     auto id = ignore_fid
-                                  ? samples[i].IID
-                                  : samples[i].FID + " " + samples[i].IID;
+                                  ? res_sample[i].IID
+                                  : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == valid_idx);
-                    expected.push_back(misc::convert<double>(samples[i].pheno));
-                    ++valid_idx;
+                    REQUIRE(loc->second == i);
+                    REQUIRE(res_sample[i].in_regression);
+                    expected.push_back(
+                        misc::convert<double>(res_sample[i].pheno));
+                }
+                else
+                {
+                    REQUIRE_FALSE(res_sample[i].in_regression);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -397,21 +414,27 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(num_not_found == 1);
             REQUIRE(invalid == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
-            size_t valid_idx = 0;
             std::vector<double> expected;
-            for (size_t i = 0; i < samples.size(); ++i)
+            auto res_sample = geno.get_sample_vec();
+            for (size_t i = 0; i < res_sample.size(); ++i)
             {
-                if (samples[i].FID != "na1" && samples[i].FID != "na2"
-                    && samples[i].FID != "invalid" && samples[i].FID != "ID4")
+                if (res_sample[i].FID != "na1" && res_sample[i].FID != "na2"
+                    && res_sample[i].FID != "invalid"
+                    && res_sample[i].FID != "ID4")
                 {
                     auto id = ignore_fid
-                                  ? samples[i].IID
-                                  : samples[i].FID + " " + samples[i].IID;
+                                  ? res_sample[i].IID
+                                  : res_sample[i].FID + " " + res_sample[i].IID;
                     auto loc = pheno_map.find(id);
                     REQUIRE(loc != pheno_map.end());
-                    REQUIRE(loc->second == valid_idx);
-                    expected.push_back(misc::convert<double>(samples[i].pheno));
-                    ++valid_idx;
+                    REQUIRE(loc->second == i);
+                    REQUIRE(res_sample[i].in_regression);
+                    expected.push_back(
+                        misc::convert<double>(res_sample[i].pheno));
+                }
+                else
+                {
+                    REQUIRE_FALSE(res_sample[i].in_regression);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -559,6 +582,7 @@ TEST_CASE("gen_pheno_vec")
     std::shuffle(samples.begin(), samples.end(), mersenne_engine);
     for (auto&& s : samples) { geno.add_sample(s); }
     geno.set_sample(samples.size());
+    geno.set_sample_vector(samples.size());
     Reporter reporter("log", 60, true);
     mock_prsice prsice(false, &reporter);
     SECTION("From file")

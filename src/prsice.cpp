@@ -376,11 +376,12 @@ PRSice::process_phenotype_info(const std::string& delim, const bool ignore_fid,
     std::vector<double> pheno_store;
     pheno_store.reserve(sample_ct);
     size_t invalid_pheno = 0;
-    size_t sample_index_ct = 0;
     int max_pheno_code = 0;
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
-        if (target.pheno_is_na(i_sample) || !target.in_regression(i_sample)
+        target.update_valid_sample(i_sample, false);
+        if (target.pheno_is_na(i_sample)
+            || !target.sample_selected_for_prs(i_sample)
             || (m_binary_trait && target.pheno(i_sample) == "-9"))
         { continue; }
         try
@@ -388,8 +389,8 @@ PRSice::process_phenotype_info(const std::string& delim, const bool ignore_fid,
             parse_pheno(target.pheno(i_sample), pheno_store, max_pheno_code);
             auto id = ignore_fid ? target.iid(i_sample)
                                  : target.sample_id(i_sample, delim);
-            m_sample_with_phenotypes[id] = sample_index_ct;
-            ++sample_index_ct;
+            m_sample_with_phenotypes[id] = i_sample;
+            target.update_valid_sample(i_sample, true);
         }
         catch (const std::runtime_error&)
         {
@@ -414,11 +415,11 @@ PRSice::process_phenotype_file(const std::string& file_name,
     int max_pheno_code = 0;
     size_t invalid_pheno = 0;
     size_t num_not_found = 0;
-    size_t sample_index_ct = 0;
     std::vector<double> pheno_store;
     pheno_store.reserve(sample_ct);
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
+        target.update_valid_sample(i_sample, false);
         id = (ignore_fid) ? target.iid(i_sample)
                           : target.sample_id(i_sample, delim);
         auto pheno_in_file = phenotype_info.find(id);
@@ -427,15 +428,15 @@ PRSice::process_phenotype_file(const std::string& file_name,
             auto pheno_tmp = pheno_in_file->second;
             misc::to_lower(pheno_tmp);
             if (pheno_tmp != "na" && phenotype_info[id] != "nan"
-                && target.in_regression(i_sample)
+                && target.sample_selected_for_prs(i_sample)
                 && !(m_binary_trait && target.pheno(i_sample) == "-9"))
             {
                 try
                 {
                     parse_pheno(phenotype_info[id], pheno_store,
                                 max_pheno_code);
-                    m_sample_with_phenotypes[id] = sample_index_ct;
-                    ++sample_index_ct;
+                    m_sample_with_phenotypes[id] = i_sample;
+                    target.update_valid_sample(i_sample, true);
                 }
                 catch (...)
                 {
@@ -556,6 +557,9 @@ void PRSice::gen_pheno_vec(const std::string& pheno_file,
     size_t invalid_pheno = 0;
     int max_pheno_code = 0;
     std::vector<double> pheno_store;
+    // m_sample_with_phenotype will have ID as key and idx on the vector
+    // SampleID as value because we know the phenobtype are stored w.r.t the
+    // order of vector SampleID
     if (!pheno_file.empty()) // use phenotype file
     {
         std::tie(pheno_store, num_not_found, invalid_pheno, max_pheno_code) =
@@ -872,6 +876,184 @@ void PRSice::gen_cov_matrix(const std::string& cov_file,
         return;
     }
 }*/
+
+bool PRSice::is_valid_covariate(const std::set<size_t>& factor_idx,
+                                const std::vector<size_t>& cov_idx,
+                                std::vector<std::string>& cov_line,
+                                std::vector<size_t>& missing_count)
+{
+    bool valid = true;
+    for (size_t idx = 0; idx < cov_idx.size(); ++idx)
+    {
+        auto cur_cov_idx = cov_idx[idx];
+        auto cur_cov = cov_line[cur_cov_idx];
+        misc::to_upper(cur_cov);
+        if (cur_cov == "NAN" || cur_cov == "NA")
+        {
+            ++missing_count[idx];
+            valid = false;
+        }
+        else if (factor_idx.find(cur_cov_idx) == factor_idx.end())
+        {
+            // not factor
+            try
+            {
+                misc::convert<double>(cur_cov);
+            }
+            catch (...)
+            {
+                ++missing_count[idx];
+                valid = false;
+            }
+        }
+    }
+    return valid;
+}
+std::string PRSice::output_missing(const std::set<size_t>& factor_idx,
+                                   const std::vector<std::string>& cov_names,
+                                   const std::vector<size_t>& cov_idx,
+                                   const std::vector<size_t>& factor_levels,
+                                   const std::vector<size_t>& missing_count)
+{
+    std::string message =
+        "Include Covariates:\nName\tMissing\tNumber of levels\n";
+    size_t cur_name_idx = 0;
+    size_t i_factor = 0;
+    for (auto&& cov : cov_idx)
+    {
+        if (factor_idx.find(cov) == factor_idx.end())
+        {
+            // non-factor
+            message.append(cov_names[cur_name_idx] + "\t"
+                           + std::to_string(missing_count[cur_name_idx])
+                           + "\t-\n");
+        }
+        else
+        {
+            message.append(cov_names[cur_name_idx] + "\t"
+                           + std::to_string(missing_count[cur_name_idx]) + "\t"
+                           + std::to_string(factor_levels[i_factor++]) + "\n");
+        }
+        ++cur_name_idx;
+    }
+    return message;
+}
+void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_samples,
+                                     const size_t num_valid, Genotype& target)
+{
+    Eigen::VectorXd new_pheno = Eigen::VectorXd::Zero(num_valid);
+    const size_t num_sample = target.num_sample();
+    size_t new_matrix_idx = 0, pheno_matrix_idx = 0;
+    for (size_t i = 0; i < num_sample; ++i)
+    {
+        if (target.sample_valid_for_regress(i))
+        {
+            if (valid_samples[i])
+            {
+                new_pheno(new_matrix_idx, 0) = m_phenotype(pheno_matrix_idx, 0);
+                ++new_matrix_idx;
+            }
+            else
+            {
+                target.update_valid_sample(i, false);
+            }
+            ++pheno_matrix_idx;
+        }
+    }
+    m_phenotype = new_pheno;
+}
+
+std::vector<std::unordered_map<std::string, size_t>>
+PRSice::cov_check_and_factor_level_count(
+    const std::set<size_t>& factor_idx,
+    const std::vector<std::string>& cov_names,
+    const std::vector<size_t>& cov_idx, const std::string& delim,
+    const bool ignore_fid, std::unique_ptr<std::istream>& cov_file,
+    Genotype& target)
+{
+    const size_t max_idx = cov_idx.back() + 1;
+    std::vector<size_t> missing_count(cov_idx.size(), 0);
+    std::vector<size_t> current_factor_level(factor_idx.size(), 0);
+    std::unordered_set<std::string> duplicated_id;
+    std::string line, id;
+    std::vector<std::string> token;
+    size_t num_duplicated_id = 0;
+    // indicate if the sample is valid after covariate read
+    // we need this as the covariate file might not follow order of the
+    // fam file. Size should be total number of samples in vector not in the
+    // matrix as we don't know the order
+    std::vector<bool> valid_samples(target.num_sample(), false);
+    bool valid;
+    size_t num_valid = 0;
+    std::vector<std::unordered_map<std::string, size_t>> factor_levels(
+        factor_idx.size());
+    while (std::getline(*cov_file, line))
+    {
+        misc::trim(line);
+        if (line.empty()) continue;
+        token = misc::split(line);
+        if (token.size() < max_idx)
+        {
+            throw std::runtime_error(
+                "Error: Malformed covariate file, should have at least "
+                + std::to_string(max_idx) + " columns");
+        }
+        id = (ignore_fid) ? token[0] : token[0] + delim + token[1];
+        auto sample_idx = m_sample_with_phenotypes.find(id);
+        if (sample_idx != m_sample_with_phenotypes.end())
+        {
+            valid =
+                is_valid_covariate(factor_idx, cov_idx, token, missing_count);
+            if (!valid) continue;
+            if (duplicated_id.find(id) != duplicated_id.end())
+            {
+                ++num_duplicated_id;
+                continue;
+            }
+            duplicated_id.insert(id);
+            // sample is valid
+            valid_samples[sample_idx->second] = true;
+            ++num_valid;
+            size_t i_factor = 0;
+            for (auto&& f : factor_idx)
+            {
+                auto&& cur_level = factor_levels[i_factor];
+                auto&& cur_cov = token[f];
+                if (cur_level.find(cur_cov) == cur_level.end())
+                { cur_level[cur_cov] = current_factor_level[i_factor]++; }
+                ++i_factor;
+            }
+        }
+    }
+    if (num_duplicated_id != 0)
+    {
+        throw std::runtime_error("Error: " + std::to_string(num_duplicated_id)
+                                 + " duplicated IDs in covariate file!\n");
+    }
+    else if (num_valid == 0)
+    {
+        throw std::runtime_error("Error: All samples removed due to "
+                                 "missingness in covariate file!");
+    }
+    auto message = output_missing(factor_idx, cov_names, cov_idx,
+                                  current_factor_level, missing_count);
+    double ratio = static_cast<double>(num_valid)
+                   / static_cast<double>(m_sample_with_phenotypes.size());
+    if (ratio < 0.95)
+    {
+        message.append(
+            "Warning: More than " + std::to_string((1.0 - ratio) * 100)
+            + "% of your samples were removed! "
+              "You should check if your covariate file is correct\n");
+    }
+    m_reporter->report(message);
+    update_phenotype_matrix(valid_samples, num_valid, target);
+    // update phenotype matrix here
+    cov_file->clear();
+    cov_file->seekg(0, cov_file->beg);
+    return factor_levels;
+}
+
 void PRSice::gen_cov_matrix(const std::string& delim)
 {
     // The size of the map should be informative of the number of sample
@@ -883,8 +1065,14 @@ void PRSice::gen_cov_matrix(const std::string& delim)
         m_independent_variables = Eigen::MatrixXd::Ones(num_sample, 2);
         return;
     }
-    // obtain the index of each covariate
-    // the key is the variable name and the value is the index on the matrix
+    // convert factor idx to unordered_set for more elegant way of determining
+    // if idx is factor
+    std::set<size_t> is_factor;
+    for (auto&& f : m_pheno_info.col_index_of_factor_cov)
+    { is_factor.insert(f); }
+
+    // obtain the index of each covariate the key is the
+    // variable name and the value is the index on the matrix
 
     // need to account for the situation where the same variable name can
     // occur in different covariates
