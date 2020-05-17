@@ -34,7 +34,7 @@ TEST_CASE("Initialize progress bar")
     perm.num_permutation = GENERATE(take(1, random(1ul, 10000ul)));
     std::string output = "PRSice";
     Reporter reporter("log", 60, true);
-    mock_prsice prsice(prs_info, thres, perm, output, 3, 3, true, &reporter);
+    mock_prsice prsice(prs_info, thres, perm, output, true, &reporter);
     size_t exp_total = 0;
     if (perm.run_perm)
         exp_total = total_thres * (perm.num_permutation + 1);

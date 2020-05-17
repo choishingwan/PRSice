@@ -1458,220 +1458,142 @@ void PRSice::consume_null_pheno(
     }
 }
 
-void PRSice::prep_output(const Genotype& target,
-                         const std::vector<std::string>& region_name,
-                         const size_t pheno_index, const bool all_score)
+void PRSice::prep_best_output(
+    const Genotype& target,
+    const std::vector<std::vector<size_t>>& region_membership,
+    const std::vector<std::string>& region_name, const size_t max_fid,
+    const size_t max_iid, std::unique_ptr<std::ostream>& best_file)
 {
-    // As R has a default precision of 7, we will go a bit
-    // higher to ensure we use up all precision
-    std::string pheno_name = "";
-    // > 1 because we don't need to specify the name when there's only one
-    // phenotype
-    if (m_pheno_info.pheno_col.size() > 1)
-        pheno_name = m_pheno_info.pheno_col[pheno_index];
-    std::string output_prefix = m_prefix;
-    if (!pheno_name.empty()) output_prefix.append("." + pheno_name);
-    const std::string out_prsice = output_prefix + ".prsice";
-    // all score will be the same for all phenotype anyway, so we will only
-    // generate it once
-    const std::string out_all = m_prefix + ".all.score";
-    const std::string out_best = output_prefix + ".best";
-    const size_t num_samples_included = target.num_sample();
-    const long long empty_sets =
-        std::count_if(region_name.begin(), region_name.end(), empty_name);
-    const long long num_region =
-        static_cast<long long>(region_name.size()) - empty_sets;
-    if (num_region > std::numeric_limits<long long>::max())
+    const size_t num_region = region_name.size();
+    const size_t num_samples = target.num_sample();
+    const long long begin_byte = best_file->tellp();
+    (*best_file) << "FID IID In_Regression";
+    if (!(num_region > 2)) { (*best_file) << " PRS\n"; }
+    for (size_t i = 0; i < region_name.size(); ++i)
     {
-        throw std::runtime_error("Error: Too many regions, will cause integer "
-                                 "overflow when generating the best file");
+        if (i == 1 || region_membership[i].empty()) continue;
+        (*best_file) << " " << region_name[i];
     }
-    // .prsice output
-    // we only need to generate the header for it
-    m_prsice_out.open(out_prsice.c_str());
-    if (!m_prsice_out.is_open())
+    (*best_file) << "\n";
+    try
     {
-        throw std::runtime_error("Error: Cannot open file: " + out_prsice
-                                 + " to write");
+        m_fast_best_output =
+            Eigen::MatrixXd::Zero(num_samples, region_name.size());
+        m_quick_best = true;
     }
-    // we won't store the empirical p and competitive p output in the
-    // prsice file now as that seems like a waste (only one threshold
-    // will contain that information, storing that in the summary file
-    // should be enough)
-    m_prsice_out << "Set\tThreshold\tR2\t";
-    // but generate the adjusted R2 if prevalence is provided
-    if (!m_pheno_info.prevalence.empty()) m_prsice_out << "R2.adj\t";
-    m_prsice_out << "P\tCoefficient\tStandard.Error\tNum_SNP\n";
-    if (!m_prs_info.no_regress)
+    catch (...)
     {
-        // .best output
-        try
-        {
-            m_fast_best_output =
-                Eigen::MatrixXd::Zero(num_samples_included, region_name.size());
-            m_quick_best = true;
-        }
-        catch (...)
-        {
-            m_reporter->report(
-                "Warning: Not enough memory to store all best scores "
-                "into the memory, will use a slower method to output "
-                "the best score file");
-            // not enough memory for fast best use the seekg method
-            m_best_out.open(out_best.c_str());
-            if (!m_best_out.is_open())
-            {
-                throw std::runtime_error("Error: Cannot open file: " + out_best
-                                         + " to write");
-            }
-            std::string header_line = "FID IID In_Regression";
-            // The default name of the output should be PRS, but if we are
-            // running PRSet, it should be call Base
-            if (!(num_region > 2))
-                header_line.append(" PRS");
-            else
-            {
-                for (long long i = 0;
-                     i < static_cast<long long>(region_name.size()); ++i)
-                {
-                    if (i == 1 || region_name[static_cast<size_t>(i)].empty())
-                        continue;
-                    header_line.append(" "
-                                       + region_name[static_cast<size_t>(i)]);
-                }
-                m_quick_best = num_region <= 2;
-            }
-            // the safetest way to calculate the length we need to skip is
-            // to directly count the number of byte involved
-            const long long begin_byte = m_best_out.tellp();
-            m_best_out << header_line << "\n";
-            const long long end_byte = m_best_out.tellp();
-            // we now know the exact number of byte the header contain and
-            // can correctly skip it acordingly
-            assert(end_byte >= begin_byte);
-            m_best_file.header_length = end_byte - begin_byte;
-            // we will set the processed_threshold information to 0
-            m_best_file.processed_threshold = 0;
+        m_reporter->report(
+            "Warning: Not enough memory to store all best scores "
+            "into the memory, will use a slower method to output "
+            "the best score file");
+        // not enough memory for fast best use the seekg method
 
-            // each numeric output took 12 spaces, then for each output,
-            // there is one space next to each
-            m_best_file.line_width =
-                m_max_fid_length /* FID */ + 1LL           /* space */
-                + m_max_iid_length                         /* IID */
-                + 1LL /* space */ + 3LL /* Yes/No */ + 1LL /* space */
-                + (num_region - 1) /* each region -1 to remove background*/
-                      * (m_numeric_width + 1LL /* space */)
-                + 1LL /* new line */;
-            m_best_file.skip_column_length =
-                m_max_fid_length + 1LL + m_max_iid_length + 1LL + 3LL + 1LL;
-        }
-    }
-
-    // also handle all score here
-    // but we will only try and generate the all score file when we are
-    // dealing with the first phenotype (pheno_index == 0)
-    const bool all_scores = all_score && !pheno_index;
-    if (all_scores)
-    {
-        m_all_out.open(out_all.c_str());
-        if (!m_all_out.is_open())
-        {
-            throw std::runtime_error("Cannot open file " + out_all
-                                     + " for write");
-        }
-        // we need to know the number of available thresholds so that we can
-        // know how many white spaces we need to pad in
-        std::vector<std::set<double>> set_thresholds =
-            target.get_set_thresholds();
-        unsigned long long total_set_thresholds = 0;
-        for (size_t thres = 0; thres < set_thresholds.size(); ++thres)
-        {
-            if (thres == 1) continue;
-            if (total_set_thresholds
-                    == std::numeric_limits<unsigned long long>::max()
-                || total_set_thresholds > std::numeric_limits<long long>::max())
-            {
-                throw std::runtime_error(
-                    "Error: Too many combinations of number of regions and "
-                    "number "
-                    "of thresholds, will cause integer overflow.");
-            }
-            total_set_thresholds += set_thresholds[thres].size();
-        }
-        // we want the threshold to be in sorted order as we will process
-        // the SNPs from the smaller threshold to the highest (therefore,
-        // the processed_threshold index should be correct)
-
-        const long long begin_byte = m_all_out.tellp();
-        m_all_out << "FID IID";
-        // size_t header_length = 3+1+3;
-        if (!(region_name.size() > 2))
-        {
-            for (auto& thres : set_thresholds.front())
-            { m_all_out << " " << thres; }
-        }
-        else
-        {
-            // don't output all score for background
-            // not all set has snps in all threshold
-            for (size_t i = 0; i < region_name.size(); ++i)
-            {
-                if (i == 1) continue;
-                for (auto& thres : set_thresholds[i])
-                { m_all_out << " " << region_name[i] << "_" << thres; }
-            }
-        }
-        m_all_out << "\n";
-        const long long end_byte = m_all_out.tellp();
-        // if the line is too long, we might encounter overflow
+        m_quick_best = num_region <= 2;
+        const long long end_byte = best_file->tellp();
         assert(end_byte >= begin_byte);
-        m_all_file.header_length = end_byte - begin_byte;
-        m_all_file.processed_threshold = 0;
-        m_all_file.line_width = m_max_fid_length + 1LL + m_max_iid_length + 1LL
-                                + static_cast<long long>(total_set_thresholds)
-                                      * (m_numeric_width + 1LL)
-                                + 1LL;
-        m_all_file.skip_column_length = m_max_fid_length + m_max_iid_length + 2;
-    }
-
-    // output sample IDs
-    std::string best_line;
-    std::string name;
-    if (all_scores || (!m_prs_info.no_regress && !m_quick_best))
-    {
-        for (size_t i_sample = 0; i_sample < num_samples_included; ++i_sample)
+        m_best_file.header_length = end_byte - begin_byte;
+        m_best_file.processed_threshold = 0;
+        // each numeric output took 12 spaces, then for each output,
+        // there is one space next to each
+        m_best_file.line_width =
+            max_fid /* FID */ + 1LL                    /* space */
+            + max_iid                                  /* IID */
+            + 1LL /* space */ + 3LL /* Yes/No */ + 1LL /* space */
+            + (num_region - 1) /* each region -1 to remove background*/
+                  * (m_numeric_width + 1LL /* space */)
+            + 1LL /* new line */;
+        m_best_file.skip_column_length =
+            max_fid + 1LL + max_iid + 1LL + 3LL + 1LL;
+        if (!m_quick_best)
         {
-            name = target.sample_id(i_sample, " ");
-            // when we print the best file, we want to also print whether
-            // the sample is used in regression or not (so that user can
-            // easily reproduce their results)
-            if (!m_prs_info.no_regress && !m_quick_best)
+            // need to pre-write some info
+            std::string best_line;
+            for (size_t i_sample = 0; i_sample < num_samples; ++i_sample)
             {
                 best_line =
-                    name + " "
-                    + ((target.sample_in_regression(i_sample)) ? "Yes" : "No");
-                // we print a line containing m_best_file.line_width white
-                // space characters, which we can then overwrite later on,
-                // therefore achieving a vertical output
-                m_best_out << std::setfill(
-                    ' ') << std::setw(static_cast<int>(m_best_file.line_width))
-                           << std::left << best_line << "\n";
+                    target.sample_id(i_sample, " ") + " "
+                    + ((target.sample_valid_for_regress(i_sample)) ? "Yes"
+                                                                   : "No");
+                // TODO: Bug if line width is bigger than what setw can handle
+                (*best_file)
+                    << std::setfill(' ') << std::setw(m_best_file.line_width)
+                    << std::left << best_line << "\n";
             }
-            if (all_scores)
-            {
-                m_all_out << std::setfill(' ')
-                          << std::setw(static_cast<int>(m_all_file.line_width))
-                          << std::left << name << "\n";
-            }
+            // seek back to front right after header
+            best_file->seekp(end_byte, best_file->beg);
         }
     }
-
-    // another one spacing for new line (just to be safe)
-    ++m_all_file.line_width;
     ++m_best_file.line_width;
-    // don't need to close the files as they will automatically be closed
-    // when we move out of the function
 }
+
+void PRSice::prep_all_score_output(
+    const Genotype& target,
+    const std::vector<std::vector<size_t>>& region_membership,
+    const std::vector<std::string>& region_name, const size_t max_fid,
+    const size_t max_iid, std::unique_ptr<std::ostream>& all_score_file)
+{
+    auto set_thresholds = target.get_set_thresholds();
+    unsigned long long total_set_thresholds = 0;
+    for (size_t thres = 0; thres < set_thresholds.size(); ++thres)
+    {
+        // skip bakcground and empty region
+        if (thres == 1 || region_membership[thres].empty()) continue;
+        if (total_set_thresholds > std::numeric_limits<long long>::max()
+                                       - set_thresholds[thres].size())
+        {
+            throw std::runtime_error(
+                "Error: Too many combinations of number of regions and "
+                "number "
+                "of thresholds, will cause integer overflow.");
+        }
+        total_set_thresholds += set_thresholds[thres].size();
+    }
+    const long long begin_byte = all_score_file->tellp();
+    (*all_score_file) << "FID IID";
+    if (!(region_name.size() > 2))
+    {
+        // add character in front so that when R parse it, it doesn't add the
+        // annoying X and properly treat it as a header
+        for (auto& thres : set_thresholds.front())
+        { m_all_out << " Pt_" << thres; }
+    }
+    else
+    {
+        // don't output all score for background
+        // not all set has snps in all threshold
+        for (size_t i = 0; i < region_name.size(); ++i)
+        {
+            if (i == 1 || region_membership[i].empty()) continue;
+            for (auto& thres : set_thresholds[i])
+            { m_all_out << " " << region_name[i] << "_" << thres; }
+        }
+    }
+    const long long end_byte = m_all_out.tellp();
+    // if the line is too long, we might encounter overflow
+    assert(end_byte >= begin_byte);
+    m_all_file.header_length = end_byte - begin_byte;
+    m_all_file.processed_threshold = 0;
+    m_all_file.line_width =
+        max_fid + 1LL + max_iid + 1LL
+        + static_cast<long long>(total_set_thresholds) * (m_numeric_width + 1LL)
+        + 1LL;
+    m_all_file.skip_column_length = max_fid + max_iid + 2;
+    size_t num_sample = target.num_sample();
+    // now print out all the empty lines
+    std::string name;
+    for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+    {
+        name = target.sample_id(i_sample, " ");
+        // TODO: Bug if line_width is bigger than what setw can handle
+        (*all_score_file) << std::setfill(' ')
+                          << std::setw(m_all_file.line_width) << std::left
+                          << name << "\n";
+    }
+    ++m_all_file.line_width;
+    all_score_file->seekp(0, all_score_file->beg);
+}
+
 
 void PRSice::adjustment_factor(const double prevalence, double& top,
                                double& bottom)

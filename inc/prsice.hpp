@@ -73,11 +73,8 @@ public:
     PRSice() {}
     PRSice(const CalculatePRS& prs_info, const PThresholding& p_info,
            const Permutations& perm, const std::string& output,
-           const size_t max_fid, const size_t max_iid, const bool binary,
-           Reporter* reporter)
+           const bool binary, Reporter* reporter)
         : m_prefix(output)
-        , m_max_fid_length(max_fid)
-        , m_max_iid_length(max_iid)
         , m_binary_trait(binary)
         , m_reporter(reporter)
         , m_prs_info(prs_info)
@@ -181,6 +178,17 @@ public:
     void prep_output(const Genotype& target,
                      const std::vector<std::string>& region_name,
                      const size_t pheno_index, const bool all_score);
+    void
+    prep_best_output(const Genotype& target,
+                     const std::vector<std::vector<size_t>>& region_membership,
+                     const std::vector<std::string>& region_name,
+                     const size_t max_fid, const size_t max_iid,
+                     std::unique_ptr<std::ostream>& best_file);
+    void prep_all_score_output(
+        const Genotype& target,
+        const std::vector<std::vector<size_t>>& region_membership,
+        const std::vector<std::string>& region_name, const size_t max_fid,
+        const size_t max_iid, std::unique_ptr<std::ostream>& all_score_file);
     /*!
      * \brief This function will summarize all PRSice / PRSet results and
      * generate the .summary file
@@ -319,8 +327,6 @@ protected:
     // 2 for e- (scientific)
     // 3 for exponent (max precision is somewhere around +-e297, so 3 is enough
     const long long m_numeric_width = m_precision + 7;
-    const size_t m_max_fid_length = 3;
-    const size_t m_max_iid_length = 3;
     const bool m_binary_trait = true;
     Eigen::MatrixXd m_independent_variables;
     // TODO: Use other method for faster best output

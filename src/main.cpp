@@ -96,8 +96,8 @@ int main(int argc, char* argv[])
                 add_gene_set_info(commander, target_file, reporter);
             auto prs_instruction = commander.get_prs_instruction();
             auto pheno_info = commander.get_pheno();
-            PRSice::pheno_check(prs_instruction.no_regress, pheno_info,
-                                reporter);
+            const bool no_regress = prs_instruction.no_regress;
+            PRSice::pheno_check(no_regress, pheno_info, reporter);
 
             if (!commander.get_clump_info().no_clump)
             {
@@ -142,6 +142,25 @@ int main(int argc, char* argv[])
 
             const auto [max_fid, max_iid] = target_file->get_max_id_length();
             const size_t num_pheno = pheno_info.pheno_col_idx.size();
+            // prsice and summary file will be per run
+            // all score and best file will be per phenotype
+            // this is mainly because of the size of the file and the way we
+            // need to generate them
+            // with prsice and summary file, we can do row wise output, so it is
+            // ok for us to keep using it
+            // but for all and best, we are doing column-wise output, which need
+            // expensive seek operations
+            std::unique_ptr<std::ostream> summary_file = nullptr;
+            auto prsice_out = misc::load_ostream(commander.out() + ".prsice");
+            bool has_prevalence = !pheno_info.prevalence.empty();
+            print_prsice_header(has_prevalence, no_regress, prsice_out);
+            auto perm_info = commander.get_perm();
+            if (!no_regress)
+            {
+                summary_file = misc::load_ostream(commander.out() + ".summary");
+                print_summary_header(has_prevalence, perm_info.run_set_perm,
+                                     perm_info.run_perm, summary_file);
+            }
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
                 if (pheno_info.skip_pheno[i_pheno])
@@ -155,11 +174,13 @@ int main(int argc, char* argv[])
                                        + std::to_string(i_pheno + 1)
                                        + " th phenotype");
                 PRSice prsice(commander.get_prs_instruction(),
-                              commander.get_p_threshold(), commander.get_perm(),
-                              commander.out(), max_fid, max_iid,
-                              pheno_info.binary[i_pheno], &reporter);
+                              commander.get_p_threshold(), perm_info,
+                              commander.out(), pheno_info.binary[i_pheno],
+                              &reporter);
                 prsice.init_progress_count(target_file->get_set_thresholds());
-                if (!commander.get_prs_instruction().no_regress)
+                std::unique_ptr<std::ostream> best_file = nullptr,
+                                              all_score_file = nullptr;
+                if (!no_regress)
                 {
                     prsice.init_matrix(
                         pheno_info.cov_colname, pheno_info.col_index_of_cov,
@@ -168,10 +189,26 @@ int main(int argc, char* argv[])
                         pheno_info.pheno_col[i_pheno], commander.delim(),
                         pheno_info.pheno_col_idx[i_pheno],
                         pheno_info.ignore_fid, *target_file);
+                    best_file = misc::load_ostream(
+                        commander.out()
+                        + ((num_pheno > 1) ? "." + pheno_info.pheno_col[i_pheno]
+                                           : "")
+                        + ".best");
+                    prsice.prep_best_output(*target_file, region_membership,
+                                            region_names, max_fid, max_iid,
+                                            best_file);
                 }
-                fprintf(stderr, "Preparing Output Files\n");
-                prsice.prep_output(*target_file, region_names, i_pheno,
-                                   commander.all_scores());
+                if (commander.all_scores())
+                {
+                    all_score_file = misc::load_ostream(
+                        commander.out()
+                        + ((num_pheno > 1) ? "." + pheno_info.pheno_col[i_pheno]
+                                           : "")
+                        + ".all_score");
+                    prsice.prep_all_score_output(
+                        *target_file, region_membership, region_names, max_fid,
+                        max_iid, all_score_file);
+                }
                 // go through each region
                 fprintf(stderr, "\nStart Processing\n");
                 for (size_t i_region = 0; i_region < num_regions; ++i_region)
@@ -179,20 +216,14 @@ int main(int argc, char* argv[])
                     // always skip background region and empty regions
                     if (i_region == 1 || region_membership[i_region].empty())
                         continue;
-                    if (!prsice.run_prsice(i_pheno, i_region, region_membership,
-                                           commander.all_scores(),
-                                           *target_file))
-                    {
-                        // did not run
-                        continue;
-                    }
+                    prsice.run_prsice(i_pheno, i_region, region_membership,
+                                      commander.all_scores(), *target_file);
                     prsice.output(region_names, i_pheno, i_region);
                 }
-                if (!commander.get_prs_instruction().no_regress)
+                if (!no_regress)
                 {
                     prsice.print_best(*target_file, region_names, i_pheno);
-                    if (commander.get_perm().run_set_perm
-                        && region_names.size() > 2)
+                    if (perm_info.run_set_perm && region_names.size() > 2)
                     {
                         // only perform permutation if regression is performed
                         // and user request it

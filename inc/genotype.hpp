@@ -396,11 +396,11 @@ public:
     {
         m_sample_id.at(idx).in_regression = in_regression;
     }
-    bool sample_selected_for_prs(size_t idx)
+    bool sample_selected_for_prs(size_t idx) const
     {
         return IS_SET(m_calculate_prs.data(), idx);
     }
-    bool sample_valid_for_regress(size_t idx)
+    bool sample_valid_for_regress(size_t idx) const
     {
         return m_sample_id.at(idx).in_regression;
     }

@@ -116,4 +116,29 @@ add_gene_set_info(const Commander& commander, Genotype* target_file,
     return {region.get_names(), num_regions};
 }
 
+void print_prsice_header(const bool has_prevalence, const bool no_regress,
+                         std::unique_ptr<std::ostream>& prsice_out)
+{
+    (*prsice_out) << "Pheno\tSet\tThreshold";
+    if (!no_regress)
+    {
+        (*prsice_out) << "\tR2";
+        if (has_prevalence) (*prsice_out) << "\tR2.adj";
+        (*prsice_out) << "\tP\tCoefficient\tStandard.Error";
+    }
+    (*prsice_out) << "\tNum_SNP\n";
+}
+void print_summary_header(const bool has_prevalence, const bool run_set_perm,
+                          const bool run_perm,
+                          std::unique_ptr<std::ostream>& summary_file)
+{
+    (*summary_file) << "Phenotype\tSet\tThreshold\tPRS.R2";
+    if (has_prevalence) (*summary_file) << "\tPRS.R2.adj";
+    (*summary_file)
+        << "\tFull.R2\tNull."
+           "R2\tPrevalence\tCoefficient\tStandard.Error\tP\tNum_SNP";
+    if (run_set_perm) (*summary_file) << "\tCompetitive.P";
+    if (run_perm) (*summary_file) << "\tEmpirical-P";
+    (*summary_file) << "\n";
+}
 #endif // PIPELINE_FUNCTIONS_HPP

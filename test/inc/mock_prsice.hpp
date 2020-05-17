@@ -7,17 +7,15 @@ class mock_prsice : public PRSice
 public:
     mock_prsice(Reporter* reporter) { set_reporter(reporter); }
     mock_prsice(const bool binary, Reporter* reporter)
-        : PRSice(CalculatePRS(), PThresholding(), Permutations(), "PRSice", 3,
-                 3, binary, reporter)
+        : PRSice(CalculatePRS(), PThresholding(), Permutations(), "PRSice",
+                 binary, reporter)
     {
     }
     mock_prsice() {};
     mock_prsice(const CalculatePRS& prs_info, const PThresholding& p_info,
                 const Permutations& perm, const std::string& output,
-                const size_t max_fid, const size_t max_iid, const bool binary,
-                Reporter* reporter)
-        : PRSice(prs_info, p_info, perm, output, max_fid, max_iid, binary,
-                 reporter)
+                const bool binary, Reporter* reporter)
+        : PRSice(prs_info, p_info, perm, output, binary, reporter)
     {
     }
     void set_reporter(Reporter* reporter) { m_reporter = reporter; }
