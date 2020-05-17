@@ -169,6 +169,16 @@ public:
         m_independent_variables.col(0).setOnes();
         m_independent_variables.col(1).setOnes();
     }
+    void test_gen_cov_matrix(const std::vector<std::string>& cov_names,
+                             const std::vector<size_t>& cov_idx,
+                             const std::vector<size_t>& factor_idx,
+                             const std::string& cov_file_name,
+                             const std::string& delim, const bool ignore_fid,
+                             Genotype& target)
+    {
+        gen_cov_matrix(cov_names, cov_idx, factor_idx, cov_file_name, delim,
+                       ignore_fid, target);
+    }
 };
 
 #endif // MOCK_PRSICE_HPP

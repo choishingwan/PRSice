@@ -159,7 +159,6 @@ int main(int argc, char* argv[])
                               commander.out(), max_fid, max_iid,
                               pheno_info.binary[i_pheno], &reporter);
                 prsice.init_progress_count(target_file->get_set_thresholds());
-                prsice.new_phenotype(*target_file);
                 if (!commander.get_prs_instruction().no_regress)
                 {
                     prsice.init_matrix(

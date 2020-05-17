@@ -140,7 +140,6 @@ public:
                      Genotype& target);
     void init_matrix(const size_t pheno_index, const std::string& delim,
                      Genotype& target);
-    void new_phenotype(Genotype& target);
     bool run_prsice(const size_t pheno_index, const size_t region_index,
                     const std::vector<std::vector<size_t>>& region_membership,
                     const bool all_scores, Genotype& target);
@@ -369,14 +368,7 @@ protected:
      * \param is_binary indicate if the current phenotype is binary
      */
     void permutation(const int n_thread, const bool is_binary);
-    /*!
-     * \brief This function will calculate the maximum length of the FID and
-     * IID, generate the matrix index for quicker search and also set the in
-     * regression flag for each sample
-     * \param target is the target genotype object
-     */
-    void update_sample_included(const std::string& delim, const bool binary,
-                                Genotype& target);
+
     void slow_print_best(Genotype& target, const size_t pheno_index);
 
     void gen_pheno_vec(const std::string& pheno_file,
@@ -406,24 +398,7 @@ protected:
                     const std::string& region_name, const double top,
                     const double bottom, const double prevalence,
                     const bool is_base);
-    /*!
-     * \brief Function use to process the covariate file, should be able to
-     * determine the level of factors
-     * \param cov_file is the name of the covariate file
-     * \param factor_cov_index is the column index for factor covariates
-     * \param cov_start_index is the starting position of each column (return)
-     * \param cov_index is the column index for all covariates
-     * \param cov_name is the name of each covariates
-     * \param factor_levels is a structure to store the factor levels. It's size
-     * should equal to the number of factor level. The nested map should contain
-     * the variable to level matching information
-     * \param num_column is the number of column required (return)
-     * \param reporter is the logger
-     */
-    void process_cov_file(
-        std::vector<size_t>& cov_start_index,
-        std::vector<std::unordered_map<std::string, size_t>>& factor_levels,
-        Eigen::Index& num_column, const std::string& delim);
+
     bool validate_covariate(const std::string& covariate,
                             const size_t num_factors, const size_t idx,
                             size_t& factor_level_idx,
@@ -432,9 +407,6 @@ protected:
                                  const std::string& delim,
                                  const size_t num_valid, const bool ignore_fid,
                                  Genotype& target);
-    void update_sample_matrix(
-        const std::vector<size_t>& missing_count,
-        std::vector<std::pair<std::string, size_t>>& valid_sample_index);
     void get_se_matrix(
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&

@@ -333,7 +333,7 @@ TEST_CASE("Get covariate start position")
     REQUIRE_THAT(cov_start, Catch::Equals<size_t>(expected_start));
 }
 
-TEST_CASE("Propaage independent matrix")
+TEST_CASE("Generate covariate matrix")
 {
     // need to get the number of column, number of covariate start the factor
     // levels and a cov file
@@ -363,6 +363,10 @@ TEST_CASE("Propaage independent matrix")
     const std::string delim = " ";
     std::unordered_set<std::string> valid_factor;
     size_t valid_idx = 0;
+    mockGenotype geno;
+    geno.set_reporter(&reporter);
+    size_t n_fam_sample = 0;
+    std::vector<double> pheno_value;
     for (size_t i = 0; i < num_sample; ++i)
     {
         auto cur_pheno = pheno();
@@ -377,8 +381,17 @@ TEST_CASE("Propaage independent matrix")
             if (!ignore_fid) { id.append(delim + std::to_string(i)); }
             sample_with_pheno[id] = valid_idx++;
             valid_factor.insert(cur_factor);
+            geno.add_sample(Sample_ID(std::to_string(i), std::to_string(i),
+                                      std::to_string(cur_pheno), true));
+            pheno_value.push_back(
+                misc::convert<double>(std::to_string(cur_pheno)));
+            ++n_fam_sample;
         }
     }
+    prsice.phenotype_matrix() = Eigen::Map<Eigen::VectorXd>(
+        pheno_value.data(), static_cast<Eigen::Index>(pheno_value.size()));
+    geno.set_sample_vector(n_fam_sample);
+    geno.set_sample(n_fam_sample);
     std::shuffle(cov_input.begin(), cov_input.end(), mersenne_engine);
     size_t num_factor = valid_factor.size();
     Eigen::MatrixXd expected_independent =
@@ -391,7 +404,7 @@ TEST_CASE("Propaage independent matrix")
     auto cur_level = factor_level.front();
     size_t num_level = 0;
     std::set<size_t> is_factor = {3};
-    std::vector<size_t> cov_idx = {2, 3};
+    std::vector<size_t> cov_idx = {2, 3}, factor_idx = {3};
     for (size_t i = 0; i < cov_input.size(); ++i)
     {
         cov_input_str.append(cov_input[i]);
@@ -399,8 +412,11 @@ TEST_CASE("Propaage independent matrix")
         token = misc::split(cov_input[i]);
         auto id = token[0];
         if (!ignore_fid) id.append(delim + token[1]);
-        auto idx = sample_with_pheno[id];
+        auto found = sample_with_pheno.find(id);
+        if (found == sample_with_pheno.end()) continue;
+        const auto idx = found->second;
         expected_independent(idx, 2) = misc::convert<double>(token[2]);
+
         if (factor_level[0].find(token[3]) != factor_level[0].end())
         {
             if (factor_level[0][token[3]] != 0)
@@ -413,13 +429,37 @@ TEST_CASE("Propaage independent matrix")
                 expected_independent(idx, 2 + factor_level[0][token[3]]) = 1;
         }
     }
-    prsice.init_independent(valid_idx, num_factor + 2);
     std::unique_ptr<std::istream> cov_file =
         std::make_unique<std::istringstream>(cov_input_str);
-    std::vector<size_t> cov_start = {2, 3};
-    prsice.test_propagate_independent_matrix(factor_level, is_factor, cov_idx,
-                                             cov_start, delim, ignore_fid,
-                                             std::move(cov_file));
-    Eigen::MatrixXd result = prsice.get_independent();
-    REQUIRE(result == expected_independent);
+    SECTION("Propagate independent matrix")
+    {
+        std::vector<size_t> cov_start = {2, 3};
+        prsice.init_independent(valid_idx, num_factor + 2);
+        prsice.test_propagate_independent_matrix(
+            factor_level, is_factor, cov_idx, cov_start, delim, ignore_fid,
+            std::move(cov_file));
+        Eigen::MatrixXd result = prsice.get_independent();
+        REQUIRE(result == expected_independent);
+    }
+    SECTION("Read from covariate file")
+    {
+        SECTION("no file")
+        {
+            REQUIRE_NOTHROW(prsice.test_gen_cov_matrix(
+                std::vector<std::string> {}, std::vector<size_t> {},
+                std::vector<size_t> {}, "", delim, ignore_fid, geno));
+            REQUIRE(prsice.get_independent()
+                    == Eigen::MatrixXd::Ones(n_fam_sample, 2));
+        }
+        SECTION("From file")
+        {
+            std::ofstream cov_out("cov_file_test");
+            cov_out << cov_input_str << std::endl;
+            cov_out.close();
+            REQUIRE_NOTHROW(prsice.test_gen_cov_matrix(
+                std::vector<std::string> {"PC1", "Batch"}, cov_idx, factor_idx,
+                "cov_file_test", delim, ignore_fid, geno));
+            REQUIRE(prsice.get_independent() == expected_independent);
+        }
+    }
 }
