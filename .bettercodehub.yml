@@ -1,7 +1,0 @@
-exclude:
-- /lib/.* 
-- /src/dcdflib.cpp
-- /src/cgranges.cpp
-- /src/bgen_lib.cpp
-- /src/plink_common.cpp
-- /src/gzstream.cpp
