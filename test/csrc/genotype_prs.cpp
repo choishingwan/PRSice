@@ -126,11 +126,9 @@ TEST_CASE("Read_PRS")
     // need to set the weight
     // need to initialize prs_list
     // need m_sample_ct
-    /*
+
     auto model = GENERATE(MODEL::ADDITIVE, MODEL::DOMINANT, MODEL::RECESSIVE,
                           MODEL::HETEROZYGOUS);
-*/
-    auto model = MODEL::ADDITIVE;
     geno.set_weight(model);
     const size_t num_sample = 2000;
     std::vector<bool> selected_sample(num_sample);
