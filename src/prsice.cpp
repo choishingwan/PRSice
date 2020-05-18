@@ -1386,12 +1386,15 @@ void PRSice::prep_best_output(
     const long long begin_byte = best_file->tellp();
     (*best_file) << "FID IID In_Regression";
     if (!(num_region > 2)) { (*best_file) << " PRS\n"; }
-    for (size_t i = 0; i < region_name.size(); ++i)
+    else
     {
-        if (i == 1 || region_membership[i].empty()) continue;
-        (*best_file) << " " << region_name[i];
+        for (size_t i = 0; i < region_name.size(); ++i)
+        {
+            if (i == 1 || region_membership[i].empty()) continue;
+            (*best_file) << " " << region_name[i];
+        }
+        (*best_file) << "\n";
     }
-    (*best_file) << "\n";
     try
     {
         m_fast_best_output =
