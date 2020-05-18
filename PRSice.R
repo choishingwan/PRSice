@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.2.14"
+r.version <- "2.3.0"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -28,11 +28,18 @@ help_message <-
     --dir                   Location to install ggplot. Only require if ggplot\n
                             is not installed\n
 \nBase File:\n
-    --A1                    Column header containing allele 1 (effective allele)\n
-                            Default: A1\n
-    --A2                    Column header containing allele 2 (non-effective allele)\n
-                            Default: A2\n
-    --base          | -b    Base association file\n
+    --base-info             Base INFO score filtering. Format should be\n
+                            <Column name>:<Threshold>. SNPs with info \n
+                            score less than <Threshold> will be ignored\n
+                            Column name default: INFO\n
+                            Threshold default: 0.9\n
+    --base-maf              Base MAF filtering. Format should be\n
+                            <Column name>:<Threshold>. SNPs with maf\n
+                            less than <Threshold> will be ignored. An\n
+                            additional column can also be added (e.g.\n
+                            also filter MAF for cases), using the\n
+                            following format:\n
+                            <Column name>:<Threshold>,<Column name>:<Threshold>\n
     --beta                  Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
                             to be in the form of BETA. Mutually exclusive\n
@@ -41,25 +48,13 @@ help_message <-
                             Default: BP\n
     --chr                   Column header containing the chromosome\n
                             Default: CHR\n
-    --index                 If set, assume the INDEX instead of NAME  for\n
+    --index                 If set, assume the INDEX instead of NAME for\n
                             the corresponding columns are provided. Index\n
                             should be 0-based (start counting from 0)\n
-    --base-info             Base INFO score filtering. Format should be\n
-                            <Column name>,<Threshold>. SNPs with info \n
-                            score less than <Threshold> will be ignored\n
-                            Column name default: INFO\n
-                            Threshold default: 0.9\n
-    --base-maf              Base MAF filtering. Format should be\n
-                            <Column name>,<Threshold>. SNPs with maf\n
-                            less than <Threshold> will be ignored. An\n
-                            additional column can also be added (e.g.\n
-                            also filter MAF for cases), using the\n
-                            following format:\n
-                            <Column name>,<Threshold>:<Column name>,<Threshold>\n
     --no-default            Remove all default options. If set, PRSice\n
                             will not set any default column name and you\n
-                            will have to ensure all required columns are\n
-                            provided. (--snp, --stat, --A1, --pvalue)\n
+                            must manually provide all required columns\n
+                            (--snp, --stat, --A1, --pvalue)\n
     --or                    Whether the test statistic is in the form of \n
                             BETA or OR. If set, test statistic is assume\n
                             to be in the form of OR. Mutually exclusive \n
@@ -103,8 +98,7 @@ help_message <-
                             will adjust the ascertainment bias of the R2.\n
                             Note that when multiple binary trait is found,\n
                             prevalence information must be provided for\n
-                            all of them (Either adjust all binary traits,\n
-                            or don't adjust at all)\n
+                            all of them\n
     --remove                File containing the sample(s) to be removed from\n
                             the target file. First column should be FID and\n
                             the second column should be IID. If --ignore-fid is\n
@@ -137,11 +131,11 @@ help_message <-
                             Default is to use dosage instead of hard coding\n
 \nClumping:\n
     --clump-kb              The distance for clumping in kb\n
-                            Default: 250 \n
+                            Default: 250kb (1mb for PRSet)\n
     --clump-r2              The R2 threshold for clumping\n
-                            Default: 0.1 \n
+                            Default: 0.1\n
     --clump-p               The p-value threshold use for clumping.\n
-                            Default: 1.0 \n
+                            Default: 1\n
     --ld            | -L    LD reference file. Use for LD calculation. If not\n
                             provided, will use the post-filtered target genotype\n
                             for LD calculation. Support multiple chromosome input\n
@@ -204,8 +198,8 @@ help_message <-
     --no-full               By default, PRSice will include the full model, \n
                             i.e. p-value threshold = 1. Setting this flag will\n
                             disable that behaviour\n
-    --interval      | -i    The step size of the threshold. Default: 0.00005 \n
-    --lower         | -l    The starting p-value threshold. Default: 5e-08 \n
+    --interval      | -i    The step size of the threshold. Default: 0.00005\n
+    --lower         | -l    The starting p-value threshold. Default: 5e-8\n
     --model                 Genetic model use for regression. The genetic\n
                             encoding is based on the base data where the\n
                             encoding represent number of the coding allele\n
@@ -214,25 +208,25 @@ help_message <-
                             dom - Dominant model, code as 0/1/1\n
                             rec - Recessive model, code as 0/0/1\n
                             het - Heterozygous only model, code as 0/1/0\n
-    --no-regress            Do not perform the regression analysis and simply\n
-                            output all PRS.\n
     --missing               Method to handle missing genotypes. By default, \n
                             final scores are averages of valid per-allele \n
                             scores with missing genotypes contribute an amount\n
                             proportional to imputed allele frequency. To throw\n
                             out missing observations instead (decreasing the\n
                             denominator in the final average when this happens),\n
-                            use the 'no_mean_imputation' modifier. Alternatively,\n
-                            you can use the 'center' modifier to shift all scores\n
+                            use the 'SET_ZERO' modifier. Alternatively,\n
+                            you can use the 'CENTER' modifier to shift all scores\n
                             to mean zero. \n
+    --no-regress            Do not perform the regression analysis and simply\n
+                            output all PRS.\n
     --score                 Method to calculate the polygenic score.\n
                             Available methods include:\n
-                            avg - Take the average effect size (default)\n
-                            std - Standardize the effect size \n
+                            avg     - Take the average effect size (default)\n
+                            std     - Standardize the effect size \n
                             con-std - Standardize the effect size using mean \n
                                       and sd derived from control samples\n
-                            sum - Direct summation of the effect size \n
-    --upper         | -u    The final p-value threshold. Default: 0.5 \n
+                            sum     - Direct summation of the effect size \n
+    --upper         | -u    The final p-value threshold. Default: 0.5\n
 \nPRSet:\n
     --background            String to indicate a background file. This string\n
                             should have the format of Name:Type where type can be\n
@@ -258,10 +252,11 @@ help_message <-
                                               can be provided using \n
                                               --snp-set File:Name\n
                             MSigDB format   - Each row represent a single SNP \n
-                                              set with the first column containing\n
-                                              the name of the SNP set.\n
+                                              set with the first column \n
+                                              containing the name of the SNP\n
+                                              set.\n
     --wind-3                Add N base(s) to the 3' region of each feature(s) \n
-    --wind-5                Add N base(s) to the 5' region of each feature(s) \n     
+    --wind-5                Add N base(s) to the 5' region of each feature(s) \n   
 \nPlotting:\n
     --bar-col-high          Colour of the most predicting threshold\n
                             Default: firebrick\n
@@ -287,40 +282,49 @@ help_message <-
                             contain FID if --ignore-fid isn't set.\n
     --quant-ref             Reference quantile for quantile plot\n
     --scatter-r2            y-axis of the high resolution scatter plot should be R2\n
-
 \nMisc:\n
     --all-score             Output PRS for ALL threshold. WARNING: This\n
                             will generate a huge file\n
+    --chr-id                Try to construct an RS ID for SNP based on its\n
+                            chromosome, coordinate, effective allele and \n
+                            non-effective allele.\n
+                            e.g. c:L-aBd is translated to: \n
+                            <chr>:<coordinate>-<effective><noneffective>d\n
+                            This is always true for target file, whereas for\n
+                            base file, this is only used if the RS ID \n
+                            wasn't provided\n
     --exclude               File contains SNPs to be excluded from the\n
                             analysis\n
     --extract               File contains SNPs to be included in the \n
                             analysis\n
-    --keep-ambig            Keep ambiguous SNPs. Only use this option\n
-                            if you are certain that the base and target\n
-                            has the same A1 and A2 alleles\n
-    --flip-ambig            Force flipping of ambiguous SNPs when they are kept.\n
-                            Will also set the --keep-ambig flag\n
     --id-delim              This parameter causes sample IDs to be parsed as\n
                             <FID><delimiter><IID>; the default delimiter\n
                             is '_'. \n
     --ignore-fid            Ignore FID for all input. When this is set,\n
                             first column of all file will be assume to\n
                             be IID instead of FID\n
-    --memory                Maximum memory usage allowed. PRSice will try\n
-                           its best to honor this setting\n
-    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
-                            to 0 for each new P-value threshold instead of\n
-                            adding up\n
+    --keep-ambig            Keep ambiguous SNPs. Only use this option\n
+                            if you are certain that the base and target\n
+                            has the same A1 and A2 alleles\n
     --logit-perm            When performing permutation, still use logistic\n
                             regression instead of linear regression. This\n
                             will substantially slow down PRSice\n
-    --no-install            Forbid PRSice from automatically installing\n
-                            the required packages (e.g. ggplot2)\n
+    --memory                Maximum memory usage allowed (in Mb). PRSice will try\n
+                            its best to honor this setting\n
+    --non-cumulate          Calculate non-cumulative PRS. PRS will be reset\n
+                            to 0 for each new P-value threshold instead of\n
+                            adding up\n
     --out           | -o    Prefix for all file output\n
     --perm                  Number of permutation to perform. This swill\n
                             generate the empirical p-value. Recommend to\n
                             use value larger than 10,000\n
-    --print-snp             Print all SNPs used to construct the best PRS\n
+    --print-snp             Print all SNPs that remains in the analysis \n
+                            after clumping is performed. For PRSet, Y \n
+                            indicate the SNPs falls within the gene set \n
+                            of interest and N otherwise. If only PRSice \n
+                            is performed, a single \"gene set\" called \n
+                            \"Base\" will be presented with all entries\n
+                            marked as Y\n
     --seed          | -s    Seed used for permutation. If not provided,\n
                             system time will be used as seed. When same\n
                             seed and same input is provided, same result\n
@@ -328,6 +332,12 @@ help_message <-
     --thread        | -n    Number of thread use\n
     --use-ref-maf           When specified, missingness imputation will be\n
                             performed based on the reference samples\n
+    --ultra                 Ultra aggressive memory usage. When this is enabled\n
+                            PRSice and PRSet will try to load all genotypes into\n
+                            memory after clumping is performed. This should\n
+                            drastically speed up PRSice and PRSet at the expense\n
+                            of higher memory consumption.\n
+                            Has no effect for dosage score\n
     --x-range               Range of SNPs to be excluded from the whole\n
                             analysis. It can either be a single bed file\n
                             or a comma seperated list of range. Range must\n
@@ -534,6 +544,8 @@ option_list <- list(
   make_option(c("--snp-set"), type = "character", dest = "snp_set"),
   # Misc
   make_option(c("--all-score"), action = "store_true", dest = "all_score"),
+  make_option(c("--ultra"), action = "store_true"),
+  make_option(c("--chr-id"), type = "character", dest = "chr_id"),
   make_option(c("--exclude"), type = "character"),
   make_option(c("--extract"), type = "character"),
   make_option(c("--enable-mmap"), action = "store_true", dest = "enable_mmap"),
@@ -704,7 +716,8 @@ flags <-
         "non-cumulate",
         "or",
         "print-snp",
-        "use-ref-maf"
+        "use-ref-maf",
+        "ultra"
     )
 # Skip PRSice core function if only plotting is requirec
 if (!provided("plot", argv)) {

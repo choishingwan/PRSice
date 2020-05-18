@@ -508,7 +508,7 @@ void Commander::set_help_message()
         "ignored\n"
         "                            Column name default: INFO\n"
         "                            Threshold default: 0.9\n"
-        "    --base-maf             Base MAF filtering. Format should be\n"
+        "    --base-maf              Base MAF filtering. Format should be\n"
         "                            <Column name>:<Threshold>. SNPs with maf\n"
         "                            less than <Threshold> will be ignored. "
         "An\n"
@@ -530,7 +530,7 @@ void Commander::set_help_message()
         "                            Default: BP\n"
         "    --chr                   Column header containing the chromosome\n"
         "                            Default: CHR\n"
-        "    --index                 If set, assume the INDEX instead of NAME  "
+        "    --index                 If set, assume the INDEX instead of NAME "
         "for\n"
         "                            the corresponding columns are provided. "
         "Index\n"
@@ -540,10 +540,9 @@ void Commander::set_help_message()
         "PRSice\n"
         "                            will not set any default column name and "
         "you\n"
-        "                            will have to ensure all required columns "
-        "are\n"
-        "                            provided. (--snp, --stat, --A1, "
-        "--pvalue)\n"
+        "                            must manually provide all required "
+        "columns\n"
+        "                            (--snp, --stat, --A1, --pvalue)\n"
         "    --or                    Whether the test statistic is in the form "
         "of \n"
         "                            BETA or OR. If set, test statistic is "
@@ -613,9 +612,7 @@ void Commander::set_help_message()
         "found,\n"
         "                            prevalence information must be provided "
         "for\n"
-        "                            all of them (Either adjust all binary "
-        "traits,\n"
-        "                            or don't adjust at all)\n"
+        "                            all of them\n"
         "    --remove                File containing the sample(s) to be "
         "removed from\n"
         "                            the target file. First column should be "
@@ -678,7 +675,7 @@ void Commander::set_help_message()
           "    --clump-r2              The R2 threshold for clumping\n"
           "                            Default: "
         + misc::to_string(m_clump_info.r2)
-        + "\n"
+        + " (1mb for PRSet)\n"
           "    --clump-p               The p-value threshold use for "
           "clumping.\n"
           "                            Default: "
@@ -906,6 +903,19 @@ void Commander::set_help_message()
           "    --all-score             Output PRS for ALL threshold. WARNING: "
           "This\n"
           "                            will generate a huge file\n"
+          "    --chr-id                Try to construct an RS ID for SNP based "
+          "on its\n"
+          "                            chromosome, coordinate, effective "
+          "allele and \n"
+          "                            non-effective allele.\n"
+          "                            e.g. c:L-aBd is translated to: \n"
+          "                            "
+          "<chr>:<coordinate>-<effective><noneffective>d\n"
+          "                            This is always true for target file, "
+          "whereas for\n"
+          "                            base file, this is only used if the RS "
+          "ID \n"
+          "                            wasn't provided\n"
           "    --exclude               File contains SNPs to be excluded from "
           "the\n"
           "                            analysis\n"
@@ -927,7 +937,6 @@ void Commander::set_help_message()
           "                            if you are certain that the base and "
           "target\n"
           "                            has the same A1 and A2 alleles\n"
-          "                            Will also set the --keep-ambig flag\n"
           "    --logit-perm            When performing permutation, still use "
           "logistic\n"
           "                            regression instead of linear "
@@ -1128,11 +1137,15 @@ bool Commander::base_column_check(std::vector<std::string>& column_names)
         m_error_message.append(
             "Error: Column for the effective allele must be provided!\n");
     }
-    if (!in_file(column_names, +BASE_INDEX::RS, "Error", m_user_no_default))
+    if (!in_file(column_names, +BASE_INDEX::RS, "Warning", m_user_no_default))
     {
-        error = true;
-        m_error_message.append(
-            "Error: Column for the SNP ID must be provided!\n");
+        if (m_chr_id_formula.empty())
+        {
+            error = true;
+            m_error_message.append(
+                "Error: Column for the SNP ID must be "
+                "provided when --chr-id was not provided!\n");
+        }
     }
     if (!in_file(column_names, +BASE_INDEX::P, "Error", m_user_no_default))
     {
