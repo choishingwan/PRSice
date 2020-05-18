@@ -892,7 +892,7 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
     print_progress();
     bool first_run = true;
     std::vector<size_t>::const_iterator start = set_snp_idx.begin();
-    double top, bot;
+    double top = 1, bot = 0;
     if (prevalence <= 1.0)
     { std::tie(top, bot) = lee_adjustment_factor(prevalence); }
     while (target.get_score(start, set_snp_idx.cend(), cur_threshold,
@@ -1560,7 +1560,7 @@ void PRSice::print_summary(const std::string& pheno_name,
     assert(significant_count.size() == m_significant_store.size());
     for (size_t i = 0; i < significant_count.size(); ++i)
     { significant_count[i] += m_significant_store[i]; }
-    double top, bot;
+    double top = 1, bot = 0;
     if (prevalence < 1.0)
     { std::tie(top, bot) = lee_adjustment_factor(prevalence); }
     for (auto&& sum : m_prs_summary)
