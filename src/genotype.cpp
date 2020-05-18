@@ -592,7 +592,7 @@ bool Genotype::process_snp(
     auto snp_idx = genotype->m_existed_snps_index[snp.rs()];
     auto&& target_snp = genotype->m_existed_snps[snp_idx];
 
-    bool flipping;
+    bool flipping = false;
     if (!target_snp.matching(snp, flipping))
     {
         genotype->print_mismatch(mismatch_snp_record_name, mismatch_source,
@@ -1562,7 +1562,8 @@ Genotype::build_membership_matrix(const size_t num_sets,
         }
         for (size_t s = 0; s < num_sets; ++s)
         {
-            if (print_snps) out << "\t" << IS_SET(flags.data(), s);
+            if (print_snps && !is_prset && s == 1)
+                out << "\t" << IS_SET(flags.data(), s);
             if (IS_SET(flags.data(), s))
             {
                 m_set_thresholds[s].insert(snp.get_threshold());
