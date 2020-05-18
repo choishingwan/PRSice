@@ -1,21 +1,5 @@
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
-<div class="admonition announcement">
-<p class="admonition-title">NOW HIRING!</p>
-<p></p><h2>We are hiring!!</h2><p></p>
-<ul>
-<li>We are recruiting Statistical Genetics postdocs in polygenic prediction and causal inference <a href="https://twitter.com/IcahnMountSinai">@IcahnMountSinai</a> in New York.
-More details can be found <a href="http://pauloreilly.info">here</a>. If interested, please email 
-<a href="#" class="cryptedmail"
-   data-name="paul.oreilly"
-   data-domain="mssm"
-   data-tld="edu"
-   onclick="window.location.href = 'mailto:' + this.dataset.name + '@' + this.dataset.domain + '.' + this.dataset.tld; return false;"></a>
-</li>
-</ul>
-</div>
-</br>
-
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
 
@@ -34,19 +18,38 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.2.13](https://github.com/choishingwan/PRSice/releases/download/2.2.13/PRSice_linux.zip) |
-| OS X 64-bit | [v2.2.13](https://github.com/choishingwan/PRSice/releases/download/2.2.13/PRSice_mac.zip) |
+| Linux 64-bit | [v2.3.0](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.zip) |
+| OS X 64-bit | [v2.3.0](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
+!!! Note "Latest Update"
+ 
+    - We now support multi-threaded clumping (separated by chromosome)
+    - Genotypes will be stored to memory during clumping (increase memory usage, significantly speed up clumping)
+    - Will only generate one .prsice file for all phenotypes
+        - .prsice file now has additional column call "Pheno"
+    - Introduced `--chr-id` which generate rs id based on user provided formula (see [detail](command_detail.md) for more info)
+    - Format of `--base-maf` and `--base-info` are now changed to `<name>:<value>` from `<name>,<value>`
+    - Fix a bug related to ambiguous allele dosage flipping when `--keep-ambig` is used
+    - Better mismatch handling. For example, if your base file only provide the effective allele A without the non-effective allele information, PRSice will now do dosage flipping if your target file has G/C as effective allele and A /T as an non-effective allele (whereas previous this SNP will be considered as a mismatch)
+    - Fix bug in 2.2.13 where PRSice won't output the error message during command parsing stage
+    - If user provided the `--stat` information, PRSice will now error out instead of trying to look for BETA or OR in the file. 
+    - PRSice should now better recognize if phenotype file contains a header
+    - various small bug fix
+
+    update log for previous release can be found [here](update_log.md)
+
+
+
 !!! Caution
 
-    PRSice currently does not work on Window machine. We are currently looking into the problem but do not expect this to be fixed anytime soon. 
+    We have now fixed window problem. But was unable to access the computer that is used for compilation due to COVID. Will try to compile it when we regain access.
 
 
 !!! Caution 
 
-    PRSet are currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)
+    PRSet are currently under open beta - results output are reliable but please report any specific problems to our google group (see Support below)3
 
 
 # R Packages Requirements

@@ -7,14 +7,14 @@ This page contains all command available in PRSice.
 
 
 # Base File
-- `--A1`
+- `--a1`
 
     Column header containing the **effective allele**.
     There isn't any standardized label for the effective allele, therefore
     extra care must be taken to ensure the correct label is provided, otherwise, 
     the effect will be flipped. 
 
-- `--A2`
+- `--a2`
 
     Column header containing **non-effective allele**.
 
@@ -53,7 +53,7 @@ This page contains all command available in PRSice.
 
 - `--base-info`
 
-    Base INFO score filtering. Format should be `<Column name>,<Threshold>`.
+    Base INFO score filtering. Format should be `<Column name>:<Threshold>`.
     SNPs with info score less than `<Threshold>` will be ignored.
     It is useful to perform INFO score filtering to remove SNPs
     with low imputation confidence score. By default, PRSice will search for
@@ -63,11 +63,11 @@ This page contains all command available in PRSice.
 - `--base-maf`
 
     Base minor allele frequency (MAF) filtering.
-    Format should be `<Column name>,<Threshold>`.
+    Format should be `<Column name>,:<Threshold>`.
     SNPs with MAF less than `<Threshold>` will be ignored.
     Additional column can be provided (e.g. different filtering threshold
     for case and control), using the following format:
-        `<Column name>,<Threshold>:<Column name>,<Threshold>`
+        `<Column name>:<Threshold>,<Column name>:<Threshold>`
 
 
 - `--no-default`
@@ -656,6 +656,15 @@ This page contains all command available in PRSice.
     File contains SNPs to be excluded from the analysis.
     Mutually exclusive from `--extract`
 
+- `--chr-id` 
+
+    Try to construct an RS ID for SNP based on its chromosome, coordinate, effective allele and non-effective allele.
+    
+    For example, c:L-aBd is translated to: 
+    `<chr>:<coordinate>-<effective><noneffective>d`
+
+    This ID will always be used to represent SNPs on the target file, whereas for the base file, we will still prefer to use the column provided in the `--snp` parameter. SNPs in base file will only be represented by the `--chr-id` if the RS ID is not provided. 
+
 - `--extract`
 
     File contains SNPs to be included in the analysis.
@@ -746,9 +755,9 @@ This page contains all command available in PRSice.
 
 - `--print-snp`
 
-    Print all SNPs that remains in the analysis after clumping is performed. For PRSet, `Y` indicate the SNPs
-    falls within the gene set of interest and `N` otherwise. If only PRSice is performed, a single "gene set" called
-    "Base" will be indicated with all entries marked as `Y`
+    Print all SNPs that remains in the analysis after clumping is performed. For PRSet, `1` indicate the SNPs
+    falls within the gene set of interest and `0` otherwise. If only PRSice is performed, a single "gene set" called
+    "Base" will be indicated with all entries marked as `1`
 
 - `--seed` | `-s`
 
@@ -768,6 +777,10 @@ This page contains all command available in PRSice.
     !!! note
 
         PRSice will limit the maximum number of thread used to the number of core available on the system as detected by PRSice.
+
+- `--ultra` 
+   
+    Ultra aggressive memory managememnt. Will store all genotype into the memory after clumping is performed. This will significant speed up PRSice and PRSet at the expense of increased memory usage. 
 
 - `--x-range`               
     Range of SNPs to be excluded from the whole
