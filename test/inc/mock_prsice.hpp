@@ -177,6 +177,11 @@ public:
         gen_cov_matrix(cov_names, cov_idx, factor_idx, cov_file_name, delim,
                        ignore_fid, target);
     }
+    void test_set_std_exclusion_flag(const std::string& delim,
+                                     const bool ignore_fid, Genotype& target)
+    {
+        set_std_exclusion_flag(delim, ignore_fid, target);
+    }
 };
 
 #endif // MOCK_PRSICE_HPP

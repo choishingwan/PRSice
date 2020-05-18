@@ -103,6 +103,49 @@ inline void initialize_reference(
                         target_file);
 }
 
+std::string print_project_summary(std::vector<size_t>& significant_store)
+{
+    // we need to know if we are going to write "and" in the output, thus
+    // need a flag to indicate if there are any previous outputs
+    bool has_previous_output = false;
+    // we will output a short summary file
+    std::string message = "There are ";
+    if (significant_store[0] != 0)
+    {
+        message.append(
+            misc::to_string(significant_store[0])
+            + " region(s)/phenotype(s) with p-value > 0.1 (\033[1;31mnot "
+              "significant\033[0m);");
+        has_previous_output = true;
+    }
+    if (significant_store[1] != 0)
+    {
+        if (significant_store[2] == 0 && has_previous_output)
+        { message.append(" and "); }
+        message.append(
+            misc::to_string(significant_store[1])
+            + " region(s) with p-value between "
+              "0.1 and 1e-5 (\033[1;31mmay not be significant\033[0m);");
+        has_previous_output = true;
+    }
+    if (significant_store[2] != 0)
+    {
+        if (has_previous_output) message.append(" and ");
+        message.append(std::to_string(significant_store[2])
+                       + " region(s) with p-value less than 1e-5.");
+    }
+    if (!has_previous_output)
+    {
+        message.append(
+            " Please note that these results are inflated due to the "
+            "overfitting inherent in finding the best-fit "
+            "PRS (but it's still best to find the best-fit PRS!).\n"
+            "You can use the --perm option (see manual) to calculate "
+            "an empirical P-value.");
+    }
+    return message;
+}
+
 inline std::tuple<std::vector<std::string>, size_t>
 add_gene_set_info(const Commander& commander, Genotype* target_file,
                   Reporter& reporter)

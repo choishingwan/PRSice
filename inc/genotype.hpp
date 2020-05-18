@@ -292,7 +292,6 @@ public:
         const uintptr_t unfiltered_sample_ctv2 = 2 * unfiltered_sample_ctl;
         m_tmp_genotype.resize(unfiltered_sample_ctv2, 0);
         m_prs_info.resize(m_sample_ct, PRS());
-        m_in_regression.resize(m_calculate_prs.size(), 0);
         m_sample_include2.resize(unfiltered_sample_ctv2, 0);
         m_founder_include2.resize(unfiltered_sample_ctv2, 0);
         // fill it with the required mask (copy from PLINK2)
@@ -302,6 +301,7 @@ public:
         init_quaterarr_from_bitarr(m_sample_for_ld.data(),
                                    m_unfiltered_sample_ct,
                                    m_founder_include2.data());
+        m_exclude_from_std.resize(unfiltered_sample_ctl, 0);
     }
     void clumping(const Clumping& clump_info, Genotype& reference,
                   size_t threads);
@@ -1137,43 +1137,42 @@ protected:
                             const std::vector<size_t>& counts, T load_prs)
     {
         uintptr_t* lbptr = genotype;
-        uintptr_t ulii;
-        uint32_t uii;
-        uint32_t ujj;
-        uint32_t ukk;
-        uii = 0;
-        ulii = 0;
+        uintptr_t byte_block;
+        uint32_t processed_samples;
+        uint32_t sample_idx;
+        uint32_t geno;
+        processed_samples = 0;
+        byte_block = 0;
         do
         {
             // ulii contain the numeric representation of the current
             // genotype
-            ulii = ~(*lbptr++);
-            if (uii + BITCT2 > m_unfiltered_sample_ct)
+            byte_block = ~(*lbptr++);
+            if (processed_samples + BITCT2 > m_unfiltered_sample_ct)
             {
-                // this is PLINK, not sure exactly what this is about
-                ulii &= (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
-                        - ONELU;
+                byte_block &=
+                    (ONELU << ((m_unfiltered_sample_ct & (BITCT2 - 1)) * 2))
+                    - ONELU;
             }
             // ujj sample index of the current genotype block
-            ujj = 0;
-            while (ujj < BITCT)
+            sample_idx = 0;
+            while (sample_idx < BITCT)
             {
                 // go through the whole genotype block
                 // ukk is the current genotype
-                ukk = (ulii >> ujj) & 3;
+                geno = (byte_block >> sample_idx) & 3;
                 // and the sample index can be calculated as uii+(ujj/2)
-                if (uii + (ujj / 2) >= m_sample_ct) { break; }
-                auto& sample_prs = prs_list[uii + (ujj / 2)];
+                if (processed_samples + (sample_idx / 2) >= m_sample_ct)
+                { break; }
+                auto& sample_prs =
+                    prs_list[processed_samples + (sample_idx / 2)];
                 // now we will get all genotypes (0, 1, 2, 3)
-                (this->*load_prs)(sample_prs, ukk, scores, counts);
-                // ulii &= ~((3 * ONELU) << ujj);
-                // as each sample is represented by two byte, we will add 2
-                // to the index
-                ujj += 2;
+                (this->*load_prs)(sample_prs, geno, scores, counts);
+                sample_idx += 2;
             }
             // uii is the number of samples we have finished so far
-            uii += BITCT2;
-        } while (uii < m_sample_ct);
+            processed_samples += BITCT2;
+        } while (processed_samples < m_sample_ct);
     }
 
     void read_prs(uintptr_t* genotype, std::vector<PRS>& prs_list,

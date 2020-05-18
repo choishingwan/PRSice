@@ -1500,7 +1500,9 @@ void Genotype::standardize_prs()
     const size_t num_prs = m_prs_info.size();
     for (size_t i = 0; i < num_prs; ++i)
     {
-        if (!IS_SET(m_calculate_prs, i) || IS_SET(m_exclude_from_std, i))
+        // only standardize using samples that are selected and have valid pheno
+        if (!IS_SET(m_calculate_prs, i) || !m_sample_id[i].in_regression
+            || IS_SET(m_exclude_from_std, i))
             continue;
         if (m_prs_info[i].num_snp == 0) { rs.push(0.0); }
         else
@@ -1536,9 +1538,9 @@ void Genotype::get_null_score(std::vector<PRS>& prs_list,
 }
 void Genotype::load_genotype_to_memory()
 {
-
     // don't reserve memory if we don't need to run hard coding
     if (!m_hard_coded) { return; }
+    m_genotype_stored = true;
     // this is use for initialize the array sizes
     const uintptr_t unfiltered_sample_ctl =
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -1572,17 +1574,32 @@ bool Genotype::get_score(std::vector<size_t>::const_iterator& start_index,
         return false;
     // reset number of SNPs if we don't need cumulative PRS
     if (m_prs_calculation.non_cumulate) num_snp_included = 0;
-    unsigned long long cur_category = m_existed_snps[(*start_index)].category();
-    cur_threshold = m_existed_snps[(*start_index)].get_threshold();
     std::vector<size_t>::const_iterator region_end = start_index;
-    for (; region_end != end_index; ++region_end)
+    if (!m_very_small_thresholds)
     {
-        if (m_existed_snps[(*region_end)].category() != cur_category)
+        unsigned long long cur_category =
+            m_existed_snps[(*start_index)].category();
+        cur_threshold = m_existed_snps[(*start_index)].get_threshold();
+        for (; region_end != end_index; ++region_end)
         {
-            cur_category = m_existed_snps[(*region_end)].category();
-            break;
+            if (m_existed_snps[(*region_end)].category() != cur_category)
+            { break; }
+            ++num_snp_included;
         }
-        ++num_snp_included;
+    }
+    else
+    {
+        // when we have very small thresholds, we use the p-value as the
+        // indicator
+        auto cur_pvalue = m_existed_snps[(*start_index)].p_value();
+        cur_threshold = cur_pvalue;
+        for (; region_end != end_index; ++region_end)
+        {
+            if (!misc::logically_equal(m_existed_snps[(*region_end)].p_value(),
+                                       cur_pvalue))
+            { break; }
+            ++num_snp_included;
+        }
     }
     read_score(start_index, region_end,
                (m_prs_calculation.non_cumulate || first_run));

@@ -261,6 +261,8 @@ TEST_CASE("test phenotype file processes")
         for (auto&& s : samples) { geno.add_sample(s); }
         geno.set_sample(samples.size());
         geno.set_sample_vector(samples.size());
+        geno.set_founder_vector(samples.size());
+        geno.post_sample_read_init();
         mock_prsice prsice(true, &reporter);
         SECTION("From phenotype file")
         {
@@ -365,6 +367,8 @@ TEST_CASE("test phenotype file processes")
         for (auto&& s : samples) { geno.add_sample(s); }
         geno.set_sample(samples.size());
         geno.set_sample_vector(samples.size());
+        geno.set_founder_vector(samples.size());
+        geno.post_sample_read_init();
         mock_prsice prsice(false, &reporter);
         SECTION("Directly from fam")
         {
@@ -591,6 +595,8 @@ TEST_CASE("gen_pheno_vec")
     for (auto&& s : samples) { geno.add_sample(s); }
     geno.set_sample(samples.size());
     geno.set_sample_vector(samples.size());
+    geno.set_founder_vector(samples.size());
+    geno.post_sample_read_init();
     Reporter reporter("log", 60, true);
     mock_prsice prsice(false, &reporter);
     SECTION("From file")
@@ -718,4 +724,40 @@ TEST_CASE("Print Phenotype log")
                     && Catch::Contains("Not enough valid phenotype"));
         }
     }
+}
+
+TEST_CASE("Set std exclusion flag")
+{
+    mock_prsice prsice;
+    mockGenotype geno;
+    size_t n_sample = 1000;
+    geno.set_sample(n_sample);
+    geno.test_init_sample_vectors();
+    // this should init the m_excusion_std vector
+    geno.test_post_sample_read_init();
+    std::vector<double> pheno_store;
+    const uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(n_sample);
+    std::vector<uintptr_t> expected(unfiltered_sample_ctl, 0);
+    // this function should only be called for binary traits
+    auto&& sample_with_phenotypes = prsice.sample_with_phenotypes();
+    auto ignore_fid = GENERATE(true, false);
+    std::random_device rnd_device;
+    std::mt19937 mersenne_engine {rnd_device()};
+    std::uniform_int_distribution<size_t> dist {0, 1};
+    auto gen = [&dist, &mersenne_engine]() { return dist(mersenne_engine); };
+    const std::string delim = " ";
+    for (size_t i = 0; i < n_sample; ++i)
+    {
+        auto id = std::to_string(i);
+        geno.add_sample(Sample_ID(id, id, " ", true));
+        if (!ignore_fid) id.append(delim + std::to_string(i));
+        sample_with_phenotypes[id] = i;
+        auto pheno = gen();
+        pheno_store.push_back(pheno);
+        if (pheno != 0) { SET_BIT(i, expected.data()); }
+    }
+    prsice.phenotype_matrix() = Eigen::Map<Eigen::VectorXd>(
+        pheno_store.data(), static_cast<Eigen::Index>(pheno_store.size()));
+    prsice.test_set_std_exclusion_flag(delim, ignore_fid, geno);
+    REQUIRE_THAT(geno.std_exclusion_flag(), Catch::Equals<uintptr_t>(expected));
 }

@@ -382,25 +382,16 @@ void BinaryPlink::read_score(
     double homcom_weight = m_homcom_weight;
     double het_weight = m_het_weight;
     double homrar_weight = m_homrar_weight;
-    // this is required if we want to calculate the MAF from the genotype (for
-    // imputation of missing genotype)
-    // if we want to set the missing score to zero, miss_count will equal to 0,
-    // 1 otherwise
     const size_t miss_count =
         (m_prs_calculation.missing_score != MISSING_SCORE::SET_ZERO) * ploidy;
-    // this indicate if we want the mean of the genotype to be 0 (missingness =
-    // 0)
     const bool is_centre =
         (m_prs_calculation.missing_score == MISSING_SCORE::CENTER);
-    // this indicate if we want to impute the missing genotypes using the
-    // population mean
     const bool mean_impute =
         (m_prs_calculation.missing_score == MISSING_SCORE::MEAN_IMPUTE);
     // check if it is not the frist run, if it is the first run, we will reset
     // the PRS to zero instead of addint it up
     bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
-    // initialize the genotype vector to store the binary genotypes
     std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     uintptr_t* genotype_ptr;
@@ -462,28 +453,21 @@ void BinaryPlink::read_score(
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
+        if (cur_snp.is_flipped()) { std::swap(homcom_weight, homrar_weight); }
         maf = 1.0
               - static_cast<double>(homcom_weight * homcom_ct
                                     + het_ct * het_weight
                                     + homrar_weight * homrar_ct)
                     / (static_cast<double>((homcom_ct + het_ct + homrar_ct)
                                            * ploidy));
-        if (cur_snp.is_flipped())
-        {
-            std::swap(homcom_weight, homrar_weight);
-            maf = 1.0 - maf;
-        }
         stat = cur_snp.stat();
         adj_score = 0;
         if (is_centre) { adj_score = ploidy * stat * maf; }
         miss_score = 0;
         if (mean_impute) { miss_score = ploidy * stat * maf; }
-        // now we go through the SNP vector
         read_prs(genotype_ptr, prs_list, ploidy, stat, adj_score, miss_score,
                  miss_count, homcom_weight, het_weight, homrar_weight,
                  not_first);
-        // indicate that we've already read in the first SNP and no longer need
-        // to reset the PRS
         not_first = true;
     }
 }

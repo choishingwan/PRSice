@@ -127,19 +127,19 @@ public:
                                      const bool ignore_fid,
                                      std::unique_ptr<std::istream>& cov_file,
                                      Genotype& target);
-    void init_matrix(const std::vector<std::string>& cov_names,
-                     const std::vector<size_t>& cov_idx,
-                     const std::vector<size_t>& factor_idx,
-                     const std::string& file_name,
-                     const std::string& cov_file_name,
-                     const std::string& pheno_name, const std::string& delim,
-                     const size_t file_idx, const bool ignore_fid,
-                     Genotype& target);
-    void init_matrix(const size_t pheno_index, const std::string& delim,
-                     Genotype& target);
-    bool run_prsice(const size_t pheno_index, const size_t region_index,
-                    const std::vector<std::vector<size_t>>& region_membership,
-                    const bool all_scores, Genotype& target);
+    void init_matrix(const Phenotype& pheno_info, const std::string& delim,
+                     const size_t pheno_idx, Genotype& target);
+    void set_std_exclusion_flag(const std::string& delim, const bool ignore_fid,
+                                Genotype& target);
+    void run_prsice(const std::vector<size_t>& set_snp_idx,
+                    const std::vector<std::string>& region_names,
+                    const std::string& pheno_name, const double prevalence,
+                    const size_t pheno_idx, const size_t region_idx,
+                    const bool all_scores, const bool has_prevalence,
+                    std::unique_ptr<std::ostream>& prsice_out,
+                    std::unique_ptr<std::ostream>& best_score_file,
+                    std::unique_ptr<std::ostream>& all_score_file,
+                    Genotype& target);
     /*!
      * \brief Before calling this function, the target should have loaded the
      * PRS. Then this function will fill in the m_independent_variable matrix
@@ -152,32 +152,13 @@ public:
      * \param iter_threshold is the index of the current threshold
      */
     void regress_score(Genotype& target, const double threshold,
-                       const int thread, const size_t pheno_index,
-                       const size_t prs_result_idx);
+                       const int thread, const size_t prs_result_idx);
 
-    /*!
-     * \brief Function responsible for generating the .prsice file
-     * \param c_commander contains the user inputs
-     * \param region contains the region information
-     * \param pheno_index is the index of the current phenotype
-     * \param region_index is teh index of the current region
-     */
-    void output(const std::vector<std::string>& region_names,
-                const size_t pheno_index, const size_t region_index);
-    /*!
-     * \brief Function that prepare the output files by writing out white
-     * spaces, this allow us to generate a nice vertical file
-     * \param out is the output prefix
-     * \param all_score indicate if we want to generate the all score file
-     * \param has_prev indicate if prevalence is provided. If it is
-     * provided, we need to also provide the adjusted R2 \param target is
-     * the target genotype object containing the sample names \param
-     * region_name is the name of regions involved \param pheno_index is the
-     * index of the current phenotype
-     */
-    void prep_output(const Genotype& target,
-                     const std::vector<std::string>& region_name,
-                     const size_t pheno_index, const bool all_score);
+    void print_all_score(const size_t num_sample,
+                         std::unique_ptr<std::ostream>& all_score_file,
+                         Genotype& target);
+    std::vector<size_t> get_matrix_idx(const std::string& delim,
+                                       const bool ignore_fid, Genotype& target);
     void
     prep_best_output(const Genotype& target,
                      const std::vector<std::vector<size_t>>& region_membership,
@@ -189,13 +170,11 @@ public:
         const std::vector<std::vector<size_t>>& region_membership,
         const std::vector<std::string>& region_name, const size_t max_fid,
         const size_t max_iid, std::unique_ptr<std::ostream>& all_score_file);
-    /*!
-     * \brief This function will summarize all PRSice / PRSet results and
-     * generate the .summary file
-     * \param c_commander contains all user input
-     * \param reporter is the logger
-     */
-    void summarize();
+
+    void print_summary(const std::string& pheno_name, const double prevalence,
+                       const bool has_prevalence,
+                       std::vector<size_t>& significant_count,
+                       std::unique_ptr<std::ostream>& summary_file);
     /*!
      * \brief Calculate the number of processes required
      * \param commander the user input, provide information on the number of
@@ -227,10 +206,20 @@ public:
 
     PRSice(const PRSice&) = delete;            // disable copying
     PRSice& operator=(const PRSice&) = delete; // disable assignment
-    /*!
-     * \brief responsible for printing the progress bar
-     * \param completed is use for cheating. To print the 100% at the end
-     */
+    void print_competitive_progress(bool completed = false)
+    {
+        double cur_progress =
+            (static_cast<double>(m_total_competitive_perm_done)
+             / static_cast<double>(m_total_competitive_process))
+            * 100.0;
+        if (cur_progress - m_previous_competitive_percentage > 0.01)
+        {
+            fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
+            m_previous_competitive_percentage = cur_progress;
+        }
+        if (m_previous_competitive_percentage >= 100.0 || completed)
+        { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
+    }
     void print_progress(bool completed = false)
     {
         double cur_progress = (static_cast<double>(m_analysis_done)
@@ -243,9 +232,8 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_percentage = cur_progress;
         }
-
         if (m_previous_percentage >= 100.0 || completed)
-        { fprintf(stderr, "\rProcessing %03.2f%%", 100.0); }
+        { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
     }
     /*!
      * \brief The master function for performing the competitive analysis
@@ -256,8 +244,7 @@ public:
     void
     run_competitive(Genotype& target,
                     const std::vector<size_t>::const_iterator& bk_start_idx,
-                    const std::vector<size_t>::const_iterator& bk_end_idx,
-                    const size_t pheno_index);
+                    const std::vector<size_t>::const_iterator& bk_end_idx);
 
     /*!
      * \brief Function responsible to generate the best score file
@@ -266,9 +253,9 @@ public:
      * \param pheno_index  the index of the current phenotype
      * \param  commander is the container of all user inputs
      */
-    void print_best(Genotype& target,
-                    const std::vector<std::string>& region_name,
-                    const size_t pheno_index);
+    void
+    print_best(const std::vector<std::vector<std::size_t>>& region_membership,
+               std::unique_ptr<std::ostream> best_file, Genotype& target);
 
 protected:
     static void parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
@@ -279,6 +266,25 @@ protected:
 
     struct prsice_result
     {
+        prsice_result(double thres, double pvalue, size_t nsnp)
+            : prsice_result(thres, 0, 0, 0, pvalue, -1, 0, -1, nsnp)
+        {
+        }
+        prsice_result(double thres, double r_sq, double rsq_adj, double coef,
+                      double pvalue, double empP, double std_er, double comp_p,
+                      size_t nsnp)
+            : threshold(thres)
+            , r2(r_sq)
+            , r2_adj(rsq_adj)
+            , coefficient(coef)
+            , p(pvalue)
+            , emp_p(empP)
+            , se(std_er)
+            , competitive_p(comp_p)
+            , num_snp(nsnp)
+        {
+        }
+        prsice_result() : prsice_result(-1, 0, 0, 0, -1, -1, 0, -1, 0) {}
         double threshold;
         double r2;
         double r2_adj;
@@ -291,6 +297,12 @@ protected:
     };
     struct prsice_summary
     {
+        prsice_summary() {}
+        prsice_summary(const prsice_result& res, const std::string& set_name,
+                       const bool has_comp)
+            : result(res), set(set_name), has_competitive(has_comp)
+        {
+        }
         prsice_result result;
         std::string pheno;
         std::string set;
@@ -314,7 +326,25 @@ protected:
             processed_threshold = 0;
         }
     };
-
+    void print_set_warning();
+    void print_prsice_output(const prsice_result& res,
+                             const std::string& pheno_name,
+                             const std::string& region_name,
+                             const double cur_threshold, const double top,
+                             const double bot, const bool has_prevalence,
+                             std::unique_ptr<std::ostream>& prsice_out)
+    {
+        (*prsice_out) << pheno_name << "\t" << region_name << "\t"
+                      << cur_threshold << "\t" << res.r2;
+        if (has_prevalence && m_binary_trait)
+            (*prsice_out) << "\t" << get_adjusted_r2(res.r2, top, bot);
+        else if (has_prevalence)
+        {
+            (*prsice_out) << "\tNA";
+        }
+        (*prsice_out) << "\t" << res.p << "\t" << res.coefficient << "\t"
+                      << res.se << "\t" << m_num_snp_included << "\n";
+    }
     // store the number of non-sig, margin sig, and sig pathway & phenotype
     static std::mutex lock_guard;
     // As R has a default precision of 7, we will go a bit
@@ -340,20 +370,18 @@ protected:
     std::vector<double> m_best_sample_score;
     std::vector<size_t> m_matrix_index;
     std::vector<size_t> m_significant_store {0, 0, 0};
-    std::ofstream m_all_out, m_best_out, m_prsice_out;
     column_file_info m_all_file, m_best_file;
-    std::string m_out;
-    std::mutex m_thread_mutex;
     double m_previous_percentage = -1.0;
+    double m_previous_competitive_percentage = -1.0;
     double m_null_r2 = 0.0;
     double m_null_p = 1.0;
     double m_null_se = 0.0;
     double m_null_coeff = 0.0;
     size_t m_total_process = 0;
+    size_t m_analysis_done = 0;
     size_t m_total_competitive_process = 0;
     size_t m_total_competitive_perm_done = 0;
     uint32_t m_num_snp_included = 0;
-    uint32_t m_analysis_done = 0;
 
 
     int m_best_index = -1;
@@ -373,10 +401,15 @@ protected:
      * \param n_thread indicate the number of threads allowed
      * \param is_binary indicate if the current phenotype is binary
      */
-    void permutation(const int n_thread, const bool is_binary);
+    void permutation(const int n_thread);
 
-    void slow_print_best(Genotype& target, const size_t pheno_index);
-
+    void slow_print_best(std::unique_ptr<std::ostream>& best_file,
+                         Genotype& target);
+    double get_adjusted_r2(const double r2, const double top, const double bot)
+    {
+        return top * r2 / (1 + bot * r2);
+    }
+    std::tuple<double, double> lee_adjustment_factor(const double prevalence);
     void gen_pheno_vec(const std::string& pheno_file,
                        const std::string& pheno_name, const std::string& delim,
                        const size_t pheno_file_idx, const bool ignore_fid,
@@ -431,8 +464,7 @@ protected:
                           std::vector<std::atomic<size_t>>& set_perm_res,
                           const std::vector<double>& obs_t_value,
                           const std::random_device::result_type seed,
-                          const Regress& decomposed, const size_t num_perm,
-                          const bool is_binary);
+                          const Regress& decomposed, const size_t num_perm);
     /*!
      * \brief Once PRS analysis and permutation has been performed for all
      * p-value thresholds we will run this function to calculate the
@@ -476,8 +508,7 @@ protected:
                      const Regress& decomposed,
                      std::map<size_t, std::vector<size_t>>& set_index,
                      const std::vector<double>& obs_t_value,
-                     std::vector<std::atomic<size_t>>& set_perm_res,
-                     const bool is_binary);
+                     std::vector<std::atomic<size_t>>& set_perm_res);
 
     void null_set_no_thread(
         Genotype& target, const size_t num_background,
@@ -548,8 +579,8 @@ protected:
         dummy_reporter(PRSice& p) : m_parent(p) {}
         void emplace(T&& /*item*/)
         {
-            ++m_parent.m_analysis_done;
-            m_parent.print_progress();
+            ++m_parent.m_total_competitive_perm_done;
+            m_parent.print_competitive_progress();
         }
         void completed() { m_completed = true; }
     };

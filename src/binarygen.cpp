@@ -570,16 +570,16 @@ void BinaryGen::dosage_score(
     // m_prs_info is where we store the PRS information
     // and m_sample_include let us know if the sample is required.
     // m_missing_score will inform us as to how to handle the missingness
-    PRS_Interpreter* setter;
+    std::unique_ptr<PRS_Interpreter> setter = nullptr;
     if (not_first)
     {
-        setter = new Add_PRS(&prs_list, &m_calculate_prs,
-                             m_prs_calculation.missing_score);
+        setter = std::make_unique<Add_PRS>(&prs_list, &m_calculate_prs,
+                                           m_prs_calculation.missing_score);
     }
     else
     {
-        setter = new First_PRS(&prs_list, &m_calculate_prs,
-                               m_prs_calculation.missing_score);
+        setter = std::make_unique<First_PRS>(&prs_list, &m_calculate_prs,
+                                             m_prs_calculation.missing_score);
     }
     std::vector<size_t>::const_iterator cur_idx = start_idx;
     size_t file_idx;
@@ -587,7 +587,7 @@ void BinaryGen::dosage_score(
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& snp = m_existed_snps[(*cur_idx)];
-        snp.get_file_info(file_idx, byte_pos, m_is_ref);
+        std::tie(file_idx, byte_pos) = snp.get_file_info(m_is_ref);
         // if the file name differ, or the file isn't open, we will open it
         auto&& context = m_context_map[file_idx];
         setter->set_stat(snp.stat(), m_homcom_weight, m_het_weight,
@@ -596,19 +596,14 @@ void BinaryGen::dosage_score(
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_genotype_file, m_genotype_file_names[file_idx] + ".bgen", context,
             *setter, &m_buffer1, &m_buffer2, byte_pos);
-        // check if this SNP has some non-missing sample, if not, invalidate
-        // it
-        // after reading in this SNP, we no longer need to reset the PRS
         if (!not_first)
         {
-            // use a new setter
-            delete setter;
-            setter = new Add_PRS(&prs_list, &m_calculate_prs,
-                                 m_prs_calculation.missing_score);
+            setter.reset(new Add_PRS(&prs_list, &m_calculate_prs,
+                                     m_prs_calculation.missing_score));
         }
         not_first = true;
     }
-    delete setter;
+    setter.reset();
 }
 
 
@@ -637,8 +632,6 @@ void BinaryGen::hard_code_score(
     // check if we need to reset the sample's PRS
     bool not_first = !reset_zero;
     double stat, maf, adj_score, miss_score;
-    // initialize the data structure for storing the genotype
-    // std::vector<uintptr_t> genotype(unfiltered_sample_ctl * 2, 0);
     genfile::bgen::Context context;
     PLINK_generator setter(m_calculate_prs.data(), m_tmp_genotype.data(),
                            m_hard_threshold, m_dose_threshold);
@@ -647,11 +640,6 @@ void BinaryGen::hard_code_score(
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        // read in the genotype using the modified load_and_collapse_incl
-        // function. m_target_plink will inform the function wheter there's
-        // an intermediate file
-        // if it has the intermediate file, then we should have already
-        // calculated the counts
         if (cur_snp.current_genotype() == nullptr)
         {
             auto [idx, byte_pos] = cur_snp.get_file_info(m_is_ref);
@@ -681,52 +669,50 @@ void BinaryGen::hard_code_score(
                     PLINK_generator>(
                     m_genotype_file, m_genotype_file_names[idx] + ".bgen",
                     context, setter, &m_buffer1, &m_buffer2, byte_pos);
-                setter.get_count(homcom_ct, het_ct, homrar_ct, missing_ct);
+                if (!m_prs_calculation.use_ref_maf)
+                {
+                    setter.get_count(homcom_ct, het_ct, homrar_ct, missing_ct);
+                }
+                else
+                {
+                    if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct,
+                                            missing_ct,
+                                            m_prs_calculation.use_ref_maf))
+                    {
+                        throw std::runtime_error(
+                            "Error: Sam forgot to load genotype count from "
+                            "reference");
+                    }
+                }
             }
             genotype_ptr = m_tmp_genotype.data();
         }
         else
         {
-            cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                               m_prs_calculation.use_ref_maf);
+            if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                    m_prs_calculation.use_ref_maf))
+            { throw std::runtime_error("Error: Sam has a logic error"); }
             genotype_ptr = cur_snp.current_genotype();
         }
-        // TODO: if we haven't got the count from the genotype matrix, we
-        // will need to calculate that, we might not need to do the counting
-        // as that is already done when we convert the dosages into the
-        // binary genotypes
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
+        if (cur_snp.is_flipped()) { std::swap(homcom_weight, homrar_weight); }
         maf = 1.0
               - static_cast<double>(homcom_weight * homcom_ct
                                     + het_ct * het_weight
                                     + homrar_weight * homrar_ct)
                     / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
                        * ploidy);
-        if (cur_snp.is_flipped())
-        {
-            // change the mean to reflect flipping
-            maf = 1.0 - maf;
-            // swap the weighting
-            std::swap(homcom_weight, homrar_weight);
-        }
-        stat = cur_snp.stat(); // Multiply by ploidy
-        // only set these value to the imputed value if we require them
+
+        stat = cur_snp.stat();
         adj_score = 0;
         if (is_centre) { adj_score = ploidy * stat * maf; }
         miss_score = 0;
-        if (mean_impute)
-        {
-            // again, mean_impute is stable, branch prediction should be ok
-            miss_score = ploidy * stat * maf;
-        }
-        // start reading the genotype
+        if (mean_impute) { miss_score = ploidy * stat * maf; }
         read_prs(genotype_ptr, prs_list, ploidy, stat, adj_score, miss_score,
                  miss_count, homcom_weight, het_weight, homrar_weight,
                  not_first);
-        // we've finish processing the first SNP no longer need to reset the
-        // PRS
         not_first = true;
     }
 }
@@ -771,14 +757,8 @@ void BinaryGen::read_score(std::vector<PRS>& prs_list,
                            const std::vector<size_t>::const_iterator& end_idx,
                            bool reset_zero)
 {
-    // because I don't want to touch the code in dosage_score, we will reset
-    // the sample here reset_sample_prs();
     if (m_hard_coded)
-    {
-        // for hard coded, we need to check if intermediate file is used
-        // instead
-        hard_code_score(prs_list, start_idx, end_idx, reset_zero);
-    }
+    { hard_code_score(prs_list, start_idx, end_idx, reset_zero); }
     else
     {
         dosage_score(prs_list, start_idx, end_idx, reset_zero);

@@ -151,60 +151,60 @@ int main(int argc, char* argv[])
             // but for all and best, we are doing column-wise output, which need
             // expensive seek operations
             std::unique_ptr<std::ostream> summary_file = nullptr;
-            auto prsice_out = misc::load_ostream(commander.out() + ".prsice");
-            bool has_prevalence = !pheno_info.prevalence.empty();
+            auto prefix = commander.out();
+            auto prsice_out = misc::load_ostream(prefix + ".prsice");
+            const bool has_prevalence = !pheno_info.prevalence.empty();
             print_prsice_header(has_prevalence, no_regress, prsice_out);
             auto perm_info = commander.get_perm();
             if (!no_regress)
             {
-                summary_file = misc::load_ostream(commander.out() + ".summary");
+                summary_file = misc::load_ostream(prefix + ".summary");
                 print_summary_header(has_prevalence, perm_info.run_set_perm,
                                      perm_info.run_perm, summary_file);
             }
+            size_t i_prevalence = 0;
+            std::vector<size_t> significant_count = {0, 0, 0};
             for (size_t i_pheno = 0; i_pheno < num_pheno; ++i_pheno)
             {
                 if (pheno_info.skip_pheno[i_pheno])
                 {
-                    reporter.simple_report("Skipping the "
-                                           + std::to_string(i_pheno + 1)
-                                           + " th phenotype");
+                    reporter.report("Skipping the "
+                                    + std::to_string(i_pheno + 1)
+                                    + " th phenotype");
                     continue;
                 }
-                reporter.simple_report("Processing the "
-                                       + std::to_string(i_pheno + 1)
-                                       + " th phenotype");
+                reporter.report("Processing the " + std::to_string(i_pheno + 1)
+                                + " th phenotype");
+                const std::string pheno_name =
+                    (num_pheno > 1) ? pheno_info.pheno_col[i_pheno] : "-";
+                const std::string file_suffix =
+                    (num_pheno > 1) ? "." + pheno_name : "";
                 PRSice prsice(commander.get_prs_instruction(),
-                              commander.get_p_threshold(), perm_info,
-                              commander.out(), pheno_info.binary[i_pheno],
-                              &reporter);
+                              commander.get_p_threshold(), perm_info, prefix,
+                              pheno_info.binary[i_pheno], &reporter);
+                const double prevalence =
+                    (i_prevalence < pheno_info.prevalence.size())
+                        ? pheno_info.prevalence[i_prevalence]
+                        : 2;
+                if (pheno_info.binary[i_pheno]) ++i_prevalence;
                 prsice.init_progress_count(target_file->get_set_thresholds());
+                prsice.init_matrix(pheno_info, commander.delim(), i_pheno,
+                                   *target_file);
                 std::unique_ptr<std::ostream> best_file = nullptr,
                                               all_score_file = nullptr;
                 if (!no_regress)
                 {
-                    prsice.init_matrix(
-                        pheno_info.cov_colname, pheno_info.col_index_of_cov,
-                        pheno_info.col_index_of_factor_cov,
-                        pheno_info.pheno_file, pheno_info.cov_file,
-                        pheno_info.pheno_col[i_pheno], commander.delim(),
-                        pheno_info.pheno_col_idx[i_pheno],
-                        pheno_info.ignore_fid, *target_file);
-                    best_file = misc::load_ostream(
-                        commander.out()
-                        + ((num_pheno > 1) ? "." + pheno_info.pheno_col[i_pheno]
-                                           : "")
-                        + ".best");
+
+                    best_file =
+                        misc::load_ostream(prefix + file_suffix + ".best");
                     prsice.prep_best_output(*target_file, region_membership,
                                             region_names, max_fid, max_iid,
                                             best_file);
                 }
                 if (commander.all_scores())
                 {
-                    all_score_file = misc::load_ostream(
-                        commander.out()
-                        + ((num_pheno > 1) ? "." + pheno_info.pheno_col[i_pheno]
-                                           : "")
-                        + ".all_score");
+                    all_score_file =
+                        misc::load_ostream(prefix + file_suffix + ".all_score");
                     prsice.prep_all_score_output(
                         *target_file, region_membership, region_names, max_fid,
                         max_iid, all_score_file);
@@ -216,31 +216,31 @@ int main(int argc, char* argv[])
                     // always skip background region and empty regions
                     if (i_region == 1 || region_membership[i_region].empty())
                         continue;
-                    prsice.run_prsice(i_pheno, i_region, region_membership,
-                                      commander.all_scores(), *target_file);
-                    prsice.output(region_names, i_pheno, i_region);
+                    prsice.run_prsice(region_membership[i_region], region_names,
+                                      pheno_name, prevalence, i_pheno, i_region,
+                                      commander.all_scores(), has_prevalence,
+                                      prsice_out, best_file, all_score_file,
+                                      *target_file);
                 }
+                // normal progress for this phenotype completed
+                prsice.print_progress(true);
                 if (!no_regress)
                 {
-                    prsice.print_best(*target_file, region_names, i_pheno);
+                    // best file is nullptr after this
+                    prsice.print_best(region_membership, std::move(best_file),
+                                      *target_file);
                     if (perm_info.run_set_perm && region_names.size() > 2)
                     {
-                        // only perform permutation if regression is performed
-                        // and user request it
                         assert(region_membership.size() >= 2);
-                        prsice.run_competitive(
-                            *target_file, region_membership[1].begin(),
-                            region_membership[1].end(), i_pheno);
+                        prsice.run_competitive(*target_file,
+                                               region_membership[1].begin(),
+                                               region_membership[1].end());
                     }
                 }
+                prsice.print_summary(pheno_name, prevalence, has_prevalence,
+                                     significant_count, summary_file);
             }
-            // prsice.print_progress(true);
-            // fprintf(stderr, "\n");
-            /*
-            if (!commander.get_prs_instruction().no_regress)
-                // now generate the summary file
-                prsice.summarize();
-                */
+            reporter.report(print_project_summary(significant_count));
         }
         catch (const std::invalid_argument& ia)
         {

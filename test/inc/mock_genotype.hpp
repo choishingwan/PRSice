@@ -285,12 +285,17 @@ public:
 
     void set_founder_vector(const size_t n_sample)
     {
+        m_unfiltered_sample_ct = n_sample;
+        const uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(n_sample);
+        m_sample_for_ld.resize(unfiltered_sample_ctl, 0);
         for (size_t i = 0; i < n_sample; ++i)
         { SET_BIT(i, m_sample_for_ld.data()); }
         m_founder_ct = n_sample;
     }
     void set_founder_vector(const std::vector<bool>& founder)
     {
+        const uintptr_t unfiltered_sample_ctl = BITCT_TO_WORDCT(founder.size());
+        m_sample_for_ld.resize(unfiltered_sample_ctl, 0);
         for (size_t i = 0; i < founder.size(); ++i)
         {
             if (founder[i])
@@ -301,6 +306,7 @@ public:
         }
     }
     void set_very_small_thresholds() { m_very_small_thresholds = true; }
+    std::vector<uintptr_t>& std_exclusion_flag() { return m_exclude_from_std; }
 };
 
 #endif // MOCK_GENOTYPE_H
