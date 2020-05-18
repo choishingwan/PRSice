@@ -1562,8 +1562,8 @@ Genotype::build_membership_matrix(const size_t num_sets,
         }
         for (size_t s = 0; s < num_sets; ++s)
         {
-            if (print_snps && !is_prset && s == 1)
-                out << "\t" << IS_SET(flags.data(), s);
+            if (print_snps && (is_prset || s != 1))
+            { out << "\t" << IS_SET(flags.data(), s); }
             if (IS_SET(flags.data(), s))
             {
                 m_set_thresholds[s].insert(snp.get_threshold());
