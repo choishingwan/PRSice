@@ -306,12 +306,7 @@ protected:
         {
         }
         prsice_result result;
-        std::string pheno;
         std::string set;
-        double r2_null;
-        double top;
-        double bottom;
-        double prevalence;
         bool has_competitive;
     };
     struct column_file_info

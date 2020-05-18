@@ -59,7 +59,7 @@ inline void initialize_genotype(
              .intermediate(commander.use_inter())
              .set_prs_instruction(commander.get_prs_instruction())
              .set_weight(commander.get_prs_instruction().genetic_model);
-
+    current_file->parse_chr_id_formula(commander.chr_id_formula());
     if (target_file == nullptr)
     {
         is_ref = false;

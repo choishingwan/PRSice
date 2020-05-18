@@ -202,6 +202,23 @@ public:
         { SET_BIT(i, m_calculate_prs.data()); }
         m_sample_ct = n_sample;
     }
+
+    void set_sample_vector(const std::vector<bool>& selected_samples)
+    {
+        m_unfiltered_sample_ct = selected_samples.size();
+        const uintptr_t unfiltered_sample_ctl =
+            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+        m_calculate_prs.resize(unfiltered_sample_ctl, 0);
+        m_sample_ct = 0;
+        for (size_t i = 0; i < m_unfiltered_sample_ct; ++i)
+        {
+            if (selected_samples[i])
+            {
+                SET_BIT(i, m_calculate_prs.data());
+                ++m_sample_ct;
+            }
+        }
+    }
     void set_founder_vector(const std::vector<bool>& founder)
     {
         m_founder_ct = 0;

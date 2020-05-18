@@ -334,6 +334,19 @@ public:
                  miss_count, homcom_weight, het_weight, homrar_weight,
                  not_first);
     }
+    std::vector<int>& chr_id_col() { return m_chr_id_column; }
+    std::vector<char>& chr_id_symbol() { return m_chr_id_symbol; }
+    bool has_chr_formula() { return m_has_chr_id_formula; }
+    std::string test_chr_id_from_genotype(const SNP& snp) const
+    {
+        return chr_id_from_genotype(snp);
+    }
+    std::string
+    test_get_chr_id_from_base(const BaseFile& base_file,
+                              const std::vector<std::string_view>& token) const
+    {
+        return get_chr_id_from_base(base_file, token);
+    }
 };
 
 #endif // MOCK_GENOTYPE_H

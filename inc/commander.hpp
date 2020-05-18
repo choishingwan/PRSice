@@ -90,6 +90,7 @@ public:
     unsigned long long memory() const { return m_memory; }
     std::string exclude_file() const { return m_exclude_file; }
     std::string extract_file() const { return m_extract_file; }
+    std::string chr_id_formula() const { return m_chr_id_formula; }
     bool keep_ambig() const { return m_keep_ambig; }
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
@@ -102,6 +103,7 @@ protected:
     std::string m_exclude_file = "";
     std::string m_extract_file = "";
     std::string m_help_message;
+    std::string m_chr_id_formula;
     size_t m_memory = 1e10;
     int m_allow_inter = false;
     int m_include_nonfounders = false;

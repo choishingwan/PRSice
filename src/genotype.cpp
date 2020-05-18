@@ -170,7 +170,35 @@ void Genotype::snp_extraction(const std::string& extract_snps,
         m_snp_selection_list = load_snp_list(std::move(input));
     }
 }
-
+std::string
+Genotype::get_chr_id_from_base(const BaseFile& base_file,
+                               const std::vector<std::string_view>& token) const
+{
+    // check if we have all the column we need
+    assert(!token.empty());
+    std::string chr_id = "";
+    for (auto col : m_chr_id_column)
+    {
+        if (col < 0)
+        {
+            auto idx = (-1 * col - 1);
+            chr_id += m_chr_id_symbol[idx];
+        }
+        else if (!base_file.has_column[col])
+        {
+            throw std::runtime_error("Error: Required column for chr id "
+                                     "construction not found in base file!");
+        }
+        else
+        {
+            auto idx = base_file.column_index[col];
+            auto str = std::string(token[idx]);
+            misc::to_upper(str);
+            chr_id += str;
+        }
+    }
+    return chr_id;
+}
 std::tuple<std::vector<size_t>, std::unordered_set<std::string>>
 Genotype::transverse_base_file(
     const BaseFile& base_file, const QCFiltering& base_qc,
@@ -521,6 +549,32 @@ bool Genotype::not_in_xregion(
     }
     return true;
 }
+std::string Genotype::chr_id_from_genotype(const SNP& snp) const
+{
+    std::string chr_id = "";
+    if (!m_has_chr_id_formula) return chr_id;
+
+    for (auto&& col : m_chr_id_column)
+    {
+        if (col < 0)
+        {
+            auto idx = -1 * col - 1;
+            chr_id += m_chr_id_symbol[idx];
+        }
+        else
+        {
+            switch (col)
+            {
+            case +BASE_INDEX::CHR: chr_id += std::to_string(snp.chr()); break;
+            case +BASE_INDEX::BP: chr_id += std::to_string(snp.loc()); break;
+            case +BASE_INDEX::EFFECT: chr_id += snp.ref(); break;
+            case +BASE_INDEX::NONEFFECT: chr_id += snp.alt(); break;
+            default: throw std::logic_error("Error: This should never happen");
+            }
+        }
+    }
+    return chr_id;
+}
 bool Genotype::process_snp(
     const std::vector<IITree<size_t, size_t>>& exclusion_regions,
     const std::string& mismatch_snp_record_name,
@@ -529,16 +583,15 @@ bool Genotype::process_snp(
     std::unordered_set<std::string>& duplicated_snps,
     std::vector<bool>& retain_snp, Genotype* genotype)
 {
-    // TODO: allow  chr_id in future
-    // std::string chr_id = SNP::chr_id(chr_num, bp);
-    if (!check_rs(snpid, "", snp.rs(), processed_snps, duplicated_snps,
+    misc::to_upper(snp.ref());
+    misc::to_upper(snp.alt());
+    auto chr_id = chr_id_from_genotype(snp);
+    if (!check_rs(snpid, chr_id, snp.rs(), processed_snps, duplicated_snps,
                   genotype))
         return false;
     auto snp_idx = genotype->m_existed_snps_index[snp.rs()];
     auto&& target_snp = genotype->m_existed_snps[snp_idx];
 
-    misc::to_upper(snp.ref());
-    misc::to_upper(snp.alt());
     bool flipping;
     if (!target_snp.matching(snp, flipping))
     {
@@ -1430,7 +1483,44 @@ bool Genotype::prepare_prsice()
     }
     return true;
 }
-
+void Genotype::parse_chr_id_formula(const std::string& chr_id_formula)
+{
+    if (chr_id_formula.empty()) return;
+    m_has_chr_id_formula = true;
+    auto length = chr_id_formula.length();
+    std::unordered_map<char, int> symbol_idx;
+    // c = chr
+    // l = loc
+    // a = a1
+    // b = a2
+    // start at 1 so that we know and number < 0 is for symbol
+    int num_symbol = 1;
+    for (size_t i = 0; i < length; ++i)
+    {
+        auto cur_char = chr_id_formula.at(i);
+        switch (cur_char)
+        {
+        case 'c':
+        case 'C': m_chr_id_column.push_back(+BASE_INDEX::CHR); break;
+        case 'l':
+        case 'L': m_chr_id_column.push_back(+BASE_INDEX::BP); break;
+        case 'a':
+        case 'A': m_chr_id_column.push_back(+BASE_INDEX::EFFECT); break;
+        case 'b':
+        case 'B': m_chr_id_column.push_back(+BASE_INDEX::NONEFFECT); break;
+        default:
+        {
+            if (symbol_idx.find(cur_char) == symbol_idx.end())
+            {
+                symbol_idx[cur_char] = -num_symbol;
+                m_chr_id_symbol.push_back(cur_char);
+                ++num_symbol;
+            }
+            m_chr_id_column.push_back(symbol_idx[cur_char]);
+        }
+        }
+    }
+}
 // TODO: This function is likely to have bug (2019-12-09 It does)
 std::vector<std::vector<size_t>>
 Genotype::build_membership_matrix(const size_t num_sets,

@@ -109,6 +109,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"binary-target", required_argument, nullptr, 0},
         {"bp", required_argument, nullptr, 0},
         {"chr", required_argument, nullptr, 0},
+        {"chr-id", required_argument, nullptr, 0},
         {"clump-kb", required_argument, nullptr, 0},
         {"clump-p", required_argument, nullptr, 0},
         {"clump-r2", required_argument, nullptr, 0},
@@ -198,6 +199,8 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
                 set_string(optarg, command, +BASE_INDEX::BP);
             else if (command == "chr")
                 set_string(optarg, command, +BASE_INDEX::CHR);
+            else if (command == "chr-id")
+                set_string(optarg, command, m_chr_id_formula);
             else if (command == "clump-kb")
             {
                 error |= !parse_unit_value(optarg, command, 1,

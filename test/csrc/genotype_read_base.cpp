@@ -432,3 +432,136 @@ TEST_CASE("base file read")
         REQUIRE(snps[find->second].rs() == "normal");
     }
 }
+
+TEST_CASE("parse_chr_id_formula")
+{
+    mockGenotype geno;
+    SECTION("Have input")
+    {
+        std::string chr_id_formula = "c:L:acdbD";
+        geno.parse_chr_id_formula(chr_id_formula);
+        REQUIRE(geno.has_chr_formula());
+        REQUIRE_THAT(
+            geno.chr_id_col(),
+            Catch::Equals<int>({+BASE_INDEX::CHR, -1, +BASE_INDEX::BP, -1,
+                                +BASE_INDEX::EFFECT, +BASE_INDEX::CHR, -2,
+                                +BASE_INDEX::NONEFFECT, -3}));
+        REQUIRE_THAT(geno.chr_id_symbol(),
+                     Catch::Equals<char>({':', 'd', 'D'}));
+    }
+    SECTION("no input")
+    {
+        geno.parse_chr_id_formula("");
+        REQUIRE_FALSE(geno.has_chr_formula());
+    }
+}
+
+TEST_CASE("Read chr_id from base")
+{
+    BaseFile base;
+    mockGenotype geno;
+    Reporter reporter("log", 60, true);
+    geno.set_reporter(&reporter);
+    std::string row = "1 123 A C 1.96 0.05";
+    auto token = misc::tokenize(row);
+    SECTION("No formular")
+    {
+        for (auto&& b : base.has_column) { b = true; }
+        base.column_index[+BASE_INDEX::CHR] = 0;
+        base.column_index[+BASE_INDEX::BP] = 1;
+        base.column_index[+BASE_INDEX::EFFECT] = 2;
+        base.column_index[+BASE_INDEX::NONEFFECT] = 3;
+        REQUIRE(geno.test_get_chr_id_from_base(base, token) == "");
+    }
+    SECTION("Has formular")
+    {
+        geno.parse_chr_id_formula("c:L:ab");
+        SECTION("Does not have one of the column")
+        {
+            auto missing =
+                GENERATE(+BASE_INDEX::CHR, +BASE_INDEX::BP, +BASE_INDEX::EFFECT,
+                         +BASE_INDEX::NONEFFECT);
+            for (auto&& b : base.has_column) { b = true; }
+            base.has_column[missing] = false;
+            REQUIRE_THROWS(geno.test_get_chr_id_from_base(base, token));
+        }
+        SECTION("Have all required columns")
+        {
+            for (auto&& b : base.has_column) { b = true; }
+            base.column_index[+BASE_INDEX::CHR] = 0;
+            base.column_index[+BASE_INDEX::BP] = 1;
+            base.column_index[+BASE_INDEX::EFFECT] = 2;
+            base.column_index[+BASE_INDEX::NONEFFECT] = 3;
+            REQUIRE(geno.test_get_chr_id_from_base(base, token) == "1:123:AC");
+        }
+    }
+}
+TEST_CASE("Read chr_id from SNP")
+{
+    mockGenotype geno;
+    Reporter reporter("log", 60, true);
+    geno.set_reporter(&reporter);
+    SNP cur_snp("rs123", 12, 3456, "C", "T", 1.96, 0.05, 0, 0);
+    SECTION("No formula")
+    {
+        REQUIRE(geno.test_chr_id_from_genotype(cur_snp).empty());
+    }
+    SECTION("Have formular")
+    {
+        geno.parse_chr_id_formula("L:C:-Abd");
+        REQUIRE(geno.test_chr_id_from_genotype(cur_snp) == "3456:12:-CTd");
+    }
+}
+TEST_CASE("chr id in parse rs id")
+{
+    mockGenotype geno;
+    Reporter reporter("log", 60, true);
+    geno.set_reporter(&reporter);
+    BaseFile base;
+    std::string input = "rs123 123 1 A t";
+    auto token = misc::tokenize(input);
+
+    std::unordered_set<std::string> dup_index, processed_rs;
+
+    std::vector<size_t> filter_count(+BASE_INDEX::MAX, 0);
+    std::string rs_id;
+    SECTION("Missing both information")
+    {
+        base.has_column[+BASE_INDEX::RS] = false;
+        REQUIRE_THROWS(geno.test_parse_rs_id(token, base, processed_rs,
+                                             dup_index, filter_count, rs_id));
+    }
+    SECTION("provided chr_id_formula")
+    {
+        geno.parse_chr_id_formula("c-l:a-b");
+
+        base.column_index[+BASE_INDEX::CHR] = 2;
+        base.column_index[+BASE_INDEX::BP] = 1;
+        base.column_index[+BASE_INDEX::EFFECT] = 3;
+        base.column_index[+BASE_INDEX::NONEFFECT] = 4;
+        base.column_index[+BASE_INDEX::RS] = 0;
+        base.has_column[+BASE_INDEX::BP] = true;
+        base.has_column[+BASE_INDEX::EFFECT] = true;
+        base.has_column[+BASE_INDEX::NONEFFECT] = true;
+        SECTION("Mising column")
+        {
+            REQUIRE_THROWS(geno.test_parse_rs_id(
+                token, base, processed_rs, dup_index, filter_count, rs_id));
+        }
+        SECTION("Does not have rs but got all required column")
+        {
+            base.has_column[+BASE_INDEX::CHR] = true;
+            REQUIRE(geno.test_parse_rs_id(token, base, processed_rs, dup_index,
+                                          filter_count, rs_id));
+            REQUIRE(rs_id == "1-123:A-T");
+        }
+        SECTION("Have both info")
+        {
+            base.has_column[+BASE_INDEX::CHR] = true;
+            base.has_column[+BASE_INDEX::RS] = true;
+            REQUIRE(geno.test_parse_rs_id(token, base, processed_rs, dup_index,
+                                          filter_count, rs_id));
+            REQUIRE(rs_id == "rs123");
+        }
+    }
+}

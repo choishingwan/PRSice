@@ -808,6 +808,12 @@ TEST_CASE("misc parameter loading")
             REQUIRE(commander.get_prs_instruction().thread == max_thread);
         }
     }
+    SECTION("chr id formula")
+    {
+        REQUIRE(commander.chr_id_formula().empty());
+        REQUIRE(commander.parse_command_wrapper("--chr-id c:l-l-a-b"));
+        REQUIRE(commander.chr_id_formula() == "c:l-l-a-b");
+    }
     SECTION("extract")
     {
         REQUIRE(commander.extract_file().empty());

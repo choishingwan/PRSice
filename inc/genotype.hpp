@@ -637,7 +637,6 @@ public:
         m_hard_threshold = qc.hard_threshold;
         m_dose_threshold = qc.dose_threshold;
     }
-
     void load_genotype_to_memory();
     bool genotyped_stored() const { return m_genotype_stored; }
     const std::unordered_map<std::string, size_t>& included_snps_idx() const
@@ -645,6 +644,8 @@ public:
         return m_existed_snps_index;
     }
     const std::vector<SNP>& included_snps() const { return m_existed_snps; }
+    void parse_chr_id_formula(const std::string& chr_id_formula);
+
 
 protected:
     // friend with all child class so that they can also access the
@@ -663,6 +664,7 @@ protected:
     std::vector<Sample_ID> m_sample_id;
     std::vector<PRS> m_prs_info;
     std::vector<std::string> m_genotype_file_names;
+    std::vector<char> m_chr_id_symbol;
     std::vector<uintptr_t> m_tmp_genotype;
     // std::vector<uintptr_t> m_chrom_mask;
     std::vector<uintptr_t> m_sample_for_ld;
@@ -673,6 +675,7 @@ protected:
     std::vector<uintptr_t> m_in_regression;
     std::vector<uintptr_t> m_haploid_mask;
     std::vector<size_t> m_sort_by_p_index;
+    std::vector<int> m_chr_id_column;
     // std::vector<uintptr_t> m_sex_male;
     std::vector<int32_t> m_xymt_codes;
     std::ofstream m_mismatch_snp_record;
@@ -730,6 +733,7 @@ protected:
     bool m_memory_initialized = false;
     bool m_very_small_thresholds = false;
     bool m_vector_initialized = false;
+    bool m_has_chr_id_formula = false;
     Reporter* m_reporter = nullptr;
     CalculatePRS m_prs_calculation;
 
@@ -787,6 +791,10 @@ protected:
         }
         return message;
     }
+    std::string chr_id_from_genotype(const SNP& snp) const;
+    std::string
+    get_chr_id_from_base(const BaseFile& base_file,
+                         const std::vector<std::string_view>& token) const;
     bool has_parent(const std::unordered_set<std::string>& founder_info,
                     const std::vector<std::string>& token,
                     const std::string& fid, const size_t idx);
@@ -801,25 +809,7 @@ protected:
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const SNP& new_snp);
-    /*
-        bool parse_chr_id(const std::vector<std::string_view>& token,
-                          const BaseFile& base_file,
-                          std::unordered_set<std::string>& processed_idx,
-                          std::unordered_set<std::string>& dup_rs,
-                          std::vector<size_t>& filter_count, std::string&
-       chr_id)
-        {
-            if (!base_file.has_column[+BASE_INDEX::CHR]
-                && !base_file.has_column[+BASE_INDEX::BP])
-            {
-                throw std::runtime_error(
-                    "Error: Need chr and bp column to construct chr id");
-            }
-            chr_id = SNP::chr_id(token[+BASE_INDEX::CHR],
-       token[+BASE_INDEX::BP]); return snp_dup_selection_check(chr_id,
-       processed_idx, dup_rs, filter_count);
-        }
-        */
+
     bool snp_dup_selection_check(const std::string& id,
                                  std::unordered_set<std::string>& processed_idx,
                                  std::unordered_set<std::string>& dup_rs,
@@ -849,9 +839,17 @@ protected:
                      std::unordered_set<std::string>& dup_rs,
                      std::vector<size_t>& filter_count, std::string& rs_id)
     {
-        if (!base_file.has_column[+BASE_INDEX::RS])
+        if (!base_file.has_column[+BASE_INDEX::RS] && !m_has_chr_id_formula)
         { throw std::runtime_error("Error: RS ID column not provided!"); }
-        rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
+        else if (base_file.has_column[+BASE_INDEX::RS])
+        {
+            rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
+        }
+        else if (m_has_chr_id_formula)
+        {
+            rs_id = get_chr_id_from_base(base_file, token);
+        }
+
         return (snp_dup_selection_check(rs_id, processed_idx, dup_rs,
                                         filter_count));
     }
