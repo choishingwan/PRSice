@@ -7,17 +7,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <meta name="author" content="Shing Wan CHOI">
-  <link rel="shortcut icon" href="/img/favicon.ico">
-  <title>PRSice-2</title>
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Update Log - PRSice-2</title>
   <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
 
-  <link rel="stylesheet" href="/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="/css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
   <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-  <link href="/css/extra.css" rel="stylesheet">
+  <link href="../css/extra.css" rel="stylesheet">
   
-  <script src="/js/jquery-2.1.1.min.js" defer></script>
-  <script src="/js/modernizr-2.8.3.min.js" defer></script>
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Update Log";
+    var mkdocs_page_input_path = "update_log.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
   <script>hljs.initHighlightingOnLoad();</script> 
   
@@ -40,9 +47,9 @@
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
       <div class="wy-side-nav-search">
-        <a href="/." class="icon icon-home"> PRSice-2</a>
+        <a href=".." class="icon icon-home"> PRSice-2</a>
         <div role="search">
-  <form id ="rtd-search-form" class="wy-form" action="//search.html" method="get">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
   </form>
 </div>
@@ -54,7 +61,7 @@
           
             <li class="toctree-l1">
 		
-    <a class="" href="/.">Home</a>
+    <a class="" href="..">Home</a>
 	    </li>
           
             <li class="toctree-l1">
@@ -63,11 +70,11 @@
     <ul class="subnav">
                 <li class="">
                     
-    <a class="" href="/quick_start/">PRSice</a>
+    <a class="" href="../quick_start/">PRSice</a>
                 </li>
                 <li class="">
                     
-    <a class="" href="/quick_start_prset/">PRSet</a>
+    <a class="" href="../quick_start_prset/">PRSet</a>
                 </li>
     </ul>
 	    </li>
@@ -78,18 +85,18 @@
     <ul class="subnav">
                 <li class="">
                     
-    <a class="" href="/step_by_step/">PRSice</a>
+    <a class="" href="../step_by_step/">PRSice</a>
                 </li>
                 <li class="">
                     
-    <a class="" href="/prset_detail/">PRSet</a>
+    <a class="" href="../prset_detail/">PRSet</a>
                 </li>
     </ul>
 	    </li>
           
             <li class="toctree-l1">
 		
-    <a class="" href="/command_detail/">Available Commands</a>
+    <a class="" href="../command_detail/">Available Commands</a>
 	    </li>
           
             <li class="toctree-l1">
@@ -98,15 +105,15 @@
     <ul class="subnav">
                 <li class="">
                     
-    <a class="" href="/compilation/">Compile from Source</a>
+    <a class="" href="../compilation/">Compile from Source</a>
                 </li>
                 <li class="">
                     
-    <a class="" href="/decisions/">Development Decisions</a>
+    <a class="" href="../decisions/">Development Decisions</a>
                 </li>
                 <li class="">
                     
-    <a class="" href="/resources/">Useful Resources</a>
+    <a class="" href="../resources/">Useful Resources</a>
                 </li>
     </ul>
 	    </li>
@@ -117,19 +124,25 @@
     <ul class="subnav">
                 <li class="">
                     
-    <a class="" href="/extra_steps/">Additional Steps for MAC and Window users</a>
+    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
                 </li>
                 <li class="">
                     
-    <a class="" href="/faq/">Frequently Asked Questions</a>
+    <a class="" href="../faq/">Frequently Asked Questions</a>
                 </li>
                 <li class="">
                     
-    <a class="" href="/archive/">Archive</a>
+    <a class="" href="../archive/">Archive</a>
                 </li>
-                <li class="">
+                <li class=" current">
                     
-    <a class="" href="/update_log/">Update Log</a>
+    <a class="current" href="./">Update Log</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#2020-05-18-v230">2020-05-18 (v2.3.0)</a></li>
+    
+
+    </ul>
                 </li>
     </ul>
 	    </li>
@@ -144,7 +157,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="/.">PRSice-2</a>
+        <a href="..">PRSice-2</a>
       </nav>
 
       
@@ -152,10 +165,19 @@
         <div class="rst-content">
           <div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href="/.">Docs</a> &raquo;</li>
+    <li><a href="..">Docs</a> &raquo;</li>
     
+      
+        
+          <li>Misc &raquo;</li>
+        
+      
     
+    <li>Update Log</li>
     <li class="wy-breadcrumbs-aside">
+      
+        <a href="https://github.com/choishingwan/PRSice/edit/master/docs/update_log.md"
+          class="icon icon-github"> Edit on GitHub</a>
       
     </li>
   </ul>
@@ -164,15 +186,35 @@
           <div role="main">
             <div class="section">
               
-
-  <h1 id="404-page-not-found">404</h1>
-
-  <p><strong>Page not found</strong></p>
-
-
+                <p>From now on, I will try to archive our update log here. </p>
+<h1 id="2020-05-18-v230">2020-05-18 (v2.3.0)<a class="headerlink" href="#2020-05-18-v230" title="Permanent link">&para;</a></h1>
+<ul>
+<li>We now support multi-threaded clumping (separated by chromosome)</li>
+<li>Genotypes will be stored to memory during clumping (increase memory usage, significantly speed up clumping)</li>
+<li>Will only generate one .prsice file for all phenotypes<ul>
+<li>.prsice file now has additional column call "Pheno"</li>
+</ul>
+</li>
+<li>Introduced <code>--chr-id</code> which generate rs id based on user provided formula (see <a href="../command_detail/">detail</a> for more info)</li>
+<li>Format of <code>--base-maf</code> and <code>--base-info</code> are now changed to <code>&lt;name&gt;:&lt;value&gt;</code> from <code>&lt;name&gt;,&lt;value&gt;</code></li>
+<li>Fix a bug related to ambiguous allele dosage flipping when <code>--keep-ambig</code> is used</li>
+<li>Better mismatch handling. For example, if your base file only provide the effective allele A without the non-effective allele information, PRSice will now do dosage flipping if your target file has G/C as effective allele and A /T as an non-effective allele (whereas previous this SNP will be considered as a mismatch)</li>
+<li>Fix bug in 2.2.13 where PRSice won't output the error message during command parsing stage</li>
+<li>If user provided the <code>--stat</code> information, PRSice will now error out instead of trying to look for BETA or OR in the file. </li>
+<li>PRSice should now better recognize if phenotype file contains a header</li>
+<li>various small bug fix</li>
+</ul>
+              
             </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../archive/" class="btn btn-neutral" title="Archive"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>
@@ -198,13 +240,15 @@
           <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
       
       
+        <span><a href="../archive/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
       
     </span>
 </div>
-    <script>var base_url = '/';</script>
-    <script src="/js/theme.js" defer></script>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js" defer></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
-      <script src="/search/main.js" defer></script>
+      <script src="../search/main.js" defer></script>
 
 </body>
 </html>

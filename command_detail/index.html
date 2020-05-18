@@ -167,6 +167,10 @@
                     
     <a class="" href="../archive/">Archive</a>
                 </li>
+                <li class="">
+                    
+    <a class="" href="../update_log/">Update Log</a>
+                </li>
     </ul>
 	    </li>
           
@@ -214,14 +218,14 @@ it will have a prefix of the file name. For example, <code>--base-info</code> ap
 <h1 id="base-file">Base File<a class="headerlink" href="#base-file" title="Permanent link">&para;</a></h1>
 <ul>
 <li>
-<p><code>--A1</code></p>
+<p><code>--a1</code></p>
 <p>Column header containing the <strong>effective allele</strong>.
 There isn't any standardized label for the effective allele, therefore
 extra care must be taken to ensure the correct label is provided, otherwise, 
 the effect will be flipped. </p>
 </li>
 <li>
-<p><code>--A2</code></p>
+<p><code>--a2</code></p>
 <p>Column header containing <strong>non-effective allele</strong>.</p>
 </li>
 <li>
@@ -258,7 +262,7 @@ columns. Index should be 0-based (start counting from 0)</p>
 </li>
 <li>
 <p><code>--base-info</code></p>
-<p>Base INFO score filtering. Format should be <code>&lt;Column name&gt;,&lt;Threshold&gt;</code>.
+<p>Base INFO score filtering. Format should be <code>&lt;Column name&gt;:&lt;Threshold&gt;</code>.
 SNPs with info score less than <code>&lt;Threshold&gt;</code> will be ignored.
 It is useful to perform INFO score filtering to remove SNPs
 with low imputation confidence score. By default, PRSice will search for
@@ -268,11 +272,11 @@ threshold of <strong>0.9</strong>. You can disable this behaviour by using <code
 <li>
 <p><code>--base-maf</code></p>
 <p>Base minor allele frequency (MAF) filtering.
-Format should be <code>&lt;Column name&gt;,&lt;Threshold&gt;</code>.
+Format should be <code>&lt;Column name&gt;,:&lt;Threshold&gt;</code>.
 SNPs with MAF less than <code>&lt;Threshold&gt;</code> will be ignored.
 Additional column can be provided (e.g. different filtering threshold
 for case and control), using the following format:
-    <code>&lt;Column name&gt;,&lt;Threshold&gt;:&lt;Column name&gt;,&lt;Threshold&gt;</code></p>
+    <code>&lt;Column name&gt;:&lt;Threshold&gt;,&lt;Column name&gt;:&lt;Threshold&gt;</code></p>
 </li>
 <li>
 <p><code>--no-default</code>
@@ -872,6 +876,13 @@ phenotype or if the target phenotype is quantitative</p>
 Mutually exclusive from <code>--extract</code></p>
 </li>
 <li>
+<p><code>--chr-id</code> </p>
+<p>Try to construct an RS ID for SNP based on its chromosome, coordinate, effective allele and non-effective allele.</p>
+<p>For example, c:L-aBd is translated to: 
+<code>&lt;chr&gt;:&lt;coordinate&gt;-&lt;effective&gt;&lt;noneffective&gt;d</code></p>
+<p>This ID will always be used to represent SNPs on the target file, whereas for the base file, we will still prefer to use the column provided in the <code>--snp</code> parameter. SNPs in base file will only be represented by the <code>--chr-id</code> if the RS ID is not provided. </p>
+</li>
+<li>
 <p><code>--extract</code></p>
 <p>File contains SNPs to be included in the analysis.
 Mutually exclusive from <code>--exclude</code></p>
@@ -960,9 +971,9 @@ the permuted</li>
 </li>
 <li>
 <p><code>--print-snp</code></p>
-<p>Print all SNPs that remains in the analysis after clumping is performed. For PRSet, <code>Y</code> indicate the SNPs
-falls within the gene set of interest and <code>N</code> otherwise. If only PRSice is performed, a single "gene set" called
-"Base" will be indicated with all entries marked as <code>Y</code></p>
+<p>Print all SNPs that remains in the analysis after clumping is performed. For PRSet, <code>1</code> indicate the SNPs
+falls within the gene set of interest and <code>0</code> otherwise. If only PRSice is performed, a single "gene set" called
+"Base" will be indicated with all entries marked as <code>1</code></p>
 </li>
 <li>
 <p><code>--seed</code> | <code>-s</code></p>
@@ -982,6 +993,10 @@ the same seed and input is used</p>
 <p class="admonition-title">Note</p>
 <p>PRSice will limit the maximum number of thread used to the number of core available on the system as detected by PRSice.</p>
 </div>
+</li>
+<li>
+<p><code>--ultra</code> </p>
+<p>Ultra aggressive memory managememnt. Will store all genotype into the memory after clumping is performed. This will significant speed up PRSice and PRSet at the expense of increased memory usage. </p>
 </li>
 <li>
 <p><code>--x-range</code>             <br />
