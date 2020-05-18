@@ -273,6 +273,22 @@ public:
         return get_r2(founder_ctl2, founder_ctv2, window_data_ptr, index_data,
                       index_tots);
     }
+    void set_sample_vector(const std::vector<bool>& selected_samples)
+    {
+        m_unfiltered_sample_ct = selected_samples.size();
+        const uintptr_t unfiltered_sample_ctl =
+            BITCT_TO_WORDCT(m_unfiltered_sample_ct);
+        m_calculate_prs.resize(unfiltered_sample_ctl, 0);
+        m_sample_ct = 0;
+        for (size_t i = 0; i < m_unfiltered_sample_ct; ++i)
+        {
+            if (selected_samples[i])
+            {
+                SET_BIT(i, m_calculate_prs.data());
+                ++m_sample_ct;
+            }
+        }
+    }
     void set_sample_vector(const size_t n_sample)
     {
         m_unfiltered_sample_ct = n_sample;
@@ -307,6 +323,17 @@ public:
     }
     void set_very_small_thresholds() { m_very_small_thresholds = true; }
     std::vector<uintptr_t>& std_exclusion_flag() { return m_exclude_from_std; }
+    void test_read_prs(uintptr_t* genotype, std::vector<PRS>& prs_list,
+                       const size_t ploidy, const double stat,
+                       const double adj_score, const double miss_score,
+                       const size_t miss_count, const double homcom_weight,
+                       const double het_weight, const double homrar_weight,
+                       const bool not_first)
+    {
+        read_prs(genotype, prs_list, ploidy, stat, adj_score, miss_score,
+                 miss_count, homcom_weight, het_weight, homrar_weight,
+                 not_first);
+    }
 };
 
 #endif // MOCK_GENOTYPE_H

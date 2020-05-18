@@ -217,7 +217,9 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_competitive_percentage = cur_progress;
         }
-        if (m_previous_competitive_percentage >= 100.0 || completed)
+        if (m_previous_competitive_percentage >= 100.0
+            || m_total_competitive_perm_done == m_total_competitive_process
+            || completed)
         { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
     }
     void print_progress(bool completed = false)

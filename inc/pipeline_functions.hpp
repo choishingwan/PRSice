@@ -53,11 +53,12 @@ inline void initialize_genotype(
     std::string type = "reference";
     const std::string separator =
         "==================================================";
-    current_file = &current_file->keep_nonfounder(commander.nonfounders())
-                        .keep_ambig(commander.keep_ambig())
-                        .intermediate(commander.use_inter())
-                        .set_prs_instruction(commander.get_prs_instruction())
-                        .set_weight();
+    current_file =
+        &current_file->keep_nonfounder(commander.nonfounders())
+             .keep_ambig(commander.keep_ambig())
+             .intermediate(commander.use_inter())
+             .set_prs_instruction(commander.get_prs_instruction())
+             .set_weight(commander.get_prs_instruction().genetic_model);
 
     if (target_file == nullptr)
     {
@@ -115,25 +116,30 @@ std::string print_project_summary(std::vector<size_t>& significant_store)
         message.append(
             misc::to_string(significant_store[0])
             + " region(s)/phenotype(s) with p-value > 0.1 (\033[1;31mnot "
-              "significant\033[0m);");
+              "significant\033[0m)");
         has_previous_output = true;
     }
     if (significant_store[1] != 0)
     {
         if (significant_store[2] == 0 && has_previous_output)
-        { message.append(" and "); }
+        { message.append("; and "); }
+        else if (has_previous_output)
+        {
+            message.append("; ");
+        }
         message.append(
             misc::to_string(significant_store[1])
             + " region(s) with p-value between "
-              "0.1 and 1e-5 (\033[1;31mmay not be significant\033[0m);");
+              "0.1 and 1e-5 (\033[1;31mmay not be significant\033[0m)");
         has_previous_output = true;
     }
     if (significant_store[2] != 0)
     {
-        if (has_previous_output) message.append(" and ");
+        if (has_previous_output) message.append("; and ");
         message.append(std::to_string(significant_store[2])
-                       + " region(s) with p-value less than 1e-5.");
+                       + " region(s) with p-value less than 1e-5");
     }
+    message.append(".");
     if (!has_previous_output)
     {
         message.append(

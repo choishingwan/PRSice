@@ -226,19 +226,17 @@ void PRSice::print_set_warning()
         m_reporter->report(
             "Warning: To speed up the permutation, "
             "linear regression instead of logistic "
-            "regression were performed within the permutation, and "
-            "constructs the null distribution using the absolute "
-            "z-scores. This is based on the assumption that "
-            "linear Regression & logistic "
-            "regression should produce similar absolute z-scores. In "
-            "addition, the regression equation changed from "
+            "regression were performed within permutation. The null "
+            "distribution is then constructed using the absolute z-scores. "
+            "This is based on the assumption that  linear Regression & "
+            "logistic regression should produce similar absolute z-scores. In "
+            "addition, We changed the regression equation from "
             "Phenotype~PRS+Covariates to PRS~Phenotype+Covariate. This "
-            "two "
-            "equations should generate similar z-score for the "
+            "two equations should generate similar z-score for the "
             "independent "
-            "variable and will allow us to perform some optimizations "
-            "to "
-            "speed up the permutation\n\n");
+            "variable and will allow us to perform optimizations that "
+            "significantly"
+            " speed up the permutation\n\n");
     }
     else
     {
@@ -362,6 +360,10 @@ void PRSice::run_competitive(
     m_reporter->report("Running permutation with " + misc::to_string(num_thread)
                        + " threads");
     size_t ran_perm = 0;
+
+    // count total number of permutation to run
+    m_total_competitive_process =
+        set_index.size() * m_perm_info.num_permutation;
     if (num_thread > 1)
     {
         if (!target.genotyped_stored())

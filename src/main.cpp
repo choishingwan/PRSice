@@ -222,8 +222,6 @@ int main(int argc, char* argv[])
                                       prsice_out, best_file, all_score_file,
                                       *target_file);
                 }
-                // normal progress for this phenotype completed
-                prsice.print_progress(true);
                 if (!no_regress)
                 {
                     // best file is nullptr after this

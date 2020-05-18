@@ -604,11 +604,9 @@ public:
         }
         void completed() { m_completed = true; }
     };
-
-    Genotype& set_weight()
+    Genotype& set_weight(const MODEL& genetic_model)
     {
-        assert(m_has_prs_instruction);
-        switch (m_prs_calculation.genetic_model)
+        switch (genetic_model)
         {
         case MODEL::HETEROZYGOUS:
             m_homcom_weight = 0;
