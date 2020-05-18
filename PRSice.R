@@ -2296,7 +2296,7 @@ process_plot <-
             prs.summary <-
                 fread(paste0(sum.prefix, ".summary"), data.table = F)
             prsice.result <-
-                fread(paste0(prefix, ".prsice"), data.table = F)
+                fread(paste0(sum.prefix, ".prsice"), data.table = F)
             phenotype <-
                 fread(pheno.file, data.table = F, header = F)
         } else{
@@ -2304,7 +2304,7 @@ process_plot <-
             prs.summary <-
                 read.table(paste0(sum.prefix, ".summary"), header = T)
             prsice.result <-
-                read.table(paste0(prefix, ".prsice"), header = T)
+                read.table(paste0(sum.prefix, ".prsice"), header = T)
             # Allow header = false for fam or for phenotype files that does not contain phenotype name
             phenotype <- read.table(pheno.file, header = F)
         }
