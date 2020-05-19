@@ -245,8 +245,9 @@ PRSice::load_pheno_map(const std::string& delim, const size_t idx,
         {
             throw std::runtime_error(
                 "Malformed pheno file, should contain at least "
-                + misc::to_string(idx + 1)
-                + " columns. "
+                + misc::to_string(idx + 1) + " columns. "
+                + misc::to_string(token.size())
+                + " observed. "
                   "Have you use the --ignore-fid option?");
         }
         id = (ignore_fid)
@@ -438,7 +439,7 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
         if (ignore_fid)
         {
             message.append("Maybe the first column of your phenotype file "
-                           "is the FID?");
+                           "is the FID? ");
         }
         else
         {
@@ -1107,41 +1108,80 @@ void PRSice::process_permutations()
         (num_better + 1.0) / (m_perm_info.num_permutation + 1.0);
 }
 
+void PRSice::pre_decompose_matrix(const Eigen::MatrixXd& compute_target,
+                                  Regress& decomposed)
+{
+    const Eigen::Index p = compute_target.cols();
+    decomposed.PQR.compute(compute_target);
+    decomposed.Pmat = decomposed.PQR.colsPermutation();
+    decomposed.rank = decomposed.PQR.rank();
+    if (decomposed.rank != p)
+    {
+        decomposed.Rinv = decomposed.PQR.matrixQR()
+                              .topLeftCorner(decomposed.rank, decomposed.rank)
+                              .triangularView<Eigen::Upper>()
+                              .solve(Eigen::MatrixXd::Identity(
+                                  decomposed.rank, decomposed.rank));
+    }
+    get_se_matrix(p, decomposed);
+}
+
+void PRSice::run_null_perm_no_thread(const Regress& decomposed,
+                                     const bool run_glm)
+{
+    std::mt19937 rand_gen {m_perm_info.seed};
+    // we want to count the number of samples included in the analysis
+    const Eigen::Index num_regress_sample = m_phenotype.rows();
+    Eigen::VectorXd perm_pheno = m_phenotype;
+    size_t processed = 0;
+    double coefficient, standard_error, r2, obs_p;
+    double obs_t = -1;
+    Eigen::VectorXd beta, effects;
+    while (processed < m_perm_info.num_permutation)
+    {
+        // re-copy perm_pheno to ensure that given the same seed, single thread
+        // will return the same answer as multiple thread
+        perm_pheno = m_phenotype;
+        std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
+                     rand_gen);
+        ++m_analysis_done;
+        print_progress();
+        if (run_glm)
+        {
+            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
+                            coefficient, standard_error, 1);
+        }
+        else
+        {
+            std::tie(coefficient, standard_error) = get_coeff_se(
+                decomposed, m_independent_variables, perm_pheno, beta, effects);
+        }
+        obs_t = std::fabs(coefficient / standard_error);
+        m_perm_result[processed] = std::max(obs_t, m_perm_result[processed]);
+        ++processed;
+    }
+}
 void PRSice::permutation(const int n_thread)
 {
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
     Eigen::setNbThreads(n_thread);
-    Eigen::Index rank = 0;
     // logit_perm can only be true if it is binary trait and user used the
     // --logit-perm flag
     // can always do the following if
     // 1. QT trait (!is_binary)
     // 2. Not require logit perm
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXd> PQR;
-    Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType Pmat;
-    Eigen::MatrixXd R;
+    Regress decomposed;
     bool run_glm = true;
     if (!m_binary_trait || !m_perm_info.logit_perm)
     {
-        //  first decompose the independent variable to speed up the other
-        //  processes
-        PQR.compute(m_independent_variables);
-        Pmat = PQR.colsPermutation();
-        rank = PQR.rank();
-        if (rank != m_independent_variables.cols())
-        {
-            PQR.matrixQR()
-                .topLeftCorner(rank, rank)
-                .triangularView<Eigen::Upper>()
-                .solve(Eigen::MatrixXd::Identity(rank, rank));
-        }
+        pre_decompose_matrix(m_independent_variables, decomposed);
         run_glm = false;
     }
     if (n_thread == 1)
     {
         // we will run the single thread function to reduce overhead
-        run_null_perm_no_thread(PQR, Pmat, R, run_glm);
+        run_null_perm_no_thread(decomposed, run_glm);
     }
     else
     {
@@ -1155,7 +1195,7 @@ void PRSice::permutation(const int n_thread)
         {
             consume_store.push_back(std::thread(
                 &PRSice::consume_null_pheno, this, std::ref(set_perm_queue),
-                std::ref(PQR), std::ref(Pmat), std::ref(R), run_glm));
+                std::cref(decomposed), run_glm));
         }
         // wait for all the threads to complete their job
         producer.join();
@@ -1163,138 +1203,34 @@ void PRSice::permutation(const int n_thread)
     }
 }
 
-void PRSice::run_null_perm_no_thread(
-    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
-    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
-    const Eigen::MatrixXd& R, const bool run_glm)
-{
-    // reset the seed for each new threshold such that we will always
-    // generate the same phenotpe for each threhsold without us needing to
-    // regenerate the PRS
-    std::mt19937 rand_gen {m_perm_info.seed};
-    // we want to count the number of samples included in the analysis
-    const Eigen::Index num_regress_sample = m_phenotype.rows();
-    const Eigen::Index p = m_independent_variables.cols();
-    const Eigen::Index rank = PQR.rank();
-    // we will copy the phenotype into a new vector (Maybe not necessary,
-    // but better safe than sorry)
-    Eigen::VectorXd perm_pheno = m_phenotype;
-    // count the number of loop we've finished so far
-    size_t processed = 0;
-    // pre-initialize these parameters
-    double coefficient, standard_error, r2, obs_p;
-    double obs_t = -1;
-
-    Eigen::VectorXd beta, se, effects, fitted, resid;
-    Eigen::Index df;
-    while (processed < m_perm_info.num_permutation)
-    {
-        // for quantitative trait, we can directly compute the results
-        // without re-computing the decomposition
-        perm_pheno = m_phenotype;
-        std::shuffle(perm_pheno.data(), perm_pheno.data() + num_regress_sample,
-                     rand_gen);
-        m_analysis_done++;
-        print_progress();
-        if (run_glm)
-        {
-            Regression::glm(perm_pheno, m_independent_variables, obs_p, r2,
-                            coefficient, standard_error, 1);
-        }
-        else
-        {
-            // directly solve the current phenotype to obtain the required
-            // beta
-            if (p == rank)
-            {
-                beta = PQR.solve(perm_pheno);
-                fitted = m_independent_variables * beta;
-                se = Pmat
-                     * PQR.matrixQR()
-                           .topRows(p)
-                           .triangularView<Eigen::Upper>()
-                           .solve(lm::I_p(p))
-                           .rowwise()
-                           .norm();
-            }
-            else
-            {
-                effects = PQR.householderQ().adjoint() * perm_pheno;
-                beta = Eigen::VectorXd::Constant(
-                    p, std::numeric_limits<double>::quiet_NaN());
-                beta.head(rank) = R * effects.head(rank);
-                beta = Pmat * beta;
-                // create fitted values from effects
-                // (can't use X*m_coef if X is rank-deficient)
-                effects.tail(num_regress_sample - rank).setZero();
-                fitted = PQR.householderQ() * effects;
-                se = Eigen::VectorXd::Constant(
-                    p, std::numeric_limits<double>::quiet_NaN());
-                se.head(rank) = R.rowwise().norm();
-                se = Pmat * se;
-            }
-            // we take the absolute of the T-value as we only concern about
-            // the magnitude
-            resid = perm_pheno - fitted;
-            df = (rank >= 0) ? num_regress_sample - p
-                             : num_regress_sample - rank;
-            double s = resid.norm() / std::sqrt(double(df));
-            se = s * se;
-            coefficient = beta(1);
-            standard_error = se(1);
-        }
-        obs_t = std::fabs(coefficient / standard_error);
-        m_perm_result[processed] = std::max(obs_t, m_perm_result[processed]);
-        // we have finished the current analysis.
-        ++processed;
-    }
-}
-
-
 void PRSice::gen_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
                             size_t num_consumer)
 {
     size_t processed = 0;
-    // we need to reset the seed for each threshold so that the phenotype
-    // generated should always be the same for each threshold. This help us
-    // avoid needing to repeat reading in the PRS for each permutation
     std::mt19937 rand_gen {m_perm_info.seed};
     Eigen::setNbThreads(1);
     const Eigen::Index num_regress_sample = m_phenotype.rows();
-    // this matrix is use for storing the shuffle information
     Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> perm_matrix(
         m_phenotype.rows());
 
     while (processed < m_perm_info.num_permutation)
     {
-        // I am not completely sure whether we pass by reference or pass by
-        // value to the queue (or if we move this out and cause undefined
-        // behaviour). To avoid the aforementioned problems, we reinitialize
-        // a new vector for each permutation
+        // TODO: Might want a thread safe memory pool heres
         Eigen::VectorXd null_pheno = m_phenotype;
-        // then we shuffle it
         std::shuffle(null_pheno.data(), null_pheno.data() + num_regress_sample,
                      rand_gen);
-        // and the we will push it to the queue where the consumers will
-        // pick up and work on it
         q.emplace(std::make_pair(null_pheno, processed), num_consumer);
         ++m_analysis_done;
         print_progress();
         ++processed;
     }
-    // send termination signal to the consumers
     q.completed();
 }
 
 void PRSice::consume_null_pheno(
     Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
-    const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
-    const Eigen::MatrixXd& R, bool run_glm)
+    const Regress& decomposed, bool run_glm)
 {
-    const Eigen::Index n = m_phenotype.rows();
-    const Eigen::Index p = m_independent_variables.cols();
-    const Eigen::Index rank = PQR.rank();
     // to avoid false sharing, all consumer will first store their
     // permutation result in their own vector and only update the master
     // vector at the end of permutation temp_store stores all the T-value
@@ -1304,73 +1240,32 @@ void PRSice::consume_null_pheno(
     // supposed to mimic re-running PRSice N times with different
     // permutation
     std::vector<size_t> temp_index;
-    Eigen::VectorXd beta, se, effects, fitted, resid;
-    Eigen::Index df;
+    Eigen::VectorXd beta, effects;
     std::pair<Eigen::VectorXd, size_t> input;
     double coefficient, standard_error, r2, obs_p;
     double obs_t = -1;
     while (!q.pop(input))
     {
-        // as long as we have not received a termination signal, we will
-        // continue our processing and should read from the queue
         if (run_glm)
         {
-            // the first entry from the queue should be the permuted
-            // phenotype and the second entry is the index. We will pass the
-            // phenotype for GLM analysis if required
             Regression::glm(std::get<0>(input), m_independent_variables, obs_p,
                             r2, coefficient, standard_error, 1);
         }
         else
         {
-            if (p == rank)
-            {
-                beta = PQR.solve(std::get<0>(input));
-                fitted = m_independent_variables * beta;
-                se = Pmat
-                     * PQR.matrixQR()
-                           .topRows(p)
-                           .triangularView<Eigen::Upper>()
-                           .solve(lm::I_p(p))
-                           .rowwise()
-                           .norm();
-            }
-            else
-            {
-                beta = Eigen::VectorXd::Constant(
-                    p, std::numeric_limits<double>::quiet_NaN());
-                effects = PQR.householderQ().adjoint() * std::get<0>(input);
-                beta.head(rank) = R * effects.head(rank);
-                beta = Pmat * beta;
-                // create fitted values from effects
-                // (can't use X*m_coef if X is rank-deficient)
-                effects.tail(n - rank).setZero();
-                fitted = PQR.householderQ() * effects;
-                se = Eigen::VectorXd::Constant(
-                    p, std::numeric_limits<double>::quiet_NaN());
-                se.head(rank) = R.rowwise().norm();
-                se = Pmat * se;
-            }
-            coefficient = beta(1);
-            resid = std::get<0>(input) - fitted;
-            df = (rank >= 0) ? n - p : n - rank;
-            double s = resid.norm() / std::sqrt(double(df));
-            se = s * se;
-            standard_error = se(1);
+            std::tie(coefficient, standard_error) =
+                get_coeff_se(decomposed, m_independent_variables,
+                             std::get<0>(input), beta, effects);
         }
         obs_t = std::fabs(coefficient / standard_error);
         temp_store.push_back(obs_t);
         temp_index.push_back(std::get<1>(input));
     }
-    // once we received the termination signal, we can start propagating the
-    // master vector with out content
     std::lock_guard<std::mutex> lock(lock_guard);
     for (size_t i = 0; i < temp_store.size(); ++i)
     {
         double obs_t = temp_store[i];
         auto&& index = temp_index[i];
-        // if the t-value in the master vector is lower than our observed t,
-        // update it
         if (m_perm_result[index] < obs_t) { m_perm_result[index] = obs_t; }
     }
 }
@@ -1604,7 +1499,26 @@ void PRSice::print_summary(const std::string& pheno_name,
 
 
 PRSice::~PRSice() {}
-
+void PRSice::get_se_matrix(const Eigen::Index p, Regress& decomposed)
+{
+    if (p == decomposed.rank)
+    {
+        decomposed.se = decomposed.Pmat
+                        * decomposed.PQR.matrixQR()
+                              .topRows(p)
+                              .triangularView<Eigen::Upper>()
+                              .solve(lm::I_p(p))
+                              .rowwise()
+                              .norm();
+    }
+    else
+    {
+        decomposed.se = Eigen::VectorXd::Constant(
+            p, std::numeric_limits<double>::quiet_NaN());
+        decomposed.se.head(decomposed.rank) = decomposed.Rinv.rowwise().norm();
+        decomposed.se = decomposed.Pmat * decomposed.se;
+    }
+}
 void PRSice::get_se_matrix(
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
     const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType& Pmat,
@@ -1631,16 +1545,17 @@ void PRSice::get_se_matrix(
 }
 
 double PRSice::get_coeff_resid_norm(const Regress& decomposed,
+                                    const Eigen::MatrixXd& target,
                                     const Eigen::VectorXd& prs,
                                     Eigen::VectorXd& beta,
-                                    Eigen::VectorXd effects)
+                                    Eigen::VectorXd& effects)
 {
-    const Eigen::Index p = m_independent_variables.cols();
+    const Eigen::Index p = target.cols();
     if (decomposed.rank == p)
     {
         // full rank case
         beta = decomposed.PQR.solve(prs);
-        return (prs - decomposed.YCov * beta).norm();
+        return (prs - target * beta).norm();
     }
     effects = decomposed.PQR.householderQ().adjoint() * prs;
     beta =
@@ -1648,25 +1563,24 @@ double PRSice::get_coeff_resid_norm(const Regress& decomposed,
     beta.head(decomposed.rank) =
         decomposed.Rinv * effects.head(decomposed.rank);
     beta = decomposed.Pmat * beta;
-    const Eigen::Index num_regress_sample =
-        static_cast<Eigen::Index>(m_matrix_index.size());
+    const Eigen::Index num_regress_sample = m_independent_variables.rows();
     effects.tail(num_regress_sample - decomposed.rank).setZero();
     return (prs - decomposed.PQR.householderQ() * effects).norm();
 }
 
-double PRSice::get_t_value(const Regress& decomposed,
-                           const Eigen::VectorXd& prs, Eigen::VectorXd& beta,
-                           Eigen::VectorXd& effects, double& coefficient,
-                           double& standard_error)
+std::tuple<double, double> PRSice::get_coeff_se(const Regress& decomposed,
+                                                const Eigen::MatrixXd& target,
+                                                const Eigen::VectorXd& prs,
+                                                Eigen::VectorXd& beta,
+                                                Eigen::VectorXd& effects)
 {
     const Eigen::Index rank = decomposed.rank;
-    const Eigen::Index num_regress_sample = decomposed.YCov.rows();
+    const Eigen::Index num_regress_sample = m_independent_variables.rows();
     const Eigen::Index p = m_independent_variables.cols();
     const Eigen::Index df = (rank >= 0) ? num_regress_sample - p
                                         : num_regress_sample - decomposed.rank;
-    const double s = get_coeff_resid_norm(decomposed, prs, beta, effects)
-                     / std::sqrt(double(df));
-    coefficient = beta(1);
-    standard_error = (s * decomposed.se)(1);
-    return coefficient / standard_error;
+    const double s =
+        get_coeff_resid_norm(decomposed, target, prs, beta, effects)
+        / std::sqrt(double(df));
+    return {beta(1), (s * decomposed.se)(1)};
 }

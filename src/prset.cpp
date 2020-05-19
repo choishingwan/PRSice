@@ -102,8 +102,8 @@ void PRSice::consume_prs(
         {
             prs = Eigen::Map<Eigen::VectorXd>(std::get<0>(prs_info).data(),
                                               num_regress_sample);
-            get_t_value(decomposed, prs, beta, effects, coefficient,
-                        standard_error);
+            std::tie(coefficient, standard_error) =
+                get_coeff_se(decomposed, decomposed.YCov, prs, beta, effects);
         }
         double t_value = std::fabs(coefficient / standard_error);
         auto&& index = set_index[std::get<1>(prs_info)];
@@ -206,8 +206,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             }
             else
             {
-                get_t_value(decomposed, prs, beta, effects, coefficient,
-                            standard_error);
+                std::tie(coefficient, standard_error) = get_coeff_se(
+                    decomposed, decomposed.YCov, prs, beta, effects);
             }
             t_value = std::fabs(coefficient / standard_error);
             // set_size second contain the indexs to each set with this size
@@ -264,22 +264,7 @@ void PRSice::run_competitive(
     {
         decomposed.YCov = m_independent_variables;
         decomposed.YCov.col(1) = m_phenotype;
-        // TODO: The phenotype vector here doesn't seems to represent the
-        // phenotype in the reference file?
-        decomposed.PQR.compute(decomposed.YCov);
-        decomposed.Pmat = decomposed.PQR.colsPermutation();
-        decomposed.rank = decomposed.PQR.rank();
-        if (decomposed.rank != p)
-        {
-            decomposed.Rinv =
-                decomposed.PQR.matrixQR()
-                    .topLeftCorner(decomposed.rank, decomposed.rank)
-                    .triangularView<Eigen::Upper>()
-                    .solve(Eigen::MatrixXd::Identity(decomposed.rank,
-                                                     decomposed.rank));
-        }
-        get_se_matrix(decomposed.PQR, decomposed.Pmat, decomposed.Rinv, p,
-                      decomposed.rank, decomposed.se);
+        pre_decompose_matrix(decomposed.YCov, decomposed);
     }
 
     size_t pheno_start_idx = 0;
