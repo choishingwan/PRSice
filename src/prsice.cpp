@@ -495,7 +495,7 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
         }
         else
         {
-            message.append(std::to_string(m_phenotype.rows())
+            message.append(std::to_string(pheno_store.size())
                            + " sample(s) with valid phenotype\n");
         }
     }

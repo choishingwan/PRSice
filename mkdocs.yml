@@ -22,6 +22,7 @@ nav:
         - Additional Steps for MAC and Window users: extra_steps.md
         - Frequently Asked Questions: faq.md
         - Archive: archive.md
+        - Update Log: update_log.md
 
 theme: readthedocs
 markdown_extensions:
