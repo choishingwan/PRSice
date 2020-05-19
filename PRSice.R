@@ -2292,25 +2292,25 @@ process_plot <-
         prsice.result <- NULL
         phenotype <- NULL
         if (use.data.table) {
-            best <- fread(paste0(prefix, ".best"), data.table = F)
+            best <- fread(paste0(prefix, ".best"), data.table = F, colClasses=c("FID"="character","IID"="character"))
             prs.summary <-
                 fread(paste0(sum.prefix, ".summary"), data.table = F)
             prsice.result <-
                 fread(paste0(sum.prefix, ".prsice"), data.table = F)
             phenotype <-
-                fread(pheno.file, data.table = F, header = F)
+                fread(pheno.file, data.table = F, header = F, colClasses=c("V1"="character","V2"="character"))
         } else{
-            best <- read.table(paste0(prefix, ".best"), header = T)
+            best <- read.table(paste0(prefix, ".best"), header = T, colClasses=c("FID"="character","IID"="character"))
             prs.summary <-
                 read.table(paste0(sum.prefix, ".summary"), header = T)
             prsice.result <-
                 read.table(paste0(sum.prefix, ".prsice"), header = T)
             # Allow header = false for fam or for phenotype files that does not contain phenotype name
-            phenotype <- read.table(pheno.file, header = F)
+            phenotype <- read.table(pheno.file, header = F, colClasses=c("V1"="character","V2"="character"))
         }
         best <- subset(best, In_Regression == "Yes")
         # We know the format of the best file, and it will always contain FID and IID
-        
+        prsice.result <- subset(prsice.result, Pheno==pheno.name)
         base.prs <- best[,c(1,2,4)]
         if(provided("plot_set", parameters) & (provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)| provided("snp_set", parameters)| provided("snp_sets", parameters))){
             base.prs <- best[,colnames(best)%in%c("FID", "IID", parameters$plot_set)]
