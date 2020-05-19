@@ -234,9 +234,9 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_percentage = cur_progress;
         }
-        if (completed && m_analysis_done != m_total_process)
+        if (completed && m_analysis_done < m_total_process)
         { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
-        else if (m_previous_percentage >= 100.0)
+        else if (!completed && m_previous_percentage >= 100.0)
         {
             fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
         }
