@@ -376,19 +376,23 @@ PRSice::process_phenotype_file(const std::string& file_name,
     std::vector<double> pheno_store;
     pheno_store.reserve(sample_ct);
     size_t pheno_matrix_idx = 0;
+    if (phenotype_info.empty())
+    { throw std::runtime_error("Error: No data found in phenotype file"); }
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
         target.update_valid_sample(i_sample, false);
         id = (ignore_fid) ? target.iid(i_sample)
                           : target.sample_id(i_sample, delim);
-        auto pheno_in_file = phenotype_info.find(id);
+        auto&& pheno_in_file = phenotype_info.find(id);
         if (pheno_in_file != phenotype_info.end())
         {
-            auto pheno_tmp = pheno_in_file->second;
+            auto&& pheno_tmp = pheno_in_file->second;
             misc::to_lower(pheno_tmp);
-            if (pheno_tmp != "na" && phenotype_info[id] != "nan"
-                && target.sample_selected_for_prs(i_sample)
-                && !(m_binary_trait && target.pheno(i_sample) == "-9"))
+            if (pheno_tmp == "na" || pheno_tmp == "nan"
+                || !target.sample_selected_for_prs(i_sample)
+                || (m_binary_trait && pheno_tmp == "-9"))
+            { continue; }
+            else
             {
                 try
                 {

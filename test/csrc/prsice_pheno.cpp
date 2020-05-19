@@ -278,6 +278,23 @@ TEST_CASE("test phenotype file processes")
             }
             pheno_file << "NotFound\tNotFound\t1" << std::endl;
             pheno_file.close();
+            auto fam_has_pheno = GENERATE(true, false);
+
+            std::vector<double> expected;
+            auto&& input_sample = geno.get_sample_vec();
+            for (auto&& s : input_sample)
+            {
+                if (s.FID != "Missing" && s.FID != "na1" && s.FID != "na2"
+                    && s.FID != "invalid" && s.FID != "Control2")
+                { expected.push_back(misc::convert<double>(s.pheno)); }
+            }
+            if (!fam_has_pheno)
+            {
+
+                auto missing_code = GENERATE("-9", "Na", "NAN");
+                for (auto&& sample : input_sample)
+                { sample.pheno = missing_code; }
+            }
             auto [pheno_store, num_not_found, invalid, max_code] =
                 prsice.test_process_phenotype_file("pheno_test", " ", 2,
                                                    ignore_fid, geno);
@@ -285,7 +302,6 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(invalid == 1);
             REQUIRE(max_code == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
-            std::vector<double> expected;
             size_t valid_idx = 0;
             auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < res_sample.size(); ++i)
@@ -303,8 +319,6 @@ TEST_CASE("test phenotype file processes")
                     REQUIRE(loc->second == valid_idx);
                     ++valid_idx;
                     REQUIRE(res_sample[i].in_regression);
-                    expected.push_back(
-                        misc::convert<double>(res_sample[i].pheno));
                 }
                 else
                 {
