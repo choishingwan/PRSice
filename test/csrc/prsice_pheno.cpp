@@ -234,6 +234,13 @@ TEST_CASE("load_pheno_map")
         }
     }
 }
+
+TEST_CASE("Phenotype file processing couple with sample selection")
+{
+    // this test is required because in theory, the id used in PRSice is the
+    // Index of the vector, not the index in the file. And forgetting that will
+    // cause bug. So we want to make sure the index is handled correctly
+}
 TEST_CASE("test phenotype file processes")
 {
 
@@ -254,11 +261,12 @@ TEST_CASE("test phenotype file processes")
             Sample_ID("na1", "na1", "nan", true),
             Sample_ID("invalid", "invalid", "string", true),
             Sample_ID("na2", "na2", "NA", true)};
-
+        std::vector<size_t> sample_idx(samples.size());
+        std::iota(sample_idx.begin(), sample_idx.end(), 0);
         std::random_device rd;
         std::mt19937 g(rd());
-        std::shuffle(samples.begin(), samples.end(), g);
-        for (auto&& s : samples) { geno.add_sample(s); }
+        std::shuffle(sample_idx.begin(), sample_idx.end(), g);
+        for (auto&& s : sample_idx) { geno.add_sample(samples[s]); }
         geno.set_sample(samples.size());
         geno.set_sample_vector(samples.size());
         geno.set_founder_vector(samples.size());
@@ -318,11 +326,11 @@ TEST_CASE("test phenotype file processes")
                     REQUIRE(loc != pheno_map.end());
                     REQUIRE(loc->second == valid_idx);
                     ++valid_idx;
-                    REQUIRE(res_sample[i].in_regression);
+                    REQUIRE(res_sample[i].valid_phenotype);
                 }
                 else
                 {
-                    REQUIRE_FALSE(res_sample[i].in_regression);
+                    REQUIRE_FALSE(res_sample[i].valid_phenotype);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -350,12 +358,13 @@ TEST_CASE("test phenotype file processes")
                     REQUIRE(loc != pheno_map.end());
                     REQUIRE(loc->second == valid_idx);
                     ++valid_idx;
-                    REQUIRE(res_sample[i].in_regression);
-                    expected.push_back(misc::convert<double>(samples[i].pheno));
+                    REQUIRE(res_sample[i].valid_phenotype);
+                    expected.push_back(
+                        misc::convert<double>(samples[sample_idx[i]].pheno));
                 }
                 else
                 {
-                    REQUIRE_FALSE(res_sample[i].in_regression);
+                    REQUIRE_FALSE(res_sample[i].valid_phenotype);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -375,10 +384,12 @@ TEST_CASE("test phenotype file processes")
             Sample_ID("na1", "na1", "nan", true),
             Sample_ID("invalid", "invalid", "string", true),
             Sample_ID("na2", "na2", "NA", true)};
+        std::vector<size_t> sample_idx(samples.size());
+        std::iota(sample_idx.begin(), sample_idx.end(), 0);
         std::random_device rd;
         std::mt19937 g(rd());
-        std::shuffle(samples.begin(), samples.end(), g);
-        for (auto&& s : samples) { geno.add_sample(s); }
+        std::shuffle(sample_idx.begin(), sample_idx.end(), g);
+        for (auto&& s : sample_idx) { geno.add_sample(samples[s]); }
         geno.set_sample(samples.size());
         geno.set_sample_vector(samples.size());
         geno.set_founder_vector(samples.size());
@@ -406,13 +417,13 @@ TEST_CASE("test phenotype file processes")
                     REQUIRE(loc != pheno_map.end());
                     REQUIRE(loc->second == valid_idx);
                     ++valid_idx;
-                    REQUIRE(res_sample[i].in_regression);
+                    REQUIRE(res_sample[i].valid_phenotype);
                     expected.push_back(
                         misc::convert<double>(res_sample[i].pheno));
                 }
                 else
                 {
-                    REQUIRE_FALSE(res_sample[i].in_regression);
+                    REQUIRE_FALSE(res_sample[i].valid_phenotype);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -468,11 +479,11 @@ TEST_CASE("test phenotype file processes")
                     REQUIRE(loc != pheno_map.end());
                     REQUIRE(loc->second == valid_idx);
                     ++valid_idx;
-                    REQUIRE(res_sample[i].in_regression);
+                    REQUIRE(res_sample[i].valid_phenotype);
                 }
                 else
                 {
-                    REQUIRE_FALSE(res_sample[i].in_regression);
+                    REQUIRE_FALSE(res_sample[i].valid_phenotype);
                 }
             }
             REQUIRE_THAT(pheno_store, Catch::Equals<double>(expected));
@@ -617,8 +628,10 @@ TEST_CASE("gen_pheno_vec")
                                        std::to_string(gen()), true));
     }
     mockGenotype geno;
-    std::shuffle(samples.begin(), samples.end(), mersenne_engine);
-    for (auto&& s : samples) { geno.add_sample(s); }
+    std::vector<size_t> sample_idx(samples.size());
+    std::iota(sample_idx.begin(), sample_idx.end(), 0);
+    std::shuffle(sample_idx.begin(), sample_idx.end(), mersenne_engine);
+    for (auto&& s : sample_idx) { geno.add_sample(samples[s]); }
     geno.set_sample(samples.size());
     geno.set_sample_vector(samples.size());
     geno.set_founder_vector(samples.size());
@@ -639,8 +652,9 @@ TEST_CASE("gen_pheno_vec")
         Eigen::VectorXd res = prsice.phenotype_matrix();
         for (size_t i = 0; i < samples.size(); ++i)
         {
-            REQUIRE(res(i, 0)
-                    == Approx(misc::convert<double>(samples[i].pheno)));
+            REQUIRE(
+                res(i, 0)
+                == Approx(misc::convert<double>(samples[sample_idx[i]].pheno)));
         }
     }
     SECTION("From fam")
@@ -650,8 +664,9 @@ TEST_CASE("gen_pheno_vec")
         Eigen::VectorXd res = prsice.phenotype_matrix();
         for (size_t i = 0; i < samples.size(); ++i)
         {
-            REQUIRE(res(i, 0)
-                    == Approx(misc::convert<double>(samples[i].pheno)));
+            REQUIRE(
+                res(i, 0)
+                == Approx(misc::convert<double>(samples[sample_idx[i]].pheno)));
         }
     }
 }
@@ -751,7 +766,6 @@ TEST_CASE("Print Phenotype log")
         }
     }
 }
-
 TEST_CASE("Set std exclusion flag")
 {
     mock_prsice prsice;
