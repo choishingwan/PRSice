@@ -432,6 +432,21 @@ TEST_CASE("test phenotype file processes")
             }
             pheno_file << "NotFound\tNotFound\t1" << std::endl;
             pheno_file.close();
+            // should not be affected by phenotypes in the fam file
+            std::vector<double> expected;
+            auto&& ori_sample = geno.get_sample_vec();
+            std::normal_distribution dist;
+            auto pheno = [&dist, &g] { return dist(g); };
+
+            for (auto&& s : ori_sample)
+            {
+                if (s.FID != "na1" && s.FID != "na2" && s.FID != "invalid"
+                    && s.FID != "ID4")
+                {
+                    expected.push_back(misc::convert<double>(s.pheno));
+                    s.pheno = std::to_string(pheno());
+                }
+            }
             auto [pheno_store, num_not_found, invalid, max_code] =
                 prsice.test_process_phenotype_file("pheno_test", " ", 2,
                                                    ignore_fid, geno);
@@ -439,7 +454,6 @@ TEST_CASE("test phenotype file processes")
             REQUIRE(invalid == 1);
             auto pheno_map = prsice.sample_with_phenotypes();
             size_t valid_idx = 0;
-            std::vector<double> expected;
             auto res_sample = geno.get_sample_vec();
             for (size_t i = 0; i < res_sample.size(); ++i)
             {
@@ -455,8 +469,6 @@ TEST_CASE("test phenotype file processes")
                     REQUIRE(loc->second == valid_idx);
                     ++valid_idx;
                     REQUIRE(res_sample[i].in_regression);
-                    expected.push_back(
-                        misc::convert<double>(res_sample[i].pheno));
                 }
                 else
                 {
