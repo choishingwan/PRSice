@@ -67,6 +67,12 @@
     <li class="toctree-l2"><a href="#executable-downloads">Executable downloads</a></li>
     
 
+    <li class="toctree-l2"><a href="#2020-05-19">2020-05-19</a></li>
+    
+
+    <li class="toctree-l2"><a href="#2020-05-18">2020-05-18</a></li>
+    
+
     <li class="toctree-l2"><a href="#r-packages-requirements">R Packages Requirements</a></li>
     
 
@@ -235,11 +241,11 @@
 <tbody>
 <tr>
 <td>Linux 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.zip">v2.3.0</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.0.a/PRSice_linux.zip">v2.3.0.a</a></td>
 </tr>
 <tr>
 <td>OS X 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.zip">v2.3.0</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.0.a/PRSice_mac.zip">v2.3.0.a</a></td>
 </tr>
 <tr>
 <td>Windows 32-bit</td>
@@ -253,6 +259,14 @@
 </table>
 <div class="admonition note">
 <p class="admonition-title">Latest Update</p>
+<h1 id="2020-05-19">2020-05-19<a class="headerlink" href="#2020-05-19" title="Permanent link">&para;</a></h1>
+<ul>
+<li>Fix output error where we always say 0 valid phenotype were included for continuous trait</li>
+<li>Fix problem with permutation where PRSice will crash if input are rank deficient </li>
+<li>Fix problem when provide a binary phenotype file with a fam file containing -9 as phenotype, PRSice will wrongly state that there are no phenotype presented</li>
+<li>Fix problem in Rscript where if sample ID is numeric and starts with 0, the best file will not merge with the phenotype file, causing 0 valid PRS to be observed</li>
+</ul>
+<h1 id="2020-05-18">2020-05-18<a class="headerlink" href="#2020-05-18" title="Permanent link">&para;</a></h1>
 <ul>
 <li>We now support multi-threaded clumping (separated by chromosome)</li>
 <li>Genotypes will be stored to memory during clumping (increase memory usage, significantly speed up clumping)</li>
@@ -388,5 +402,5 @@ We also utilize the <a href="https://eigen.tuxfamily.org">Eigen C++</a> library,
 
 <!--
 MkDocs version : 1.0.4
-Build Date UTC : 2020-05-19 04:49:47
+Build Date UTC : 2020-05-19 10:56:25
 -->

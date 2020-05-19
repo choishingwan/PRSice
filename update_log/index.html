@@ -139,6 +139,9 @@
     <a class="current" href="./">Update Log</a>
     <ul class="subnav">
             
+    <li class="toctree-l3"><a href="#2020-05-19-v230a">2020-05-19 (v2.3.0.a)</a></li>
+    
+
     <li class="toctree-l3"><a href="#2020-05-18-v230">2020-05-18 (v2.3.0)</a></li>
     
 
@@ -187,7 +190,14 @@
             <div class="section">
               
                 <p>From now on, I will try to archive our update log here. </p>
-<h1 id="2020-05-18-v230">2020-05-18 (v2.3.0)<a class="headerlink" href="#2020-05-18-v230" title="Permanent link">&para;</a></h1>
+<h1 id="2020-05-19-v230a">2020-05-19 (<a href="https://github.com/choishingwan/PRSice/tree/87c8571f8b27d39cfe6d8ec3b00e059d0ecf0376">v2.3.0.a</a>)<a class="headerlink" href="#2020-05-19-v230a" title="Permanent link">&para;</a></h1>
+<ul>
+<li>Fix output error where we always say 0 valid phenotype were included for continuous trait</li>
+<li>Fix problem with permutation where PRSice will crash if input are rank deficient</li>
+<li>Fix problem when provide a binary phenotype file with a fam file containing -9 as phenotype, PRSice will wrongly state that there are no phenotype presented</li>
+<li>Fix problem in Rscript where if sample ID is numeric and starts with 0, the best file will not merge with the phenotype file, causing 0 valid PRS to be observed</li>
+</ul>
+<h1 id="2020-05-18-v230">2020-05-18 (<a href="https://github.com/choishingwan/PRSice/tree/2.3.0">v2.3.0</a>)<a class="headerlink" href="#2020-05-18-v230" title="Permanent link">&para;</a></h1>
 <ul>
 <li>We now support multi-threaded clumping (separated by chromosome)</li>
 <li>Genotypes will be stored to memory during clumping (increase memory usage, significantly speed up clumping)</li>
