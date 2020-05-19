@@ -18,13 +18,20 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.0](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.zip) |
-| OS X 64-bit | [v2.3.0](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.zip) |
+| Linux 64-bit | [v2.3.0.a](https://github.com/choishingwan/PRSice/releases/download/2.3.0.a/PRSice_linux.zip) |
+| OS X 64-bit | [v2.3.0.a](https://github.com/choishingwan/PRSice/releases/download/2.3.0.a/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
 !!! Note "Latest Update"
- 
+   
+    # 2020-05-19
+    - Fix output error where we always say 0 valid phenotype were included for continuous trait
+    - Fix problem with permutation where PRSice will crash if input are rank deficient 
+    - Fix problem when provide a binary phenotype file with a fam file containing -9 as phenotype, PRSice will wrongly state that there are no phenotype presented
+    - Fix problem in Rscript where if sample ID is numeric and starts with 0, the best file will not merge with the phenotype file, causing 0 valid PRS to be observed
+    
+    # 2020-05-18
     - We now support multi-threaded clumping (separated by chromosome)
     - Genotypes will be stored to memory during clumping (increase memory usage, significantly speed up clumping)
     - Will only generate one .prsice file for all phenotypes
