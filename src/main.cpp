@@ -222,6 +222,7 @@ int main(int argc, char* argv[])
                                       prsice_out, best_file, all_score_file,
                                       *target_file);
                 }
+                prsice.print_progress(true);
                 if (!no_regress)
                 {
                     // best file is nullptr after this

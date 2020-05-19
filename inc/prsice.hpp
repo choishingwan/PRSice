@@ -234,8 +234,12 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_percentage = cur_progress;
         }
-        if (m_previous_percentage >= 100.0 || completed)
+        if (completed && m_analysis_done != m_total_process)
         { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
+        else if (m_previous_percentage >= 100.0)
+        {
+            fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
+        }
     }
     /*!
      * \brief The master function for performing the competitive analysis
@@ -443,6 +447,9 @@ protected:
                                  const std::string& delim,
                                  const size_t num_valid, const bool ignore_fid,
                                  Genotype& target);
+    void get_se_matrix(const Eigen::Index p, Regress& decomposed);
+    void pre_decompose_matrix(const Eigen::MatrixXd& compute_target,
+                              Regress& decomposed);
     void get_se_matrix(
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
         const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
@@ -452,8 +459,10 @@ protected:
     void observe_set_perm(Thread_Queue<size_t>& progress_observer,
                           size_t total_perm);
     double get_coeff_resid_norm(const Regress& decomposed,
+                                const Eigen::MatrixXd& target,
                                 const Eigen::VectorXd& prs,
-                                Eigen::VectorXd& beta, Eigen::VectorXd effects);
+                                Eigen::VectorXd& beta,
+                                Eigen::VectorXd& effects);
     template <typename T>
     void subject_set_perm(T& progress_observer, Genotype& target,
                           std::vector<size_t> background,
@@ -513,9 +522,12 @@ protected:
         const std::map<size_t, std::vector<size_t>>& set_index,
         const Regress& decomposed, std::vector<double>& obs_t_value,
         std::vector<std::atomic<size_t>>& set_perm_res, const bool is_binary);
-    double get_t_value(const Regress& decomposed, const Eigen::VectorXd& prs,
-                       Eigen::VectorXd& beta, Eigen::VectorXd& effects,
-                       double& coefficient, double& standard_error);
+
+    std::tuple<double, double> get_coeff_se(const Regress& decomposed,
+                                            const Eigen::MatrixXd& target,
+                                            const Eigen::VectorXd& prs,
+                                            Eigen::VectorXd& beta,
+                                            Eigen::VectorXd& effects);
     /*!
      * \brief The "producer" for generating the permuted phenotypes
      * \param q is the queue for contacting the consumers
@@ -532,12 +544,8 @@ protected:
      * \param run_glm is a boolean indicate if we want to run logistic
      * regression
      */
-    void consume_null_pheno(
-        Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
-            Pmat,
-        const Eigen::MatrixXd& R, bool run_glm);
+    void consume_null_pheno(Thread_Queue<std::pair<Eigen::VectorXd, size_t>>& q,
+                            const Regress& decomposed, bool run_glm);
     /*!
      * \brief Funtion to perform single threaded permutation
      * \param decomposed is the pre-decomposed independent matrix. If run glm is
@@ -548,11 +556,7 @@ protected:
      * \param run_glm indicate if we want to run GLM instead of using
      * precomputed matrix
      */
-    void run_null_perm_no_thread(
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>& PQR,
-        const Eigen::ColPivHouseholderQR<Eigen::MatrixXd>::PermutationType&
-            Pmat,
-        const Eigen::MatrixXd& R, const bool run_glm);
+    void run_null_perm_no_thread(const Regress& decomposed, const bool run_glm);
 
     void parse_pheno(const std::string& pheno, std::vector<double>& pheno_store,
                      int& max_pheno_code);
