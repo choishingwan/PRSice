@@ -173,8 +173,16 @@ int main(int argc, char* argv[])
                                     + " th phenotype");
                     continue;
                 }
-                reporter.report("Processing the " + std::to_string(i_pheno + 1)
-                                + " th phenotype");
+                if (!no_regress)
+                {
+                    reporter.report("Processing the "
+                                    + std::to_string(i_pheno + 1)
+                                    + " th phenotype");
+                }
+                else
+                {
+                    reporter.report("Start calculating the scores\n");
+                }
                 const std::string pheno_name =
                     (num_pheno > 1) ? pheno_info.pheno_col[i_pheno] : "-";
                 const std::string file_suffix =
@@ -239,7 +247,8 @@ int main(int argc, char* argv[])
                 prsice.print_summary(pheno_name, prevalence, has_prevalence,
                                      significant_count, summary_file);
             }
-            reporter.report(print_project_summary(significant_count));
+            if (!no_regress)
+                reporter.report(print_project_summary(significant_count));
         }
         catch (const std::invalid_argument& ia)
         {

@@ -625,7 +625,7 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     assert(m_vector_initialized);
     for (size_t i = 0; i < token.size(); ++i) { misc::trim(token[i]); }
     // we have already checked for malformed file
-    const std::string fid = (m_ignore_fid) ? "" : token[fid_idx];
+    const std::string fid = (m_ignore_fid) ? "-" : token[fid_idx];
     const std::string id =
         (m_ignore_fid) ? token[iid_idx] : fid + m_delim + token[iid_idx];
     if (m_max_fid_length < token[fid_idx].length())
@@ -681,7 +681,7 @@ void Genotype::gen_sample(const size_t fid_idx, const size_t iid_idx,
     if (inclusion && !m_is_ref)
     {
         sample_storage.emplace_back(
-            Sample_ID(fid, token[iid_idx], pheno, in_regression));
+            Sample_ID(token[fid_idx], token[iid_idx], pheno, in_regression));
     }
     sample_in_file.insert(id);
 }

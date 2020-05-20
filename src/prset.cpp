@@ -432,4 +432,5 @@ void PRSice::run_competitive(
             / (static_cast<double>(ran_perm) + 1.0);
         m_prs_summary[i].has_competitive = true;
     }
+    print_competitive_progress(true);
 }
