@@ -1,4 +1,9 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-20 ([v2.3.0.c](https://github.com/choishingwan/PRSice/tree/3fca49456ea5f0d84e01c06d0c491fbb5917181a))
+- Fix all score output format
+- Fix problem with `--no-regress`. Might still have problem with `--no-regress --score con-std`
+    
+
 # 2020-05-19 ([v2.3.0.b](https://github.com/choishingwan/PRSice/tree/a999a862b83599497bcea3fa16cde340dca52e11))
 - Fix error where sample selection will distort phenotype loading, loading the wrong phenotype to wrong sample. As
 this is a major bug, we deleted the previous 2 releases. Sorry for the troubles.

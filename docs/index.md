@@ -18,22 +18,26 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.0.b](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.230b.zip) |
-| OS X 64-bit | [v2.3.0.b](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.230b.zip) |
+| Linux 64-bit | [v2.3.0.cb](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.230c.zip) |
+| OS X 64-bit | [v2.3.0.c](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.230c.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
 !!! Note "Latest Update"
-    # 2020-05-19 
+    # 2020-05-20  (v2.3.0.c)
+    - Fix all score output format
+    - Fix problem with `--no-regress`. Might still have problem with `--no-regress --score con-std`
+    
+    # 2020-05-19 (v2.3.0.b) 
     - Fix error where sample selection will distort phenotype loading, loading the wrong phenotype to wrong sample. As this is a major bug, we deleted the previous 2 releases. Sorry for the troubles.
      
-    # 2020-05-19
+    # 2020-05-19 (v2.3.0.a)
     - Fix output error where we always say 0 valid phenotype were included for continuous trait
     - Fix problem with permutation where PRSice will crash if input are rank deficient 
     - Fix problem when provide a binary phenotype file with a fam file containing -9 as phenotype, PRSice will wrongly state that there are no phenotype presented
     - Fix problem in Rscript where if sample ID is numeric and starts with 0, the best file will not merge with the phenotype file, causing 0 valid PRS to be observed
     
-    # 2020-05-18
+    # 2020-05-18 (v2.3.0)
     - We now support multi-threaded clumping (separated by chromosome)
     - Genotypes will be stored to memory during clumping (increase memory usage, significantly speed up clumping)
     - Will only generate one .prsice file for all phenotypes
