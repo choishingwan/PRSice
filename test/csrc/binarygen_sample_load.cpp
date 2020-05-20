@@ -139,25 +139,25 @@ TEST_CASE("full sample load")
         auto mock_file = GENERATE(
             table<std::string, bool>({record {"ID1 ID2 missing Sex\n"
                                               "0 0 0 D\n"
-                                              "S1 S1 1 F\n"
+                                              "S1 s1 1 F\n"
                                               "remove1 remove 1 F\n"
-                                              "S2 S2 1 M",
+                                              "S2 s2 1 M",
                                               true},
                                       // fam format
-                                      record {"S1 S1 0 0 2 Pheno\n"
+                                      record {"S1 s1 0 0 2 Pheno\n"
                                               "remove1 remove 0 0 2 Pheno\n"
-                                              "S2 S2 0 0 2 Pheno",
+                                              "S2 s2 0 0 2 Pheno",
                                               false},
                                       /*pheno file*/
-                                      record {"S1 S1 Pheno\n"
+                                      record {"S1 s1 Pheno\n"
                                               "remove1 remove 0 0 2 Pheno\n"
-                                              "S2 S2 Pheno\n",
+                                              "S2 s2 Pheno\n",
                                               false},
                                       /*pheno file with header*/
                                       record {"FID IID Pheno\n"
-                                              "S1 S1 Pheno\n"
+                                              "S1 s1 Pheno\n"
                                               "remove1 remove 0 0 2 Pheno\n"
-                                              "S2 S2 Pheno",
+                                              "S2 s2 Pheno",
                                               false}}));
         std::ofstream test("bgen_pheno_load");
         test << std::get<0>(mock_file) << std::endl;
@@ -173,12 +173,16 @@ TEST_CASE("full sample load")
                         ? "remove"
                         : (ignore_fid ? "remove1" : "remove");
                 REQUIRE(res.size() == 3);
-                REQUIRE(res[0].FID == (ignore_fid ? "" : "S1"));
-                REQUIRE(res[0].IID == "S1");
-                REQUIRE(res[1].FID == (ignore_fid ? "" : "remove1"));
+                REQUIRE(res[0].FID == "S1");
+                REQUIRE(
+                    res[0].IID
+                    == ((std::get<1>(mock_file) || !ignore_fid) ? "s1" : "S1"));
+                REQUIRE(res[1].FID == "remove1");
                 REQUIRE(res[1].IID == expected_iid);
-                REQUIRE(res[2].FID == (ignore_fid ? "" : "S2"));
-                REQUIRE(res[2].IID == "S2");
+                REQUIRE(res[2].FID == "S2");
+                REQUIRE(
+                    res[2].IID
+                    == ((std::get<1>(mock_file) || !ignore_fid) ? "s2" : "S2"));
                 for (auto&& i : res) { REQUIRE(i.in_regression); }
             }
             else
@@ -212,15 +216,21 @@ TEST_CASE("full sample load")
                 if (remove_sample)
                 {
                     REQUIRE(res.size() == 2);
-                    REQUIRE(res[0].FID == (ignore_fid ? "" : "S1"));
-                    REQUIRE(res[0].IID == "S1");
-                    REQUIRE(res[1].FID == (ignore_fid ? "" : "S2"));
-                    REQUIRE(res[1].IID == "S2");
+                    REQUIRE(res[0].FID == "S1");
+                    REQUIRE(res[0].IID
+                            == ((std::get<1>(mock_file) || !ignore_fid)
+                                    ? "s1"
+                                    : "S1"));
+                    REQUIRE(res[1].FID == "S2");
+                    REQUIRE(res[1].IID
+                            == ((std::get<1>(mock_file) || !ignore_fid)
+                                    ? "s2"
+                                    : "S2"));
                 }
                 else
                 {
                     REQUIRE(res.size() == 1);
-                    REQUIRE(res[0].FID == (ignore_fid ? "" : "remove1"));
+                    REQUIRE(res[0].FID == "remove1");
                     REQUIRE(res[0].IID == expected_iid);
                 }
                 for (auto&& i : res) { REQUIRE(i.in_regression); }

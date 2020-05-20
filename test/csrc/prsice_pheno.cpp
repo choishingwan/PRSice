@@ -110,7 +110,7 @@ TEST_CASE("Simple Phenotype check")
                 // with no regress, user are not required to provide binary
                 // flag, thus we will just add one
                 REQUIRE_THAT(pheno.pheno_col,
-                             Catch::Equals<std::string>({"PlaceHolder"}));
+                             Catch::Equals<std::string>({"Phenotype"}));
                 REQUIRE_THAT(pheno.pheno_col_idx,
                              Catch::Equals<size_t>({~size_t(0)}));
                 REQUIRE(pheno.binary.size() == pheno.pheno_col_idx.size());

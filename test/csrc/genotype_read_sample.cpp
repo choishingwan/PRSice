@@ -173,11 +173,7 @@ TEST_CASE("Sample object generation")
             {
                 REQUIRE(sample_storage.back().in_regression);
             }
-            if (!ignore_fid) { REQUIRE(sample_storage.back().FID == exp); }
-            else
-            {
-                REQUIRE(sample_storage.back().FID.empty());
-            }
+            REQUIRE(sample_storage.back().FID == exp);
         }
         else
         {

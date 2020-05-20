@@ -1,4 +1,7 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-19 ([v2.3.0.b](https://github.com/choishingwan/PRSice/tree/a999a862b83599497bcea3fa16cde340dca52e11))
+- Fix error where sample selection will distort phenotype loading, loading the wrong phenotype to wrong sample. As
+this is a major bug, we deleted the previous 2 releases. Sorry for the troubles.
 
 # 2020-05-19 ([v2.3.0.a](https://github.com/choishingwan/PRSice/tree/87c8571f8b27d39cfe6d8ec3b00e059d0ecf0376))
 - Fix output error where we always say 0 valid phenotype were included for continuous trait

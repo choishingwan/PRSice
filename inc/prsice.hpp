@@ -217,10 +217,7 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_competitive_percentage = cur_progress;
         }
-        if (m_previous_competitive_percentage >= 100.0
-            || m_total_competitive_perm_done == m_total_competitive_process
-            || completed)
-        { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
+        if (completed) { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
     }
     void print_progress(bool completed = false)
     {
@@ -234,12 +231,8 @@ public:
             fprintf(stderr, "\rProcessing %03.2f%%", cur_progress);
             m_previous_percentage = cur_progress;
         }
-        if (completed && m_analysis_done < m_total_process)
-        { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
-        else if (!completed && m_previous_percentage >= 100.0)
-        {
-            fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0);
-        }
+
+        if (completed) { fprintf(stderr, "\rProcessing %03.2f%%\n", 100.0); }
     }
     /*!
      * \brief The master function for performing the competitive analysis

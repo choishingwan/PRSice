@@ -113,11 +113,12 @@ void PRSice::parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
 void PRSice::pheno_check(const bool no_regress, Phenotype& pheno,
                          Reporter& reporter)
 {
-    // don't bother to check anything, just add a place holder in binary
-    if (no_regress)
+    // for no regress, we still need phenotype if user want con-std
+    // TODO: Properly handle this
+    if (no_regress && pheno.pheno_file.empty())
     {
-        pheno.binary = {true};
-        pheno.pheno_col = {"PlaceHolder"};
+        pheno.binary = {false};
+        pheno.pheno_col = {"Phenotype"};
         pheno.skip_pheno = {false};
         pheno.pheno_col_idx = {~size_t(0)};
         return;
@@ -160,7 +161,12 @@ void PRSice::init_matrix(const Phenotype& pheno_info, const std::string& delim,
     if (m_binary_trait && m_prs_info.scoring_method == SCORING::CONTROL_STD)
     { target.reset_std_flag(); }
     // we need genotype for no-regress if we are trying to do control std
-    gen_pheno_vec(file_name, pheno_name, delim, file_idx, ignore_fid, target);
+    if (no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
+        && m_binary_trait)
+    {
+        gen_pheno_vec(file_name, pheno_name, delim, file_idx, ignore_fid,
+                      target);
+    }
     if (!no_regress)
     {
         // won't use covariate when no regression is performed
@@ -1388,6 +1394,7 @@ void PRSice::prep_all_score_output(
             { (*all_score_file) << " " << region_name[i] << "_" << thres; }
         }
     }
+    (*all_score_file) << "\n";
     const long long end_byte = all_score_file->tellp();
     // if the line is too long, we might encounter overflow
     assert(end_byte >= begin_byte);
@@ -1403,7 +1410,7 @@ void PRSice::prep_all_score_output(
     std::string name;
     for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
     {
-        name = target.sample_id(i_sample, " ");
+        name = target.fid(i_sample) + " " + target.iid(i_sample);
         // TODO: Bug if line_width is bigger than what setw can handle
         (*all_score_file) << std::setfill(' ')
                           << std::setw(m_all_file.line_width) << std::left
