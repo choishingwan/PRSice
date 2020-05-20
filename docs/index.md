@@ -18,7 +18,7 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.0.cb](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.230c.zip) |
+| Linux 64-bit | [v2.3.0.c](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.230c.zip) |
 | OS X 64-bit | [v2.3.0.c](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.230c.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
