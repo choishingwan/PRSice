@@ -161,8 +161,9 @@ void PRSice::init_matrix(const Phenotype& pheno_info, const std::string& delim,
     if (m_binary_trait && m_prs_info.scoring_method == SCORING::CONTROL_STD)
     { target.reset_std_flag(); }
     // we need genotype for no-regress if we are trying to do control std
-    if (no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
-        && m_binary_trait)
+    if ((no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
+         && m_binary_trait)
+        || !no_regress)
     {
         gen_pheno_vec(file_name, pheno_name, delim, file_idx, ignore_fid,
                       target);
