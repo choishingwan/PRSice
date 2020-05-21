@@ -54,7 +54,8 @@ struct Sample_ID
     std::string FID;
     std::string IID;
     std::string pheno;
-    bool in_regression; // true if include in regression model
+    const bool in_regression = true; // true if include in regression model
+    bool valid_phenotype = false;
     Sample_ID(const std::string& F, const std::string& I, const std::string& P,
               const bool& regression)
         : FID(F), IID(I), pheno(P), in_regression(regression)

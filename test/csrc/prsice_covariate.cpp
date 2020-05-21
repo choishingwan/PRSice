@@ -61,7 +61,7 @@ TEST_CASE("covarience check and factor level count")
     std::uniform_int_distribution<size_t> dist {1, 10};
     std::uniform_int_distribution<size_t> sex_dist {0, 1};
     std::uniform_int_distribution<size_t> batch_dist {0, 100};
-    auto valid = [&dist, &mersenne_engine]() {
+    auto in_reg = [&dist, &mersenne_engine]() {
         return dist(mersenne_engine) > 3;
     };
     auto batch = [&batch_dist, &mersenne_engine] {
@@ -85,19 +85,21 @@ TEST_CASE("covarience check and factor level count")
     prsice.set_reporter(&reporter);
     geno.set_reporter(&reporter);
     std::vector<double> sample_pheno;
-    std::vector<bool> valid_pheno(num_sample, false);
+    std::vector<bool> sample_in_regression(num_sample, false);
     auto&& sample_with_pheno = prsice.sample_with_phenotypes();
     const std::string delim = " ";
     auto ignore_fid = GENERATE(true, false);
     for (size_t i = 0; i < num_sample; ++i)
     {
-        auto cur_pheno = pheno();
-        auto valid_sample = valid();
+        // auto cur_pheno = pheno();
+        auto cur_pheno = i;
+        auto in_regression = in_reg();
         geno.add_sample(Sample_ID(std::to_string(i), std::to_string(i),
-                                  std::to_string(cur_pheno), valid_sample));
-        if (valid_sample)
+                                  std::to_string(cur_pheno), in_regression));
+        geno.update_valid_sample(i, in_regression);
+        if (in_regression)
         {
-            valid_pheno[i] = true;
+            sample_in_regression[i] = true;
             std::string id = std::to_string(i);
             if (!ignore_fid) id.append(delim + std::to_string(i));
             sample_with_pheno[id] = i;
@@ -121,49 +123,38 @@ TEST_CASE("covarience check and factor level count")
         auto&& sample_vec = geno.get_sample_vec();
         for (size_t i = 0; i < sample_in_file; ++i)
         {
-            if (i < num_sample)
+            if (i >= num_sample || !sample_vec[i].in_regression)
             {
-                if (!sample_vec[i].in_regression)
-                {
-                    // doesn't matter what we sim
-                    cov_file.append(std::to_string(i) + " " + std::to_string(i)
-                                    + " " + std::to_string(pheno()) + " "
-                                    + std::to_string(pheno()) + " "
-                                    + std::to_string(pheno()) + " " + sex()
-                                    + " " + std::to_string(pheno()) + " "
-                                    + batch() + " " + batch() + "\n");
-                }
-                else
-                {
-                    auto pc1 = valid() ? std::to_string(pheno()) : "NA";
-                    auto cur_batch = batch();
-                    auto cur_sex = sex();
-                    if (pc1 != "NA")
-                    {
-                        expected_pheno.push_back(
-                            misc::convert<double>(sample_vec[i].pheno));
-                        if (expected_sex.find(cur_sex) == expected_sex.end())
-                        { expected_sex[cur_sex] = sex_count++; }
-                        if (expected_batch.find(cur_batch)
-                            == expected_batch.end())
-                        { expected_batch[cur_batch] = batch_count++; }
-                    }
-                    cov_file.append(std::to_string(i) + " " + std::to_string(i)
-                                    + " " + pc1 + " " + std::to_string(pheno())
-                                    + " " + std::to_string(pheno()) + " "
-                                    + cur_sex + " " + std::to_string(pheno())
-                                    + " " + cur_batch + " " + batch() + "\n");
-                }
-            }
-            else
-            {
-                // just doesn't matter what we simulate
+                // doesn't matter what we sim
                 cov_file.append(std::to_string(i) + " " + std::to_string(i)
                                 + " " + std::to_string(pheno()) + " "
                                 + std::to_string(pheno()) + " "
                                 + std::to_string(pheno()) + " " + sex() + " "
                                 + std::to_string(pheno()) + " " + batch() + " "
                                 + batch() + "\n");
+            }
+            else
+            {
+                auto valid_cov = in_reg();
+                auto pc1 = valid_cov ? std::to_string(pheno()) : "NA";
+                auto cur_batch = batch();
+                auto cur_sex = sex();
+                if (valid_cov)
+                {
+                    expected_pheno.push_back(
+                        misc::convert<double>(sample_vec[i].pheno));
+                    if (expected_sex.find(cur_sex) == expected_sex.end())
+                    { expected_sex[cur_sex] = sex_count++; }
+                    if (expected_batch.find(cur_batch) == expected_batch.end())
+                    { expected_batch[cur_batch] = batch_count++; }
+                    if (geno.sample_valid_for_regress(i))
+                    { geno.update_valid_sample(i, true); }
+                }
+                cov_file.append(std::to_string(i) + " " + std::to_string(i)
+                                + " " + pc1 + " " + std::to_string(pheno())
+                                + " " + std::to_string(pheno()) + " " + cur_sex
+                                + " " + std::to_string(pheno()) + " "
+                                + cur_batch + " " + batch() + "\n");
             }
         }
         std::unique_ptr<std::istream> input_file =
@@ -281,9 +272,11 @@ TEST_CASE("Update valid samples from m_phenotype")
         auto valid_sample = valid();
         geno.add_sample(Sample_ID(std::to_string(i), std::to_string(i),
                                   std::to_string(cur_pheno), valid_sample));
+        geno.update_valid_sample(i, false);
         if (valid_sample)
         {
             sample_pheno.push_back(cur_pheno);
+            geno.update_valid_sample(i, true);
             valid_after_covariate[i] = valid();
             if (valid_after_covariate[i])
             {

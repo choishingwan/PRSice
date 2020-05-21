@@ -161,8 +161,9 @@ void PRSice::init_matrix(const Phenotype& pheno_info, const std::string& delim,
     if (m_binary_trait && m_prs_info.scoring_method == SCORING::CONTROL_STD)
     { target.reset_std_flag(); }
     // we need genotype for no-regress if we are trying to do control std
-    if (no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
-        && m_binary_trait)
+    if ((no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
+         && m_binary_trait)
+        || !no_regress)
     {
         gen_pheno_vec(file_name, pheno_name, delim, file_idx, ignore_fid,
                       target);
@@ -608,7 +609,7 @@ std::string PRSice::output_missing(const std::set<size_t>& factor_idx,
     }
     return message;
 }
-void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_samples,
+void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_cov,
                                      const std::string& delim,
                                      const size_t num_valid,
                                      const bool ignore_fid, Genotype& target)
@@ -621,10 +622,10 @@ void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_samples,
         if (target.sample_valid_for_regress(i))
         {
             auto id = ignore_fid ? target.iid(i) : target.sample_id(i, delim);
-            if (valid_samples[i])
+            if (valid_cov[i])
             {
                 m_sample_with_phenotypes[id] = new_matrix_idx;
-                new_pheno(new_matrix_idx, 0) = m_phenotype(pheno_matrix_idx, 0);
+                new_pheno(new_matrix_idx) = m_phenotype(pheno_matrix_idx);
                 ++new_matrix_idx;
             }
             else
@@ -679,7 +680,7 @@ PRSice::cov_check_and_factor_level_count(
         {
             valid =
                 is_valid_covariate(factor_idx, cov_idx, token, missing_count);
-            if (!valid) continue;
+            if (!valid) { continue; }
             if (duplicated_id.find(id) != duplicated_id.end())
             {
                 ++num_duplicated_id;
