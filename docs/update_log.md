@@ -1,4 +1,8 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-21 ((v2.3.0.d)[https://github.com/choishingwan/PRSice/tree/8784ab58b5171c5e4bbc5341de5baa68f5f5238f])
+- Fix problem introduced by previous fix.
+- Was hoping 2.3.0's unit test will help reducing the amount of bugs. Sorry for the troubles.
+
 # 2020-05-20 ([v2.3.0.c](https://github.com/choishingwan/PRSice/tree/3fca49456ea5f0d84e01c06d0c491fbb5917181a))
 - Fix all score output format
 - Fix problem with `--no-regress`. Might still have problem with `--no-regress --score con-std`
