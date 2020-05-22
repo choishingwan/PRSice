@@ -18,12 +18,15 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.0.d](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.230d.zip) |
-| OS X 64-bit | [v2.3.0.d](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.230d.zip) |
+| Linux 64-bit | [v2.3.0.e](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_linux.230e.zip) |
+| OS X 64-bit | [v2.3.0.e](https://github.com/choishingwan/PRSice/releases/download/2.3.0/PRSice_mac.230e.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
 !!! Note "Latest Update"
+    # 2020-05-21 (v2.3.0.e)
+    - Fix Rscript bar plot problem
+
     # 2020-05-21 (v2.3.0.d)
     - Fix problem introduced by previous fix.
     - Was hoping 2.3.0's unit test will help reducing the amount of bugs. Sorry for the troubles.
