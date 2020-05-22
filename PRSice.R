@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.3.0"
+r.version <- "2.3.0.e"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -2310,7 +2310,10 @@ process_plot <-
         }
         best <- subset(best, In_Regression == "Yes")
         # We know the format of the best file, and it will always contain FID and IID
-        prsice.result <- subset(prsice.result, Pheno==pheno.name)
+        phenos <- unique(prsice.result$Pheno)
+        if(length(phenos)!= 1) {
+          prsice.result <- subset(prsice.result, Pheno == pheno.name)
+        }
         base.prs <- best[,c(1,2,4)]
         if(provided("plot_set", parameters) & (provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)| provided("snp_set", parameters)| provided("snp_sets", parameters))){
             base.prs <- best[,colnames(best)%in%c("FID", "IID", parameters$plot_set)]
