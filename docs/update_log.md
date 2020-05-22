@@ -1,5 +1,5 @@
 From now on, I will try to archive our update log here. 
-# 2020-05-21 ((v2.3.0.d)[https://github.com/choishingwan/PRSice/tree/8784ab58b5171c5e4bbc5341de5baa68f5f5238f])
+# 2020-05-21 ([v2.3.0.d](https://github.com/choishingwan/PRSice/tree/8784ab58b5171c5e4bbc5341de5baa68f5f5238f))
 - Fix problem introduced by previous fix.
 - Was hoping 2.3.0's unit test will help reducing the amount of bugs. Sorry for the troubles.
 
