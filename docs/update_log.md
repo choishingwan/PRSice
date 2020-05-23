@@ -1,4 +1,10 @@
 From now on, I will try to archive our update log here. 
+
+# 2020-05-23 (v2.3.1)
+- Update Rscript such that it match features in executable (thus avoid problem in plotting)
+- Fix a bug where PRSice will crash when there are missing covariates
+
+
 # 2020-05-21 ([v2.3.0.e](https://github.com/choishingwan/PRSice/tree/2b057f0eafa28762ec0c1245bc2f20aacadda05b))
 - Fix Rscript bar plot problem
 
