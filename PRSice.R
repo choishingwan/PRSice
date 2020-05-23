@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.3.0"
+r.version <- "2.3.1"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -431,7 +431,7 @@ UsePackage <- function(package, dir, no.install)
 }
 
 use.data.table <- T
-use.ggplot <- T #cerr
+use.ggplot <- T 
 for (library in libraries)
 {
     package.directory <- "."
@@ -762,7 +762,6 @@ writeLines(paste0("Current Rscript version = ",r.version))
 expand_scale <- function(mult = 0, add = 0) {
     stopifnot(is.numeric(mult) && is.numeric(add))
     stopifnot((length(mult) %in% 1:2) && (length(add) %in% 1:2))
-    
     mult <- rep(mult, length.out = 2)
     add <- rep(add, length.out = 2)
     c(mult[1], add[1], mult[2], add[2])
@@ -783,6 +782,8 @@ shorten_label <- function(x) {
     return(str_wrap(lab)[[1]])
 }
 
+
+# Quantile functions ------------------------------------------------------
 
 get_quantile <- function(x, num.quant, quant.ref){
     quant <- as.numeric(cut(x,
@@ -840,9 +841,10 @@ set_uneven_quant <- function(quant.cutoff, ref.cutoff, num.quant, prs, quant.ind
     return(list(quant, quant.index))
 }
 # Determine Default -------------------------------------------------------
-# First, determine the bar levels
+# Bar level default -------------------------------------------------------
 if(!provided("bar_levels", argv)){
     if(!provided("msigdb", argv) & !provided("gtf", argv) & !provided("bed", argv)) {
+        # Not PRSet
         argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
         if (!provided("no_full", argv)) {
             argv$bar_levels <- paste(argv$bar_levels, 1, sep=",")
@@ -850,67 +852,98 @@ if(!provided("bar_levels", argv)){
     } else if (!provided("fastscore", argv) &
                !provided("lower", argv) &
                !provided("upper", argv) & !provided("interval", argv)) {
-        # This is prset, so by default, we don't do all threshold
-        # unless user use some of the parameter related to the thresholding
+        # This is prset, no thresholding unless user use parameters related to thresholding
         argv$bar_levels <- "1"
     }else{
-        # this should be PRSet but user want thresholding
         argv$bar_levels <- paste(0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, sep=",")
         if (!provided("no_full", argv)) {
             argv$bar_levels <- paste(argv$bar_levels, 1, sep=",")
         }
     }
 }
-# Next, we need to determine if we are doing binary target
-# This is only required when user does not provide --binary-target
- 
-if(!provided("binary_target", argv)){
-    # Now we want to check if base is beta
-    base_beta <- F
-    if(provided("beta", argv)){
-        # Base is beta
-        base_beta <- T
-    }else{
-        if(!provided("base", argv)){
-            writeLines("Warning: Without base file, we cannot determine if the summary statistic is beta or OR, which is used to determine if the target phenotype is binary or not. We will now proceed assuming the target phenotype is binary. If that is incorrect, please use --binary-target to specify the correct target phenotype type, or you can provide the base file")
-        }
-        else{
-            zz <- gzfile(argv$base)
-            base_header <- readLines(zz,n=1)
-            close(zz)
-            or <- length(grep("or",base_header,ignore.case=TRUE))==1
-            beta <- length(grep("beta",base_header,ignore.case=TRUE))==1
-            if(or & beta){
-                stop("Both OR and BETA detected. Cannot determine which one should be used. Please use --beta or --binary-target")
-            }
-            if(beta){
-                base_beta <- T    
-            }
-            if(!or & !beta){
-                stop("Do not detect either BETA or OR. Please ensure your base input is correct")
-            }
-        }
-    }
-    # Now we know if the base is beta or not, we can determine the target binary status
-    if(!provided("pheno_col", argv)){
-        if(base_beta){
-            argv$binary_target <- "F"
-        }else{
-            argv$binary_target <- "T"
-        }
-    }else if(length(strsplit(argv$pheno_col, split=",")[[1]])==1){
-        if(base_beta){
-            argv$binary_target <- "F"
-        }else{
-            argv$binary_target <- "T"
-        }    
-    }
+
+# Base check --------------------------------------------------------------
+# We need to check the base when both --beta, --or and --binary-target isn't provided
+# as PRSice will try to determine the binary-target flag with those input
+base.beta <- provided("beta", argv)
+base.or <- provided("or", argv)
+if(!base.beta &
+   !base.or &
+   !provided("binary_target", argv)) {
+  if (!provided("base", argv)) {
+    stop(
+      "Warning: Without base file, we cannot determine if the summary statistic is beta or OR, which is used to determine if the target phenotype is binary or not. Please use --binary-target to specify the correct target phenotype type."
+    )
+  }
+  zz <- gzfile(argv$base)
+  base_header <- readLines(zz, n = 1)
+  close(zz)
+  or <- length(grep("or", base_header, ignore.case = TRUE)) == 1
+  beta <- length(grep("beta", base_header, ignore.case = TRUE)) == 1
+  if (or & beta) {
+    stop(
+      "Both OR and BETA detected. Cannot determine which one should be used. Please use --beta or --binary-target"
+    )
+  }
+  if (beta) {
+    base.beta <- T
+    base.or <- F
+  } else if (or) {
+    base.or <- T
+    base.beta <- F
+  }
+  else {
+    stop("Do not detect either BETA or OR. Please ensure your base input is correct")
+  }
 }
 
+# Determine default of binary-target  ----------------------------------------
+get_binary_vector <- function(input){
+  # Assume the input is correct. If not, then user is likely using --plot
+  vec <- strsplit(input, split=",")[[1]]
+  binary.vec <- NULL
+  for(i in vec){
+    if(endsWith(toupper(i), "F") |endsWith(toupper(i), "FALSE")){
+      count <- as.numeric(gsub("F", "", gsub("FALSE","", i, ignore.case=T), ignore.case=T))
+      if(!is.na(count)){
+        binary.vec <- c(binary.vec, rep(F, count))
+      }else{
+        binary.vec <- c(binary.vec, F)
+      }
+    }else if(endsWith(toupper(i), "T") |endsWith(toupper(i), "TRUE")){
+      count <- as.numeric(gsub("T", "", gsub("TRUE","", i, ignore.case=T), ignore.case=T))
+      if(!is.na(count)){
+        binary.vec <- c(binary.vec, rep(T,count))
+      }else{
+        binary.vec <- c(binary.vec, T)
+      }
+    }
+  }
+  return(binary.vec)
+}
+binary.vector <- NULL
+if(!provided("binary_target", argv)){
+  num.pheno <- 1
+  if(provided("pheno_col", argv)){
+    num.pheno <- length(strsplit(argv$pheno_col, str=",")[[1]])
+  }
+  if(base.beta){
+    binary.vector <- rep(F, num.pheno)
+  }else if(base.or){
+    binary.vector <- rep(T, num.pheno)
+  }else{
+    stop("Error: Fatal logic error from Sam when parsing binary target status")
+  }
+}else{
+  # Try to parse binary_target into vector of TF 
+  binary.vector <- get_binary_vector(argv$binary_target)
+}
+
+
 # Sanity check for binary-target
-if(provided("pheno_col", argv) & provided("binary_target", argv)){
+if(provided("pheno_col", argv) ){
     pheno_length <- length(strsplit(argv$pheno_col, split=",")[[1]])
-    binary_length <- length(strsplit(argv$binary_target, split=",")[[1]])
+    binary_length <- length(binary.vector)
     if(pheno_length==0 & binary_length==1){
         # This is ok
     }else if(pheno_length!=binary_length){
@@ -2065,8 +2098,6 @@ multi_set_plot <- function(prefix, prs.summary, pheno.name, parameters, use.ggpl
 }
 
 # Sanity Check ------------------------------------------------------------
-
-
 if (provided("no_regress", argv)) {
     quit("yes")
 }
@@ -2088,62 +2119,70 @@ extract_matrix <- function(x, y) {
 # With this update, we only allow a single base file therefore we don't even need the
 # information of base here
 
+# Check if target provided ------------------------------------------------
+
 if (!provided("target", argv) & !provided("target_list", argv)) {
     stop("Target file name not found. You'll need to provide the target name for plotting! (even with --plot)")
 }
 
 
-phenos <- NULL
-
-binary_target <- strsplit(argv$binary_target, split = ",")[[1]]
+# Phenotype file check ----------------------------------------------------
+pheno.cols <- NULL
 pheno.index <- 6
+
 if (provided("pheno_col", argv)) {
-    phenos <- strsplit(argv$pheno_col, split = ",")[[1]]
-    if (!provided("pheno_file", argv)) {
-        writeLines(
-            strwrap(
-                "WARNING: Cannot have multiple phenotypes if pheno_file is not provided. We will ignore the pheno_col option.",
-                width = 80
-            )
-        )
-    }else if (length(binary_target) != length(phenos)) {
-        message <-
-            "Number of binray target should match number of phenotype provided!"
-        message <- paste(
-            message,
-            "There are ",
-            length(binary_target),
-            " binary target information and ",
-            length(phenos),
-            "phenotypes",
-            sep = ""
-        )
-        stop(message)
-    } else{
-        header <- read.table(argv$pheno_file, nrows = 1, header = TRUE, check.names=FALSE)
-        # This will automatically filter out un-used phenos
-        valid.pheno <- phenos %in% colnames(header)
-        valid.file.index <- colnames(header) %in% phenos
-        if (sum(valid.pheno) == 0) {
-            stop("Error: None of the phenotype is identified in phenotype header!")
-        }else if(sum(valid.pheno) != length(phenos)){
-            writeLines("WARNING: Some phenotypes were not identified from the phenotype file:")
-            for(i in phenos[!phenos %in% colnames(header)] ){
-                writeLines(i)
-            }
-        }
-        binary_target <- binary_target[valid.pheno]
-        phenos <- phenos[valid.pheno]
-        pheno.index <- c(1:ncol(header))[valid.file.index]
+  pheno.cols <- strsplit(argv$pheno_col, split = ",")[[1]]
+  if (!provided("pheno_file", argv)) {
+    stop("Error: You must provide a phenotype file for multiple phenotype analysis")
+  } else if (length(binary.vector) != length(pheno.cols)) {
+    message <-
+      "Number of binray target should match number of phenotype provided!"
+    message <- paste(
+      message,
+      "There are ",
+      length(binary_target),
+      " binary target information and ",
+      length(pheno.cols),
+      "phenotypes",
+      sep = ""
+    )
+    stop(message)
+  } else{
+    header <-
+      read.table(
+        argv$pheno_file,
+        nrows = 1,
+        header = TRUE,
+        check.names = FALSE
+      )
+    if (length(unique(header)) != length(header)) {
+      # Duplicated phenotype
+      stop(
+        "Error: Duplicated phenotype column detected. Please make sure you have provided the correct input"
+      )
     }
+    valid.pheno <- pheno.cols %in% colnames(header)
+    if (sum(valid.pheno) == 0) {
+      stop("Error: None of the phenotype is identified in phenotype header!")
+    } else if (sum(valid.pheno) != length(pheno.cols)) {
+      writeLines("WARNING: Some phenotypes were not identified from the phenotype file:")
+      for (i in pheno.cols[!pheno.cols %in% colnames(header)]) {
+        writeLines(i)
+      }
+    }
+    binary.vector <- binary.vector[valid.pheno]
+    pheno.cols <- pheno.cols[valid.pheno]
+    pheno.index <- 1:length(header)
+    pheno.index <- pheno.index[valid.pheno]
+  }
 } else if (provided("pheno_file", argv)) {
-    pheno.index <- 3
-    if (ignore_fid)
-        pheno.index <- 2
+  pheno.index <- 3
+  if (ignore_fid)
+    pheno.index <- 2
 } else{
-    if (length(binary_target) != 1) {
-        stop("Too many binary target information. We only have one phenotype")
-    }
+  if (length(binary.vector) != 1) {
+    stop("Too many binary target information. We only have one phenotype")
+  }
 }
 
 
@@ -2274,101 +2313,119 @@ prefix <- argv$out
 
 # Process plot functions --------------------------------------------------
 process_plot <-
-    function(prefix,
-             covariance,
-             is_binary,
-             pheno.file,
-             parameters,
-             pheno.index,
-             use.data.table,
-             use.ggplot,
-             pheno.name) {
-        sum.prefix <- prefix
-        if(pheno.name!="-"){
-            prefix <- paste(prefix, pheno.name, sep=".")
-        }
-        best <- NULL
-        prs.summary <- NULL
-        prsice.result <- NULL
-        phenotype <- NULL
-        if (use.data.table) {
-            best <- fread(paste0(prefix, ".best"), data.table = F, colClasses=c("FID"="character","IID"="character"))
-            prs.summary <-
-                fread(paste0(sum.prefix, ".summary"), data.table = F)
-            prsice.result <-
-                fread(paste0(sum.prefix, ".prsice"), data.table = F)
-            phenotype <-
-                fread(pheno.file, data.table = F, header = F, colClasses=c("V1"="character","V2"="character"))
-        } else{
-            best <- read.table(paste0(prefix, ".best"), header = T, colClasses=c("FID"="character","IID"="character"))
-            prs.summary <-
-                read.table(paste0(sum.prefix, ".summary"), header = T)
-            prsice.result <-
-                read.table(paste0(sum.prefix, ".prsice"), header = T)
-            # Allow header = false for fam or for phenotype files that does not contain phenotype name
-            phenotype <- read.table(pheno.file, header = F, colClasses=c("V1"="character","V2"="character"))
-        }
-        best <- subset(best, In_Regression == "Yes")
-        # We know the format of the best file, and it will always contain FID and IID
-        prsice.result <- subset(prsice.result, Pheno==pheno.name)
-        base.prs <- best[,c(1,2,4)]
-        if(provided("plot_set", parameters) & (provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)| provided("snp_set", parameters)| provided("snp_sets", parameters))){
-            base.prs <- best[,colnames(best)%in%c("FID", "IID", parameters$plot_set)]
-            colnames(base.prs)[3] <- "PRS"
-        }
-# Generate phenotype matrix -----------------------------------------------
-        # extract the phenotype column
-        # And only retain samples with phenotype and covariate information
-        # They will be found in the best data.frame
-        
-        ignore_fid <- provided("ignore_fid", parameters)
-        if (!ignore_fid) {
-            phenotype <- phenotype[, c(1:2, pheno.index)]
-            colnames(phenotype) <- c("FID", "IID", "Pheno")
-            phenotype <-
-                phenotype[phenotype$FID %in% best$FID &
-                              phenotype$IID %in% best$IID, ]
-        } else{
-            phenotype <- phenotype[, c(1, pheno.index)]
-            colnames(phenotype) <- c("IID", "Pheno")
-            phenotype <- phenotype[phenotype$IID %in% best$IID, ]
-        }
-        phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
-        pheno <- phenotype
-        use.residual <- F
-        if(is_binary){
-            if(max(pheno$Pheno)==2){
-                pheno$Pheno <- pheno$Pheno-1
-            }
-        }
-        
-# Start calling functions -------------------------------------------------
-        if (provided("quantile", parameters) && parameters$quantile > 0) {
-            # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
-            if(!provided("quant_break", parameters)){
-                quantile_plot(base.prs, pheno, covariance,  prefix, parameters, is_binary, use.ggplot)
-            }else{
-                uneven_quantile_plot(base.prs, pheno, covariance, prefix, parameters, is_binary, use.ggplot)
-            }
-        }
-        if(provided("msigdb", parameters) | provided("bed", parameters) | provided("gtf", parameters)
-           | provided("snp_test", parameters) | provided("snp_tests", parameters)){
-            if(length(strsplit(argv$bar_levels, split=",")[[1]])>1){
-                bar_plot(prsice.result, prefix, parameters, use.ggplot) 
-                if(!provided("fastscore", parameters)){
-                    high_res_plot(prsice.result, prefix, parameters, use.ggplot)
-                }
-            }
-        }else{
-            bar_plot(prsice.result, prefix, parameters, use.ggplot)
-            if(!provided("fastscore", parameters)){
-                high_res_plot(prsice.result, prefix, parameters, use.ggplot)
-            }
-        }
-        if(provided("multi_plot", parameters)){
-            multi_set_plot(prefix, prs.summary, pheno.name, parameters, use.ggplot, argv$device)
-        }
+  function(prefix,
+           phenotype,
+           covariance,
+           pheno.index,
+           is_binary,
+           prsice.summary,
+           prsice.result,
+           pheno.name,
+           parameters,
+           use.data.table,
+           use.ggplot) {
+    if (pheno.name != "-") {
+      prefix <- paste(prefix, pheno.name, sep = ".")
     }
+    best <- NULL
+    if (use.data.table) {
+      best <-
+        fread(
+          paste0(prefix, ".best"),
+          data.table = F,
+          colClasses = c("FID" = "character", "IID" = "character")
+        )
+      print(best)
+    } else{
+      best <-
+        read.table(
+          paste0(prefix, ".best"),
+          header = T,
+          colClasses = c("FID" = "character", "IID" = "character")
+        )
+    }
+    best <- subset(best, In_Regression == "Yes")
+    # We know the format of the best file, and it will always contain FID and IID
+    base.prs <- best[, c(1, 2, 4)]
+    if (provided("plot_set", parameters) &
+        (
+          provided("msigdb", parameters) |
+          provided("bed", parameters) |
+          provided("gtf", parameters) |
+          provided("snp_set", parameters)
+        )) {
+      base.prs <-
+        best[, colnames(best) %in% c("FID", "IID", parameters$plot_set)]
+      colnames(base.prs)[3] <- "PRS"
+    }
+    ignore_fid <- provided("ignore_fid", parameters)
+    if (!ignore_fid) {
+      phenotype <- phenotype[, c(1:2, pheno.index)]
+      colnames(phenotype) <- c("FID", "IID", "Pheno")
+      phenotype <-
+        phenotype[phenotype$FID %in% best$FID &
+                    phenotype$IID %in% best$IID,]
+    } else{
+      phenotype <- phenotype[, c(1, pheno.index)]
+      colnames(phenotype) <- c("IID", "Pheno")
+      phenotype <- phenotype[phenotype$IID %in% best$IID,]
+    }
+    # Because we read with header=F, it is likely our pheno is parsed as character
+    phenotype$Pheno <- as.numeric(as.character(phenotype$Pheno))
+    pheno <- phenotype
+    if (is_binary) {
+      pheno$Pheno[pheno$Pheno == -9] <- NA
+      if (max(pheno$Pheno) == 2) {
+        pheno$Pheno <- pheno$Pheno - 1
+      }
+    }
+    if (provided("quantile", parameters) &&
+        parameters$quantile > 0) {
+      # Need to plot the quantile plot (Remember to remove the iid when performing the regression)
+      if (!provided("quant_break", parameters)) {
+        quantile_plot(base.prs,
+                      pheno,
+                      covariance,
+                      prefix,
+                      parameters,
+                      is_binary,
+                      use.ggplot)
+      } else{
+        uneven_quantile_plot(base.prs,
+                             pheno,
+                             covariance,
+                             prefix,
+                             parameters,
+                             is_binary,
+                             use.ggplot)
+      }
+    }
+    if (provided("msigdb", parameters) |
+        provided("bed", parameters) |
+        provided("gtf", parameters) |
+        provided("snp_test", parameters))
+    {
+      if (length(strsplit(argv$bar_levels, split = ",")[[1]]) > 1) {
+        bar_plot(prsice.result, prefix, parameters, use.ggplot)
+        if (!provided("fastscore", parameters)) {
+          high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+        }
+      }
+    } else{
+      bar_plot(prsice.result, prefix, parameters, use.ggplot)
+      if (!provided("fastscore", parameters)) {
+        high_res_plot(prsice.result, prefix, parameters, use.ggplot)
+      }
+    }
+    if (provided("multi_plot", parameters)) {
+      multi_set_plot(prefix,
+                     prsice.summary,
+                     pheno.name,
+                     parameters,
+                     use.ggplot,
+                     argv$device)
+    }
+  }
 
 # Check if phenotype file is of sample format -----------------------------
 is_sample_format <- function(file) {
@@ -2386,7 +2443,7 @@ is_sample_format <- function(file) {
         first <- strsplit(first_line, split = " ")[[1]]
     }
     second <- strsplit(second_line, split = "\t")[[1]]
-    if (length(first) == 1) {
+    if (length(second) == 1) {
         second <- strsplit(second_line, split = " ")[[1]]
     }
     if (length(first) != length(second) | length(first) < 3) {
@@ -2411,111 +2468,108 @@ is_sample_format <- function(file) {
 pheno.file <- NULL
 
 if (provided("pheno_file", argv)) {
-    pheno.file <- argv$pheno_file
-} else if(provided("target", argv)){
-    # Check if external fam / sample file is provided
-    target.info <- strsplit(argv$target, split = ",")[[1]]
-    if (length(target.info) == 2) {
-        pheno.file <- target.info[2]
-        if (provided("type", argv)) {
-            if (argv$type == "bgen") {
-                # sample file should contain FID and IID by format requirement
-                pheno.index <- 3
-                if (ignore_fid &
-                    !is_sample_format(pheno.file))
-                    pheno.index <- 2
-            }
-        }
-    } else{
-        if (provided("type", argv)) {
-            if (argv$type == "bgen") {
-                stop("Error: You must provide either a phenotype or sample file for bgen input")
-            } else if (argv$type == "bed") {
-                pheno.file <- paste0(argv$target, ".fam")
-            }
-        } else{
-            # Because default is always plink
-            pheno.file <- paste0(argv$target, ".fam")
-        }
+  pheno.file <- argv$pheno_file
+} else if (provided("target", argv)) {
+  if (provided("type", argv)) {
+    if (argv$type == "bgen") {
+      # We don't have a default phenotype file
+      stop("Error: You must provide a phenotype file for bgen input")
     }
-}else if(provided("target_list", argv)){
-    # Assume no header
-    target.info <- strsplit(argv$target_list, split = ",")[[1]]
-    target.list <- read.table(argv$target_list)
-    target.prefix <- target.list[1,1]
-    if (length(target.info) == 2) {
-        pheno.file <- target.info[2]
-        if (provided("type", argv)) {
-            if (argv$type == "bgen") {
-                # sample file should contain FID and IID by format requirement
-                pheno.index <- 3
-                if (ignore_fid &
-                    !is_sample_format(pheno.file))
-                    pheno.index <- 2
-            }
-        }
+  }
+  target.info <- strsplit(argv$target, split = ",")[[1]]
+  
+  if (length(target.info) == 2) {
+    pheno.file <- target.info[2]
+  } else{
+    if (provided("type", argv)) {
+      pheno.file <- paste0(argv$target, ".fam")
     } else{
-        if (provided("type", argv)) {
-            if (argv$type == "bgen") {
-                stop("Error: You must provide either a phenotype or sample file for bgen input")
-            } else if (argv$type == "bed") {
-                pheno.file <- paste0(target.prefix, ".fam")
-            }
-        } else{
-            # Because default is always plink
-            pheno.file <- paste0(target.prefix, ".fam")
-        }
+      # Because default is always plink
+      pheno.file <- paste0(argv$target, ".fam")
     }
+  }
+} else if (provided("target_list", argv)) {
+  # Assume no header
+  if (provided("type", argv)) {
+    if (argv$type == "bgen") {
+      # We don't have a default phenotype file
+      stop("Error: You must provide a phenotype file for bgen input")
+    }
+  }
+  target.info <- strsplit(argv$target_list, split = ",")[[1]]
+  target.list <- read.table(argv$target_list)
+  target.prefix <- target.list[1, 1]
+  if (length(target.info) == 2) {
+    pheno.file <- target.info[2]
+  } else{
+    if (provided("type", argv)) {
+      pheno.file <- paste0(target.prefix, ".fam")
+    } else{
+      # Because default is always plink
+      pheno.file <- paste0(target.prefix, ".fam")
+    }
+  }
 }
 
 # To account for the chromosome number
-
 pheno.file <- gsub("#", "1", pheno.file)
-if (!is.null(phenos) &
-    length(phenos) > 1) {
-    for (i in 1:length(phenos)) {
-        # Update the covariance matrix accordingly
-        
-        process_plot(
-            argv$out,
-            covariance.base,
-            binary_target[i],
-            pheno.file,
-            argv,
-            pheno.index[i],
-            use.data.table,
-            use.ggplot,
-            phenos[i]
-        )
-    }
-    if(provided("multi_plot", argv)){
-        multi_pheno_plot(argv, use.ggplot, use.data.table, argv$device)
-    }
-} else if (!is.null(phenos)) {
-    process_plot(
-        argv$out,
-        covariance.base,
-        binary_target[1],
-        pheno.file,
-        argv,
-        pheno.index[1],
-        use.data.table,
-        use.ggplot,
-        "-"
-    )
+
+# Read in required files --------------------------------------------------
+# With exception of best, we have 1 file for each PRSice run
+prs.summary <- NULL
+prsice.result <- NULL
+phenotype <- NULL
+if (use.data.table) {
+  prs.summary <-
+    fread(paste0(argv$out, ".summary"), data.table = F)
+  prsice.result <-
+    fread(paste0(argv$out, ".prsice"), data.table = F)
+  phenotype <-
+    fread(pheno.file, data.table = F, header = F, colClasses=c("V1"="character","V2"="character"))
 } else{
-    process_plot(
-        argv$out,
-        covariance.base,
-        binary_target[1],
-        pheno.file,
-        argv,
-        pheno.index[1],
-        use.data.table,
-        use.ggplot,
-        "-"
-    )
+  prs.summary <-
+    read.table(paste0(argv$out, ".summary"), header = T)
+  prsice.result <-
+    read.table(paste0(argv$out, ".prsice"), header = T)
+  phenotype <- read.table(pheno.file, header = F, colClasses=c("V1"="character","V2"="character"))
 }
 
+
+if (!is.null(pheno.cols) &
+    length(pheno.cols) > 1) {
+  for (i in 1:length(pheno.cols)) {
+    # Update the covariance matrix accordingly
+    process_plot(
+      argv$out,
+      phenotype,
+      covariance.base,
+      pheno.index[i],
+      binary.vector[i],
+      prs.summary,
+      subset(prsice.result, Pheno == pheno.cols[i]),
+      pheno.cols[i],
+      argv,
+      use.data.table,
+      use.ggplot
+    )
+  }
+  if (provided("multi_plot", argv)) {
+    multi_pheno_plot(argv, use.ggplot, use.data.table, argv$device)
+  }
+} else{
+  process_plot(
+    argv$out,
+    phenotype,
+    covariance.base,
+    pheno.index[1],
+    binary.vector[1],
+    prs.summary,
+    prsice.result,
+    "-",
+    argv,
+    use.data.table,
+    use.ggplot
+  )
+}
 
 
