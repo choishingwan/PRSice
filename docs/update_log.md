@@ -1,6 +1,6 @@
 From now on, I will try to archive our update log here. 
 
-# 2020-05-23 (v2.3.1)
+# 2020-05-23 ([v2.3.1](https://github.com/choishingwan/PRSice/tree/91f4265ad5c30643c0676c6bb37a404fff021bc3))
 - Update Rscript such that it match features in executable (thus avoid problem in plotting)
 - Fix a bug where PRSice will crash when there are missing covariates
 
