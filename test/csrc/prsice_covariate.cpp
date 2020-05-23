@@ -456,3 +456,9 @@ TEST_CASE("Generate covariate matrix")
         }
     }
 }
+
+
+TEST_CASE("Full init_matrix test")
+{
+    SECTION("No regress") {}
+}

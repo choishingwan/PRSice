@@ -1041,51 +1041,66 @@ std::vector<std::string> get_base_header(const std::string& file)
 bool Commander::get_statistic_column(
     const std::vector<std::string>& column_names)
 {
-    bool has_col;
     // don't allow both OR and BETA to be set
     if (m_base_info.is_or && m_base_info.is_beta) return false;
-    if (m_base_info.is_or || m_base_info.is_beta)
+    const bool or_has_set = m_base_info.is_or;
+    const bool beta_has_set = m_base_info.is_beta;
+
+    // go through file and look for either OR or BETA
+    m_base_info.column_name[+BASE_INDEX::STAT] = "OR";
+    bool or_found = in_file(column_names, +BASE_INDEX::STAT, "Warning", false,
+                            false, false);
+    m_base_info.column_name[+BASE_INDEX::STAT] = "BETA";
+    bool beta_found = in_file(column_names, +BASE_INDEX::STAT, "Warning", false,
+                              false, false);
+    if ((beta_has_set || or_has_set) && (beta_found || or_found))
     {
-        // guess default based on --or and --beta
-        const std::string target = m_base_info.is_or ? "OR" : "BETA";
-        m_base_info.column_name[+BASE_INDEX::STAT] = target;
-        has_col = in_file(column_names, +BASE_INDEX::STAT, "Error",
-                          m_user_no_default, false);
-        m_base_info.has_column[+BASE_INDEX::STAT] = has_col;
-        return has_col;
+        if (beta_has_set && beta_found)
+        {
+            // don't need to do anything as beta_found come last
+        }
+        else if (or_has_set && or_found)
+        {
+            // we need to recall or to set the index
+            m_base_info.column_name[+BASE_INDEX::STAT] = "OR";
+            in_file(column_names, +BASE_INDEX::STAT, "Warning", false, false,
+                    false);
+        }
+        else if (or_has_set && beta_found)
+        {
+        }
+        else if (beta_has_set && or_found)
+        {
+            m_base_info.column_name[+BASE_INDEX::STAT] = "OR";
+            in_file(column_names, +BASE_INDEX::STAT, "Warning", false, false,
+                    false);
+        }
+        m_base_info.has_column[+BASE_INDEX::STAT] = true;
+        return true;
+    }
+    else if (or_found && beta_found)
+    {
+        m_error_message.append("Error: Both OR and BETA "
+                               "found in base file! We cannot determine "
+                               "which statistic to use, please provide it "
+                               "through --stat\n");
+        return false;
+    }
+    else if (or_found || beta_found)
+    {
+        // don't need to update column_index as column_index is only set
+        // when we find the item in the base file so this will only be set to
+        // the correct one
+        m_base_info.is_or = or_found;
+        m_base_info.is_beta = beta_found;
+        m_base_info.has_column[+BASE_INDEX::STAT] = true;
+        return true;
     }
     else
     {
-        // go through file and look for either OR or BETA
-        m_base_info.column_name[+BASE_INDEX::STAT] = "OR";
-        bool or_found = in_file(column_names, +BASE_INDEX::STAT, "Warning",
-                                false, false, false);
-        m_base_info.column_name[+BASE_INDEX::STAT] = "BETA";
-        bool beta_found = in_file(column_names, +BASE_INDEX::STAT, "Warning",
-                                  false, false, false);
-        if (or_found && beta_found)
-        {
-            m_error_message.append("Error: Both OR and BETA "
-                                   "found in base file! We cannot determine "
-                                   "which statistic to use, please provide it "
-                                   "through --stat\n");
-            return false;
-        }
-        else if (or_found || beta_found)
-        {
-            // don't need to update column_index as column_index is only set
-            // when we find the item in the base file
-            m_base_info.is_or = or_found;
-            m_base_info.is_beta = beta_found;
-            m_base_info.has_column[+BASE_INDEX::STAT] = true;
-            return true;
-        }
-        else
-        {
-            // cannot find either
-            m_error_message.append("Error: No statistic column in file!\n");
-            return false;
-        }
+        // cannot find either
+        m_error_message.append("Error: No statistic column in file!\n");
+        return false;
     }
 }
 
@@ -1195,9 +1210,45 @@ bool Commander::base_column_check(std::vector<std::string>& column_names)
     }
     m_base_info.column_index[+BASE_INDEX::MAX] = *max_element(
         m_base_info.column_index.begin(), m_base_info.column_index.end());
+    add_base_to_log();
     return !error;
 }
 
+void Commander::add_base_to_log()
+{
+    for (size_t i = 0; i < +BASE_INDEX::MAX; ++i)
+    {
+        std::string flag = "";
+        switch (i)
+        {
+        case +BASE_INDEX::P:
+            if (m_base_info.has_column[i]) { flag = "pvalue"; }
+            break;
+        case +BASE_INDEX::BP:
+            if (m_base_info.has_column[i]) { flag = "bp"; }
+            break;
+        case +BASE_INDEX::RS:
+            if (m_base_info.has_column[i]) { flag = "snp"; }
+            break;
+        case +BASE_INDEX::CHR:
+            if (m_base_info.has_column[i]) { flag = "chr"; }
+            break;
+        case +BASE_INDEX::INFO:
+            if (m_base_info.has_column[i]) { flag = "base-info"; }
+            break;
+        case +BASE_INDEX::STAT:
+            if (m_base_info.has_column[i]) { flag = "stat"; }
+            break;
+        case +BASE_INDEX::EFFECT:
+            if (m_base_info.has_column[i]) { flag = "a1"; }
+            break;
+        case +BASE_INDEX::NONEFFECT:
+            if (m_base_info.has_column[i]) { flag = "a2"; }
+            break;
+        }
+        if (!flag.empty()) m_parameter_log[flag] = m_base_info.column_name[i];
+    }
+}
 bool Commander::clump_check()
 {
     bool error = false;

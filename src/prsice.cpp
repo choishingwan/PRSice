@@ -830,11 +830,12 @@ void PRSice::gen_cov_matrix(const std::vector<std::string>& cov_names,
                        + "\n==============================\n");
     auto factor_levels = cov_check_and_factor_level_count(
         is_factor, cov_names, cov_idx, delim, ignore_fid, cov_file, target);
+    const auto num_valid_sample = m_phenotype.rows();
     auto [cov_start, num_matrix_col] =
         get_cov_start(factor_levels, is_factor, cov_idx);
     // update size of independent variable
     m_independent_variables =
-        Eigen::MatrixXd::Zero(static_cast<Eigen::Index>(num_sample),
+        Eigen::MatrixXd::Zero(static_cast<Eigen::Index>(num_valid_sample),
                               static_cast<Eigen::Index>(num_matrix_col));
     m_independent_variables.col(0).setOnes();
     m_independent_variables.col(1).setOnes();
