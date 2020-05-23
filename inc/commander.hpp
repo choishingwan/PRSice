@@ -42,8 +42,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.3.0.d";
-const std::string date = "2020-05-21";
+const std::string version = "2.3.1";
+const std::string date = "2020-05-23";
 class Commander
 {
 public:
@@ -652,7 +652,7 @@ protected:
         m_parameter_log["score"] = input;
         return true;
     }
-
+    void add_base_to_log();
     bool in_file(const std::vector<std::string>& column_names,
                  const size_t index, const std::string& warning,
                  bool no_default, bool case_sensitive = true,
