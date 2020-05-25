@@ -1127,10 +1127,12 @@ uneven_quantile_plot <- function(base.prs, pheno,covariance,  prefix, argv, bina
         if (use.data.table) {
             extract <- fread(argv$quant_extract,
                              header = F,
-                             data.table = F)
+                             data.table = F,
+                             colClasses=c("V1" = "character", "V2" = "character"))
         } else{
             extract <- read.table(argv$quant_extract,
-                                  header = F)
+                                  header = F,
+                                  colClasses=c("V1" = "character", "V2" = "character"))
         }
         
     }
@@ -1232,10 +1234,12 @@ quantile_plot <- function(base.prs, pheno, covariance,  prefix, argv, binary, us
         if (use.data.table) {
             extract <- fread(argv$quant_extract,
                              header = F,
-                             data.table = F)
+                             data.table = F,
+                             colClasses=c("V1" = "character", "V2" = "character"))
         } else{
             extract <- read.table(argv$quant_extract,
-                                  header = F)
+                                  header = F,
+                                  colClasses=c("V1" = "character", "V2" = "character"))
         }
         
     }
@@ -2256,13 +2260,21 @@ update_cov_header <- function(c) {
 covariance <- NULL
 covariance.base <- NULL
 if (provided("cov_file", argv)) {
-    if (use.data.table) {
-        covariance <- fread(argv$cov_file,
-                            data.table = F,
-                            header = T)
-    } else {
-        covariance <- read.table(argv$cov_file, header = T)
-    }
+  if (use.data.table) {
+    covariance <- fread(
+      argv$cov_file,
+      data.table = F,
+      header = T,
+      colClasses = c("FID" = "character", "IID" = "character")
+    )
+  } else {
+    covariance <-
+      read.table(
+        argv$cov_file,
+        header = T,
+        colClasses = c("FID" = "character", "IID" = "character")
+      )
+  }
     # We assume the first two columns are always FID and IID unless user used ignore-fid
     if(provided("ignore_fid", argv)){
         colnames(covariance)[1] <- "IID"
@@ -2335,7 +2347,6 @@ process_plot <-
           data.table = F,
           colClasses = c("FID" = "character", "IID" = "character")
         )
-      print(best)
     } else{
       best <-
         read.table(

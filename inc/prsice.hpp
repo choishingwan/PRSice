@@ -329,7 +329,7 @@ protected:
                              std::unique_ptr<std::ostream>& prsice_out)
     {
         (*prsice_out) << pheno_name << "\t" << region_name << "\t"
-                      << cur_threshold << "\t" << res.r2;
+                      << cur_threshold << "\t" << res.r2 - m_null_r2;
         if (has_prevalence && m_binary_trait)
             (*prsice_out) << "\t" << get_adjusted_r2(res.r2, top, bot);
         else if (has_prevalence)
