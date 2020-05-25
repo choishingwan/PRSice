@@ -1,4 +1,6 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-26 ([v2.3.1.a](https://github.com/choishingwan/PRSice/tree/86b002170316c63d1b7255c5f1d5f136242802c0))
+- Fix bar plot with covariate. Was plotting the full R2 instead of the PRS.R2
 
 # 2020-05-23 ([v2.3.1](https://github.com/choishingwan/PRSice/tree/91f4265ad5c30643c0676c6bb37a404fff021bc3))
 - Update Rscript such that it match features in executable (thus avoid problem in plotting)
