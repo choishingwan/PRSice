@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.3.1"
+r.version <- "2.3.1.b"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -1606,27 +1606,38 @@ high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
     PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
+    cur.pheno <- unique(PRS$Pheno)
     for (i in barchart.levels) {
         # Only proceed if this is something we want to fill in 
-        if(i %in% PRS.ori$Threshold){
-            next
-        }
-        if (sum(i - threshold > 0) > 0) {
-            # our current bar is bigger than at least one observed bar level
-            # and we will duplicate it as 
-            target <- max(threshold[i - threshold >= 0])
-            temp <- PRS.ori[threshold == target,]
-            temp$Threshold <- i
-            PRS <- rbind(PRS, temp)
-            
-        } else{
-            # Our current bar level is not bigger than any other observed bar leve
-            # This suggest there isn't any SNP located within this bar, and therefore
-            # this bar should be NA (or 0)
-            temp <- data.frame(Set=PRS.ori[1,]$Set, Threshold=i, R2=NA, P=NA, Coefficient=NA, Standard.Error=NA, Num_SNP=0)
-            PRS <- rbind(PRS, temp)
-            
-        }
+      if(i %in% PRS.ori$Threshold) {
+        next
+      }
+      if (sum(i - threshold > 0) > 0) {
+        # our current bar is bigger than at least one observed bar level
+        # and we will duplicate it as
+        target <- max(threshold[i - threshold >= 0])
+        temp <- PRS.ori[threshold == target, ]
+        temp$Threshold <- i
+        PRS <- rbind(PRS, temp)
+        
+      } else{
+        # Our current bar level is not bigger than any other observed bar leve
+        # This suggest there isn't any SNP located within this bar, and therefore
+        # this bar should be NA (or 0)
+        temp <-
+          data.frame(
+            Pheno = cur.pheno,
+            Set = PRS.ori[1, ]$Set,
+            Threshold = i,
+            R2 = NA,
+            P = NA,
+            Coefficient = NA,
+            Standard.Error = NA,
+            Num_SNP = 0
+          )
+        PRS <- rbind(PRS, temp)
+        
+      }
     }
     PRS <- unique(PRS)
     # Need to also plot the barchart level stuff with green
@@ -1718,6 +1729,7 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     threshold <- as.numeric(as.character(PRS$Threshold))
     PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
+    cur.pheno <- unique(PRS$Pheno)
     # Basically, a very inefficient way to fill in all the bar-level if some of the bar are being skipped
     for (i in barchart.levels) {
         # Only proceed if this is something we want to fill in 
@@ -1736,7 +1748,17 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
             # Our current bar level is not bigger than any other observed bar leve
             # This suggest there isn't any SNP located within this bar, and therefore
             # this bar should be NA (or 0)
-            temp <- data.frame(Set=PRS.ori[1,]$Set, Threshold=i, R2=NA, P=NA, Coefficient=NA, Standard.Error=NA, Num_SNP=0)
+          temp <-
+            data.frame(
+              Pheno = cur.pheno,
+              Set = PRS.ori[1, ]$Set,
+              Threshold = i,
+              R2 = NA,
+              P = NA,
+              Coefficient = NA,
+              Standard.Error = NA,
+              Num_SNP = 0
+            )
             PRS <- rbind(PRS, temp)
             
         }
@@ -2260,19 +2282,28 @@ update_cov_header <- function(c) {
 covariance <- NULL
 covariance.base <- NULL
 if (provided("cov_file", argv)) {
+  # We assume the header is FID and IID, will fail if it isn't the case
   if (use.data.table) {
+    colclass <- list(character=1)
+    if(!ignore_fid){
+      colclass <- list(character=1:2)
+    }
     covariance <- fread(
       argv$cov_file,
       data.table = F,
       header = T,
-      colClasses = c("FID" = "character", "IID" = "character")
+      colClasses = colclass
     )
   } else {
+    colclass <- "character"
+    if(!ignore_fid){
+      colclass <- c("character", "character")
+    }
     covariance <-
       read.table(
         argv$cov_file,
         header = T,
-        colClasses = c("FID" = "character", "IID" = "character")
+        colClasses = colclass
       )
   }
     # We assume the first two columns are always FID and IID unless user used ignore-fid
@@ -2281,7 +2312,6 @@ if (provided("cov_file", argv)) {
     }else{
         colnames(covariance)[1:2] <- c("FID", "IID")
     }
-    colnames(covariance)
     cov.header <- colnames(covariance)
     selected.cov <- cov.header[!cov.header%in%c("FID", "IID")]
     if(provided("cov_col", argv)){
@@ -2530,19 +2560,29 @@ pheno.file <- gsub("#", "1", pheno.file)
 prs.summary <- NULL
 prsice.result <- NULL
 phenotype <- NULL
+colclass <- c("V1"="character")
+if(!ignore_fid){
+  colclass <- c("V1"="character", "V2"="character")
+}
 if (use.data.table) {
   prs.summary <-
     fread(paste0(argv$out, ".summary"), data.table = F)
   prsice.result <-
     fread(paste0(argv$out, ".prsice"), data.table = F)
   phenotype <-
-    fread(pheno.file, data.table = F, header = F, colClasses=c("V1"="character","V2"="character"))
+    fread(
+      pheno.file,
+      data.table = F,
+      header = F,
+      colClasses = colclass
+    )
 } else{
   prs.summary <-
     read.table(paste0(argv$out, ".summary"), header = T)
   prsice.result <-
     read.table(paste0(argv$out, ".prsice"), header = T)
-  phenotype <- read.table(pheno.file, header = F, colClasses=c("V1"="character","V2"="character"))
+  phenotype <-
+    read.table(pheno.file, header = F, colClasses = colclass)
 }
 
 
