@@ -1606,27 +1606,38 @@ high_res_plot <- function(PRS, prefix, argv, use.ggplot) {
     # As the C++ program will skip thresholds, we need to artificially add the correct threshold information
     PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
+    cur.pheno <- unique(PRS$Pheno)
     for (i in barchart.levels) {
         # Only proceed if this is something we want to fill in 
-        if(i %in% PRS.ori$Threshold){
-            next
-        }
-        if (sum(i - threshold > 0) > 0) {
-            # our current bar is bigger than at least one observed bar level
-            # and we will duplicate it as 
-            target <- max(threshold[i - threshold >= 0])
-            temp <- PRS.ori[threshold == target,]
-            temp$Threshold <- i
-            PRS <- rbind(PRS, temp)
-            
-        } else{
-            # Our current bar level is not bigger than any other observed bar leve
-            # This suggest there isn't any SNP located within this bar, and therefore
-            # this bar should be NA (or 0)
-            temp <- data.frame(Set=PRS.ori[1,]$Set, Threshold=i, R2=NA, P=NA, Coefficient=NA, Standard.Error=NA, Num_SNP=0)
-            PRS <- rbind(PRS, temp)
-            
-        }
+      if(i %in% PRS.ori$Threshold) {
+        next
+      }
+      if (sum(i - threshold > 0) > 0) {
+        # our current bar is bigger than at least one observed bar level
+        # and we will duplicate it as
+        target <- max(threshold[i - threshold >= 0])
+        temp <- PRS.ori[threshold == target, ]
+        temp$Threshold <- i
+        PRS <- rbind(PRS, temp)
+        
+      } else{
+        # Our current bar level is not bigger than any other observed bar leve
+        # This suggest there isn't any SNP located within this bar, and therefore
+        # this bar should be NA (or 0)
+        temp <-
+          data.frame(
+            Pheno = cur.pheno,
+            Set = PRS.ori[1, ]$Set,
+            Threshold = i,
+            R2 = NA,
+            P = NA,
+            Coefficient = NA,
+            Standard.Error = NA,
+            Num_SNP = 0
+          )
+        PRS <- rbind(PRS, temp)
+        
+      }
     }
     PRS <- unique(PRS)
     # Need to also plot the barchart level stuff with green
@@ -1718,6 +1729,7 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
     threshold <- as.numeric(as.character(PRS$Threshold))
     PRS.ori <- PRS
     threshold <- as.numeric(as.character(PRS.ori$Threshold))
+    cur.pheno <- unique(PRS$Pheno)
     # Basically, a very inefficient way to fill in all the bar-level if some of the bar are being skipped
     for (i in barchart.levels) {
         # Only proceed if this is something we want to fill in 
@@ -1736,7 +1748,17 @@ bar_plot <- function(PRS, prefix, argv, use.ggplot) {
             # Our current bar level is not bigger than any other observed bar leve
             # This suggest there isn't any SNP located within this bar, and therefore
             # this bar should be NA (or 0)
-            temp <- data.frame(Set=PRS.ori[1,]$Set, Threshold=i, R2=NA, P=NA, Coefficient=NA, Standard.Error=NA, Num_SNP=0)
+          temp <-
+            data.frame(
+              Pheno = cur.pheno,
+              Set = PRS.ori[1, ]$Set,
+              Threshold = i,
+              R2 = NA,
+              P = NA,
+              Coefficient = NA,
+              Standard.Error = NA,
+              Num_SNP = 0
+            )
             PRS <- rbind(PRS, temp)
             
         }
