@@ -346,10 +346,7 @@ public:
     {
         if (i > m_sample_id.size())
             throw std::out_of_range("Sample name vector out of range");
-        if (m_ignore_fid)
-            return m_sample_id[i].IID;
-        else
-            return m_sample_id[i].FID + delim + m_sample_id[i].IID;
+        return m_sample_id[i].FID + delim + m_sample_id[i].IID;
     }
 
     bool in_regression(size_t i) const
