@@ -1,4 +1,9 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-26 ([v2.3.1.b](https://github.com/choishingwan/PRSice/tree/9e756f9c8fe9f9ed24c4b5e6c770f64f3112eeb1))
+- Fix best score output when `--ignore-fid` is used
+- Also fix Rscript covariate and phenotype file read when handling IDs star
+t with 00 and when `--ignore-fid` is used
+
 # 2020-05-26 ([v2.3.1.a](https://github.com/choishingwan/PRSice/tree/86b002170316c63d1b7255c5f1d5f136242802c0))
 - Fix bar plot with covariate. Was plotting the full R2 instead of the PRS.R2
 
