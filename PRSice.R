@@ -19,7 +19,7 @@ In_Regression <-
     R2 <-
     print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.3.1.b"
+r.version <- "2.3.1.c"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
@@ -74,7 +74,6 @@ help_message <-
                             For multiple phenotypes, the input should be\n
                             separated by comma without space. \n
                             Default: T if --beta and F if --beta is not\n
-    --geno                  Filter SNPs based on gentype missingness\n
     --info                  Filter SNPs based on info score. Only used\n
                             for imputed target\n
     --keep                  File containing the sample(s) to be extracted from\n
@@ -463,6 +462,8 @@ option_list <- list(
   # Base file
   make_option(c("--A1"), type = "character"),
   make_option(c("--A2"), type = "character"),
+  make_option(c("--a1"), type = "character"),
+  make_option(c("--a2"), type = "character"),
   make_option(c("-b", "--base"), type = "character"),
   make_option(c("--base-info"), type = "character", dest = "base_info"),
   make_option(c("--base-maf"), type = "character", dest = "base_maf"), 
@@ -925,7 +926,7 @@ binary.vector <- NULL
 if(!provided("binary_target", argv)){
   num.pheno <- 1
   if(provided("pheno_col", argv)){
-    num.pheno <- length(strsplit(argv$pheno_col, str=",")[[1]])
+    num.pheno <- length(strsplit(argv$pheno_col, split=",")[[1]])
   }
   if(base.beta){
     binary.vector <- rep(F, num.pheno)
@@ -938,7 +939,6 @@ if(!provided("binary_target", argv)){
   # Try to parse binary_target into vector of TF 
   binary.vector <- get_binary_vector(argv$binary_target)
 }
-
 
 # Sanity check for binary-target
 if(provided("pheno_col", argv) ){
@@ -988,7 +988,8 @@ call_quantile <-
         if(!is.null(covariance)){
             pheno.merge <- merge(pheno.merge, covariance)
         }
-        independent.variables <- c("quantile", "Pheno", colnames(covariance[,!colnames(covariance)%in%c("FID","IID")]))
+        independent.variables <-
+          c("quantile", "Pheno", colnames(covariance[, !colnames(covariance) %in% c("FID", "IID")]))
         reg <-
             summary(glm(Pheno ~ ., family, data = pheno.merge[, independent.variables]))
         coef.quantiles <- (reg$coefficients[1:num_quant, 1])
@@ -2187,7 +2188,7 @@ if (provided("pheno_col", argv)) {
         "Error: Duplicated phenotype column detected. Please make sure you have provided the correct input"
       )
     }
-    valid.pheno <- pheno.cols %in% colnames(header)
+    valid.pheno <-  colnames(header) %in% pheno.cols 
     if (sum(valid.pheno) == 0) {
       stop("Error: None of the phenotype is identified in phenotype header!")
     } else if (sum(valid.pheno) != length(pheno.cols)) {
@@ -2196,7 +2197,7 @@ if (provided("pheno_col", argv)) {
         writeLines(i)
       }
     }
-    binary.vector <- binary.vector[valid.pheno]
+    binary.vector <- binary.vector[pheno.cols %in% colnames(header)]
     pheno.cols <- pheno.cols[valid.pheno]
     pheno.index <- 1:length(header)
     pheno.index <- pheno.index[valid.pheno]
@@ -2210,7 +2211,6 @@ if (provided("pheno_col", argv)) {
     stop("Too many binary target information. We only have one phenotype")
   }
 }
-
 
 # Read in covariates ------------------------------------------------------
 update_cov_header <- function(c) {
@@ -2584,7 +2584,6 @@ if (use.data.table) {
   phenotype <-
     read.table(pheno.file, header = F, colClasses = colclass)
 }
-
 
 if (!is.null(pheno.cols) &
     length(pheno.cols) > 1) {
