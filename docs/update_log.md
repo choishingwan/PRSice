@@ -1,4 +1,9 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-28 ([v2.3.1.c](https://github.com/choishingwan/PRSice/tree/56b84ea6051cba23ee91bbbad4ebde272582bbd6))
+- Fix problem with missing covariate
+- Fix Rscript such that it properly read in phenotype file when `--pheno-co
+l` is specified
+
 # 2020-05-26 ([v2.3.1.b](https://github.com/choishingwan/PRSice/tree/9e756f9c8fe9f9ed24c4b5e6c770f64f3112eeb1))
 - Fix best score output when `--ignore-fid` is used
 - Also fix Rscript covariate and phenotype file read when handling IDs star
