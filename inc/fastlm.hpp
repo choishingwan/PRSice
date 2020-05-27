@@ -48,7 +48,7 @@ protected:
     Eigen::Index m_n;
     Eigen::Index m_p;
     Eigen::VectorXd m_coef;
-    Eigen::Index m_r;
+    Eigen::Index m_r = -1;
     Eigen::VectorXd m_fitted;
     Eigen::VectorXd m_se;
     Eigen::MatrixXd::RealScalar m_prescribedThreshold;

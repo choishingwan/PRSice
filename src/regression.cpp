@@ -53,7 +53,7 @@ void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
     coeff = ans.coef()(1);
     Eigen::Index rank = ans.rank();
     Eigen::VectorXd resid = y - ans.fitted();
-    Eigen::Index df = (rank >= 0) ? n - X.cols() : n - rank;
+    Eigen::Index df = (rank < 0) ? n - X.cols() : n - rank;
     double s = resid.norm() / std::sqrt(double(df));
     Eigen::VectorXd se = s * ans.se();
     standard_error = se(1);

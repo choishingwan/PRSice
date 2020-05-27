@@ -22,6 +22,7 @@ lm& lm::setThreshold(const Eigen::MatrixXd::RealScalar& threshold)
     m_prescribedThreshold = threshold;
     return *this;
 }
+
 ColPivQR::ColPivQR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
     : lm(X, y)
 {
@@ -47,8 +48,6 @@ ColPivQR::ColPivQR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
                              .topLeftCorner(m_r, m_r)
                              .triangularView<Eigen::Upper>()
                              .solve(Eigen::MatrixXd::Identity(m_r, m_r)));
-    m_se.head(m_r) = Rinv.rowwise().norm();
-    m_se = Pmat * m_se;
 
     Eigen::VectorXd effects(PQR.householderQ().adjoint() * y);
     m_coef.head(m_r) = Rinv * effects.head(m_r);
@@ -57,6 +56,8 @@ ColPivQR::ColPivQR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y)
     // (can't use X*m_coef if X is rank-deficient)
     effects.tail(m_n - m_r).setZero();
     m_fitted = PQR.householderQ() * effects;
+    m_se.head(m_r) = Rinv.rowwise().norm();
+    m_se = Pmat * m_se;
 }
 
 QR::QR(const Eigen::MatrixXd& X, const Eigen::VectorXd& y) : lm(X, y)
