@@ -89,20 +89,21 @@ TEST_CASE("covarience check and factor level count")
     auto&& sample_with_pheno = prsice.sample_with_phenotypes();
     const std::string delim = " ";
     auto ignore_fid = GENERATE(true, false);
+    size_t pheno_idx = 0;
     for (size_t i = 0; i < num_sample; ++i)
     {
         // auto cur_pheno = pheno();
         auto cur_pheno = i;
-        auto in_regression = in_reg();
+        auto valid_pheno = in_reg();
         geno.add_sample(Sample_ID(std::to_string(i), std::to_string(i),
-                                  std::to_string(cur_pheno), in_regression));
-        geno.update_valid_sample(i, in_regression);
-        if (in_regression)
+                                  std::to_string(cur_pheno), valid_pheno));
+        geno.update_valid_sample(i, valid_pheno);
+        if (valid_pheno)
         {
             sample_in_regression[i] = true;
             std::string id = std::to_string(i);
             if (!ignore_fid) id.append(delim + std::to_string(i));
-            sample_with_pheno[id] = i;
+            sample_with_pheno[id] = pheno_idx++;
             sample_pheno.push_back(
                 misc::convert<double>(std::to_string(cur_pheno)));
         }
@@ -115,15 +116,19 @@ TEST_CASE("covarience check and factor level count")
     std::string cov_header = "FID IID PC1 Something PC2 Sex Age Batch Centre\n";
     SECTION("Valid input")
     {
-        const size_t sample_in_file = 2000;
+        const size_t num_cov_sample = 2000;
         std::string cov_file = cov_header;
         std::unordered_map<std::string, size_t> expected_batch, expected_sex;
         size_t batch_count = 0, sex_count = 0;
         std::vector<double> expected_pheno;
         auto&& sample_vec = geno.get_sample_vec();
-        for (size_t i = 0; i < sample_in_file; ++i)
+        for (size_t i = 0; i < num_cov_sample; ++i)
         {
-            if (i >= num_sample || !sample_vec[i].in_regression)
+            auto id = ignore_fid
+                          ? std::to_string(i)
+                          : std::to_string(i) + delim + std::to_string(i);
+            if (i >= num_sample || !sample_vec[i].valid_phenotype
+                || sample_with_pheno.find(id) == sample_with_pheno.end())
             {
                 // doesn't matter what we sim
                 cov_file.append(std::to_string(i) + " " + std::to_string(i)
@@ -141,14 +146,12 @@ TEST_CASE("covarience check and factor level count")
                 auto cur_sex = sex();
                 if (valid_cov)
                 {
-                    expected_pheno.push_back(
-                        misc::convert<double>(sample_vec[i].pheno));
                     if (expected_sex.find(cur_sex) == expected_sex.end())
                     { expected_sex[cur_sex] = sex_count++; }
                     if (expected_batch.find(cur_batch) == expected_batch.end())
                     { expected_batch[cur_batch] = batch_count++; }
-                    if (geno.sample_valid_for_regress(i))
-                    { geno.update_valid_sample(i, true); }
+                    expected_pheno.push_back(
+                        misc::convert<double>(sample_vec[i].pheno));
                 }
                 cov_file.append(std::to_string(i) + " " + std::to_string(i)
                                 + " " + pc1 + " " + std::to_string(pheno())
@@ -157,6 +160,7 @@ TEST_CASE("covarience check and factor level count")
                                 + cur_batch + " " + batch() + "\n");
             }
         }
+
         std::unique_ptr<std::istream> input_file =
             std::make_unique<std::istringstream>(cov_file);
 
@@ -181,7 +185,15 @@ TEST_CASE("covarience check and factor level count")
         REQUIRE(static_cast<size_t>(pheno_matrix.rows())
                 == expected_pheno.size());
         for (size_t i = 0; i < expected_pheno.size(); ++i)
-        { REQUIRE(pheno_matrix(i, 0) == Approx(expected_pheno[i])); }
+        {
+            if (pheno_matrix(i) != expected_pheno[i])
+            {
+                std::cout << pheno_matrix(i) << "\t" << expected_pheno[i]
+                          << std::endl;
+                exit(0);
+            }
+            REQUIRE(pheno_matrix(i, 0) == Approx(expected_pheno[i]));
+        }
     }
     SECTION("Invalid cov file format")
     {
@@ -260,28 +272,32 @@ TEST_CASE("Update valid samples from m_phenotype")
     Reporter reporter("log", 60, true);
     geno.set_reporter(&reporter);
     std::vector<double> sample_pheno;
-    std::vector<bool> valid_after_covariate(num_sample, false);
+    std::vector<bool> valid_after_covariate;
     size_t num_cov_valid = 0;
     std::vector<double> expected_pheno;
     const std::string delim = " ";
     auto ignore_fid = GENERATE(true, false);
     std::unordered_map<std::string, size_t> expected_id_map;
+    mock_prsice prsice;
+    auto&& sample_with_pheno = prsice.sample_with_phenotypes();
+    size_t pheno_idx = 0;
     for (size_t i = 0; i < num_sample; ++i)
     {
         auto cur_pheno = pheno();
+        // auto cur_pheno = i;
         auto valid_sample = valid();
         geno.add_sample(Sample_ID(std::to_string(i), std::to_string(i),
                                   std::to_string(cur_pheno), valid_sample));
-        geno.update_valid_sample(i, false);
+        geno.update_valid_sample(i, valid_sample);
         if (valid_sample)
         {
+            auto id = std::to_string(i);
+            if (!ignore_fid) id.append(delim + std::to_string(i));
+            sample_with_pheno[id] = pheno_idx++;
             sample_pheno.push_back(cur_pheno);
-            geno.update_valid_sample(i, true);
-            valid_after_covariate[i] = valid();
-            if (valid_after_covariate[i])
+            valid_after_covariate.push_back(valid());
+            if (valid_after_covariate.back())
             {
-                auto id = std::to_string(i);
-                if (!ignore_fid) id.append(delim + std::to_string(i));
                 expected_id_map[id] = num_cov_valid;
                 expected_pheno.push_back(cur_pheno);
                 ++num_cov_valid;
@@ -289,9 +305,9 @@ TEST_CASE("Update valid samples from m_phenotype")
         }
     }
 
-    mock_prsice prsice;
     prsice.phenotype_matrix() = Eigen::Map<Eigen::VectorXd>(
         sample_pheno.data(), static_cast<Eigen::Index>(sample_pheno.size()));
+    for (size_t i = 0; i < valid_after_covariate.size(); ++i) {}
     prsice.test_update_phenotype_matrix(valid_after_covariate, delim,
                                         num_cov_valid, ignore_fid, geno);
     Eigen::VectorXd res = prsice.phenotype_matrix();

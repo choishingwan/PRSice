@@ -616,16 +616,19 @@ void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_cov,
 {
     Eigen::VectorXd new_pheno = Eigen::VectorXd::Zero(num_valid);
     const size_t num_sample = target.num_sample();
-    size_t new_matrix_idx = 0, pheno_matrix_idx = 0;
+    size_t new_matrix_idx = 0;
     for (size_t i = 0; i < num_sample; ++i)
     {
+        auto id = ignore_fid ? target.iid(i) : target.sample_id(i, delim);
         if (target.sample_valid_for_regress(i))
         {
-            auto id = ignore_fid ? target.iid(i) : target.sample_id(i, delim);
-            if (valid_cov[i])
+            auto cur_idx = m_sample_with_phenotypes.find(id);
+            if (cur_idx == m_sample_with_phenotypes.end())
+            { throw std::runtime_error("Error: Sam has some coding error"); }
+            if (valid_cov[cur_idx->second])
             {
+                new_pheno(new_matrix_idx) = m_phenotype(cur_idx->second);
                 m_sample_with_phenotypes[id] = new_matrix_idx;
-                new_pheno(new_matrix_idx) = m_phenotype(pheno_matrix_idx);
                 ++new_matrix_idx;
             }
             else
@@ -633,7 +636,6 @@ void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_cov,
                 m_sample_with_phenotypes.erase(id);
                 target.update_valid_sample(i, false);
             }
-            ++pheno_matrix_idx;
         }
     }
     m_phenotype = new_pheno;
@@ -658,7 +660,7 @@ PRSice::cov_check_and_factor_level_count(
     // we need this as the covariate file might not follow order of the
     // fam file. Size should be total number of samples in vector not in the
     // matrix as we don't know the order
-    std::vector<bool> valid_samples(target.num_sample(), false);
+    std::vector<bool> valid_samples(m_sample_with_phenotypes.size(), false);
     bool valid;
     size_t num_valid = 0;
     std::vector<std::unordered_map<std::string, size_t>> factor_levels(
@@ -675,7 +677,8 @@ PRSice::cov_check_and_factor_level_count(
                 + std::to_string(max_idx) + " columns");
         }
         id = (ignore_fid) ? token[0] : token[0] + delim + token[1];
-        auto sample_idx = m_sample_with_phenotypes.find(id);
+        // sample_idx -> second is the index on the m_phenotype file
+        const auto&& sample_idx = m_sample_with_phenotypes.find(id);
         if (sample_idx != m_sample_with_phenotypes.end())
         {
             valid =
@@ -687,7 +690,8 @@ PRSice::cov_check_and_factor_level_count(
                 continue;
             }
             duplicated_id.insert(id);
-            // sample is valid
+            // sample is valid, row of phenotype matrix should be set to true
+            assert(valid_samples.size() > sample_idx->second);
             valid_samples[sample_idx->second] = true;
             ++num_valid;
             size_t i_factor = 0;
@@ -767,6 +771,8 @@ void PRSice::propagate_independent_matrix(
     // covariate to
     std::vector<std::string> token;
     size_t i_factor = 0;
+    cov_file->clear();
+    cov_file->seekg(0, cov_file->beg);
     while (std::getline(*cov_file, line))
     {
         misc::trim(line);
@@ -783,12 +789,12 @@ void PRSice::propagate_independent_matrix(
             for (size_t i_col = 0; i_col < cov_idx.size(); ++i_col)
             {
                 auto cur_cov_idx = cov_idx[i_col];
+                auto cur_cov = token[cur_cov_idx];
                 if (is_factor.find(cur_cov_idx) != is_factor.end())
                 {
                     // -1 so that the first non-reference level will start at
                     // the first column
-                    auto cur_factor_level =
-                        factor_levels[i_factor].at(token[cur_cov_idx]);
+                    auto cur_factor_level = factor_levels[i_factor].at(cur_cov);
                     if (cur_factor_level != 0)
                     {
                         --cur_factor_level;
@@ -800,7 +806,7 @@ void PRSice::propagate_independent_matrix(
                 else
                 {
                     m_independent_variables(row_idx, cov_start[i_col]) =
-                        misc::convert<double>(token[cur_cov_idx]);
+                        misc::convert<double>(cur_cov);
                 }
             }
         }
@@ -840,8 +846,18 @@ void PRSice::gen_cov_matrix(const std::vector<std::string>& cov_names,
     m_independent_variables.col(0).setOnes();
     m_independent_variables.col(1).setOnes();
     // now propagate the matrix
-    propagate_independent_matrix(factor_levels, is_factor, cov_idx, cov_start,
-                                 delim, ignore_fid, std::move(cov_file));
+    try
+    {
+        propagate_independent_matrix(factor_levels, is_factor, cov_idx,
+                                     cov_start, delim, ignore_fid,
+                                     std::move(cov_file));
+    }
+    catch (...)
+    {
+        throw std::runtime_error(
+            "Error: Sam doesn't expect to see conversion error here");
+    }
+
     m_reporter->report("After reading the covariate file, "
                        + std::to_string(m_sample_with_phenotypes.size())
                        + " sample(s) included in the analysis\n");
