@@ -460,7 +460,7 @@ protected:
     void subject_set_perm(T& progress_observer, Genotype& target,
                           std::vector<size_t> background,
                           std::map<size_t, std::vector<size_t>>& set_index,
-                          std::vector<std::atomic<size_t>>& set_perm_res,
+                          std::vector<size_t>& set_perm_res,
                           const std::vector<double>& obs_t_value,
                           const std::random_device::result_type seed,
                           const Regress& decomposed, const size_t num_perm);
@@ -507,7 +507,7 @@ protected:
                      const Regress& decomposed,
                      std::map<size_t, std::vector<size_t>>& set_index,
                      const std::vector<double>& obs_t_value,
-                     std::vector<std::atomic<size_t>>& set_perm_res);
+                     std::vector<size_t>& set_perm_res);
 
     void null_set_no_thread(
         Genotype& target, const size_t num_background,
