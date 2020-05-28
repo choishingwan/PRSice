@@ -217,8 +217,8 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
             {
-                local_set_perm_res[set_index] +=
-                    (obs_t_value[set_index] < t_value);
+                if (obs_t_value[set_index] < t_value)
+                    ++local_set_perm_res[set_index];
             }
         }
         ++processed;
