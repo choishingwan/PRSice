@@ -1,4 +1,7 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-29 ([v2.3.1.d](https://github.com/choishingwan/PRSice/tree/1201ef4e3811dbe099fc9d49b7a463f48dc6025c))
+- Fix segmentation fault when `--ld` is used
+
 # 2020-05-28 ([v2.3.1.c](https://github.com/choishingwan/PRSice/tree/56b84ea6051cba23ee91bbbad4ebde272582bbd6))
 - Fix problem with missing covariate
 - Fix Rscript such that it properly read in phenotype file when `--pheno-co
