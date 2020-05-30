@@ -187,32 +187,31 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                                   background, first_run);
             first_run = false;
             prev_size = set_size.first;
-            for (Eigen::Index sample_id = 0; sample_id < num_sample;
-                 ++sample_id)
+            if (m_perm_info.logit_perm && m_binary_trait)
             {
-                size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
-                if (m_perm_info.logit_perm && m_binary_trait)
+                for (Eigen::Index sample_id = 0; sample_id < num_sample;
+                     ++sample_id)
                 {
+                    size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
                     independent(sample_id, 1) =
                         target.calculate_score(cur_prs, idx);
                 }
-                else
-                {
-                    prs(sample_id) = target.calculate_score(cur_prs, idx);
-                }
-            }
-            progress_observer.emplace(1);
-            //  we can now perform the glm or linear regression analysis
-            if (m_binary_trait && m_perm_info.logit_perm)
-            {
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
                                 coefficient, standard_error, 1);
             }
             else
             {
+                for (Eigen::Index sample_id = 0; sample_id < num_sample;
+                     ++sample_id)
+                {
+                    size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
+                    prs(sample_id) = target.calculate_score(cur_prs, idx);
+                }
                 std::tie(coefficient, standard_error) = get_coeff_se(
                     decomposed, decomposed.YCov, prs, beta, effects);
             }
+
+            progress_observer.emplace(1);
             t_value = std::fabs(coefficient / standard_error);
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
