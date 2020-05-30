@@ -84,7 +84,8 @@ inline void initialize_genotype(
     if (!is_ref && commander.use_ref()) current_file->expect_reference();
     current_file->load_samples();
     const bool verbose = true;
-    current_file->load_snps(commander.out(), exclusion_regions, verbose);
+    current_file->load_snps(commander.out(), exclusion_regions, verbose,
+                            target_file);
 }
 
 inline void

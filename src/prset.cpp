@@ -71,8 +71,7 @@ void PRSice::produce_null_prs(
 void PRSice::consume_prs(
     Thread_Queue<std::pair<std::vector<double>, size_t>>& q,
     const Regress& decomposed, std::map<size_t, std::vector<size_t>>& set_index,
-    const std::vector<double>& obs_t_value,
-    std::vector<std::atomic<size_t>>& set_perm_res)
+    const std::vector<double>& obs_t_value, std::vector<size_t>& set_perm_res)
 {
     const Eigen::Index num_regress_sample =
         static_cast<Eigen::Index>(m_matrix_index.size());
@@ -86,6 +85,7 @@ void PRSice::consume_prs(
     double obs_p = 2.0; // for safety reason, make sure it is out bound
     // results from queue will be stored in the prs_info
     std::pair<std::vector<double>, size_t> prs_info;
+    std::vector<size_t> local_set_perm_res(set_perm_res.size(), 0);
     // now listen for producer
     while (!q.pop(prs_info))
     {
@@ -109,9 +109,12 @@ void PRSice::consume_prs(
         auto&& index = set_index[std::get<1>(prs_info)];
         for (auto&& ref : index)
         {
-            if (obs_t_value[ref] < t_value) ++set_perm_res[ref];
+            if (obs_t_value[ref] < t_value) ++local_set_perm_res[ref];
         }
     }
+    std::lock_guard<std::mutex> lock(lock_guard);
+    for (size_t i = 0; i < set_perm_res.size(); ++i)
+    { set_perm_res[i] += local_set_perm_res[i]; }
 }
 
 void PRSice::observe_set_perm(Thread_Queue<size_t>& progress_observer,
@@ -150,7 +153,7 @@ template <typename T>
 void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                               std::vector<size_t> background,
                               std::map<size_t, std::vector<size_t>>& set_index,
-                              std::vector<std::atomic<size_t>>& set_perm_res,
+                              std::vector<size_t>& set_perm_res,
                               const std::vector<double>& obs_t_value,
                               const std::random_device::result_type seed,
                               const Regress& decomposed, const size_t num_perm)
@@ -170,6 +173,7 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
     bool first_run = true;
     std::mt19937 g(seed);
     size_t processed = 0;
+    std::vector<size_t> local_set_perm_res(set_perm_res.size(), 0);
     while (processed < num_perm)
     {
         fisher_yates(background, g, max_size);
@@ -183,40 +187,45 @@ void PRSice::subject_set_perm(T& progress_observer, Genotype& target,
                                   background, first_run);
             first_run = false;
             prev_size = set_size.first;
-            for (Eigen::Index sample_id = 0; sample_id < num_sample;
-                 ++sample_id)
+            if (m_perm_info.logit_perm && m_binary_trait)
             {
-                size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
-                if (m_perm_info.logit_perm && m_binary_trait)
+                for (Eigen::Index sample_id = 0; sample_id < num_sample;
+                     ++sample_id)
                 {
+                    size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
                     independent(sample_id, 1) =
                         target.calculate_score(cur_prs, idx);
                 }
-                else
-                {
-                    prs(sample_id) = target.calculate_score(cur_prs, idx);
-                }
-            }
-            progress_observer.emplace(1);
-            //  we can now perform the glm or linear regression analysis
-            if (m_binary_trait && m_perm_info.logit_perm)
-            {
                 Regression::glm(m_phenotype, m_independent_variables, obs_p, r2,
                                 coefficient, standard_error, 1);
             }
             else
             {
+                for (Eigen::Index sample_id = 0; sample_id < num_sample;
+                     ++sample_id)
+                {
+                    size_t idx = m_matrix_index[static_cast<size_t>(sample_id)];
+                    prs(sample_id) = target.calculate_score(cur_prs, idx);
+                }
                 std::tie(coefficient, standard_error) = get_coeff_se(
                     decomposed, decomposed.YCov, prs, beta, effects);
             }
+
+            progress_observer.emplace(1);
             t_value = std::fabs(coefficient / standard_error);
             // set_size second contain the indexs to each set with this size
             for (auto&& set_index : set_size.second)
-            { set_perm_res[set_index] += (obs_t_value[set_index] < t_value); }
+            {
+                if (obs_t_value[set_index] < t_value)
+                    ++local_set_perm_res[set_index];
+            }
         }
         ++processed;
     }
     progress_observer.completed();
+    std::lock_guard<std::mutex> lock(lock_guard);
+    for (size_t i = 0; i < set_perm_res.size(); ++i)
+    { set_perm_res[i] += local_set_perm_res[i]; }
 }
 
 void PRSice::print_set_warning()
@@ -292,8 +301,7 @@ void PRSice::run_competitive(
     }
     // set_perm_res stores number of perm where a more sig result is
     // obtained
-    std::vector<std::atomic<size_t>> set_perm_res(obs_t_value.size());
-    for (auto& set : set_perm_res) { set = 0; }
+    std::vector<size_t> set_perm_res(obs_t_value.size(), 0);
     if (max_set_size > num_bk_snps)
     {
         // can't do permutation
