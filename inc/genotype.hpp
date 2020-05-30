@@ -1273,7 +1273,7 @@ protected:
         uint32_t total_alleles = ref_ct + het_ct + alt_ct;
         double cur_geno =
             1.0 - total_alleles / (static_cast<double>(m_sample_ct));
-        if (total_alleles == m_sample_ct)
+        if (total_alleles == 0)
         {
             ++m_num_miss_filter;
             return true;
