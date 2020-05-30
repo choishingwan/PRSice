@@ -25,17 +25,25 @@ Commander::Commander()
 bool Commander::process_command(int argc, char* argv[], Reporter& reporter)
 {
     bool early_termination = false;
-    bool error = init(argc, argv, early_termination, reporter);
-    if (early_termination) return false;
-    error |= validate_command(reporter);
-    std::string message = get_program_header(argv[0]);
-    for (auto&& com : m_parameter_log)
-    { message.append(" \\\n    --" + com.first + " " + com.second); }
-    message.append("\n");
-    reporter.report(message, false);
-    if (!m_error_message.empty()) reporter.report(m_error_message);
-    if (error) throw std::runtime_error(m_error_message);
-    return true;
+    try
+    {
+        bool error = init(argc, argv, early_termination, reporter);
+        if (early_termination) return false;
+        error |= validate_command(reporter);
+        std::string message = get_program_header(argv[0]);
+        for (auto&& com : m_parameter_log)
+        { message.append(" \\\n    --" + com.first + " " + com.second); }
+        message.append("\n");
+        reporter.report(message, false);
+        if (!m_error_message.empty()) reporter.report(m_error_message);
+        if (error) throw std::runtime_error(m_error_message);
+        return true;
+    }
+    catch (const std::runtime_error& er)
+    {
+        reporter.simple_report(er.what());
+        throw er;
+    }
 }
 bool Commander::init(int argc, char* argv[], bool& early_termination,
                      Reporter& reporter)
@@ -152,8 +160,15 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"wind-3", required_argument, nullptr, 0},
         {"x-range", required_argument, nullptr, 0},
         {nullptr, 0, nullptr, 0}};
-    return parse_command(argc, argv, optString, longOpts, early_termination,
-                         reporter);
+    try
+    {
+        return parse_command(argc, argv, optString, longOpts, early_termination,
+                             reporter);
+    }
+    catch (const std::runtime_error& er)
+    {
+        throw er;
+    }
 }
 
 bool Commander::parse_command(int argc, char* argv[], const char* optString,
@@ -394,10 +409,12 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             early_termination = true;
             return true;
         case '?':
+            throw std::runtime_error("Error: " + std::string(argv[optind - 1])
+                                     + " require an argument");
         default:
-            throw "Error: Undefined operator, please use "
-                  "--help for more "
-                  "information!";
+            throw std::runtime_error("Error: Undefined operator, please use "
+                                     "--help for more "
+                                     "information!");
         }
         opt = getopt_long(argc, argv, optString, longOpts, &longIndex);
     }
