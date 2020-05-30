@@ -182,7 +182,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
     bool error = false;
     // TODO: Standardize function return such that they will return error if
     // failed
-    opterr = 0;
+    // opterr = 0;
     while (opt != -1)
     {
         switch (opt)
@@ -408,9 +408,7 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             reporter.simple_report(version + " (" + date + ") ");
             early_termination = true;
             return true;
-        case '?':
-            throw std::runtime_error("Error: " + std::string(argv[optind - 1])
-                                     + " require an argument");
+        case '?': throw std::runtime_error("");
         default:
             throw std::runtime_error("Error: Undefined operator, please use "
                                      "--help for more "
