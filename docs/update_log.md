@@ -1,4 +1,8 @@
 From now on, I will try to archive our update log here. 
+# 2020-05-30 ([v2.3.1.e](https://github.com/choishingwan/PRSice/tree/dc04caa38c05e9f15484edaeb1cfce341da7cf1d))
+- Fix bug where SNPs without missingness will be wrongly considered as having 100% missingness
+- Fix error log where PRSice should now correct stat if a parameter is missing the required arguments 
+
 # 2020-05-29 ([v2.3.1.d](https://github.com/choishingwan/PRSice/tree/1201ef4e3811dbe099fc9d49b7a463f48dc6025c))
 - Fix segmentation fault when `--ld` is used
 
