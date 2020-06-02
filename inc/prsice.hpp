@@ -364,6 +364,7 @@ protected:
     std::vector<double> m_best_sample_score;
     std::vector<size_t> m_matrix_index;
     std::vector<size_t> m_significant_store {0, 0, 0};
+    std::vector<bool> m_has_best_for_print;
     column_file_info m_all_file, m_best_file;
     double m_previous_percentage = -1.0;
     double m_previous_competitive_percentage = -1.0;

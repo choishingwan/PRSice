@@ -966,6 +966,7 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
     if (m_perm_info.run_perm) process_permutations();
     if (!no_regress && !(m_best_index < 0))
     {
+        m_has_best_for_print.push_back(true);
         // postpone summary output until we have finished competitive
         // permutation
         auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
@@ -977,6 +978,10 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
             ++m_significant_store[1];
         else
             ++m_significant_store[2];
+    }
+    else
+    {
+        m_has_best_for_print.push_back(false);
     }
 }
 
@@ -1028,7 +1033,10 @@ void PRSice::print_best(
         best_file.reset();
         return;
     }
-    if (m_best_index < 0)
+    size_t num_true = 0;
+    for (auto&& best : m_has_best_for_print) { num_true += best; }
+
+    if (num_true == 0)
     {
         // no best threshold
         m_reporter->report("Error: No best score obtained\nCannot output the "
@@ -1054,7 +1062,11 @@ void PRSice::print_best(
             for (Eigen::Index i = 0; i < m_fast_best_output.cols(); ++i)
             {
                 if (i == 1 || region_membership[i].empty()) continue;
-                (*best_file) << " " << m_fast_best_output(i_sample, i);
+                if (!m_has_best_for_print[i]) { (*best_file) << " NA"; }
+                else
+                {
+                    (*best_file) << " " << m_fast_best_output(i_sample, i);
+                }
             }
             (*best_file) << "\n";
         }
