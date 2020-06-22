@@ -964,9 +964,10 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
     }
     // we need to process the permutation result if permutation is required
     if (m_perm_info.run_perm) process_permutations();
+
     if (!no_regress && !(m_best_index < 0))
     {
-        m_has_best_for_print.push_back(true);
+        m_has_best_for_print[region_idx] = true;
         // postpone summary output until we have finished competitive
         // permutation
         auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
@@ -978,10 +979,6 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
             ++m_significant_store[1];
         else
             ++m_significant_store[2];
-    }
-    else
-    {
-        m_has_best_for_print.push_back(false);
     }
 }
 
@@ -1035,7 +1032,6 @@ void PRSice::print_best(
     }
     size_t num_true = 0;
     for (auto&& best : m_has_best_for_print) { num_true += best; }
-
     if (num_true == 0)
     {
         // no best threshold
@@ -1043,36 +1039,25 @@ void PRSice::print_best(
                            "best PRS score\n");
         return;
     }
-
-    auto&& best_info = m_prs_results[static_cast<size_t>(m_best_index)];
-    size_t best_snp_size = best_info.num_snp;
-    if (best_snp_size == 0)
+    for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
     {
-        m_reporter->report("Error: Best R2 obtained when no SNPs were "
-                           "included\nCannot output the best PRS score\n");
-    }
-    else
-    {
-        for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
+        (*best_file) << target.sample_id(i_sample, " ") << " "
+                     << ((target.sample_valid_for_regress(i_sample)) ? "Yes"
+                                                                     : "No")
+                     << std::setprecision(static_cast<int>(m_precision));
+        for (Eigen::Index i = 0; i < m_fast_best_output.cols(); ++i)
         {
-            (*best_file) << target.sample_id(i_sample, " ") << " "
-                         << ((target.sample_valid_for_regress(i_sample)) ? "Yes"
-                                                                         : "No")
-                         << std::setprecision(static_cast<int>(m_precision));
-            for (Eigen::Index i = 0; i < m_fast_best_output.cols(); ++i)
+            if (i == 1 || region_membership[i].empty()) continue;
+            if (!m_has_best_for_print[i]) { (*best_file) << " NA"; }
+            else
             {
-                if (i == 1 || region_membership[i].empty()) continue;
-                if (!m_has_best_for_print[i]) { (*best_file) << " NA"; }
-                else
-                {
-                    (*best_file) << " " << m_fast_best_output(i_sample, i);
-                }
+                (*best_file) << " " << m_fast_best_output(i_sample, i);
             }
-            (*best_file) << "\n";
         }
-        // can just close it as we assume we only need to do it once.
-        best_file.reset();
+        (*best_file) << "\n";
     }
+    // can just close it as we assume we only need to do it once.
+    best_file.reset();
 }
 
 void PRSice::regress_score(Genotype& target, const double threshold,
@@ -1335,6 +1320,7 @@ void PRSice::prep_best_output(
         m_fast_best_output =
             Eigen::MatrixXd::Zero(num_samples, region_name.size());
         m_quick_best = true;
+        m_has_best_for_print.resize(region_name.size(), false);
     }
     catch (...)
     {
@@ -1370,7 +1356,8 @@ void PRSice::prep_best_output(
                     target.sample_id(i_sample, " ") + " "
                     + ((target.sample_valid_for_regress(i_sample)) ? "Yes"
                                                                    : "No");
-                // TODO: Bug if line width is bigger than what setw can handle
+                // TODO: Bug if line width is bigger than what setw can
+                // handle
                 (*best_file)
                     << std::setfill(' ') << std::setw(m_best_file.line_width)
                     << std::left << best_line << "\n";
@@ -1408,8 +1395,8 @@ void PRSice::prep_all_score_output(
     (*all_score_file) << "FID IID";
     if (!(region_name.size() > 2))
     {
-        // add character in front so that when R parse it, it doesn't add the
-        // annoying X and properly treat it as a header
+        // add character in front so that when R parse it, it doesn't add
+        // the annoying X and properly treat it as a header
         for (auto& thres : set_thresholds.front())
         { (*all_score_file) << " Pt_" << thres; }
     }
