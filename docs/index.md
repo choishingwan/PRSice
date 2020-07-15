@@ -18,33 +18,15 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.1.e](https://github.com/choishingwan/PRSice/releases/download/2.3.1/PRSice_linux.231e.zip) |
-| OS X 64-bit | [v2.3.1.e](https://github.com/choishingwan/PRSice/releases/download/2.3.1/PRSice_mac.231e.zip) |
+| Linux 64-bit | [v2.3.2](https://github.com/choishingwan/PRSice/releases/download/2.3.2/PRSice_linux.zip) |
+| OS X 64-bit | [v2.3.2](https://github.com/choishingwan/PRSice/releases/download/2.3.2/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
 !!! Note "Latest Update"
-    # 2020-05-30 (v2.3.1.e)
-    - Fix bug where SNPs without missingness will be wrongly considered as having 100% missingness
-    - Fix error log where PRSice should now correct stat if a parameter is missing the required arguments
-
-    # 2020-05-29 (v2.3.1.d)
-    - Fix segmentation fault when `--ld` is used
-
-    # 2020-05-28 (v2.3.1.c)
-    - Fix problem with missing covariate
-    - Fix Rscript such that it properly read in phenotype file when `--pheno-col` is specified
-
-    # 2020-05-26 (v2.3.1.b)
-    - Fix best score output when `--ignore-fid` is used
-    - Also fix Rscript covariate and phenotype file read when handling IDs start with 00 and when `--ignore-fid` is used
-
-    # 2020-05-26 (v2.3.1a)
-    - Fix bar plot with covariate. Was plotting the full R2 instead of the PRS.R2
-
-    # 2020-05-23 (v2.3.1)
-    - Update Rscript such that it match features in executable (thus avoid problem in plotting)
-    - Fix a bug where PRSice will crash when there are missing covariates
+    # 2020-07-15 (v2.3.2)
+    - Fix off by one error in PRSet best score output
+    - Fix off by one error in PRSet best score output
 
     # 2020-05-18 (v2.3.0)
     - We now support multi-threaded clumping (separated by chromosome)

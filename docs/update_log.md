@@ -1,4 +1,9 @@
 From now on, I will try to archive our update log here. 
+# 2020-07-15 ([v2.3.2](https://github.com/choishingwan/PRSice/tree/e4b146e7d118277660fdfc3f5813eaebe61433ce))
+- Fix off by one error in PRSet best score output
+- Fix problem for bgen file when sample selection is performed on bgen files containing sample information
+
+
 # 2020-05-30 ([v2.3.1.e](https://github.com/choishingwan/PRSice/tree/dc04caa38c05e9f15484edaeb1cfce341da7cf1d))
 - Fix bug where SNPs without missingness will be wrongly considered as having 100% missingness
 - Fix error log where PRSice should now correct stat if a parameter is missing the required arguments 
