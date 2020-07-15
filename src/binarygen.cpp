@@ -260,26 +260,35 @@ void BinaryGen::check_sample_consistent(const genfile::bgen::Context& context,
         size_t sample_idx = 0;
         genfile::bgen::read_sample_identifier_block(
             bgen_file, tmp_context, [this, &sample_idx](const std::string& id) {
-                std::string ref_id =
-                    (m_ignore_fid ? "" : m_sample_id[sample_idx].FID + m_delim)
-                    + m_sample_id[sample_idx].IID;
-                if (ref_id != id && m_sample_id[sample_idx].IID != id)
+                auto&& find_id = m_sample_selection_list.find(id)
+                                 != m_sample_selection_list.end();
+                bool inclusion = m_remove_sample ^ find_id;
+                if (inclusion)
                 {
-                    throw std::runtime_error(
-                        "Error: Sample mismatch "
-                        "between bgen and phenotype file! Name in BGEN "
-                        "file is "
-                        ":"
-                        + id + " and in phentoype file is: " + ref_id
-                        + ". Please note that PRSice require the bgen file "
-                          "and "
-                          "the .sample (or phenotype file if sample file is "
-                          "not provided) to have sample in the same order. "
-                          "(We "
-                          "might be able to losen this requirement in future "
-                          "when we have more time)");
+                    std::string ref_id =
+                        (m_ignore_fid ? ""
+                                      : m_sample_id[sample_idx].FID + m_delim)
+                        + m_sample_id[sample_idx].IID;
+                    if (ref_id != id && m_sample_id[sample_idx].IID != id)
+                    {
+                        throw std::runtime_error(
+                            "Error: Sample mismatch "
+                            "between bgen and phenotype file! Name in BGEN "
+                            "file is "
+                            ":"
+                            + id + " and in phentoype file is: " + ref_id
+                            + ". Please note that PRSice require the bgen file "
+                              "and "
+                              "the .sample (or phenotype file if sample file "
+                              "is "
+                              "not provided) to have sample in the same order. "
+                              "(We "
+                              "might be able to losen this requirement in "
+                              "future "
+                              "when we have more time)");
+                    }
+                    ++sample_idx;
                 }
-                ++sample_idx;
             });
     }
 }
