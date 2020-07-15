@@ -904,7 +904,6 @@ void Genotype::load_samples(bool verbose)
         BITCT_TO_WORDCT(m_unfiltered_sample_ct);
     m_exclude_from_std.resize(unfiltered_sample_ctl, 0);
     if (verbose) m_reporter->report(message);
-    m_sample_selection_list.clear();
 }
 
 bool Genotype::perform_freqs_and_inter(const QCFiltering& filter_info,
@@ -1064,6 +1063,9 @@ void Genotype::load_snps(
         message = "Error: No vairant remained!\n";
         throw std::runtime_error(message);
     }
+    // only remove selection list here, as we might need this for bgen file
+    // check
+    m_sample_selection_list.clear();
 }
 
 
