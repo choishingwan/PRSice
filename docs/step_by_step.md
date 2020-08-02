@@ -4,10 +4,10 @@ perform Polygenic risk score (PRS) analyses.
 If you are unfamiliar with GWAS, you can consider reading [this paper](https://www.ncbi.nlm.nih.gov/pubmed/29484742).
 
 
-# Input Data
+## Input Data
 Here, we briefly discuss different input files required by PRSice:
 
-## Base Dataset
+### Base Dataset
 Base (i.e. GWAS) data must be provided as a whitespace delimited file containing association analysis results for SNPs on the base phenotype.
 PRSice has no problem reading in a gzipped base file (need to have a **.gz** suffix).
 
@@ -61,10 +61,10 @@ By default, PRSice will look for the following column names automatically from t
 !!! Note
     PRSice will ignore any columns that were not found in the base file (e.g. If`--A2 B` is specified but none of the column header is *B*,  then PRSice will treat it as if no *A2* information is presented)
 
-## Target Dataset
+### Target Dataset
 Currently two different target file format is supported by PRSice:
 
-### PLINK Binary
+#### PLINK Binary
 A target dataset in PLINK binary format must consist of three files: **.bed**, **.bim**, and a **.fam** file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently only SNP major PLINK format are supported  (default output of the latest PLINK program).
 
 The **.bed** and **.bim** file must have the same prefix.
@@ -102,7 +102,7 @@ prefix to PRSice.
 
     **.pgen** files are not currently supported
 
-### BGEN
+#### BGEN
 PRSice currently support BGEN v1.1 and v1.2. To specify a BGEN file, simply add the `--type bgen` or `--ld-type bgen` to the PRSice command
 
 !!! Note
@@ -135,7 +135,7 @@ To perform clumping on BGEN file, we need to repeatly decompress the genotype do
 To speed up the clumping process, you can allow PRSice to generate a large intermediate file, containing the hard
 coded genotypes in PLINK binary format by using the `--allow-inter` option.
 
-## Phenotype files
+### Phenotype files
 An external phenotype file can be provided to PRSice using the `--pheno` parameter. 
 This must be a tab / space delimited file and missing data **must** be represented by either `NA` or `-9` (only for binary traits).
 The first two column of the phenotype file should be the FID and the IID, or when
@@ -160,7 +160,7 @@ be automatically skipped.
 
 
 
-# LD reference
+## LD reference
 When the target sample is small (e.g. < 500 samples), an external reference panel can be used
 to improve the LD estimation for clumping.
 
@@ -187,7 +187,7 @@ will be used as the LD reference panel
     BGEN file will always be hard coded when used to estimate the LD
 
 
-# Clumping
+## Clumping
 By default, PRSice will perform Clumping to remove SNPs that are in LD with each other.
 Similar to PLINK, the r^2^ values computed by PRSice are based on maximum likelihood haplotype frequency estimates.
 
@@ -197,7 +197,7 @@ Alternatively, a combination of `--ld` and `--ld-keep`/`-ld-remove` can be used 
 Clumping parameters can be changed by using the `--clump-kb`, `--clump-r2` and `--clump-p` option.
 Clumping can be disabled using `--no-clump`
 
-# PRS calculation
+## PRS calculation
 PRSice allow different genetic models to be specified (e.g. add, dom, het, rec), and the polygenic score
 of each of those are calculated differently
 
@@ -282,7 +282,7 @@ the MAF of the SNP (therefore, missing samples will have PRS of 0).
     impute the missingness using the reference sample, you can use `--use-ref-maf` parameter
     to specify all MAF to be calculated using the reference samples.
 
-# Empirical P-value calculation
+## Empirical P-value calculation
 All approaches to PRS calculation involve parameter optimisation and are therefore overfitted. 
 
 There are a few methods to account for the overfitting:
@@ -293,7 +293,7 @@ There are a few methods to account for the overfitting:
 
 In, PRSice-2, we have implemented permutation procedure to calculate the empirical P-value. 
 
-## Permutation Procedure
+### Permutation Procedure
 To calculate the empirical P-value, PRSice-2 perform the following
 
 1. Perform standard PRSice analysis 
@@ -316,7 +316,7 @@ where $I(.)$ is the indicator function.
     Therefore, it is imperative to perform out-of-samp,le prediction, or cross-validation to evaluate the predictive accuracy of PRS. 
 
 
-## Computation Algorithm
+### Computation Algorithm
 In reality, PRSice-2 exploit certain property of random number generation to speed up the permutation analysis. 
 
 To generate random numbers, a random seed is required. When the same seed is provided, the same sequence of random number will always be generated. 
@@ -340,8 +340,8 @@ up of the permutation process.
     
     With binary traits, unless `--logit-perm` is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics
 
-# Output of Results
-## Bar Plot
+## Output of Results
+### Bar Plot
 
 !!! Note
 
@@ -354,7 +354,7 @@ An example bar plot:
 
 ![Bar plot](img/BARPLOT.png)
 
-## High Resolution Plot
+### High Resolution Plot
 If `--fastscore` is not specified, a high-resolution plot named *[Name]\_HIGH-RES\_PLOT\_[date].png* will be generated.
 
 This plot present the model fit of PRS calculated at all P-value thresholds.
@@ -371,7 +371,7 @@ An example high-resolution plot:
 
 ![High Resolution Plot](img/HIGH-RES_PLOT.png)
 
-## Quantile Plots
+### Quantile Plots
 If `--quantile [number of quantile]` is specified, a quantile plot named [Name]\_QUANTILE\_PLOT\_[date].png will be generated.
 The quantile plot provide an illustration of the effect of increasing PRS on predicted risk of phenotype.
 An example quantile plot:
@@ -423,7 +423,7 @@ Specifically, `--quant-break` indicates the **upper bound** of each group and `-
 !!! Note
     Usually, you will need `--quantile 100` together with `--quant-break`
 
-## PRS model-fit
+### PRS model-fit
 A file containing the PRS model fit across thresholds is named *[Name].prsice*; this is stored as
 
 > Set, Threshold, $R^2$, P-value, Coefficient, Standard Deviation and Number of SNPs at this threshold
@@ -432,7 +432,7 @@ A file containing the PRS model fit across thresholds is named *[Name].prsice*; 
 
     $R^2$ reported in the prsice file is the $R^2$ of the Full model - the $R^2$ of the Null model
 
-## Scores for each individual
+### Scores for each individual
 A file containing PRS for each individual at the best-fit PRS named
 
 *[Name].best* is provide.
@@ -453,7 +453,7 @@ If `--all-score` is used, the PRS for each individual at all threshold and all s
 In the event where the target sample size is large and a lot of threshold are tested, this file can be large.
 
 
-## Summary Information
+### Summary Information
 Information of the best model fit of each phenotype and gene set is stored in *[Name].summary*.
 The summary file contain the following fields:
 
@@ -471,7 +471,7 @@ The summary file contain the following fields:
 
 Only one summary file will be generated for each PRSice run (disregarding the number of target phenotype used)
 
-## Log File
+### Log File
 To allow for easy replication, a log file named *[Name].log* is generated for each PRSice run, 
 which contain the all the commands used for the analysis and information regarding filtering, field selected etc.
 

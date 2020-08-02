@@ -28,6 +28,7 @@ theme: readthedocs
 markdown_extensions:
     - admonition
     - pymdownx.details
+    - pymdownx.tabbed
     - pymdownx.superfences
     - toc:
         permalink: True

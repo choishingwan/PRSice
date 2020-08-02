@@ -48,7 +48,62 @@
   .superfences-tabs input:nth-child(n+1):checked + label + .superfences-content {
       display: block;
   }
-  
+
+  .tabbed-set {
+    display: flex;
+    position: relative;
+    flex-wrap: wrap;
+    border-style: solid solid none solid;
+    border-width: thin;
+    border-color: #CCC;
+    /*border-style: solid;
+    border-color: #000000;*/
+    margin-bottom: 10px;
+    }
+    
+.tabbed-set .highlight {
+    background: #ddffdd;
+}
+
+.tabbed-set .superfences-content {
+    display: none;
+    order: 99;
+    width: 100%;
+    margin-bottom: -14px;
+  }
+.tabbed-set .tabbed-content {
+    display: none;
+    order: 99;
+    width: 100%;
+    margin-bottom: -15px;
+}
+    
+.tabbed-set label {
+    width: auto;
+    margin: 0 0.5em;
+    padding: 0.25em;
+    font-size: 100%;
+    margin-bottom: -10px;
+    cursor: pointer;
+}
+    
+.tabbed-set input {
+    position: absolute;
+    opacity: 0;
+}
+    
+  .tabbed-set input:nth-child(n+1) {
+      color: #333333;
+  }
+    
+  .tabbed-set input:nth-child(n+1):checked + label {
+        color: #FF5252;
+  }
+    
+  .tabbed-set input:nth-child(n+1):checked + label + .tabbed-content {
+        display: block;
+  }
+
 .codehilite code, .codehilite pre{color:#3F3F3F;background-color:#F7F7F7;
     white-space: pre-wrap;
     overflow: auto;

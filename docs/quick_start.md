@@ -21,50 +21,58 @@ In most case,  assuming the PRSice executable is located in `($HOME)/PRSice/` an
 ## Binary Traits
 For binary traits, the following command can be used (commands specific to binary traits are highlighted in yellow)
 
-``` bash hl_lines="6 7" tab="Unix"
-Rscript PRSice.R --dir . \
-    --prsice ./PRSice \
-    --base TOY_BASE_GWAS.assoc \
-    --target TOY_TARGET_DATA \
-    --thread 1 \
-    --stat OR \
-    --binary-target T
-```
+=== "Unix"
 
-``` bash hl_lines="6 7" tab="Windows"
-Rscript.exe PRSice.R --dir . ^
-    --prsice ./PRSice.exe ^
-    --base TOY_BASE_GWAS.assoc ^
-    --target TOY_TARGET_DATA ^
-    --thread 1 ^
-    --stat OR ^
-    --binary-target T
-```
+    ``` bash hl_lines="6 7" 
+    Rscript PRSice.R --dir . \
+        --prsice ./PRSice \
+        --base TOY_BASE_GWAS.assoc \
+        --target TOY_TARGET_DATA \
+        --thread 1 \
+        --stat OR \
+        --binary-target T
+    ```
+
+=== "Windows"
+
+    ``` bash hl_lines="6 7"
+    Rscript.exe PRSice.R --dir . ^
+        --prsice ./PRSice.exe ^
+        --base TOY_BASE_GWAS.assoc ^
+        --target TOY_TARGET_DATA ^
+        --thread 1 ^
+        --stat OR ^
+        --binary-target T
+    ```
 
 ## Quantitative Traits
 For quantitative traits, the following can be used instead  (commands specific to quantitative traits are highlighted in yellow)
 
-``` bash tab="Unix" hl_lines="6 7 8" 
-Rscript PRSice.R --dir . \
-    --prsice ./PRSice \
-    --base TOY_BASE_GWAS.assoc \
-    --target TOY_TARGET_DATA \
-    --thread 1 \
-    --stat BETA \
-    --beta \
-    --binary-target F
-```
+=== "Unix"
 
-``` bash tab="Windows" hl_lines="6 7 8" 
-Rscript.exe PRSice.R --dir . ^
-    --prsice ./PRSice.exe ^
-    --base TOY_BASE_GWAS.assoc ^
-    --target TOY_TARGET_DATA ^
-    --thread 1 ^
-    --stat BETA ^
-    --beta ^
-    --binary-target F
-```
+    ``` bash hl_lines="6 7 8" 
+    Rscript PRSice.R --dir . \
+        --prsice ./PRSice \
+        --base TOY_BASE_GWAS.assoc \
+        --target TOY_TARGET_DATA \
+        --thread 1 \
+        --stat BETA \
+        --beta \
+        --binary-target F
+    ```
+
+=== "Windows"
+
+    ``` bash hl_lines="6 7 8" 
+    Rscript.exe PRSice.R --dir . ^
+        --prsice ./PRSice.exe ^
+        --base TOY_BASE_GWAS.assoc ^
+        --target TOY_TARGET_DATA ^
+        --thread 1 ^
+        --stat BETA ^
+        --beta ^
+        --binary-target F
+    ```
 
 
 !!! Note
@@ -83,27 +91,31 @@ Rscript.exe PRSice.R --dir . ^
 Quality controls can be performed on the target samples using PLINK. 
 A good starting point is (assume **_($target)_** is the prefix of the target binary file)
 
-``` bash tab="Unix"
-plink --bfile ($target) \
-    --maf 0.05 \
-    --mind 0.1 \
-    --geno 0.1 \
-    --hwe 1e-6 \
-    --make-just-bim \
-    --make-just-fam \
-    --out ($target).qc
-```
+=== "Unix"
 
-``` bash tab="Windows"
-plink.exe --bfile ($target) ^
-    --maf 0.05 ^
-    --mind 0.1 ^
-    --geno 0.1 ^
-    --hwe 1e-6 ^
-    --make-just-bim ^
-    --make-just-fam ^
-    --out ($target).qc
-```
+    ``` bash
+    plink --bfile ($target) \
+        --maf 0.05 \
+        --mind 0.1 \
+        --geno 0.1 \
+        --hwe 1e-6 \
+        --make-just-bim \
+        --make-just-fam \
+        --out ($target).qc
+    ```
+
+=== "Windows"
+
+    ``` bash 
+    plink.exe --bfile ($target) ^
+        --maf 0.05 ^
+        --mind 0.1 ^
+        --geno 0.1 ^
+        --hwe 1e-6 ^
+        --make-just-bim ^
+        --make-just-fam ^
+        --out ($target).qc
+    ```
 
 
 Then, `--keep ($target).qc.fam --extract ($target).qc.bim` can be added to the PRSice command to filter out
