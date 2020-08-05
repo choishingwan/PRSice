@@ -159,7 +159,7 @@ public:
         // assign the PRS
         else
         {
-
+            std::cerr << (*m_sample_prs).size() << "\t" << idx << std::endl;
             (*m_sample_prs)[idx].num_snp = m_ploidy;
             (*m_sample_prs)[idx].prs = m_sum * m_stat;
             dose_statistic.push(m_sum);
