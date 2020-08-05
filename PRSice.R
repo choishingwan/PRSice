@@ -10,16 +10,20 @@
 # Remove annoying messages ------------------------------------------------
 #options(error = quote({dump.frames(to.file=TRUE); q()}))
 In_Regression <-
-    DEC <-
-    Coef <-
-    CI.L <-
-    CI.U <-
-    Group <-
-    Threshold <-
-    R2 <-
-    print.p <- R <- P <- value <- Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
+  DEC <-
+  Coef <-
+  CI.L <-
+  CI.U <-
+  Group <-
+  Threshold <-
+  R2 <-
+  print.p <-
+  R <-
+  P <-
+  value <-
+  Phenotype <- Set <- PRS.R2 <- LCI <- UCI <- quant.ref <- NULL
 
-r.version <- "2.3.1.c"
+r.version <- "2.3.3"
 # Help Messages --------------------------------------
 help_message <-
 "usage: Rscript PRSice.R [options] <-b base_file> <-t target_file> <--prsice prsice_location>\n
