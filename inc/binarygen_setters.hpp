@@ -18,6 +18,7 @@ public:
                     MISSING_SCORE missing)
         : m_sample_prs(sample_prs), m_sample_inclusion(sample_inclusion)
     {
+        std::cerr << "Use interpreter initialization" << std::endl;
         m_miss_count = m_ploidy * (missing != MISSING_SCORE::SET_ZERO);
         m_setzero = (missing == MISSING_SCORE::SET_ZERO);
         m_centre = (missing == MISSING_SCORE::CENTER);
@@ -148,6 +149,7 @@ public:
               std::vector<uintptr_t>* sample_inclusion, MISSING_SCORE missing)
         : PRS_Interpreter(sample_prs, sample_inclusion, missing)
     {
+        std::cerr << "First PRS" << std::endl;
     }
     virtual ~First_PRS() {}
     void add_prs_score(size_t idx)
