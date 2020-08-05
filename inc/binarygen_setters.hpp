@@ -59,7 +59,8 @@ public:
     bool set_sample(std::size_t i)
     {
         m_is_missing = false;
-        return IS_SET(m_sample_inclusion->data(), i);
+        m_include_sample = IS_SET(m_sample_inclusion->data(), i);
+        return m_include_sample;
     }
     void set_number_of_entries(std::size_t ploidy, std::size_t,
                                genfile::OrderType phased, genfile::ValueType)
@@ -75,6 +76,7 @@ public:
 
     void sample_completed()
     {
+        if (!m_include_sample) return;
         if (!m_is_missing)
         {
             double v11_miss_check = 0.0;
@@ -140,7 +142,9 @@ protected:
     bool m_phased = false;
     bool m_setzero = false;
     bool m_centre = false;
+    bool m_include_sample = false;
 };
+
 class First_PRS : public PRS_Interpreter
 {
 public:
@@ -157,7 +161,6 @@ public:
         // assign the PRS
         else
         {
-
             (*m_sample_prs)[idx].num_snp = m_ploidy;
             (*m_sample_prs)[idx].prs = m_sum * m_stat;
             dose_statistic.push(m_sum);
