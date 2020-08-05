@@ -2,7 +2,7 @@
 PRSice relies on a number of open source projects to achieve the current performance. 
 We also used algorithm found in other projects and translate them into C++ code for our own use. Below are number of projects we relies on
 
-# Open source projects
+## Open source projects
 
 | Project | Developer(s) | Description|
 |:-|:-:|:-|

@@ -1,4 +1,7 @@
 From now on, I will try to archive our update log here. 
+# 2020-08-05 ([v2.3.3](https://github.com/choishingwan/PRSice/tree/b075dda6c93b11ef1ba5ff81fb2fbaaff70ed9e3))
+- Thanks to report from @charlisech, we were able to pinpoint a bug related to sample selection when using bgen data.
+
 # 2020-07-15 ([v2.3.2](https://github.com/choishingwan/PRSice/tree/e4b146e7d118277660fdfc3f5813eaebe61433ce))
 - Fix off by one error in PRSet best score output
 - Fix problem for bgen file when sample selection is performed on bgen files containing sample information

@@ -1,3 +1,4 @@
+# Available Commands
 This page contains all command available in PRSice. 
 
 !!! tips
@@ -6,7 +7,7 @@ This page contains all command available in PRSice.
     it will have a prefix of the file name. For example, `--base-info` applies INFO score filtering on the base file, `--ld-info` perform INFO score filtering on the LD reference file and `--info` applies the INFO score filtering on the target file. 
 
 
-# Base File
+## Base File
 - `--a1`
 
     Column header containing the **effective allele**.
@@ -103,7 +104,7 @@ This page contains all command available in PRSice.
     Otherwise, will try and search for **OR** or **BETA** from the header of the base
     file. If both **OR** and **BETA** is presented in the header, PRSice will terminate. 
 
-# Target File
+## Target File
 
 - `--binary-target`
 
@@ -215,7 +216,7 @@ This page contains all command available in PRSice.
 
     File type of the target file. Support bed (binary plink) and bgen format. Default: bed
 
-# Dosage
+## Dosage
 - `--allow-inter`
 
     Allow the generate of intermediate file. This will
@@ -253,7 +254,7 @@ This page contains all command available in PRSice.
     When set, will use hard thresholding instead of dosage for PRS construction.
     Default is to use dosage.
 
-# Clumping
+## Clumping
 - `--clump-kb`
     The distance for clumping in kb.
     For example, if `--clump-kb 250` is provided, PRSice will clump any SNPs that is 
@@ -376,7 +377,7 @@ This page contains all command available in PRSice.
     locate within the region
 
 
-# Covariate
+## Covariate
 - `--cov` | `-C`
     Covariate file. First column should be FID and
     the second column should be IID. If `--ignore-fid`
@@ -398,7 +399,7 @@ This page contains all command available in PRSice.
     `--cov-factor` must also be found in `--cov-col`
     Also accept continuous input (start with `@`).
 
-#P-value Thresholding
+## P-value Thresholding
 - `--bar-levels`
 
     Level of barchart to be plotted. When `--fastscore`
@@ -465,7 +466,7 @@ This page contains all command available in PRSice.
 
     The final p-value threshold. Default: 0.5
 
-# PRSet
+## PRSet
 - `--background`
 
     String to indicate a background file. This string
@@ -547,7 +548,7 @@ This page contains all command available in PRSice.
 
     Add N base(s) to the 5' region of each gene regions. Unit suffix are allowed e.g. `--wind-5 1M`
 
-# R specific commands
+## R specific commands
 - `--prsice`
 
     Location of the PRSice executable.
@@ -557,7 +558,7 @@ This page contains all command available in PRSice.
     Location to install require R packages. Only require if the required packages are not installed.
     We require the following packages: `optparse`, `method`, `tools`, `ggplot2`, `data.table`, `grDevices`, `RColorBrewer`
     
-# Plotting 
+## Plotting 
 
 - `--bar-col-high`
 
@@ -643,7 +644,7 @@ This page contains all command available in PRSice.
   When set, will change the y-axis of the high resolution scatter plot to R2 instead
 
 
-# Miscellaneous
+## Miscellaneous
 - `--all-score`
 
     Output PRS for ALL threshold.

@@ -9,7 +9,7 @@ Before performing PRSice, quality control should be performed on the target samp
 - **Target data set:** Raw genotype data of **target phenotype**.
 Can be in the form of  [PLINK binary](https://www.cog-genomics.org/plink2/formats#bed) or [BGEN](http://www.well.ox.ac.uk/~gav/bgen_format/)
 
-# Running PRSice
+## Running PRSice
 In most case,  assuming the PRSice executable is located in `($HOME)/PRSice/` and the working directory is `($HOME)/PRSice`, you can run PRSice with the following commands:
 
 !!! Note
@@ -18,7 +18,7 @@ In most case,  assuming the PRSice executable is located in `($HOME)/PRSice/` an
 !!! Important
     Do not copy codes to Microsoft Word. Word has a tendency to change characters from codes into special characters that cannot be recognized by the terminal
 
-## Binary Traits
+### Binary Traits
 For binary traits, the following command can be used (commands specific to binary traits are highlighted in yellow)
 
 === "Unix"
@@ -45,7 +45,7 @@ For binary traits, the following command can be used (commands specific to binar
         --binary-target T
     ```
 
-## Quantitative Traits
+### Quantitative Traits
 For quantitative traits, the following can be used instead  (commands specific to quantitative traits are highlighted in yellow)
 
 === "Unix"
@@ -86,7 +86,7 @@ For quantitative traits, the following can be used instead  (commands specific t
 
     PRSice will detail all effective options in its log file.
 
-# Quality Control of Target Samples
+## Quality Control of Target Samples
 
 Quality controls can be performed on the target samples using PLINK. 
 A good starting point is (assume **_($target)_** is the prefix of the target binary file)

@@ -1,13 +1,13 @@
 # Introduction
 Here, we detail some of the decisions we made during the implementatino of PRSice
 
-# Support of BGEN v1.3
+## Support of BGEN v1.3
 We have purposefully disabled support to BGEN v1.3 to avoid the inclusion of the zstd library. 
 This is because
 - UKBB is v1.2
 - We are not familiar with the licensing of zstd library (developed by facebook)
 
-# Removal of PCA calculation
+## Removal of PCA calculation
 The main goal of PRSice 2 is to support the polygenic score analysis on large scale data. 
 With such data, it is very time consuming to the PCA and will require specific algorithms
 such as those implemented in [flashPCA](https://github.com/gabraham/flashpca).

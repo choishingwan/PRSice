@@ -24,15 +24,18 @@ nav:
         - Archive: archive.md
         - Update Log: update_log.md
 
-theme: readthedocs
+theme: 
+    name: readthedocs
+    highlightjs: false
+    
 markdown_extensions:
     - admonition
     - pymdownx.details
     - pymdownx.tabbed
     - pymdownx.superfences
-    - toc:
-        permalink: True
-    - codehilite
+    - pymdownx.highlight:
+        use_pygments: true
+        noclasses: true
     - pymdownx.arithmatex:
         generic: True
     - pymdownx.betterem:
@@ -48,3 +51,4 @@ google_analytics:
 
 extra_javascript:
   - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML'
+  - javascripts/details.js

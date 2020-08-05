@@ -1,3 +1,11 @@
+!!! announcement Our guide paper is published
+
+    Our guide paper is now published in nature protocols:
+
+    Choi, S.W., Mak, T.S. & O’Reilly, P.F. Tutorial: a guide to performing polygenic risk score analyses. Nat Protoc (2020). [https://doi.org/10.1038/s41596-020-0353-1](https://doi.org/10.1038/s41596-020-0353-1)
+
+    You can find the accompany tutorial [here](https://choishingwan.github.io/PRS-Tutorial/)
+
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
@@ -18,15 +26,15 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.2](https://github.com/choishingwan/PRSice/releases/download/2.3.2/PRSice_linux.zip) |
-| OS X 64-bit | [v2.3.2](https://github.com/choishingwan/PRSice/releases/download/2.3.2/PRSice_mac.zip) |
+| Linux 64-bit | [v2.3.3](https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_linux.zip) |
+| OS X 64-bit | [v2.3.3](https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
 | Windows 64-bit | Not available |
 
+
 !!! Note "Latest Update"
-    # 2020-07-15 (v2.3.2)
-    - Fix off by one error in PRSet best score output
-    - Fix off by one error in PRSet best score output
+    # 2020-08-05 (v2.3.3)
+    - Thanks to report from @charlisech, we were able to pinpoint a bug related to sample selection when using bgen data.
 
     # 2020-05-18 (v2.3.0)
     - We now support multi-threaded clumping (separated by chromosome)

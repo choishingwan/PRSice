@@ -44,13 +44,13 @@ or
 Strand flips are automatically detected and accounted for.
 
 If an imputation info score or the minor allele frequencies (MAF) are also included in the file, 
-`--base-info <Info Name>,<Info Threshold>` and `--base-maf <MAF Name>,<MAF Threshold>` can be used to filter
+`--base-info <Info Name>:<Info Threshold>` and `--base-maf <MAF Name>:<MAF Threshold>` can be used to filter
 SNPs based on their INFO score and MAF respectively.
 
 For binary trait base file, SNPs can be filtered according to the MAF in case and control separately using
 
 ```
---base-maf <Name for Control>,<Threshold for Control>:<Name for Case>,<Threshold for Case>
+--base-maf <Name for Control>:<Threshold for Control>,<Name for Case>:<Threshold for Case>
 ```
 
 By default, PRSice will look for the following column names automatically from the base file header if `--index` was not provided or if the column name of the specific arguement(s) were not provided:
