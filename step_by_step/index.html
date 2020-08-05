@@ -7,14 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <meta name="author" content="Shing Wan CHOI">
+  
   <link rel="shortcut icon" href="../img/favicon.ico">
   <title>PRSice - PRSice-2</title>
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
 
-  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-  <link href="../css/extra.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link href="../css/extra.css" rel="stylesheet" />
   
   <script>
     // Current page data
@@ -24,9 +24,7 @@
   </script>
   
   <script src="../js/jquery-2.1.1.min.js" defer></script>
-  <script src="../js/modernizr-2.8.3.min.js" defer></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-  <script>hljs.initHighlightingOnLoad();</script> 
+  <script src="../js/modernizr-2.8.3.min.js" defer></script> 
   
   <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -46,6 +44,7 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
         <a href=".." class="icon icon-home"> PRSice-2</a>
         <div role="search">
@@ -56,154 +55,100 @@
       </div>
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-	<ul class="current">
-	  
-          
-            <li class="toctree-l1">
-		
-    <a class="" href="..">Home</a>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Quick Start</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../quick_start/">PRSice</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../quick_start_prset/">PRSet</a>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Detail Guides</span>
-    <ul class="subnav">
-                <li class=" current">
-                    
-    <a class="current" href="./">PRSice</a>
-    <ul class="subnav">
-            
-    <li class="toctree-l3"><a href="#background">Background</a></li>
-    
-
-    <li class="toctree-l3"><a href="#input-data">Input Data</a></li>
-    
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Quick Start</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../quick_start/">PRSice</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../quick_start_prset/">PRSet</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Detail Guides</span></p>
+                <ul class="current">
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">PRSice</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#input-data">Input Data</a>
         <ul>
-        
-            <li><a class="toctree-l4" href="#base-dataset">Base Dataset</a></li>
-        
-            <li><a class="toctree-l4" href="#target-dataset">Target Dataset</a></li>
-        
-            <li><a class="toctree-l4" href="#phenotype-files">Phenotype files</a></li>
-        
-        </ul>
-    
-
-    <li class="toctree-l3"><a href="#ld-reference">LD reference</a></li>
-    
-
-    <li class="toctree-l3"><a href="#clumping">Clumping</a></li>
-    
-
-    <li class="toctree-l3"><a href="#prs-calculation">PRS calculation</a></li>
-    
-
-    <li class="toctree-l3"><a href="#empirical-p-value-calculation">Empirical P-value calculation</a></li>
-    
+    <li class="toctree-l3"><a class="reference internal" href="#base-dataset">Base Dataset</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#target-dataset">Target Dataset</a>
         <ul>
-        
-            <li><a class="toctree-l4" href="#permutation-procedure">Permutation Procedure</a></li>
-        
-            <li><a class="toctree-l4" href="#computation-algorithm">Computation Algorithm</a></li>
-        
+    <li class="toctree-l4"><a class="reference internal" href="#plink-binary">PLINK Binary</a>
+    </li>
+    <li class="toctree-l4"><a class="reference internal" href="#bgen">BGEN</a>
+    </li>
         </ul>
-    
-
-    <li class="toctree-l3"><a href="#output-of-results">Output of Results</a></li>
-    
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#phenotype-files">Phenotype files</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#ld-reference">LD reference</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#clumping">Clumping</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#prs-calculation">PRS calculation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#empirical-p-value-calculation">Empirical P-value calculation</a>
         <ul>
-        
-            <li><a class="toctree-l4" href="#bar-plot">Bar Plot</a></li>
-        
-            <li><a class="toctree-l4" href="#high-resolution-plot">High Resolution Plot</a></li>
-        
-            <li><a class="toctree-l4" href="#quantile-plots">Quantile Plots</a></li>
-        
-            <li><a class="toctree-l4" href="#prs-model-fit">PRS model-fit</a></li>
-        
-            <li><a class="toctree-l4" href="#scores-for-each-individual">Scores for each individual</a></li>
-        
-            <li><a class="toctree-l4" href="#summary-information">Summary Information</a></li>
-        
-            <li><a class="toctree-l4" href="#log-file">Log File</a></li>
-        
+    <li class="toctree-l3"><a class="reference internal" href="#permutation-procedure">Permutation Procedure</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#computation-algorithm">Computation Algorithm</a>
+    </li>
         </ul>
-    
-
-    </ul>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../prset_detail/">PRSet</a>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <a class="" href="../command_detail/">Available Commands</a>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Developers</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../compilation/">Compile from Source</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../decisions/">Development Decisions</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../resources/">Useful Resources</a>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Misc</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../faq/">Frequently Asked Questions</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../archive/">Archive</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../update_log/">Update Log</a>
-                </li>
-    </ul>
-	    </li>
-          
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#output-of-results">Output of Results</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#bar-plot">Bar Plot</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#high-resolution-plot">High Resolution Plot</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#quantile-plots">Quantile Plots</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#prs-model-fit">PRS model-fit</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#scores-for-each-individual">Scores for each individual</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#summary-information">Summary Information</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#log-file">Log File</a>
+    </li>
         </ul>
+    </li>
+    </ul>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../prset_detail/">PRSet</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../command_detail/">Available Commands</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Developers</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../compilation/">Compile from Source</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../decisions/">Development Decisions</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../resources/">Useful Resources</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Misc</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../faq/">Frequently Asked Questions</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../archive/">Archive</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../update_log/">Update Log</a>
+                    </li>
+                </ul>
       </div>
-      &nbsp;
+    </div>
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -235,18 +180,19 @@
       
     </li>
   </ul>
+  
   <hr/>
 </div>
           <div role="main">
             <div class="section">
               
-                <h1 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h1>
+                <h1 id="background">Background</h1>
 <p>You will need to have basic understanding of Genome Wide Association Studies (GWAS) in order to be able to 
 perform Polygenic risk score (PRS) analyses.
 If you are unfamiliar with GWAS, you can consider reading <a href="https://www.ncbi.nlm.nih.gov/pubmed/29484742">this paper</a>.</p>
-<h1 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h1>
+<h2 id="input-data">Input Data</h2>
 <p>Here, we briefly discuss different input files required by PRSice:</p>
-<h2 id="base-dataset">Base Dataset<a class="headerlink" href="#base-dataset" title="Permanent link">&para;</a></h2>
+<h3 id="base-dataset">Base Dataset</h3>
 <p>Base (i.e. GWAS) data must be provided as a whitespace delimited file containing association analysis results for SNPs on the base phenotype.
 PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz</strong> suffix).</p>
 <p>If PLINK output is used, then please make sure there is a column for the effective allele (A1) and specify it with <code>--A1</code> option. </p>
@@ -309,11 +255,11 @@ PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz
 <p><code>--snp 0 --chr 1 --bp 2 --A1 3 --A2 4 --stat 5 --pvalue 7 --index</code></p>
 <p>Strand flips are automatically detected and accounted for.</p>
 <p>If an imputation info score or the minor allele frequencies (MAF) are also included in the file, 
-<code>--base-info &lt;Info Name&gt;,&lt;Info Threshold&gt;</code> and <code>--base-maf &lt;MAF Name&gt;,&lt;MAF Threshold&gt;</code> can be used to filter
+<code>--base-info &lt;Info Name&gt;:&lt;Info Threshold&gt;</code> and <code>--base-maf &lt;MAF Name&gt;:&lt;MAF Threshold&gt;</code> can be used to filter
 SNPs based on their INFO score and MAF respectively.</p>
 <p>For binary trait base file, SNPs can be filtered according to the MAF in case and control separately using</p>
-<div class="codehilite"><pre><span></span>--base-maf &lt;Name for Control&gt;,&lt;Threshold for Control&gt;:&lt;Name for Case&gt;,&lt;Threshold for Case&gt;
-</pre></div>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--base-maf &lt;Name for Control&gt;:&lt;Threshold for Control&gt;,&lt;Name for Case&gt;:&lt;Threshold for Case&gt;
+</code></pre></div>
 
 <p>By default, PRSice will look for the following column names automatically from the base file header if <code>--index</code> was not provided or if the column name of the specific arguement(s) were not provided:</p>
 <blockquote>
@@ -324,14 +270,14 @@ SNPs based on their INFO score and MAF respectively.</p>
 <p class="admonition-title">Note</p>
 <p>PRSice will ignore any columns that were not found in the base file (e.g. If<code>--A2 B</code> is specified but none of the column header is <em>B</em>,  then PRSice will treat it as if no <em>A2</em> information is presented)</p>
 </div>
-<h2 id="target-dataset">Target Dataset<a class="headerlink" href="#target-dataset" title="Permanent link">&para;</a></h2>
+<h3 id="target-dataset">Target Dataset</h3>
 <p>Currently two different target file format is supported by PRSice:</p>
-<h3 id="plink-binary">PLINK Binary<a class="headerlink" href="#plink-binary" title="Permanent link">&para;</a></h3>
+<h4 id="plink-binary">PLINK Binary</h4>
 <p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently only SNP major PLINK format are supported  (default output of the latest PLINK program).</p>
 <p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
 <p>If the <strong>.fam</strong> file follow a different prefix from the <strong>.bed</strong> and <strong>bim</strong> file, it can be specified using
-<div class="codehilite"><pre><span></span>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
-</pre></div></p>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
+</code></pre></div></p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>The fam file MUST contains the correct number of samples or PRSice will crash</p>
@@ -343,8 +289,8 @@ SNPs based on their INFO score and MAF respectively.</p>
 <p>If the binary file is separated into individual chromosomes, then an # can be used to specify the location of the chromosome number in the file name.
 PRSice will automatically substitute # with 1-22</p>
 <p>i.e. If the files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use
-<div class="codehilite"><pre><span></span>--target chr#
-</pre></div></p>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--target chr#
+</code></pre></div></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Chromosome number substitution will not be performed on the external fam file as the fam file should be the same for all chromosomes. </p>
@@ -355,7 +301,7 @@ prefix to PRSice. </p>
 <p class="admonition-title">Note</p>
 <p><strong>.pgen</strong> files are not currently supported</p>
 </div>
-<h3 id="bgen">BGEN<a class="headerlink" href="#bgen" title="Permanent link">&para;</a></h3>
+<h4 id="bgen">BGEN</h4>
 <p>PRSice currently support BGEN v1.1 and v1.2. To specify a BGEN file, simply add the <code>--type bgen</code> or <code>--ld-type bgen</code> to the PRSice command</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -365,8 +311,8 @@ You can enable the support by including the zstd library and changing the <em>bg
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
 a phenotype file (<code>--pheno</code>). Alternatively, if you have a sample file containing the phenotype information, you can 
 provide it with</p>
-<div class="codehilite"><pre><span></span>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
-</pre></div>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
+</code></pre></div>
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -387,7 +333,7 @@ coded as missing</p>
 <p>To perform clumping on BGEN file, we need to repeatly decompress the genotype dosage and convert them into PLINK binary format. 
 To speed up the clumping process, you can allow PRSice to generate a large intermediate file, containing the hard
 coded genotypes in PLINK binary format by using the <code>--allow-inter</code> option.</p>
-<h2 id="phenotype-files">Phenotype files<a class="headerlink" href="#phenotype-files" title="Permanent link">&para;</a></h2>
+<h3 id="phenotype-files">Phenotype files</h3>
 <p>An external phenotype file can be provided to PRSice using the <code>--pheno</code> parameter. 
 This must be a tab / space delimited file and missing data <strong>must</strong> be represented by either <code>NA</code> or <code>-9</code> (only for binary traits).
 The first two column of the phenotype file should be the FID and the IID, or when
@@ -407,12 +353,12 @@ be automatically skipped.</p>
 <p>When more than one traits are provided, the column name will be appended to
 the output prefix.</p>
 </div>
-<h1 id="ld-reference">LD reference<a class="headerlink" href="#ld-reference" title="Permanent link">&para;</a></h1>
+<h2 id="ld-reference">LD reference</h2>
 <p>When the target sample is small (e.g. &lt; 500 samples), an external reference panel can be used
 to improve the LD estimation for clumping.</p>
 <p>The LD reference follows the same notion as the target dataset. Simply use
-<div class="codehilite"><pre><span></span>--ld &lt;LD refernce&gt;
-</pre></div>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--ld &lt;LD refernce&gt;
+</code></pre></div>
 to specify your LD reference panel file and <code>--ld-type</code> to specify the format</p>
 <p>When a LD reference file is not provided and <code>--no-clump</code> is not specified, the target file
 will be used as the LD reference panel</p>
@@ -428,14 +374,14 @@ be provided separately to the <code>--ld</code> parameter</p>
 <p class="admonition-title">Note</p>
 <p>BGEN file will always be hard coded when used to estimate the LD</p>
 </div>
-<h1 id="clumping">Clumping<a class="headerlink" href="#clumping" title="Permanent link">&para;</a></h1>
+<h2 id="clumping">Clumping</h2>
 <p>By default, PRSice will perform Clumping to remove SNPs that are in LD with each other.
 Similar to PLINK, the r<sup>2</sup> values computed by PRSice are based on maximum likelihood haplotype frequency estimates.</p>
 <p>Both cases and controls are included in the LD calculation. 
 Alternatively, a combination of <code>--ld</code> and <code>--ld-keep</code>/<code>-ld-remove</code> can be used to restrict LD calculation in control samples. </p>
 <p>Clumping parameters can be changed by using the <code>--clump-kb</code>, <code>--clump-r2</code> and <code>--clump-p</code> option.
 Clumping can be disabled using <code>--no-clump</code></p>
-<h1 id="prs-calculation">PRS calculation<a class="headerlink" href="#prs-calculation" title="Permanent link">&para;</a></h1>
+<h2 id="prs-calculation">PRS calculation</h2>
 <p>PRSice allow different genetic models to be specified (e.g. add, dom, het, rec), and the polygenic score
 of each of those are calculated differently</p>
 <p>Assuming <span class="arithmatex">\(S\)</span> is the summary statistic for the effective allele and <span class="arithmatex">\(G\)</span> is the number
@@ -501,7 +447,7 @@ the MAF of the SNP (therefore, missing samples will have PRS of 0).</p>
 impute the missingness using the reference sample, you can use <code>--use-ref-maf</code> parameter
 to specify all MAF to be calculated using the reference samples.</p>
 </div>
-<h1 id="empirical-p-value-calculation">Empirical P-value calculation<a class="headerlink" href="#empirical-p-value-calculation" title="Permanent link">&para;</a></h1>
+<h2 id="empirical-p-value-calculation">Empirical P-value calculation</h2>
 <p>All approaches to PRS calculation involve parameter optimisation and are therefore overfitted. </p>
 <p>There are a few methods to account for the overfitting:</p>
 <ol>
@@ -510,7 +456,7 @@ to specify all MAF to be calculated using the reference samples.</p>
 <li>Calculate an empirical P-value</li>
 </ol>
 <p>In, PRSice-2, we have implemented permutation procedure to calculate the empirical P-value. </p>
-<h2 id="permutation-procedure">Permutation Procedure<a class="headerlink" href="#permutation-procedure" title="Permanent link">&para;</a></h2>
+<h3 id="permutation-procedure">Permutation Procedure</h3>
 <p>To calculate the empirical P-value, PRSice-2 perform the following</p>
 <ol>
 <li>Perform standard PRSice analysis <ul>
@@ -534,7 +480,7 @@ to specify all MAF to be calculated using the reference samples.</p>
 the observed phenotypic variance explained, R<sup>2</sup>, remains unadjusted and is affected by overfitting. 
 Therefore, it is imperative to perform out-of-samp,le prediction, or cross-validation to evaluate the predictive accuracy of PRS. </p>
 </div>
-<h2 id="computation-algorithm">Computation Algorithm<a class="headerlink" href="#computation-algorithm" title="Permanent link">&para;</a></h2>
+<h3 id="computation-algorithm">Computation Algorithm</h3>
 <p>In reality, PRSice-2 exploit certain property of random number generation to speed up the permutation analysis. </p>
 <p>To generate random numbers, a random seed is required. When the same seed is provided, the same sequence of random number will always be generated. 
 PRSice-2 exploit this property, such that the permutation analysis is performed as follow</p>
@@ -558,8 +504,8 @@ up of the permutation process.</p>
 <p class="admonition-title">Note</p>
 <p>With binary traits, unless <code>--logit-perm</code> is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics</p>
 </div>
-<h1 id="output-of-results">Output of Results<a class="headerlink" href="#output-of-results" title="Permanent link">&para;</a></h1>
-<h2 id="bar-plot">Bar Plot<a class="headerlink" href="#bar-plot" title="Permanent link">&para;</a></h2>
+<h2 id="output-of-results">Output of Results</h2>
+<h3 id="bar-plot">Bar Plot</h3>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Hereon,  <em>[Name]</em> is assumed to be the output prefix specified using <code>--out</code> and <em>[date]</em> is the date when the analysis was performed.</p>
@@ -568,7 +514,7 @@ up of the permutation process.</p>
 <p>The plot will be named as <em>[Name]_BARPLOT_[date].png</em> .
 An example bar plot:</p>
 <p><img alt="Bar plot" src="../img/BARPLOT.png" /></p>
-<h2 id="high-resolution-plot">High Resolution Plot<a class="headerlink" href="#high-resolution-plot" title="Permanent link">&para;</a></h2>
+<h3 id="high-resolution-plot">High Resolution Plot</h3>
 <p>If <code>--fastscore</code> is not specified, a high-resolution plot named <em>[Name]_HIGH-RES_PLOT_[date].png</em> will be generated.</p>
 <p>This plot present the model fit of PRS calculated at all P-value thresholds.</p>
 <div class="admonition important">
@@ -580,7 +526,7 @@ model fit = <span class="arithmatex">\(R^2\)</span> of <span class="arithmatex">
 <p>A green line connects points showing the model fit at the broad P-value thresholds used in the corresponding bar plot are also added.
 An example high-resolution plot:</p>
 <p><img alt="High Resolution Plot" src="../img/HIGH-RES_PLOT.png" /></p>
-<h2 id="quantile-plots">Quantile Plots<a class="headerlink" href="#quantile-plots" title="Permanent link">&para;</a></h2>
+<h3 id="quantile-plots">Quantile Plots</h3>
 <p>If <code>--quantile [number of quantile]</code> is specified, a quantile plot named [Name]_QUANTILE_PLOT_[date].png will be generated.
 The quantile plot provide an illustration of the effect of increasing PRS on predicted risk of phenotype.
 An example quantile plot:</p>
@@ -664,10 +610,10 @@ For example, to replicate the quantile break from Natarajan et al (2015):</p>
 </tbody>
 </table>
 <p>The following command can be added to PRSice command:</p>
-<div class="codehilite"><pre><span></span>--quantile 100 \
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--quantile 100 \
 --quant-break 1,5,10,20,40,60,80,90,95,99,100 \
 --quant-ref 60
-</pre></div>
+</code></pre></div>
 
 <p>Specifically, <code>--quant-break</code> indicates the <strong>upper bound</strong> of each group and <code>--quant-ref</code> specify the <strong>upper bound</strong> of the reference quantiles</p>
 <div class="admonition note">
@@ -678,7 +624,7 @@ For example, to replicate the quantile break from Natarajan et al (2015):</p>
 <p class="admonition-title">Note</p>
 <p>Usually, you will need <code>--quantile 100</code> together with <code>--quant-break</code></p>
 </div>
-<h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
+<h3 id="prs-model-fit">PRS model-fit</h3>
 <p>A file containing the PRS model fit across thresholds is named <em>[Name].prsice</em>; this is stored as</p>
 <blockquote>
 <p>Set, Threshold, <span class="arithmatex">\(R^2\)</span>, P-value, Coefficient, Standard Deviation and Number of SNPs at this threshold</p>
@@ -687,7 +633,7 @@ For example, to replicate the quantile break from Natarajan et al (2015):</p>
 <p class="admonition-title">Important</p>
 <p><span class="arithmatex">\(R^2\)</span> reported in the prsice file is the <span class="arithmatex">\(R^2\)</span> of the Full model - the <span class="arithmatex">\(R^2\)</span> of the Null model</p>
 </div>
-<h2 id="scores-for-each-individual">Scores for each individual<a class="headerlink" href="#scores-for-each-individual" title="Permanent link">&para;</a></h2>
+<h3 id="scores-for-each-individual">Scores for each individual</h3>
 <p>A file containing PRS for each individual at the best-fit PRS named</p>
 <p><em>[Name].best</em> is provide.
 This file has the format of:</p>
@@ -702,7 +648,7 @@ This file has the format of:</p>
 </blockquote>
 <p>If <code>--all-score</code> is used, the PRS for each individual at all threshold and all sets will be given.
 In the event where the target sample size is large and a lot of threshold are tested, this file can be large.</p>
-<h2 id="summary-information">Summary Information<a class="headerlink" href="#summary-information" title="Permanent link">&para;</a></h2>
+<h3 id="summary-information">Summary Information</h3>
 <p>Information of the best model fit of each phenotype and gene set is stored in <em>[Name].summary</em>.
 The summary file contain the following fields:</p>
 <ol>
@@ -719,7 +665,7 @@ The summary file contain the following fields:</p>
 <li><strong>Empirical-P</strong> - Only provided if permutation is performed. This is the empirical p-value and should account for multiple testing and over-fitting</li>
 </ol>
 <p>Only one summary file will be generated for each PRSice run (disregarding the number of target phenotype used)</p>
-<h2 id="log-file">Log File<a class="headerlink" href="#log-file" title="Permanent link">&para;</a></h2>
+<h3 id="log-file">Log File</h3>
 <p>To allow for easy replication, a log file named <em>[Name].log</em> is generated for each PRSice run, 
 which contain the all the commands used for the analysis and information regarding filtering, field selected etc.</p>
 <p>This also allow easy identification of problems and should always be included in the bug report.</p>
@@ -745,7 +691,7 @@ which contain the all the commands used for the analysis and information regardi
     
   </div>
 
-  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
       
         </div>
@@ -755,7 +701,7 @@ which contain the all the commands used for the analysis and information regardi
 
   </div>
 
-  <div class="rst-versions" role="note" style="cursor: pointer">
+  <div class="rst-versions" role="note" aria-label="versions">
     <span class="rst-current-version" data-toggle="rst-current-version">
       
           <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
@@ -771,7 +717,13 @@ which contain the all the commands used for the analysis and information regardi
     <script>var base_url = '..';</script>
     <script src="../js/theme.js" defer></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+      <script src="../javascripts/details.js" defer></script>
       <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
 
 </body>
 </html>

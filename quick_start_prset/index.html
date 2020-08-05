@@ -7,14 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <meta name="author" content="Shing Wan CHOI">
+  
   <link rel="shortcut icon" href="../img/favicon.ico">
   <title>PRSet - PRSice-2</title>
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
 
-  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-  <link href="../css/extra.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link href="../css/extra.css" rel="stylesheet" />
   
   <script>
     // Current page data
@@ -24,9 +24,7 @@
   </script>
   
   <script src="../js/jquery-2.1.1.min.js" defer></script>
-  <script src="../js/modernizr-2.8.3.min.js" defer></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-  <script>hljs.initHighlightingOnLoad();</script> 
+  <script src="../js/modernizr-2.8.3.min.js" defer></script> 
   
   <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -46,6 +44,7 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
         <a href=".." class="icon icon-home"> PRSice-2</a>
         <div role="search">
@@ -56,124 +55,70 @@
       </div>
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-	<ul class="current">
-	  
-          
-            <li class="toctree-l1">
-		
-    <a class="" href="..">Home</a>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Quick Start</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../quick_start/">PRSice</a>
-                </li>
-                <li class=" current">
-                    
-    <a class="current" href="./">PRSet</a>
-    <ul class="subnav">
-            
-    <li class="toctree-l3"><a href="#background">Background</a></li>
-    
-
-    <li class="toctree-l3"><a href="#preparation">Preparation</a></li>
-    
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Quick Start</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../quick_start/">PRSice</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">PRSet</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#preparation">Preparation</a>
         <ul>
-        
-            <li><a class="toctree-l4" href="#input">Input</a></li>
-        
-            <li><a class="toctree-l4" href="#prset-specific-input">PRSet Specific Input</a></li>
-        
+    <li class="toctree-l3"><a class="reference internal" href="#input">Input</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#prset-specific-input">PRSet Specific Input</a>
+    </li>
         </ul>
-    
-
-    <li class="toctree-l3"><a href="#running-prset">Running PRSet</a></li>
-    
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#running-prset">Running PRSet</a>
         <ul>
-        
-            <li><a class="toctree-l4" href="#with-msigdb-data">With MSigDB data</a></li>
-        
-            <li><a class="toctree-l4" href="#with-bed-files">With Bed Files</a></li>
-        
-            <li><a class="toctree-l4" href="#with-snp-set">With SNP Set</a></li>
-        
+    <li class="toctree-l3"><a class="reference internal" href="#with-msigdb-data">With MSigDB data</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#with-bed-files">With Bed Files</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#with-snp-set">With SNP Set</a>
+    </li>
         </ul>
-    
-
+    </li>
     </ul>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Detail Guides</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../step_by_step/">PRSice</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../prset_detail/">PRSet</a>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <a class="" href="../command_detail/">Available Commands</a>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Developers</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../compilation/">Compile from Source</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../decisions/">Development Decisions</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../resources/">Useful Resources</a>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Misc</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../faq/">Frequently Asked Questions</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../archive/">Archive</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../update_log/">Update Log</a>
-                </li>
-    </ul>
-	    </li>
-          
-        </ul>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Detail Guides</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../step_by_step/">PRSice</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../prset_detail/">PRSet</a>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../command_detail/">Available Commands</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Developers</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../compilation/">Compile from Source</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../decisions/">Development Decisions</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../resources/">Useful Resources</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Misc</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../faq/">Frequently Asked Questions</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../archive/">Archive</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../update_log/">Update Log</a>
+                    </li>
+                </ul>
       </div>
-      &nbsp;
+    </div>
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -205,28 +150,29 @@
       
     </li>
   </ul>
+  
   <hr/>
 </div>
           <div role="main">
             <div class="section">
               
-                <h1 id="background">Background<a class="headerlink" href="#background" title="Permanent link">&para;</a></h1>
+                <h1 id="background">Background</h1>
 <p>A new feature of PRSice is the ability to perform set base/pathway based analysis. This new feature is called PRSet.</p>
 <p>Paper on PRSet currently under preparation.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
 <p>PRSet is currently under active development.</p>
 </div>
-<h1 id="preparation">Preparation<a class="headerlink" href="#preparation" title="Permanent link">&para;</a></h1>
+<h2 id="preparation">Preparation</h2>
 <p>PRSet is based on <a href="../quick_start/">PRSice</a>, with additional input requirements</p>
-<h2 id="input">Input<a class="headerlink" href="#input" title="Permanent link">&para;</a></h2>
+<h3 id="input">Input</h3>
 <ul>
 <li><strong>PRSice.R file</strong>: A wrapper for the PRSice binary and for plotting</li>
 <li><strong>PRSice binary file</strong>: Perform all analysis except plotting</li>
 <li><strong>Base data set</strong>: GWAS summary results, which the PRS is based on</li>
 <li><strong>Target data set</strong>: Raw genotype data of "target phenotype". Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed">PLINK binary</a> or <a href="http://www.well.ox.ac.uk/~gav/bgen_format/">BGEN</a></li>
 </ul>
-<h2 id="prset-specific-input">PRSet Specific Input<a class="headerlink" href="#prset-specific-input" title="Permanent link">&para;</a></h2>
+<h3 id="prset-specific-input">PRSet Specific Input</h3>
 <ul>
 <li><strong>Bed file(s)</strong>: Bed file(s) containing region of genes within a gene set; or</li>
 <li><strong>MSigDB file</strong>: File containing name of each gene sets and the ID of genes within the
@@ -234,33 +180,33 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 <li><strong>GTF file</strong>: A file contain the genome boundary of each individual gene</li>
 <li><strong>SNP file</strong>: A file containing SNPs constituting the gene set of interest. Can be in MSigDB (gmt) format or a file contain a single column of SNP IDs.</li>
 </ul>
-<h1 id="running-prset">Running PRSet<a class="headerlink" href="#running-prset" title="Permanent link">&para;</a></h1>
+<h2 id="running-prset">Running PRSet</h2>
 <p>In most case, assuming the PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and the working directory is <code>($HOME)/PRSice</code>, you can run PRSet with the following commands:</p>
-<h2 id="with-msigdb-data">With MSigDB data<a class="headerlink" href="#with-msigdb-data" title="Permanent link">&para;</a></h2>
+<h3 id="with-msigdb-data">With MSigDB data</h3>
 <p>Assuming a MSigDB file (<em>set.txt</em>) is <a href="http://software.broadinstitute.org/gsea/msigdb/">downloaded</a> and a gene gtf file (gene.gtf) from <a href="http://www.ensembl.org/index.html">Ensemble</a> is available, PRSet can then be performed using: </p>
-<div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
-    --prsice ./bin/PRSice <span class="se">\</span>
-    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
-    --target TOY_TARGET_DATA <span class="se">\</span>
-    --binary-target T <span class="se">\</span>
-    --thread <span class="m">1</span> <span class="se">\</span>
-<span class="hll">    --gtf gene.gtf <span class="se">\</span>
-</span><span class="hll">    --msigdb set.txt <span class="se">\</span>
-</span><span class="hll">    --multi-plot <span class="m">10</span>
-</span></pre></div>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
+    --prsice ./bin/PRSice <span style="color: #BB6622; font-weight: bold">\</span>
+    --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
+    --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
+    --binary-target T <span style="color: #BB6622; font-weight: bold">\</span>
+    --thread <span style="color: #666666">1</span> <span style="color: #BB6622; font-weight: bold">\</span>
+<span style="background-color: #ffffcc">    --gtf gene.gtf <span style="color: #BB6622; font-weight: bold">\</span>
+</span><span style="background-color: #ffffcc">    --msigdb set.txt <span style="color: #BB6622; font-weight: bold">\</span>
+</span><span style="background-color: #ffffcc">    --multi-plot <span style="color: #666666">10</span>
+</span></code></pre></div>
 
 <p>This will perform PRSet analysis and generate the multi-set plot with the top 10 gene sets</p>
-<h2 id="with-bed-files">With Bed Files<a class="headerlink" href="#with-bed-files" title="Permanent link">&para;</a></h2>
+<h3 id="with-bed-files">With Bed Files</h3>
 <p>Alternatively, if a list of bed files are available, e.g. <em>A.bed,B.bed</em>, PRSet can be performed by running</p>
-<div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
-    --prsice ./bin/PRSice <span class="se">\</span>
-    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
-    --target TOY_TARGET_DATA <span class="se">\</span>
-    --binary-target T <span class="se">\</span>
-    --thread <span class="m">1</span> <span class="se">\</span>
-<span class="hll">    --bed A.bed:SetA,B.bed <span class="se">\</span>
-</span><span class="hll">    --multi-plot <span class="m">10</span>
-</span></pre></div>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
+    --prsice ./bin/PRSice <span style="color: #BB6622; font-weight: bold">\</span>
+    --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
+    --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
+    --binary-target T <span style="color: #BB6622; font-weight: bold">\</span>
+    --thread <span style="color: #666666">1</span> <span style="color: #BB6622; font-weight: bold">\</span>
+<span style="background-color: #ffffcc">    --bed A.bed:SetA,B.bed <span style="color: #BB6622; font-weight: bold">\</span>
+</span><span style="background-color: #ffffcc">    --multi-plot <span style="color: #666666">10</span>
+</span></code></pre></div>
 
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -270,17 +216,17 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 <p class="admonition-title">Tips</p>
 <p>Name of the set will be the bed file name or can be provided using <code>--bed File:Name</code></p>
 </div>
-<h2 id="with-snp-set">With SNP Set<a class="headerlink" href="#with-snp-set" title="Permanent link">&para;</a></h2>
+<h3 id="with-snp-set">With SNP Set</h3>
 <p>Finally, if you want to construct sets based on a list of SNPs, you can use <code>--snp-set</code>:</p>
-<div class="codehilite"><pre><span></span>Rscript PRSice.R <span class="se">\</span>
-    --prsice ./bin/PRSice <span class="se">\</span>
-    --base TOY_BASE_GWAS.assoc <span class="se">\</span>
-    --target TOY_TARGET_DATA <span class="se">\</span>
-    --binary-target T <span class="se">\</span>
-    --thread <span class="m">1</span> <span class="se">\</span>
-<span class="hll">    --snp-set A.snp:A,B.snp <span class="se">\</span>
-</span><span class="hll">    --multi-plot <span class="m">10</span>
-</span></pre></div>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
+    --prsice ./bin/PRSice <span style="color: #BB6622; font-weight: bold">\</span>
+    --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
+    --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
+    --binary-target T <span style="color: #BB6622; font-weight: bold">\</span>
+    --thread <span style="color: #666666">1</span> <span style="color: #BB6622; font-weight: bold">\</span>
+<span style="background-color: #ffffcc">    --snp-set A.snp:A,B.snp <span style="color: #BB6622; font-weight: bold">\</span>
+</span><span style="background-color: #ffffcc">    --multi-plot <span style="color: #666666">10</span>
+</span></code></pre></div>
 
 <p>Two different format are allowed:</p>
 <ul>
@@ -309,7 +255,7 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
     
   </div>
 
-  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
       
         </div>
@@ -319,7 +265,7 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 
   </div>
 
-  <div class="rst-versions" role="note" style="cursor: pointer">
+  <div class="rst-versions" role="note" aria-label="versions">
     <span class="rst-current-version" data-toggle="rst-current-version">
       
           <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
@@ -335,7 +281,13 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
     <script>var base_url = '..';</script>
     <script src="../js/theme.js" defer></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+      <script src="../javascripts/details.js" defer></script>
       <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
 
 </body>
 </html>

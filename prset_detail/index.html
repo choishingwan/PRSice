@@ -7,14 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <meta name="author" content="Shing Wan CHOI">
+  
   <link rel="shortcut icon" href="../img/favicon.ico">
   <title>PRSet - PRSice-2</title>
-  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700" />
 
-  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
-  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
-  <link href="../css/extra.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/theme.css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" />
+  <link href="../css/extra.css" rel="stylesheet" />
   
   <script>
     // Current page data
@@ -24,9 +24,7 @@
   </script>
   
   <script src="../js/jquery-2.1.1.min.js" defer></script>
-  <script src="../js/modernizr-2.8.3.min.js" defer></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
-  <script>hljs.initHighlightingOnLoad();</script> 
+  <script src="../js/modernizr-2.8.3.min.js" defer></script> 
   
   <script>
       (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
@@ -46,6 +44,7 @@
 
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
       <div class="wy-side-nav-search">
         <a href=".." class="icon icon-home"> PRSice-2</a>
         <div role="search">
@@ -56,157 +55,60 @@
       </div>
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-	<ul class="current">
-	  
-          
-            <li class="toctree-l1">
-		
-    <a class="" href="..">Home</a>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Quick Start</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../quick_start/">PRSice</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../quick_start_prset/">PRSet</a>
-                </li>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Quick Start</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../quick_start/">PRSice</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../quick_start_prset/">PRSet</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Detail Guides</span></p>
+                <ul class="current">
+                    <li class="toctree-l1"><a class="reference internal" href="../step_by_step/">PRSice</a>
+                    </li>
+                    <li class="toctree-l1 current"><a class="reference internal current" href="./">PRSet</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#msigdb">MSigDB</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#gene-gtf">Gene GTF</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#bed-files">Bed Files</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#snp-set-files">SNP Set Files</a>
+    </li>
     </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Detail Guides</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../step_by_step/">PRSice</a>
-                </li>
-                <li class=" current">
-                    
-    <a class="current" href="./">PRSet</a>
-    <ul class="subnav">
-            
-    <li class="toctree-l3"><a href="#input-data">Input Data</a></li>
-    
-        <ul>
-        
-            <li><a class="toctree-l4" href="#msigdb">MSigDB</a></li>
-        
-            <li><a class="toctree-l4" href="#gene-gtf">Gene GTF</a></li>
-        
-            <li><a class="toctree-l4" href="#bed-files">Bed Files</a></li>
-        
-            <li><a class="toctree-l4" href="#snp-set-files">SNP Set Files</a></li>
-        
-        </ul>
-    
-
-    <li class="toctree-l3"><a href="#clumping-in-prset">Clumping in PRSet</a></li>
-    
-
-    <li class="toctree-l3"><a href="#p-value-threshold-and-proxy-clumping">P-value Threshold and Proxy Clumping</a></li>
-    
-
-    <li class="toctree-l3"><a href="#options">Options</a></li>
-    
-        <ul>
-        
-            <li><a class="toctree-l4" href="#proxy-prset">Proxy PRSet</a></li>
-        
-            <li><a class="toctree-l4" href="#p-value-thresholding">P-value thresholding</a></li>
-        
-        </ul>
-    
-
-    <li class="toctree-l3"><a href="#competitive-p-value-calculation">Competitive P-value Calculation</a></li>
-    
-        <ul>
-        
-            <li><a class="toctree-l4" href="#computation-algorithm">Computation Algorithm</a></li>
-        
-        </ul>
-    
-
-    <li class="toctree-l3"><a href="#output-data">Output Data</a></li>
-    
-        <ul>
-        
-            <li><a class="toctree-l4" href="#prs-model-fit">PRS model-fit</a></li>
-        
-            <li><a class="toctree-l4" href="#scores-for-each-individual">Scores for each individual</a></li>
-        
-            <li><a class="toctree-l4" href="#summary-information">Summary Information</a></li>
-        
-            <li><a class="toctree-l4" href="#multi-set-plot">Multi-Set Plot</a></li>
-        
-            <li><a class="toctree-l4" href="#other-figures">Other Figures</a></li>
-        
-            <li><a class="toctree-l4" href="#log-file">Log File</a></li>
-        
-        </ul>
-    
-
-    </ul>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <a class="" href="../command_detail/">Available Commands</a>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Developers</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../compilation/">Compile from Source</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../decisions/">Development Decisions</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../resources/">Useful Resources</a>
-                </li>
-    </ul>
-	    </li>
-          
-            <li class="toctree-l1">
-		
-    <span class="caption-text">Misc</span>
-    <ul class="subnav">
-                <li class="">
-                    
-    <a class="" href="../extra_steps/">Additional Steps for MAC and Window users</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../faq/">Frequently Asked Questions</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../archive/">Archive</a>
-                </li>
-                <li class="">
-                    
-    <a class="" href="../update_log/">Update Log</a>
-                </li>
-    </ul>
-	    </li>
-          
-        </ul>
+                    </li>
+                </ul>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../command_detail/">Available Commands</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Developers</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../compilation/">Compile from Source</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../decisions/">Development Decisions</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../resources/">Useful Resources</a>
+                    </li>
+                </ul>
+                <p class="caption"><span class="caption-text">Misc</span></p>
+                <ul>
+                    <li class="toctree-l1"><a class="reference internal" href="../extra_steps/">Additional Steps for MAC and Window users</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../faq/">Frequently Asked Questions</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../archive/">Archive</a>
+                    </li>
+                    <li class="toctree-l1"><a class="reference internal" href="../update_log/">Update Log</a>
+                    </li>
+                </ul>
       </div>
-      &nbsp;
+    </div>
     </nav>
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
@@ -238,13 +140,14 @@
       
     </li>
   </ul>
+  
   <hr/>
 </div>
           <div role="main">
             <div class="section">
               
-                <h1 id="input-data">Input Data<a class="headerlink" href="#input-data" title="Permanent link">&para;</a></h1>
-<h2 id="msigdb">MSigDB<a class="headerlink" href="#msigdb" title="Permanent link">&para;</a></h2>
+                <h1 id="input-data">Input Data</h1>
+<h2 id="msigdb">MSigDB</h2>
 <p>One simple way to obtain gene sets or pathway is through the <a href="http://software.broadinstitute.org/gsea/msigdb/">MSigDB</a>.
 After registration in <a href="http://software.broadinstitute.org/gsea/login.jsp;jsessionid=EEFB5FCE8B9B285B2F789B46B388A647#msigdb">here</a>, you can download different gene sets curated by the Broad Institute.
 Alternatively, you can also generate your own gene sets in the GMT format:</p>
@@ -259,7 +162,7 @@ Alternatively, you can also generate your own gene sets in the GMT format:</p>
 </pre>
 
 <p>And PRSet can properly handle that.</p>
-<h2 id="gene-gtf">Gene GTF<a class="headerlink" href="#gene-gtf" title="Permanent link">&para;</a></h2>
+<h2 id="gene-gtf">Gene GTF</h2>
 <p>As MSigDB file does not contain the genome boundary of the genes within the gene set,
 one must also provide a GTF file. A GTF file contains the genome boundary of the genetic
 elements within the human genome and PRSet can use the information from GTF to determine if
@@ -272,7 +175,7 @@ Alternatively, you can specify the features using the <code>--feature</code> com
 <p class="admonition-title">Note</p>
 <p>For those who are unfamiliar, different version of the genome might differ slightly in their coordinates. Therefore it is vital to ensure all the files are originated from the same genome build</p>
 </div>
-<h2 id="bed-files">Bed Files<a class="headerlink" href="#bed-files" title="Permanent link">&para;</a></h2>
+<h2 id="bed-files">Bed Files</h2>
 <p>In addition, PRSet also accept bed file(s) as an input.</p>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
@@ -288,14 +191,14 @@ Alternatively, you can specify the features using the <code>--feature</code> com
 <p class="admonition-title">Note</p>
 <p>An annoying feature of bed file is that it starts with 0 whereas for example, the plink formats starts the coordinates at 1. So do remember to -1 from the region start when you build your own bed file from scratch.</p>
 </div>
-<h2 id="snp-set-files">SNP Set Files<a class="headerlink" href="#snp-set-files" title="Permanent link">&para;</a></h2>
+<h2 id="snp-set-files">SNP Set Files</h2>
 <p>Finally, PRSet also allow SNP sets, input via the <code>--snp-set</code> option.</p>
 <p>Two different formats are allowed</p>
 <ul>
 <li>SNP list format, a file containing a single column of SNP ID. Name of the set will be the file name or can be provided using <code>--snp-set File:Name</code></li>
 <li>MSigDB format: Each row represent a single SNP set with the first column containing the name of the SNP set.</li>
 </ul>
-<h1 id="clumping-in-prset">Clumping in PRSet<a class="headerlink" href="#clumping-in-prset" title="Permanent link">&para;</a></h1>
+<h1 id="clumping-in-prset">Clumping in PRSet</h1>
 <p>In PRSice-2, clumping is performed to account for linkage disequilibrium (LD) between SNPs.
 However, when performing set based analysis, special care are required to perform clumping. 
 Take the following as an example:
@@ -386,19 +289,19 @@ For example: </p>
 </tbody>
 </table>
 <p>which removes SNP 2, but will retain SNP 3. This allow us to achieve set based clumping by only performing a single pass genome wide clumping. </p>
-<h1 id="p-value-threshold-and-proxy-clumping">P-value Threshold and Proxy Clumping<a class="headerlink" href="#p-value-threshold-and-proxy-clumping" title="Permanent link">&para;</a></h1>
-<h1 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h1>
-<h2 id="proxy-prset">Proxy PRSet<a class="headerlink" href="#proxy-prset" title="Permanent link">&para;</a></h2>
+<h1 id="p-value-threshold-and-proxy-clumping">P-value Threshold and Proxy Clumping</h1>
+<h1 id="options">Options</h1>
+<h2 id="proxy-prset">Proxy PRSet</h2>
 <p>One complication in PRSet is the definition of SNP membership.
 The default option of PRSet is to only include SNPs that are physically within the target region.
 However, it is also likely for SNPs outside the region to influence functions of the set.
 Therefore we provide the <code>--proxy</code> option. Essentially, this provide a soft cutoff to SNP membership.
 For example, when user define <code>--proxy 0.8</code>, if LD between SNP A and SNP B is more than 0.8, then SNP A will be considered to be within the same regions as SNP B and vice versa.</p>
-<h2 id="p-value-thresholding">P-value thresholding<a class="headerlink" href="#p-value-thresholding" title="Permanent link">&para;</a></h2>
+<h2 id="p-value-thresholding">P-value thresholding</h2>
 <p>By default, PRSet do not perform p-value thresholding and will simply calculate the set based PRS at P-value threshold of 1. 
 This is because it is unclear whether the set is associated with the phenotype when the best-threshold contained only a small portion of SNPs within the gene sets.
 If you wish to perform p-value thresholding with PRSet, you will need to specify any of the parameters related to p-value thresholding, i.e. <code>--interval</code>, <code>--lower</code>, <code>--upper</code>, <code>--fastscore</code> or <code>--bar-levels</code>.</p>
-<h1 id="competitive-p-value-calculation">Competitive P-value Calculation<a class="headerlink" href="#competitive-p-value-calculation" title="Permanent link">&para;</a></h1>
+<h1 id="competitive-p-value-calculation">Competitive P-value Calculation</h1>
 <p>A challenge in Set base analysis is to obtain a competitive p-value, 
 which indicates the level of enrichment, as opposed to the self-contained 
 p-value which indicates the level of association. 
@@ -428,7 +331,7 @@ To obtain a competitive p-value, PRSet can perform a permutation analysis as fol
 </ol>
 </li>
 </ol>
-<h2 id="computation-algorithm">Computation Algorithm<a class="headerlink" href="#computation-algorithm" title="Permanent link">&para;</a></h2>
+<h2 id="computation-algorithm">Computation Algorithm</h2>
 <p>Due to the number of operation required, the set based permutation are extremely time consuming. To speed up the set based permutation, we noted that in regression,</p>
 <p>$$
 Y\sim X\beta+C+\epsilon
@@ -448,12 +351,12 @@ X\sim Y\beta+C+\epsilon
 <p class="admonition-title">Note</p>
 <p>With binary traits, unless <code>--logit-perm</code> is set, we will still perform linear regression as we assume linear regression and logistic regression should produce similar t-statistics</p>
 </div>
-<h1 id="output-data">Output Data<a class="headerlink" href="#output-data" title="Permanent link">&para;</a></h1>
-<h2 id="prs-model-fit">PRS model-fit<a class="headerlink" href="#prs-model-fit" title="Permanent link">&para;</a></h2>
+<h1 id="output-data">Output Data</h1>
+<h2 id="prs-model-fit">PRS model-fit</h2>
 <p>A file containing the PRS model fit across thresholds is named <strong>[Name].prsice</strong>, where <strong>[Name]</strong> is the
 output prefix name as specified by <code>--out</code> this is stored as</p>
 <p>Name of Set, Threshold, R2, P-value, Coefficient, Standard Error, and Number of SNPs at this threshold</p>
-<h2 id="scores-for-each-individual">Scores for each individual<a class="headerlink" href="#scores-for-each-individual" title="Permanent link">&para;</a></h2>
+<h2 id="scores-for-each-individual">Scores for each individual</h2>
 <p>A file containing PRS for each individual at the best-fit PRS named</p>
 <p><strong>[Name].best</strong> is provide.
 This file has the format of:</p>
@@ -475,7 +378,7 @@ is the name of the phenotype.
 For more details on the options used to implement this, see
 <a href="../step_by_step/#phenotype-files">here</a>.</p>
 </div>
-<h2 id="summary-information">Summary Information<a class="headerlink" href="#summary-information" title="Permanent link">&para;</a></h2>
+<h2 id="summary-information">Summary Information</h2>
 <p>Information of the best model fit of each phenotype and gene set is stored in [Name].summary.
 The summary file contain the following fields:</p>
 <ol>
@@ -492,14 +395,14 @@ The summary file contain the following fields:</p>
 <li><strong>Empirical-P</strong> - Only provided if permutation is performed. This is the empirical p-value and should account for multiple testing and over-fitting</li>
 <li><strong>Competitive-P</strong> - Only provided if set permutation is performed. This is the competitive p-value and should measure the enrichment of signal of the gene set</li>
 </ol>
-<h2 id="multi-set-plot">Multi-Set Plot<a class="headerlink" href="#multi-set-plot" title="Permanent link">&para;</a></h2>
+<h2 id="multi-set-plot">Multi-Set Plot</h2>
 <p>When the <code>--multi-plot &lt;N&gt;</code> option is set, the results of the top <em>N</em> gene sets will be plotted.
 An example of the multi-set plot is:</p>
 <p><img alt="multo set plot" src="../img/MULTISET_BARPLOT.png" /></p>
-<h2 id="other-figures">Other Figures<a class="headerlink" href="#other-figures" title="Permanent link">&para;</a></h2>
+<h2 id="other-figures">Other Figures</h2>
 <p>The default behaviour of PRSet is to only plot the High-resolution plot, bar-plot and the quantile plot
 for the "Base" data. You can change this behaviour by using the <code>--plot-set</code> option.</p>
-<h2 id="log-file">Log File<a class="headerlink" href="#log-file" title="Permanent link">&para;</a></h2>
+<h2 id="log-file">Log File</h2>
 <p>We value reproducible research. Therefore we try our best to make replicating PRSice run easier.
 For every PRSice run, a log file named <strong>[Name].log</strong> is generated which contain the all the commands
 used for the analysis and information regarding filtering, field selected etc.</p>
@@ -526,7 +429,7 @@ used for the analysis and information regarding filtering, field selected etc.</
     
   </div>
 
-  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
 </footer>
       
         </div>
@@ -536,7 +439,7 @@ used for the analysis and information regarding filtering, field selected etc.</
 
   </div>
 
-  <div class="rst-versions" role="note" style="cursor: pointer">
+  <div class="rst-versions" role="note" aria-label="versions">
     <span class="rst-current-version" data-toggle="rst-current-version">
       
           <a href="https://github.com/choishingwan/PRSice/" class="fa fa-github" style="float: left; color: #fcfcfc"> GitHub</a>
@@ -552,7 +455,13 @@ used for the analysis and information regarding filtering, field selected etc.</
     <script>var base_url = '..';</script>
     <script src="../js/theme.js" defer></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+      <script src="../javascripts/details.js" defer></script>
       <script src="../search/main.js" defer></script>
+    <script defer>
+        window.onload = function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        };
+    </script>
 
 </body>
 </html>
