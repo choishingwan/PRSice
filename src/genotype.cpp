@@ -1181,20 +1181,18 @@ void Genotype::clumping(const Clumping& clump_info, Genotype& reference,
     for (auto&& s : remain_snps) { s = false; }
     std::atomic<size_t> num_core = 0;
     using range = std::pair<size_t, size_t>;
+    // get boundaries
+    std::vector<range> snp_range = get_chrom_boundary();
     if (threads == 1)
     {
         dummy_reporter progress_reporter(m_existed_snps.size(),
                                          !m_reporter->unit_testing());
-        threaded_clumping(std::vector<range> {range(0, m_existed_snps.size())},
-                          clump_info, progress_reporter, remain_snps, num_core,
-                          reference);
+        threaded_clumping(snp_range, clump_info, progress_reporter, remain_snps,
+                          num_core, reference);
     }
     else
     {
         if (threads > m_autosome_ct) { threads = m_autosome_ct; }
-        // get boundaries
-
-        std::vector<range> snp_range = get_chrom_boundary();
         Thread_Queue<size_t> progress_observer;
         std::thread observer(&Genotype::clump_progress_observer, this,
                              std::ref(progress_observer), m_existed_snps.size(),
@@ -1280,11 +1278,19 @@ void Genotype::threaded_clumping(
     // available memory size
     // can set number to way higher with ultra (e.g. all SNPs)
     size_t num_snp_in_chr = 0;
+    size_t max_snp_in_chr = 0;
+    // only reserves the max amount of SNPs required for all chromosome involved
     for (auto&& range : snp_range)
-    { num_snp_in_chr += std::get<1>(range) - std::get<0>(range); }
-    const auto max_size = m_max_window_size > std::floor(num_snp_in_chr * 0.2)
+    {
+        num_snp_in_chr = std::get<1>(range) - std::get<0>(range);
+        if (num_snp_in_chr > max_snp_in_chr) max_snp_in_chr = num_snp_in_chr;
+    }
+    // define the max size as the maximum window size if it is bigger than 20%
+    // of the size of current chromosome. Otherwise, define the max size as 20%
+    // of the chromosome.
+    const auto max_size = m_max_window_size > std::floor(max_snp_in_chr * 0.2)
                               ? m_max_window_size
-                              : std::floor(num_snp_in_chr * 0.2);
+                              : std::floor(max_snp_in_chr * 0.2);
     GenotypePool genotype_pool(max_size + 1, unfiltered_sample_ctv2);
     auto tmp_genotype = genotype_pool.alloc();
     double r2 = -1;
@@ -1325,6 +1331,7 @@ void Genotype::threaded_clumping(
                 { continue; }
                 if (clump_snp.current_genotype() == nullptr)
                 {
+                    // store clump SNP's genotype into our genotype pool
                     clump_snp.set_genotype_storage(genotype_pool.alloc());
                     reference.read_genotype(
                         clump_snp, reference.m_founder_ct, genotype_file,
@@ -1334,6 +1341,7 @@ void Genotype::threaded_clumping(
             }
             if (core_snp.current_genotype() == nullptr)
             {
+                // store core SNP's genotype into our genotype pool
                 core_snp.set_genotype_storage(genotype_pool.alloc());
                 reference.read_genotype(core_snp, reference.m_founder_ct,
                                         genotype_file, tmp_genotype->get_geno(),
@@ -1343,6 +1351,8 @@ void Genotype::threaded_clumping(
             update_index_tot(founder_ctl2, founder_ctv2, reference.m_founder_ct,
                              index_data, index_tots, founder_include2,
                              core_snp.current_genotype());
+            // free core SNP's genotype form the genotype pool as we will no
+            // longer need it. (it will never be clumped by another SNP)
             core_snp.freed_geno_storage(genotype_pool);
 
             for (size_t clump_idx = clump_start_idx; clump_idx < core_snp_idx;
@@ -1360,6 +1370,8 @@ void Genotype::threaded_clumping(
                 {
                     core_snp.clump(clump_snp, r2, clump_info.use_proxy,
                                    clump_info.proxy);
+                    // remove SNP's genotype data from the genotype pool if it
+                    // is clumped out
                     if (clump_snp.clumped())
                     { clump_snp.freed_geno_storage(genotype_pool); }
                 }
@@ -1375,6 +1387,7 @@ void Genotype::threaded_clumping(
                     continue;
                 if (clump_snp.current_genotype() == nullptr)
                 {
+                    // store clump SNP's genotype into our genotype pool
                     clump_snp.set_genotype_storage(genotype_pool.alloc());
                     reference.read_genotype(
                         clump_snp, reference.m_founder_ct, genotype_file,
@@ -1387,6 +1400,8 @@ void Genotype::threaded_clumping(
 
                 if (r2 >= min_r2)
                 {
+                    // remove SNP's genotype data from the genotype pool if it
+                    // is clumped out
                     core_snp.clump(clump_snp, r2, clump_info.use_proxy,
                                    clump_info.proxy);
                     if (clump_snp.clumped())
@@ -1399,6 +1414,8 @@ void Genotype::threaded_clumping(
             ++num_processed;
             ++local_num_core;
         }
+        // in theory, by the time we reached here, genotype_pool should be empty
+        // as all SNPs should either be clumped out or are index
     }
 
     progress_observer.completed();
