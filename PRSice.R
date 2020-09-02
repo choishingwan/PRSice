@@ -2202,7 +2202,7 @@ if (provided("pheno_col", argv)) {
       }
     }
     binary.vector <- binary.vector[pheno.cols %in% colnames(header)]
-    pheno.cols <- pheno.cols[valid.pheno]
+    pheno.cols <- pheno.cols[pheno.cols %in% colnames(header)]
     pheno.index <- 1:length(header)
     pheno.index <- pheno.index[valid.pheno]
   }
@@ -2420,7 +2420,7 @@ process_plot <-
     pheno <- phenotype
     if (is_binary) {
       pheno$Pheno[pheno$Pheno == -9] <- NA
-      if (max(pheno$Pheno) == 2) {
+      if (max(pheno$Pheno, na.rm = T) == 2) {
         pheno$Pheno <- pheno$Pheno - 1
       }
     }
