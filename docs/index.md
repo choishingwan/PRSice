@@ -10,9 +10,6 @@
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
-
-PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
-
 1. High-resolution scoring (PRS calculated across a large number of P-value thresholds)
 2. Identify Most predictive PRS
 3. Empirical P-values output (not subject to over-fitting)
