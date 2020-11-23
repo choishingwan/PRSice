@@ -31,7 +31,10 @@ std::string Genotype::print_duplicated_snps(
     for (auto&& snp : m_existed_snps)
     {
         // we only output the valid SNPs.
-        if (duplicated_snp.find(snp.rs()) == duplicated_snp.end())
+        if (duplicated_snp.find(snp.rs()) == duplicated_snp.end()
+            && (!m_has_chr_id_formula
+                || duplicated_snp.find(get_chr_id(snp))
+                       == duplicated_snp.end()))
             log_file_stream << snp.rs() << "\t" << snp.chr() << "\t"
                             << snp.loc() << "\t" << snp.ref() << "\t"
                             << snp.alt() << "\n";

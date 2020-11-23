@@ -866,6 +866,46 @@ protected:
         processed_idx.insert(id);
         return true;
     }
+
+    std::string get_chr_id(const SNP& snp) const
+    {
+        // check if we have all the column we need
+        std::string chr_id = "";
+        for (auto col : m_chr_id_column)
+        {
+            if (col < 0)
+            {
+                auto idx = (-1 * col - 1);
+                chr_id += m_chr_id_symbol[idx];
+            }
+            else
+            {
+                std::string str;
+                switch (col)
+                {
+                case +BASE_INDEX::EFFECT:
+                    str = snp.ref();
+                    misc::to_upper(str);
+                    chr_id += str;
+                    break;
+                case +BASE_INDEX::NONEFFECT:
+                    str = snp.alt();
+                    misc::to_upper(str);
+                    chr_id += str;
+                    break;
+                case +BASE_INDEX::CHR:
+                    str = std::to_string(snp.chr());
+                    chr_id += str;
+                    break;
+                case +BASE_INDEX::BP:
+                    str = std::to_string(snp.loc());
+                    chr_id += str;
+                    break;
+                }
+            }
+        }
+        return chr_id;
+    }
     bool parse_rs_id(const std::vector<std::string_view>& token,
                      const BaseFile& base_file,
                      std::unordered_set<std::string>& processed_idx,
