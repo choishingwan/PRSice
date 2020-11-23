@@ -43,7 +43,7 @@
 #endif
 
 const std::string version = "2.3.4";
-const std::string date = "2020-09-01";
+const std::string date = "2020-11-04";
 class Commander
 {
 public:
@@ -94,6 +94,7 @@ public:
     bool keep_ambig() const { return m_keep_ambig; }
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
+    bool clump_only() const { return m_clump_only; }
 
 protected:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -112,6 +113,7 @@ protected:
     int m_print_snp = false;
     int m_ultra_aggressive = false;
     int m_user_no_default = false;
+    int m_clump_only = false;
     bool m_provided_memory = false;
     bool m_set_delim = false;
     bool m_ran_base_check = false;

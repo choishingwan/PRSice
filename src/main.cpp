@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
                                       commander.use_ref() ? *reference_file
                                                           : *target_file,
                                       commander.get_prs_instruction().thread);
+                if (commander.clump_only()) return 0;
             }
             // immediately free the memory
             if (reference_file != nullptr) { delete reference_file; }
