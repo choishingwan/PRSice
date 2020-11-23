@@ -832,32 +832,38 @@ protected:
         }
         // check for extraction / exclusion using rs_id first
         auto&& selection = m_snp_selection_list.find(id);
-        if ((!m_exclude_snp && selection == m_snp_selection_list.end())
-            || (m_exclude_snp && selection != m_snp_selection_list.end()))
+        if (m_exclude_snp && selection != m_snp_selection_list.end())
         {
+            // we want to exclude this snp
             ++filter_count[+FILTER_COUNT::SELECT];
             return false;
         }
-        else if (!chr_id.empty())
+        else if (!m_exclude_snp && selection == m_snp_selection_list.end())
         {
-            // now check if extraction / exclusion is required to be
-            // done on the chr_id
-            selection = m_snp_selection_list.find(chr_id);
-            if ((!m_exclude_snp && selection == m_snp_selection_list.end())
-                || (m_exclude_snp && selection != m_snp_selection_list.end()))
+            // want to include, but not found
+            if (chr_id.empty())
             {
                 ++filter_count[+FILTER_COUNT::SELECT];
                 return false;
             }
             else
             {
-                processed_idx.insert(chr_id);
+                selection = m_snp_selection_list.find(chr_id);
+                if ((!m_exclude_snp && selection == m_snp_selection_list.end())
+                    || (m_exclude_snp
+                        && selection != m_snp_selection_list.end()))
+                {
+                    ++filter_count[+FILTER_COUNT::SELECT];
+                    return false;
+                }
+                else
+                {
+                    processed_idx.insert(chr_id);
+                }
             }
         }
-        else
-        {
-            processed_idx.insert(id);
-        }
+        // without selection file
+        processed_idx.insert(id);
         return true;
     }
     bool parse_rs_id(const std::vector<std::string_view>& token,

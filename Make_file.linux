@@ -1,0 +1,15 @@
+CXXFLAGS=-Wall -O3 -std=c++17 -DNDEBUG
+ZLIB=lib/zlib-1.2.11/libz.a
+CXX=g++-8
+INCLUDES := -I inc/ -isystem lib/ -isystem lib/zlib-1.2.11/ -isystem lib/eigen/
+THREAD := -Wl,--whole-archive -lpthread
+SERVER := -L /usr/lib/x86_64-linux-gnu/
+GCC := -Wl,--no-whole-archive -static-libstdc++ -static-libgcc -static
+CPPSRC := src/*.cpp
+OBJ := gzstream.o bgen_lib.o binaryplink.o genotype.o misc.o dcdflib.o regression.o snp.o binarygen.o commander.o main.o plink_common.o prsice.o region.o reporter.o fastlm.o prset.o
+
+%.o: src/%.cpp
+		$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+PRSice: $(OBJ)
+		$(CXX) $(CXXFLAGS) $(INCLUDES) $(SERVER)  $^ $(ZLIB) $(THREAD) $(GCC) -o $@
