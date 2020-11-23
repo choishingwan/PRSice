@@ -217,6 +217,7 @@ Genotype::transverse_base_file(
     double progress, prev_progress = 0.0;
     std::vector<std::string_view> token;
     std::string rs_id;
+    std::string chr_id;
     std::string ref_allele;
     std::string alt_allele;
     double pvalue = 2.0;
@@ -259,7 +260,7 @@ Genotype::transverse_base_file(
                 {}
                 else */
         if (!parse_rs_id(token, base_file, processed_rs, dup_rs, filter_count,
-                         rs_id))
+                         rs_id, chr_id))
         { continue; }
         if (!parse_chr(token, base_file, filter_count, chr)) { continue; }
         parse_allele(token, base_file, +BASE_INDEX::EFFECT, ref_allele);
@@ -320,6 +321,9 @@ Genotype::transverse_base_file(
             }
         }
         m_existed_snps_index[rs_id] = m_existed_snps.size();
+        // we should also load the chr_id
+        if (!chr_id.empty())
+            m_existed_snps_index[chr_id] = m_existed_snps.size();
         m_existed_snps.emplace_back(SNP(rs_id, chr, loc, ref_allele, alt_allele,
                                         stat, pvalue, category, pthres));
     }

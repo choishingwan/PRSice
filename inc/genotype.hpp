@@ -870,17 +870,18 @@ protected:
                      const BaseFile& base_file,
                      std::unordered_set<std::string>& processed_idx,
                      std::unordered_set<std::string>& dup_rs,
-                     std::vector<size_t>& filter_count, std::string& rs_id)
+                     std::vector<size_t>& filter_count, std::string& rs_id,
+                     std::string& chr_id)
     {
         // when chr_id is provided, we should use both the rs and chr id and
         // count it as extracted / excluded / successs whenever one of them
         // is matched, this allow flexibility esp w.r.t. situation when
         // there's duplicated SNPs
+        chr_id = "";
         if (!base_file.has_column[+BASE_INDEX::RS] && !m_has_chr_id_formula)
         { throw std::runtime_error("Error: RS ID column not provided!"); }
         if (base_file.has_column[+BASE_INDEX::RS])
         { rs_id = token[base_file.column_index[+BASE_INDEX::RS]]; }
-        std::string chr_id;
         if (m_has_chr_id_formula)
         { chr_id = get_chr_id_from_base(base_file, token); }
 
