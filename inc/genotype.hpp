@@ -807,19 +807,30 @@ protected:
     void print_mismatch(const std::string& out, const std::string& type,
                         const SNP& target, const SNP& new_snp);
 
-    bool snp_dup_selection_check(const std::string& id,
+    bool snp_dup_selection_check(const std::string& chr_id, std::string& id,
                                  std::unordered_set<std::string>& processed_idx,
                                  std::unordered_set<std::string>& dup_rs,
                                  std::vector<size_t>& filter_count)
     {
+        // resize the counting vector if it isn't the correct size
         if (filter_count.size() != +FILTER_COUNT::MAX)
         { filter_count.resize(+FILTER_COUNT::MAX, 0); }
-        if (processed_idx.find(id) != processed_idx.end())
+        // if rs id isn't provided, use chr_id for all
+        if (id.empty()) id = chr_id;
+        // if chr_id or the rs_id is already found, then
+        // add it to the duplicated list. Duplicated SNPs might be
+        // more of a problem for chr_id as it is more likely to have
+        // two SNPs with same coordinates than having two different
+        // SNPs to have same coordinates
+        if (processed_idx.find(id) != processed_idx.end()
+            || (!chr_id.empty()
+                && processed_idx.find(chr_id) != processed_idx.end()))
         {
             ++filter_count[+FILTER_COUNT::DUP_SNP];
             dup_rs.insert(id);
             return false;
         }
+        // check for extraction / exclusion using rs_id first
         auto&& selection = m_snp_selection_list.find(id);
         if ((!m_exclude_snp && selection == m_snp_selection_list.end())
             || (m_exclude_snp && selection != m_snp_selection_list.end()))
@@ -827,7 +838,26 @@ protected:
             ++filter_count[+FILTER_COUNT::SELECT];
             return false;
         }
-        processed_idx.insert(id);
+        else if (!chr_id.empty())
+        {
+            // now check if extraction / exclusion is required to be
+            // done on the chr_id
+            selection = m_snp_selection_list.find(chr_id);
+            if ((!m_exclude_snp && selection == m_snp_selection_list.end())
+                || (m_exclude_snp && selection != m_snp_selection_list.end()))
+            {
+                ++filter_count[+FILTER_COUNT::SELECT];
+                return false;
+            }
+            else
+            {
+                processed_idx.insert(chr_id);
+            }
+        }
+        else
+        {
+            processed_idx.insert(id);
+        }
         return true;
     }
     bool parse_rs_id(const std::vector<std::string_view>& token,
@@ -836,18 +866,19 @@ protected:
                      std::unordered_set<std::string>& dup_rs,
                      std::vector<size_t>& filter_count, std::string& rs_id)
     {
+        // when chr_id is provided, we should use both the rs and chr id and
+        // count it as extracted / excluded / successs whenever one of them
+        // is matched, this allow flexibility esp w.r.t. situation when
+        // there's duplicated SNPs
         if (!base_file.has_column[+BASE_INDEX::RS] && !m_has_chr_id_formula)
         { throw std::runtime_error("Error: RS ID column not provided!"); }
-        else if (base_file.has_column[+BASE_INDEX::RS])
-        {
-            rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
-        }
-        else if (m_has_chr_id_formula)
-        {
-            rs_id = get_chr_id_from_base(base_file, token);
-        }
+        if (base_file.has_column[+BASE_INDEX::RS])
+        { rs_id = token[base_file.column_index[+BASE_INDEX::RS]]; }
+        std::string chr_id;
+        if (m_has_chr_id_formula)
+        { chr_id = get_chr_id_from_base(base_file, token); }
 
-        return (snp_dup_selection_check(rs_id, processed_idx, dup_rs,
+        return (snp_dup_selection_check(chr_id, rs_id, processed_idx, dup_rs,
                                         filter_count));
     }
 
