@@ -791,7 +791,7 @@ protected:
     std::string chr_id_from_genotype(const SNP& snp) const;
     std::string
     get_chr_id_from_base(const BaseFile& base_file,
-                         const std::vector<std::string_view>& token) const;
+                         const std::vector<std::string_view>& token);
     bool has_parent(const std::unordered_set<std::string>& founder_info,
                     const std::vector<std::string>& token,
                     const std::string& fid, const size_t idx);

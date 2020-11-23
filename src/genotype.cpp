@@ -175,7 +175,7 @@ void Genotype::snp_extraction(const std::string& extract_snps,
 }
 std::string
 Genotype::get_chr_id_from_base(const BaseFile& base_file,
-                               const std::vector<std::string_view>& token) const
+                               const std::vector<std::string_view>& token)
 {
     // check if we have all the column we need
     assert(!token.empty());
@@ -189,6 +189,8 @@ Genotype::get_chr_id_from_base(const BaseFile& base_file,
         }
         else if (!base_file.has_column[col])
         {
+            m_has_chr_id_formula = false;
+            return "";
             throw std::runtime_error("Error: Required column for chr id "
                                      "construction not found in base file!");
         }
