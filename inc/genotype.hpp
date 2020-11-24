@@ -918,6 +918,7 @@ protected:
         // is matched, this allow flexibility esp w.r.t. situation when
         // there's duplicated SNPs
         chr_id = "";
+        rs_id = "";
         if (!base_file.has_column[+BASE_INDEX::RS] && !m_has_chr_id_formula)
         { throw std::runtime_error("Error: RS ID column not provided!"); }
         if (base_file.has_column[+BASE_INDEX::RS])
