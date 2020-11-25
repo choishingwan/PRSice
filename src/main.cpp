@@ -109,7 +109,6 @@ int main(int argc, char* argv[])
                                       commander.use_ref() ? *reference_file
                                                           : *target_file,
                                       commander.get_prs_instruction().thread);
-                if (commander.clump_only()) return 0;
             }
             // immediately free the memory
             if (reference_file != nullptr) { delete reference_file; }
@@ -125,6 +124,7 @@ int main(int argc, char* argv[])
             auto region_membership = target_file->build_membership_matrix(
                 num_regions, region_names, commander.print_snp(),
                 *snp_file.get());
+            if (commander.clump_only()) return 0;
             // we can now quickly check if any of the region are empty
             try
             {
