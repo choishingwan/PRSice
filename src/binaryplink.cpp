@@ -126,7 +126,7 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
                     progress);
             prev_progress = progress;
         }
-        snp.get_file_info(cur_file_idx, byte_pos, m_is_ref);
+        snp->get_file_info(cur_file_idx, byte_pos, m_is_ref);
         m_genotype_file.read(m_genotype_file_names[cur_file_idx] + ".bed",
                              byte_pos,
                              static_cast<long long>(unfiltered_sample_ct4),
@@ -144,8 +144,8 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
                        filter_info.maf, missing_founder_ct))
         { continue; }
         // if we can reach here, it is not removed
-        snp.set_counts(ref_founder_count, het_founder_count, alt_founder_count,
-                       missing_founder_ct, m_is_ref);
+        snp->set_counts(ref_founder_count, het_founder_count, alt_founder_count,
+                        missing_founder_ct, m_is_ref);
         ++retained;
         // we need to -1 because we put processed_count ++ forward
         // to avoid continue skipping out the addition
@@ -209,11 +209,13 @@ size_t BinaryPlink::transverse_bed_for_snp(
         if (!check_chr(bim_token[+BIM::CHR], prev_chr, chr_num, chr_error,
                        sex_error))
         { continue; }
-        SNP cur_snp(bim_token[+BIM::RS], chr_num, loc, bim_token[+BIM::A1],
-                    bim_token[+BIM::A2], idx, byte_pos);
         if (process_snp(exclusion_regions, mismatch_snp_record_name,
-                        mismatch_source, "", cur_snp, processed_snps,
-                        duplicated_snps, retain_snp, genotype))
+                        mismatch_source, "",
+                        std::make_unique<SNP>(bim_token[+BIM::RS], chr_num, loc,
+                                              bim_token[+BIM::A1],
+                                              bim_token[+BIM::A2], idx,
+                                              byte_pos),
+                        processed_snps, duplicated_snps, retain_snp, genotype))
         { ++num_retained; }
     }
     bim.reset();
@@ -398,15 +400,15 @@ void BinaryPlink::read_score(
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        if (cur_snp.current_genotype() == nullptr)
+        if (cur_snp->current_genotype() == nullptr)
         {
-            auto [file_idx, byte_pos] = cur_snp.get_file_info(false);
+            auto [file_idx, byte_pos] = cur_snp->get_file_info(false);
             m_genotype_file.read(
                 m_genotype_file_names[file_idx] + ".bed", byte_pos,
                 unfiltered_sample_ct4,
                 reinterpret_cast<char*>(m_tmp_genotype.data()));
-            if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                    m_prs_calculation.use_ref_maf))
+            if (!cur_snp->get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                     m_prs_calculation.use_ref_maf))
             {
                 // we need to calculate the MA
                 // if we want to use reference, we will always have calculated
@@ -421,8 +423,8 @@ void BinaryPlink::read_score(
                 tmp_total = (homcom_ct + het_ct + homrar_ct);
                 assert(m_founder_ct >= tmp_total);
                 missing_ct = m_founder_ct - tmp_total;
-                cur_snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                   false);
+                cur_snp->set_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                    false);
             }
             if (m_unfiltered_sample_ct != m_sample_ct)
             {
@@ -440,27 +442,27 @@ void BinaryPlink::read_score(
         }
         else
         {
-            genotype_ptr = cur_snp.current_genotype();
-            cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                               m_prs_calculation.use_ref_maf);
+            genotype_ptr = cur_snp->current_genotype();
+            cur_snp->get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                m_prs_calculation.use_ref_maf);
         }
         if (m_founder_ct == missing_ct)
         {
             // problematic snp
-            cur_snp.invalid();
+            cur_snp->invalid();
             continue;
         }
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-        if (cur_snp.is_flipped()) { std::swap(homcom_weight, homrar_weight); }
+        if (cur_snp->is_flipped()) { std::swap(homcom_weight, homrar_weight); }
         maf = 1.0
               - static_cast<double>(homcom_weight * homcom_ct
                                     + het_ct * het_weight
                                     + homrar_weight * homrar_ct)
                     / (static_cast<double>((homcom_ct + het_ct + homrar_ct)
                                            * ploidy));
-        stat = cur_snp.stat();
+        stat = cur_snp->stat();
         adj_score = 0;
         if (is_centre) { adj_score = ploidy * stat * maf; }
         miss_score = 0;

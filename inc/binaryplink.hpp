@@ -68,13 +68,14 @@ protected:
         Genotype* genotype);
     std::unordered_set<std::string>
     get_founder_info(std::unique_ptr<std::istream>& famfile);
-    inline void count_and_read_genotype(SNP& snp) override
+    inline void
+    count_and_read_genotype(const std::unique_ptr<SNP>& snp) override
     {
         // false because we only use this for target
-        auto [file_idx, byte_pos] = snp.get_file_info(false);
+        auto [file_idx, byte_pos] = snp->get_file_info(false);
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
-        auto&& snp_genotype = snp.current_genotype();
+        auto&& snp_genotype = snp->current_genotype();
         auto&& load_target = (m_unfiltered_sample_ct == m_sample_ct)
                                  ? snp_genotype
                                  : m_tmp_genotype.data();
@@ -85,8 +86,8 @@ protected:
         uint32_t missing_ct = 0;
         uint32_t het_ct = 0;
         uint32_t homcom_ct = 0;
-        if (!snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                            m_prs_calculation.use_ref_maf))
+        if (!snp->get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                             m_prs_calculation.use_ref_maf))
         {
             const uintptr_t unfiltered_sample_ctl =
                 BITCT_TO_WORDCT(m_unfiltered_sample_ct);
@@ -100,7 +101,7 @@ protected:
             tmp_total = (homcom_ct + het_ct + homrar_ct);
             assert(m_founder_ct >= tmp_total);
             missing_ct = m_founder_ct - tmp_total;
-            snp.set_counts(homcom_ct, het_ct, homrar_ct, missing_ct, false);
+            snp->set_counts(homcom_ct, het_ct, homrar_ct, missing_ct, false);
         }
         if (m_unfiltered_sample_ct != m_sample_ct)
         {
@@ -117,14 +118,15 @@ protected:
         }
     }
 
-    inline void read_genotype(const SNP& snp, const uintptr_t selected_size,
+    inline void read_genotype(const std::unique_ptr<SNP>& snp,
+                              const uintptr_t selected_size,
                               FileRead& genotype_file,
                               uintptr_t* __restrict tmp_genotype,
                               uintptr_t* __restrict genotype,
                               uintptr_t* __restrict subset_mask,
                               bool is_ref = false) override
     {
-        auto [file_idx, byte_pos] = snp.get_file_info(is_ref);
+        auto [file_idx, byte_pos] = snp->get_file_info(is_ref);
         // first, generate the mask to mask out the last few byte that we don't
         // want (if our sample number isn't a multiple of 16, it is possible
         // that there'll be trailling bytes that we don't want

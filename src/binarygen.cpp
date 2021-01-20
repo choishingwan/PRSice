@@ -342,11 +342,12 @@ size_t BinaryGen::transverse_bgen_for_snp(
         // skip to current location later on
         if (check_chr(chromosome, prev_chr, chr_num, chr_error, sex_error))
         {
-            SNP cur_snp(RSID, chr_num, SNP_position, A1, A2, file_idx,
-                        bgen_file->tellg());
-            if (process_snp(exclusion_regions, mismatch_snp_record_name,
-                            mismatch_source, SNPID, cur_snp, processed_snps,
-                            duplicated_snps, retain_snp, genotype))
+            if (process_snp(
+                    exclusion_regions, mismatch_snp_record_name,
+                    mismatch_source, SNPID,
+                    std::make_unique<SNP>(RSID, chr_num, SNP_position, A1, A2,
+                                          file_idx, bgen_file->tellg()),
+                    processed_snps, duplicated_snps, retain_snp, genotype))
             { ++ref_target_match; }
         }
 
@@ -474,7 +475,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
                     progress);
             prev_progress = progress;
         }
-        snp.get_file_info(cur_file_idx, byte_pos, m_is_ref);
+        snp->get_file_info(cur_file_idx, byte_pos, m_is_ref);
         // now read in the genotype information
         genfile::bgen::read_and_parse_genotype_data_block<PLINK_generator>(
             m_genotype_file, m_genotype_file_names[cur_file_idx] + ".bgen",
@@ -494,9 +495,9 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
             continue;
         }
         // if we can reach here, it is not removed
-        snp.set_counts(ref_count, het_count, alt_count, missing_count,
-                       m_is_ref);
-        snp.set_expected(setter.expected(), m_is_ref);
+        snp->set_counts(ref_count, het_count, alt_count, missing_count,
+                        m_is_ref);
+        snp->set_expected(setter.expected(), m_is_ref);
         ++retained;
         // we need to -1 because we put processed_count ++ forward
         // to avoid continue skipping out the addition
@@ -521,23 +522,23 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
                 if (m_hard_coded)
                 {
                     m_target_plink = true;
-                    snp.update_file(m_genotype_file_names.size(), tmp_byte_pos,
-                                    false);
+                    snp->update_file(m_genotype_file_names.size(), tmp_byte_pos,
+                                     false);
                 }
                 if (!m_expect_reference)
                 {
                     // we don't have reference, so use target as reference
                     m_ref_plink = true;
-                    snp.update_file(m_genotype_file_names.size(), tmp_byte_pos,
-                                    true);
+                    snp->update_file(m_genotype_file_names.size(), tmp_byte_pos,
+                                     true);
                 }
             }
             else
             {
                 // this is the reference file
                 m_ref_plink = true;
-                snp.update_file(m_genotype_file_names.size(), tmp_byte_pos,
-                                true);
+                snp->update_file(m_genotype_file_names.size(), tmp_byte_pos,
+                                 true);
             }
         }
     }
@@ -596,11 +597,11 @@ void BinaryGen::dosage_score(
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& snp = m_existed_snps[(*cur_idx)];
-        std::tie(file_idx, byte_pos) = snp.get_file_info(m_is_ref);
+        std::tie(file_idx, byte_pos) = snp->get_file_info(m_is_ref);
         // if the file name differ, or the file isn't open, we will open it
         auto&& context = m_context_map[file_idx];
-        setter->set_stat(snp.stat(), m_homcom_weight, m_het_weight,
-                         m_homrar_weight, snp.is_flipped());
+        setter->set_stat(snp->stat(), m_homcom_weight, m_het_weight,
+                         m_homrar_weight, snp->is_flipped());
         // start performing the parsing
         genfile::bgen::read_and_parse_genotype_data_block<PRS_Interpreter>(
             m_genotype_file, m_genotype_file_names[file_idx] + ".bgen", context,
@@ -649,14 +650,14 @@ void BinaryGen::hard_code_score(
     for (; cur_idx != end_idx; ++cur_idx)
     {
         auto&& cur_snp = m_existed_snps[(*cur_idx)];
-        if (cur_snp.current_genotype() == nullptr)
+        if (cur_snp->current_genotype() == nullptr)
         {
-            auto [idx, byte_pos] = cur_snp.get_file_info(m_is_ref);
+            auto [idx, byte_pos] = cur_snp->get_file_info(m_is_ref);
             if (m_intermediate)
             {
-                if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct,
-                                        missing_ct,
-                                        m_prs_calculation.use_ref_maf))
+                if (!cur_snp->get_counts(homcom_ct, het_ct, homrar_ct,
+                                         missing_ct,
+                                         m_prs_calculation.use_ref_maf))
                 {
                     throw std::logic_error(
                         "Error: Sam has a logic error in bgen");
@@ -684,9 +685,9 @@ void BinaryGen::hard_code_score(
                 }
                 else
                 {
-                    if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct,
-                                            missing_ct,
-                                            m_prs_calculation.use_ref_maf))
+                    if (!cur_snp->get_counts(homcom_ct, het_ct, homrar_ct,
+                                             missing_ct,
+                                             m_prs_calculation.use_ref_maf))
                     {
                         throw std::runtime_error(
                             "Error: Sam forgot to load genotype count from "
@@ -698,15 +699,15 @@ void BinaryGen::hard_code_score(
         }
         else
         {
-            if (!cur_snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                                    m_prs_calculation.use_ref_maf))
+            if (!cur_snp->get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                                     m_prs_calculation.use_ref_maf))
             { throw std::runtime_error("Error: Sam has a logic error"); }
-            genotype_ptr = cur_snp.current_genotype();
+            genotype_ptr = cur_snp->current_genotype();
         }
         homcom_weight = m_homcom_weight;
         het_weight = m_het_weight;
         homrar_weight = m_homrar_weight;
-        if (cur_snp.is_flipped()) { std::swap(homcom_weight, homrar_weight); }
+        if (cur_snp->is_flipped()) { std::swap(homcom_weight, homrar_weight); }
         maf = 1.0
               - static_cast<double>(homcom_weight * homcom_ct
                                     + het_ct * het_weight
@@ -714,7 +715,7 @@ void BinaryGen::hard_code_score(
                     / (static_cast<double>(homcom_ct + het_ct + homrar_ct)
                        * ploidy);
 
-        stat = cur_snp.stat();
+        stat = cur_snp->stat();
         adj_score = 0;
         if (is_centre) { adj_score = ploidy * stat * maf; }
         miss_score = 0;
@@ -726,10 +727,10 @@ void BinaryGen::hard_code_score(
     }
 }
 
-void BinaryGen::count_and_read_genotype(SNP& snp)
+void BinaryGen::count_and_read_genotype(const std::unique_ptr<SNP>& snp)
 {
-    auto [file_idx, byte_pos] = snp.get_file_info(false);
-    auto&& genotype = snp.current_genotype();
+    auto [file_idx, byte_pos] = snp->get_file_info(false);
+    auto&& genotype = snp->current_genotype();
     // load into memory is useless for dosage score
     if (!m_hard_coded) return;
 
@@ -740,8 +741,8 @@ void BinaryGen::count_and_read_genotype(SNP& snp)
         uint32_t missing_ct = 0;
         uint32_t het_ct = 0;
         uint32_t homcom_ct = 0;
-        if (!snp.get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
-                            m_prs_calculation.use_ref_maf))
+        if (!snp->get_counts(homcom_ct, het_ct, homrar_ct, missing_ct,
+                             m_prs_calculation.use_ref_maf))
         { throw std::logic_error("Error: Sam has a logic error in bgen"); }
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;

@@ -151,7 +151,8 @@ void Region::generate_exclusion(std::vector<IITree<size_t, size_t>>& cr,
 
 size_t Region::generate_regions(
     const std::unordered_map<std::string, size_t>& included_snp_idx,
-    const std::vector<SNP>& included_snps, const size_t max_chr)
+    const std::vector<std::unique_ptr<SNP>>& included_snps,
+    const size_t max_chr)
 {
     // should be a fresh start each time
     m_gene_sets.clear();
@@ -247,7 +248,7 @@ size_t Region::generate_regions(
 
 void Region::load_background(
     const std::unordered_map<std::string, size_t>& snp_list_idx,
-    const std::vector<SNP>& snp_list, const size_t max_chr,
+    const std::vector<std::unique_ptr<SNP>>& snp_list, const size_t max_chr,
     std::unordered_map<std::string, std::vector<size_t>>& msigdb_list)
 {
     const std::unordered_map<std::string, size_t> file_type {
@@ -321,9 +322,9 @@ void Region::load_background(
                 if (snp_idx != snp_list_idx.end())
                 {
                     auto&& cur_snp = snp_list[snp_idx->second];
-                    chr_num = cur_snp.chr();
-                    start = cur_snp.loc();
-                    end = cur_snp.loc() + 1;
+                    chr_num = cur_snp->chr();
+                    start = cur_snp->loc();
+                    end = cur_snp->loc() + 1;
                     if (m_gene_sets.size() < chr_num + 1)
                     { m_gene_sets.resize(chr_num + 1); }
                     m_gene_sets[chr_num].add(start, end, BACKGROUND_IDX);
@@ -464,7 +465,7 @@ void Region::load_gtf(
 
 void Region::transverse_snp_file(
     const std::unordered_map<std::string, size_t>& snp_list_idx,
-    const std::vector<SNP>& snp_list, const bool is_set_file,
+    const std::vector<std::unique_ptr<SNP>>& snp_list, const bool is_set_file,
     std::unique_ptr<std::istream> input, size_t& set_idx)
 {
     std::string line;
@@ -485,9 +486,9 @@ void Region::transverse_snp_file(
                     if (snp_idx != snp_list_idx.end())
                     {
                         auto&& cur_snp = snp_list[snp_idx->second];
-                        chr_num = cur_snp.chr();
-                        low_bound = cur_snp.loc();
-                        upper_bound = cur_snp.loc();
+                        chr_num = cur_snp->chr();
+                        low_bound = cur_snp->loc();
+                        upper_bound = cur_snp->loc();
                         if (m_gene_sets.size() < chr_num + 1)
                         { m_gene_sets.resize(chr_num + 1); }
                         m_gene_sets[chr_num].add(low_bound, upper_bound,
@@ -503,9 +504,9 @@ void Region::transverse_snp_file(
             if (snp_idx != snp_list_idx.end())
             {
                 auto&& cur_snp = snp_list[snp_idx->second];
-                chr_num = cur_snp.chr();
-                low_bound = cur_snp.loc();
-                upper_bound = cur_snp.loc();
+                chr_num = cur_snp->chr();
+                low_bound = cur_snp->loc();
+                upper_bound = cur_snp->loc();
                 if (m_gene_sets.size() < chr_num + 1)
                 { m_gene_sets.resize(chr_num + 1); }
                 m_gene_sets[chr_num].add(low_bound, upper_bound, set_idx);
@@ -516,8 +517,8 @@ void Region::transverse_snp_file(
 }
 void Region::load_snp_sets(
     const std::unordered_map<std::string, size_t>& snp_list_idx,
-    const std::vector<SNP>& snp_list, const std::string& snp_file,
-    size_t& set_idx)
+    const std::vector<std::unique_ptr<SNP>>& snp_list,
+    const std::string& snp_file, size_t& set_idx)
 {
     std::string line, message;
     auto [file_name, set_name, user_input] = get_set_name(snp_file);

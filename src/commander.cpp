@@ -59,6 +59,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         throw std::runtime_error("Please provide the required parameters");
     }
     const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
+
     const struct option longOpts[] = {
         // parameters with short flags
         {"base", required_argument, nullptr, 'b'},

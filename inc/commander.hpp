@@ -42,8 +42,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.3.4";
-const std::string date = "2020-11-04";
+const std::string version = "2.3.5";
+const std::string date = "2021-01-20";
 class Commander
 {
 public:
@@ -321,6 +321,8 @@ protected:
         }
     }
     inline bool validate_command(Reporter& reporter);
+
+
     inline bool parse_binary_vector(const std::string& input,
                                     const std::string& c,
                                     std::vector<bool>& target)

@@ -871,6 +871,7 @@ void PRSice::reset_result_containers(const Genotype& target,
     // m_perm_result stores the result (Z scores) from each permutation and
     // is then used for calculation of empirical p value
     m_perm_result.resize(m_perm_info.num_permutation, 0);
+    m_prs_results.clear();
     m_prs_results.resize(target.num_threshold(region_idx), prsice_result());
     std::fill(m_best_sample_score.begin(), m_best_sample_score.end(), 0);
 }
@@ -1490,13 +1491,14 @@ void PRSice::print_summary(const std::string& pheno_name,
     {
         (*summary_file) << pheno_name << "\t" << sum.set << "\t"
                         << sum.result.threshold << "\t"
-                        << sum.result.r2 - m_null_r2;
+                        << 1.0 - (1.0 - sum.result.r2) / (1.0 - m_null_r2);
         if (has_prevalence && m_binary_trait)
         {
             (*summary_file)
                 << "\t"
-                << get_adjusted_r2(sum.result.r2, top, bot)
-                       - get_adjusted_r2(m_null_r2, top, bot)
+                << 1.0
+                       - (1.0 - get_adjusted_r2(sum.result.r2, top, bot))
+                             / (1.0 - get_adjusted_r2(m_null_r2, top, bot))
                 << "\t" << get_adjusted_r2(sum.result.r2, top, bot) << "\t"
                 << get_adjusted_r2(m_null_r2, top, bot) << "\t" << prevalence;
         }
