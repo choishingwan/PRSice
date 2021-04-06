@@ -880,24 +880,49 @@ void PRSice::print_all_score(const size_t num_sample,
                              std::unique_ptr<std::ostream>& all_score_file,
                              Genotype& target)
 {
-    for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+    if (m_quick_all)
     {
-        // we will calculate the the number of white space we need
-        // to skip to reach the current sample + threshold's output
-        // position
-        const long long loc =
-            m_all_file.header_length
-            + static_cast<long long>(i_sample)
-                  * (m_all_file.line_width + NEXT_LENGTH)
-            + NEXT_LENGTH + m_all_file.skip_column_length
-            + m_all_file.processed_threshold
-            + m_all_file.processed_threshold * m_numeric_width;
-        all_score_file->seekp(loc);
-        // then we will output the score
-        (*all_score_file) << std::setprecision(static_cast<int>(m_precision))
-                          << target.calculate_score(i_sample);
+        for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+        {
+            m_fast_all_output(i_sample, m_all_file.processed_threshold) =
+                target.calculate_score(i_sample);
+        }
+    }
+    else
+    {
+        for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+        {
+            // we will calculate the the number of white space we need
+            // to skip to reach the current sample + threshold's output
+            // position
+            const long long loc =
+                m_all_file.header_length
+                + static_cast<long long>(i_sample)
+                      * (m_all_file.line_width + NEXT_LENGTH)
+                + NEXT_LENGTH + m_all_file.skip_column_length
+                + m_all_file.processed_threshold
+                + m_all_file.processed_threshold * m_numeric_width;
+            all_score_file->seekp(loc);
+            // then we will output the score
+            (*all_score_file)
+                << std::setprecision(static_cast<int>(m_precision))
+                << target.calculate_score(i_sample);
+        }
     }
     ++m_all_file.processed_threshold;
+}
+
+void PRSice::write_all_score_file(std::unique_ptr<std::ostream>& all_score_file,
+                                  Genotype& target)
+{
+    if (!m_quick_all) return;
+    for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
+    {
+        (*all_score_file) << target.fid(i_sample) << "\t"
+                          << target.iid(i_sample);
+        (*all_score_file) << m_fast_all_output.row(i_sample) << "\n";
+    }
+    all_score_file.reset();
 }
 void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
                         const std::vector<std::string>& region_names,
@@ -1378,6 +1403,7 @@ void PRSice::prep_all_score_output(
 {
     auto set_thresholds = target.get_set_thresholds();
     unsigned long long total_set_thresholds = 0;
+    const size_t num_samples = target.num_sample();
     for (size_t thres = 0; thres < set_thresholds.size(); ++thres)
     {
         // skip bakcground and empty region
@@ -1394,12 +1420,16 @@ void PRSice::prep_all_score_output(
     }
     const long long begin_byte = all_score_file->tellp();
     (*all_score_file) << "FID IID";
+    size_t num_all_col = 0;
     if (!(region_name.size() > 2))
     {
         // add character in front so that when R parse it, it doesn't add
         // the annoying X and properly treat it as a header
         for (auto& thres : set_thresholds.front())
-        { (*all_score_file) << " Pt_" << thres; }
+        {
+            (*all_score_file) << " Pt_" << thres;
+            ++num_all_col;
+        }
     }
     else
     {
@@ -1409,34 +1439,55 @@ void PRSice::prep_all_score_output(
         {
             if (i == 1 || region_membership[i].empty()) continue;
             for (auto& thres : set_thresholds[i])
-            { (*all_score_file) << " " << region_name[i] << "_" << thres; }
+            {
+                (*all_score_file) << " " << region_name[i] << "_" << thres;
+                ++num_all_col;
+            }
         }
     }
+
     (*all_score_file) << "\n";
-    const long long end_byte = all_score_file->tellp();
-    // if the line is too long, we might encounter overflow
-    assert(end_byte >= begin_byte);
-    m_all_file.header_length = end_byte - begin_byte;
-    m_all_file.processed_threshold = 0;
-    m_all_file.line_width =
-        max_fid + 1LL + max_iid + 1LL
-        + static_cast<long long>(total_set_thresholds) * (m_numeric_width + 1LL)
-        + 1LL;
-    m_all_file.skip_column_length = max_fid + max_iid + 2;
-    size_t num_sample = target.num_sample();
-    // now print out all the empty lines
-    std::string name;
-    for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+
+    try
     {
-        name = target.fid(i_sample) + " " + target.iid(i_sample);
-        // TODO: Bug if line_width is bigger than what setw can handle
-        (*all_score_file) << std::setfill(' ')
-                          << std::setw(m_all_file.line_width) << std::left
-                          << name << "\n";
+        m_fast_all_output = Eigen::MatrixXd::Zero(num_samples, num_all_col);
+        m_quick_all = true;
+        m_has_best_for_print.resize(region_name.size(), false);
     }
-    ++m_all_file.line_width;
-    all_score_file->seekp(0, all_score_file->beg);
+    catch (...)
+    {
+        m_reporter->report(
+            "Warning: Not enough memory to store all scores "
+            "into the memory, will use a slower method to output "
+            "the all score file");
+        // not enough memory for fast best use the seekg method
+        m_quick_all = false;
+        const long long end_byte = all_score_file->tellp();
+        // if the line is too long, we might encounter overflow
+        assert(end_byte >= begin_byte);
+        m_all_file.header_length = end_byte - begin_byte;
+        m_all_file.processed_threshold = 0;
+        m_all_file.line_width = max_fid + 1LL + max_iid + 1LL
+                                + static_cast<long long>(total_set_thresholds)
+                                      * (m_numeric_width + 1LL)
+                                + 1LL;
+        m_all_file.skip_column_length = max_fid + max_iid + 2;
+        size_t num_sample = target.num_sample();
+        // now print out all the empty lines
+        std::string name;
+        for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+        {
+            name = target.fid(i_sample) + " " + target.iid(i_sample);
+            // TODO: Bug if line_width is bigger than what setw can handle
+            (*all_score_file)
+                << std::setfill(' ') << std::setw(m_all_file.line_width)
+                << std::left << name << "\n";
+        }
+        ++m_all_file.line_width;
+        all_score_file->seekp(0, all_score_file->beg);
+    }
 }
+
 
 std::tuple<double, double>
 PRSice::lee_adjustment_factor(const double prevalence)
