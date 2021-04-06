@@ -203,7 +203,6 @@ int main(int argc, char* argv[])
                                               all_score_file = nullptr;
                 if (!no_regress)
                 {
-
                     best_file =
                         misc::load_ostream(prefix + file_suffix + ".best");
                     prsice.prep_best_output(*target_file, region_membership,

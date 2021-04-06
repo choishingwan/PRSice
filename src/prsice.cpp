@@ -916,11 +916,18 @@ void PRSice::write_all_score_file(std::unique_ptr<std::ostream>& all_score_file,
                                   Genotype& target)
 {
     if (!m_quick_all) return;
+    const auto ncols = m_fast_all_output.cols();
     for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
     {
-        (*all_score_file) << target.fid(i_sample) << "\t"
+        (*all_score_file) << target.fid(i_sample) << " "
                           << target.iid(i_sample);
-        (*all_score_file) << m_fast_all_output.row(i_sample) << "\n";
+        for (auto col = 0; col < ncols; ++col)
+        {
+            (*all_score_file)
+                << " " << std::setprecision(static_cast<int>(m_precision))
+                << m_fast_all_output(i_sample, col);
+        }
+        (*all_score_file) << "\n";
     }
     all_score_file.reset();
 }
