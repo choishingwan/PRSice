@@ -246,7 +246,8 @@ int main(int argc, char* argv[])
                 }
                 prsice.print_summary(pheno_name, prevalence, has_prevalence,
                                      significant_count, summary_file);
-                prsice.write_all_score_file(all_score_file, *target_file);
+                if (commander.all_scores())
+                    prsice.write_all_score_file(all_score_file, *target_file);
             }
             if (!no_regress)
                 reporter.report(print_project_summary(significant_count));
