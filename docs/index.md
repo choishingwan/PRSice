@@ -1,10 +1,10 @@
 !!! announcement Our guide paper is published
 
-    Our guide paper is now published in nature protocols:
+    Our guide paper is now published in Nature Protocols:
 
     Choi, S.W., Mak, T.S. & O’Reilly, P.F. Tutorial: a guide to performing polygenic risk score analyses. Nat Protoc (2020). [https://doi.org/10.1038/s41596-020-0353-1](https://doi.org/10.1038/s41596-020-0353-1)
 
-    You can find the accompany tutorial [here](https://choishingwan.github.io/PRS-Tutorial/)
+    The online tutorial that accompanies the paper is [here](https://choishingwan.github.io/PRS-Tutorial/)
 
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
