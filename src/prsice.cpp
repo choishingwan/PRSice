@@ -78,7 +78,9 @@ void PRSice::parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
         pheno_info.pheno_col_idx.push_back(1 + !pheno_info.ignore_fid);
         pheno_info.pheno_col = {std::string(col[1 + !pheno_info.ignore_fid])};
         if (isdigit(col[1 + !pheno_info.ignore_fid].at(0)))
-        { pheno_info.pheno_col = {"Phenotype"}; }
+        {
+            pheno_info.pheno_col = {"Phenotype"};
+        }
         pheno_info.skip_pheno = {false};
     }
     else
@@ -124,7 +126,9 @@ void PRSice::pheno_check(const bool no_regress, Phenotype& pheno,
         return;
     }
     if (pheno.binary.empty())
-    { throw std::runtime_error("Error: No phenotype provided"); }
+    {
+        throw std::runtime_error("Error: No phenotype provided");
+    }
 
     // want to update the binary and prevalence vector by removing
     // phenotypes not found / duplicated
@@ -159,7 +163,9 @@ void PRSice::init_matrix(const Phenotype& pheno_info, const std::string& delim,
     const auto ignore_fid = pheno_info.ignore_fid;
     const auto no_regress = m_prs_info.no_regress;
     if (m_binary_trait && m_prs_info.scoring_method == SCORING::CONTROL_STD)
-    { target.reset_std_flag(); }
+    {
+        target.reset_std_flag();
+    }
     // we need genotype for no-regress if we are trying to do control std
     if ((no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
          && m_binary_trait)
@@ -299,7 +305,9 @@ void PRSice::set_std_exclusion_flag(const std::string& delim,
         auto&& pheno_idx = m_sample_with_phenotypes.find(id);
         if (pheno_idx == m_sample_with_phenotypes.end()) { continue; }
         if (!misc::logically_equal(m_phenotype(pheno_idx->second), 0))
-        { target.exclude_from_std(i_sample); }
+        {
+            target.exclude_from_std(i_sample);
+        }
     }
 }
 std::tuple<bool, size_t, size_t>
@@ -348,7 +356,9 @@ PRSice::process_phenotype_info(const std::string& delim, const bool ignore_fid,
         if (target.pheno_is_na(i_sample)
             || !target.sample_selected_for_prs(i_sample)
             || (m_binary_trait && target.pheno(i_sample) == "-9"))
-        { continue; }
+        {
+            continue;
+        }
         try
         {
             parse_pheno(target.pheno(i_sample), pheno_store, max_pheno_code);
@@ -384,7 +394,9 @@ PRSice::process_phenotype_file(const std::string& file_name,
     pheno_store.reserve(sample_ct);
     size_t pheno_matrix_idx = 0;
     if (phenotype_info.empty())
-    { throw std::runtime_error("Error: No data found in phenotype file"); }
+    {
+        throw std::runtime_error("Error: No data found in phenotype file");
+    }
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
         target.update_valid_sample(i_sample, false);
@@ -398,7 +410,9 @@ PRSice::process_phenotype_file(const std::string& file_name,
             if (pheno_tmp == "na" || pheno_tmp == "nan"
                 || !target.sample_selected_for_prs(i_sample)
                 || (m_binary_trait && pheno_tmp == "-9"))
-            { continue; }
+            {
+                continue;
+            }
             else
             {
                 try
@@ -470,7 +484,9 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
                                  "Error: No sample left");
     }
     if (pheno_store.empty())
-    { throw std::runtime_error("No phenotype presented"); }
+    {
+        throw std::runtime_error("No phenotype presented");
+    }
     if (m_binary_trait)
     {
         auto [valid, num_case, num_control] =
@@ -501,7 +517,9 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
             m_reporter->report(message);
             std::string error_message = "Only one phenotype value detected";
             if (misc::logically_equal(pheno_store.front(), -9))
-            { error_message.append(" and they are all -9"); }
+            {
+                error_message.append(" and they are all -9");
+            }
             throw std::runtime_error(error_message
                                      + ". Not enough valid phenotype");
         }
@@ -624,7 +642,9 @@ void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_cov,
         {
             auto cur_idx = m_sample_with_phenotypes.find(id);
             if (cur_idx == m_sample_with_phenotypes.end())
-            { throw std::runtime_error("Error: Sam has some coding error"); }
+            {
+                throw std::runtime_error("Error: Sam has some coding error");
+            }
             if (valid_cov[cur_idx->second])
             {
                 new_pheno(new_matrix_idx) = m_phenotype(cur_idx->second);
@@ -700,7 +720,9 @@ PRSice::cov_check_and_factor_level_count(
                 auto&& cur_level = factor_levels[i_factor];
                 auto&& cur_cov = token[f];
                 if (cur_level.find(cur_cov) == cur_level.end())
-                { cur_level[cur_cov] = current_factor_level[i_factor]++; }
+                {
+                    cur_level[cur_cov] = current_factor_level[i_factor]++;
+                }
                 ++i_factor;
             }
         }
@@ -956,14 +978,18 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
     std::vector<size_t>::const_iterator start = set_snp_idx.begin();
     double top = 1, bot = 0;
     if (prevalence <= 1.0)
-    { std::tie(top, bot) = lee_adjustment_factor(prevalence); }
+    {
+        std::tie(top, bot) = lee_adjustment_factor(prevalence);
+    }
     while (target.get_score(start, set_snp_idx.cend(), cur_threshold,
                             m_num_snp_included, first_run))
     {
         ++m_analysis_done;
         print_progress();
         if (print_all_scores && pheno_idx == 0)
-        { print_all_score(num_sample, all_score_file, target); }
+        {
+            print_all_score(num_sample, all_score_file, target);
+        }
         if (!no_regress)
         {
             regress_score(target, cur_threshold, num_thread, prs_result_idx);
@@ -1103,7 +1129,9 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     assert(!m_prs_results.empty());
     if (m_num_snp_included == m_prs_results[prs_result_idx].num_snp
         && !m_prs_info.non_cumulate)
-    { return; }
+    {
+        return;
+    }
 
     for (size_t sample_id = 0; sample_id < num_regress_samples; ++sample_id)
     {
@@ -1142,7 +1170,9 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         const size_t num_include_samples = target.num_sample();
         // load all sample, including those that are not used for regression
         for (size_t s = 0; s < num_include_samples; ++s)
-        { m_best_sample_score[s] = target.calculate_score(s); }
+        {
+            m_best_sample_score[s] = target.calculate_score(s);
+        }
     }
     // we can now store the prsice_result
 
@@ -1541,10 +1571,14 @@ void PRSice::print_summary(const std::string& pheno_name,
 {
     assert(significant_count.size() == m_significant_store.size());
     for (size_t i = 0; i < significant_count.size(); ++i)
-    { significant_count[i] += m_significant_store[i]; }
+    {
+        significant_count[i] += m_significant_store[i];
+    }
     double top = 1, bot = 0;
     if (prevalence < 1.0)
-    { std::tie(top, bot) = lee_adjustment_factor(prevalence); }
+    {
+        std::tie(top, bot) = lee_adjustment_factor(prevalence);
+    }
     for (auto&& sum : m_prs_summary)
     {
         (*summary_file) << pheno_name << "\t" << sum.set << "\t"
@@ -1575,7 +1609,9 @@ void PRSice::print_summary(const std::string& pheno_name,
                         << sum.result.se << "\t" << sum.result.p << "\t"
                         << sum.result.num_snp;
         if (m_perm_info.run_set_perm && (sum.result.competitive_p >= 0.0))
-        { (*summary_file) << "\t" << sum.result.competitive_p; }
+        {
+            (*summary_file) << "\t" << sum.result.competitive_p;
+        }
         else if (m_perm_info.run_set_perm)
         {
             (*summary_file) << "\tNA";
@@ -1586,7 +1622,7 @@ void PRSice::print_summary(const std::string& pheno_name,
 }
 
 
-PRSice::~PRSice() {}
+PRSice::~PRSice() { }
 void PRSice::get_se_matrix(const Eigen::Index p, Regress& decomposed)
 {
     if (p == decomposed.rank)
