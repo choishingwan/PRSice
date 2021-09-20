@@ -81,6 +81,8 @@
                 <ul class="current">
                     <li class="toctree-l1 current"><a class="reference internal current" href="./">Compile from Source</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a>
+    </li>
     <li class="toctree-l2"><a class="reference internal" href="#using-cmake">Using CMake</a>
     </li>
     <li class="toctree-l2"><a class="reference internal" href="#without-cmake">Without CMake</a>
@@ -146,13 +148,18 @@
               
                 <h1 id="introduction">Introduction <a href="https://travis-ci.org/choishingwan/PRSice"><img alt="Build Status" src="https://travis-ci.org/choishingwan/PRSice.svg?branch=master" /></a><a href="https://doi.org/10.5281/zenodo.3703335"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg" /></a></h1>
 <p>Here is the guideline for anyone who might want to compile PRSice from source. </p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>For the C++ executable
+1. GCC version 7 or higher (for C++17 support)
+2. CMake version 3.1 or higher (Optional)
+3. Git (Optional)</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Only the C++ executable need to be built</p>
 </div>
 <h2 id="using-cmake">Using CMake</h2>
 <p>With CMake, you can simply do the following:
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>git clone https://github.com/choishingwan/PRSice.git
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
 mkdir build
 cd build
@@ -161,7 +168,7 @@ make
 </code></pre></div>
 Then the PRSice executable will be located within PRSice/bin</p>
 <p>If you don't have git installed, you can still do (remember to download <a href="https://gitlab.com/libeigen/eigen/-/releases/3.3.7">eigen</a> to lib )
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.3.3 &gt; PRSice.tar.gz
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.3.3 &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
 cd PRSice-2.3.3
 mkdir build
@@ -176,13 +183,13 @@ make
 <h2 id="without-cmake">Without CMake</h2>
 <p>Without CMake, you will need to first download the <a href="https://gitlab.com/libeigen/eigen/-/releases/3.3.7">eigen library</a></p>
 <p>You can then do the following
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>git clone https://github.com/choishingwan/PRSice.git
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>git clone https://github.com/choishingwan/PRSice.git
 cd PRSice
 g++ -std=c++17 -O3 -DNDEBUG -march=native -isystem lib -isystem ${PATH_TO_EIGEN} -I inc src/*.cpp -lpthread -lz -o PRSice
 </code></pre></div>
 Then PRSice will be located in the current directory</p>
 <p>Alternatively, if you don't have git installed, you can still do
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.3.3 &gt; PRSice.tar.gz
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>curl https://codeload.github.com/choishingwan/PRSice/tar.gz/2.3.3 &gt; PRSice.tar.gz
 tar -xvf PRSice.tar.gz
 cd PRSice-2.3.3
 g++ -std=c++17 -O3 -DNDEBUG -march=native -isystem lib -isystem ${PATH_TO_EIGEN}  -I inc src/*.cpp -lpthread -lz -o PRSice

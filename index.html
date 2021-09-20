@@ -136,12 +136,13 @@
               
                 <div class="admonition announcement our guide paper is published">
 <p class="admonition-title">Announcement</p>
-<p>Our guide paper is now published in Nature Protocols:</p>
+<p>Our guide paper is now published in nature protocols:</p>
 <p>Choi, S.W., Mak, T.S. &amp; O’Reilly, P.F. Tutorial: a guide to performing polygenic risk score analyses. Nat Protoc (2020). <a href="https://doi.org/10.1038/s41596-020-0353-1">https://doi.org/10.1038/s41596-020-0353-1</a></p>
-<p>The online tutorial that accompanies the paper is <a href="https://choishingwan.github.io/PRS-Tutorial/">here</a></p>
+<p>You can find the accompany tutorial <a href="https://choishingwan.github.io/PRS-Tutorial/">here</a></p>
 </div>
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
+<p>PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:</p>
 <p>PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:</p>
 <ol>
 <li>High-resolution scoring (PRS calculated across a large number of P-value thresholds)</li>
@@ -165,11 +166,11 @@
 <tbody>
 <tr>
 <td>Linux 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_linux.zip">v2.3.3</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_linux.zip">v2.3.5</a></td>
 </tr>
 <tr>
 <td>OS X 64-bit</td>
-<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_mac.zip">v2.3.3</a></td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_mac.zip">v2.3.5</a></td>
 </tr>
 <tr>
 <td>Windows 32-bit</td>
@@ -177,12 +178,24 @@
 </tr>
 <tr>
 <td>Windows 64-bit</td>
-<td align="center">Not available</td>
+<td align="center"><a href="https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_win64.zip">v2.3.5</a></td>
 </tr>
 </tbody>
 </table>
 <div class="admonition note">
 <p class="admonition-title">Latest Update</p>
+<h1 id="2021-09-20-v235">2021-09-20 (v2.3.5)</h1>
+<ul>
+<li>This is a temporary fix for known issues. We are currently re-building PRSice with best practices and try to make sure robustness and extensibility with unit tests.</li>
+<li>Some fixes are <ul>
+<li>Fixed <code>--perm</code></li>
+<li>Fixed <code>--prevalence</code></li>
+<li>Reduced memory usage for <code>bgen</code> in multi-threaded mode</li>
+<li>Increased speed of file generation when there's enough memory</li>
+<li>Some <code>chr-id</code> fix, though it is still rather buggy</li>
+</ul>
+</li>
+</ul>
 <h1 id="2020-08-05-v233">2020-08-05 (v2.3.3)</h1>
 <ul>
 <li>Thanks to report from @charlisech, we were able to pinpoint a bug related to sample selection when using bgen data.</li>
@@ -216,9 +229,8 @@
 <p class="admonition-title">Installing required R packages</p>
 <p>PRSice can automatically download all required packages, even without administrative right.
 You can specify the install directory using <code>--dir</code>. For example</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>    Rscript PRSice.R --dir .
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>    Rscript PRSice.R --dir .
 </code></pre></div>
-
 <p>will install all required packages under the local directory.</p>
 </div>
 <h1 id="quick-start">Quick Start</h1>
@@ -226,13 +238,11 @@ You can specify the install directory using <code>--dir</code>. For example</p>
 <div class="admonition tip">
 <p class="admonition-title">List user options</p>
 <p>You can also type</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>    ./PRSice
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>    ./PRSice
 </code></pre></div>
-
 <p>to view all available parameters unrelated to plotting, or</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>    Rscript PRSice.R -h
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>    Rscript PRSice.R -h
 </code></pre></div>
-
 <p>to view all available parameters, including those used for plotting</p>
 </div>
 <h1 id="output-of-results">Output of Results</h1>
@@ -324,5 +334,5 @@ We also utilize the <a href="https://eigen.tuxfamily.org">Eigen C++</a> library,
 
 <!--
 MkDocs version : 1.1.2
-Build Date UTC : 2021-05-07 19:37:48.480152+00:00
+Build Date UTC : 2021-09-20 18:46:08.979515+00:00
 -->

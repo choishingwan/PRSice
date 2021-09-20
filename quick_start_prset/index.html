@@ -184,7 +184,7 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 <p>In most case, assuming the PRSice binary is located in <code>($HOME)/PRSice/bin/</code> and the working directory is <code>($HOME)/PRSice</code>, you can run PRSet with the following commands:</p>
 <h3 id="with-msigdb-data">With MSigDB data</h3>
 <p>Assuming a MSigDB file (<em>set.txt</em>) is <a href="http://software.broadinstitute.org/gsea/msigdb/">downloaded</a> and a gene gtf file (gene.gtf) from <a href="http://www.ensembl.org/index.html">Ensemble</a> is available, PRSet can then be performed using: </p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
     --prsice ./bin/PRSice <span style="color: #BB6622; font-weight: bold">\</span>
     --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
     --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
@@ -194,11 +194,10 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 </span><span style="background-color: #ffffcc">    --msigdb set.txt <span style="color: #BB6622; font-weight: bold">\</span>
 </span><span style="background-color: #ffffcc">    --multi-plot <span style="color: #666666">10</span>
 </span></code></pre></div>
-
 <p>This will perform PRSet analysis and generate the multi-set plot with the top 10 gene sets</p>
 <h3 id="with-bed-files">With Bed Files</h3>
 <p>Alternatively, if a list of bed files are available, e.g. <em>A.bed,B.bed</em>, PRSet can be performed by running</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
     --prsice ./bin/PRSice <span style="color: #BB6622; font-weight: bold">\</span>
     --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
     --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
@@ -207,7 +206,6 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 <span style="background-color: #ffffcc">    --bed A.bed:SetA,B.bed <span style="color: #BB6622; font-weight: bold">\</span>
 </span><span style="background-color: #ffffcc">    --multi-plot <span style="color: #666666">10</span>
 </span></code></pre></div>
-
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Both bed and GTF+MSigDB input can be used together</p>
@@ -218,7 +216,7 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 </div>
 <h3 id="with-snp-set">With SNP Set</h3>
 <p>Finally, if you want to construct sets based on a list of SNPs, you can use <code>--snp-set</code>:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript PRSice.R <span style="color: #BB6622; font-weight: bold">\</span>
     --prsice ./bin/PRSice <span style="color: #BB6622; font-weight: bold">\</span>
     --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
     --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
@@ -227,7 +225,6 @@ gene set on each individual line. If MSigDB is provided, GTF file is required.</
 <span style="background-color: #ffffcc">    --snp-set A.snp:A,B.snp <span style="color: #BB6622; font-weight: bold">\</span>
 </span><span style="background-color: #ffffcc">    --multi-plot <span style="color: #666666">10</span>
 </span></code></pre></div>
-
 <p>Two different format are allowed:</p>
 <ul>
 <li>SNP Set list format: A file containing a single column of SNP ID. Name of the set will be the file name or can be provided using <code>--snp-set File:Name</code></li>

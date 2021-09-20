@@ -258,9 +258,8 @@ PRSice has no problem reading in a gzipped base file (need to have a <strong>.gz
 <code>--base-info &lt;Info Name&gt;:&lt;Info Threshold&gt;</code> and <code>--base-maf &lt;MAF Name&gt;:&lt;MAF Threshold&gt;</code> can be used to filter
 SNPs based on their INFO score and MAF respectively.</p>
 <p>For binary trait base file, SNPs can be filtered according to the MAF in case and control separately using</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--base-maf &lt;Name for Control&gt;:&lt;Threshold for Control&gt;,&lt;Name for Case&gt;:&lt;Threshold for Case&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>--base-maf &lt;Name for Control&gt;:&lt;Threshold for Control&gt;,&lt;Name for Case&gt;:&lt;Threshold for Case&gt;
 </code></pre></div>
-
 <p>By default, PRSice will look for the following column names automatically from the base file header if <code>--index</code> was not provided or if the column name of the specific arguement(s) were not provided:</p>
 <blockquote>
 <p>CHR, BP, A1, A2, SNP, P, INFO (case sensitive) and OR / BETA (case insensitive)</p>
@@ -276,12 +275,13 @@ SNPs based on their INFO score and MAF respectively.</p>
 <p>A target dataset in PLINK binary format must consist of three files: <strong>.bed</strong>, <strong>.bim</strong>, and a <strong>.fam</strong> file - where bed contains the compressed genotype data, bim contains the SNP information and fam contains the family information. Currently only SNP major PLINK format are supported  (default output of the latest PLINK program).</p>
 <p>The <strong>.bed</strong> and <strong>.bim</strong> file must have the same prefix.</p>
 <p>If the <strong>.fam</strong> file follow a different prefix from the <strong>.bed</strong> and <strong>bim</strong> file, it can be specified using
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>--target &lt;bim bed prefix&gt;,&lt;fam file&gt;
 </code></pre></div></p>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
 <p>The fam file MUST contains the correct number of samples or PRSice will crash</p>
 </div>
+<p>Missing phenotype data can be coded as NA, or -9 for binary traits and NA for quantitative traits.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>-9 will <strong>NOT</strong> be considered as missing for quantitative traits</p>
@@ -289,7 +289,7 @@ SNPs based on their INFO score and MAF respectively.</p>
 <p>If the binary file is separated into individual chromosomes, then an # can be used to specify the location of the chromosome number in the file name.
 PRSice will automatically substitute # with 1-22</p>
 <p>i.e. If the files are chr1.<bed|bim|fam>,chr2.<bed|bim|fam>,...,chr22.<bed|bim|fam>, just use
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--target chr#
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>--target chr#
 </code></pre></div></p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
@@ -311,9 +311,8 @@ You can enable the support by including the zstd library and changing the <em>bg
 <p>As BGEN does not store the phenotype information and sometime not even the sample ID, you <strong>must</strong> provide
 a phenotype file (<code>--pheno</code>). Alternatively, if you have a sample file containing the phenotype information, you can 
 provide it with</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>--target &lt;bgen prefix&gt;,&lt;sample file&gt;
 </code></pre></div>
-
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The sample file is required even if <code>--no-regress</code> is set as the sample ID is required for output. This requirement might be losen in future versions</p>
@@ -357,7 +356,7 @@ the output prefix.</p>
 <p>When the target sample is small (e.g. &lt; 500 samples), an external reference panel can be used
 to improve the LD estimation for clumping.</p>
 <p>The LD reference follows the same notion as the target dataset. Simply use
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--ld &lt;LD refernce&gt;
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>--ld &lt;LD refernce&gt;
 </code></pre></div>
 to specify your LD reference panel file and <code>--ld-type</code> to specify the format</p>
 <p>When a LD reference file is not provided and <code>--no-clump</code> is not specified, the target file
@@ -610,11 +609,10 @@ For example, to replicate the quantile break from Natarajan et al (2015):</p>
 </tbody>
 </table>
 <p>The following command can be added to PRSice command:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>--quantile 100 \
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>--quantile 100 \
 --quant-break 1,5,10,20,40,60,80,90,95,99,100 \
 --quant-ref 60
 </code></pre></div>
-
 <p>Specifically, <code>--quant-break</code> indicates the <strong>upper bound</strong> of each group and <code>--quant-ref</code> specify the <strong>upper bound</strong> of the reference quantiles</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>

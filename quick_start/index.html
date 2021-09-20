@@ -173,7 +173,7 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 <h3 id="binary-traits">Binary Traits</h3>
 <p>For binary traits, the following command can be used (commands specific to binary traits are highlighted in yellow)</p>
 <div class="tabbed-set" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><label for="__tabbed_1_1">Unix</label><div class="tabbed-content">
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R --dir . <span style="color: #BB6622; font-weight: bold">\</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript PRSice.R --dir . <span style="color: #BB6622; font-weight: bold">\</span>
     --prsice ./PRSice <span style="color: #BB6622; font-weight: bold">\</span>
     --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
     --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
@@ -181,10 +181,9 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 <span style="background-color: #ffffcc">    --stat OR <span style="color: #BB6622; font-weight: bold">\</span>
 </span><span style="background-color: #ffffcc">    --binary-target T
 </span></code></pre></div>
-
 </div>
 <input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><label for="__tabbed_1_2">Windows</label><div class="tabbed-content">
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript.exe PRSice.R --dir . ^
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript.exe PRSice.R --dir . ^
     --prsice ./PRSice.exe ^
     --base TOY_BASE_GWAS.assoc ^
     --target TOY_TARGET_DATA ^
@@ -192,13 +191,12 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 <span style="background-color: #ffffcc">    --stat OR ^
 </span><span style="background-color: #ffffcc">    --binary-target T
 </span></code></pre></div>
-
 </div>
 </div>
 <h3 id="quantitative-traits">Quantitative Traits</h3>
 <p>For quantitative traits, the following can be used instead  (commands specific to quantitative traits are highlighted in yellow)</p>
 <div class="tabbed-set" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><label for="__tabbed_2_1">Unix</label><div class="tabbed-content">
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript PRSice.R --dir . <span style="color: #BB6622; font-weight: bold">\</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript PRSice.R --dir . <span style="color: #BB6622; font-weight: bold">\</span>
     --prsice ./PRSice <span style="color: #BB6622; font-weight: bold">\</span>
     --base TOY_BASE_GWAS.assoc <span style="color: #BB6622; font-weight: bold">\</span>
     --target TOY_TARGET_DATA <span style="color: #BB6622; font-weight: bold">\</span>
@@ -207,10 +205,9 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 </span><span style="background-color: #ffffcc">    --beta <span style="color: #BB6622; font-weight: bold">\</span>
 </span><span style="background-color: #ffffcc">    --binary-target F
 </span></code></pre></div>
-
 </div>
 <input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><label for="__tabbed_2_2">Windows</label><div class="tabbed-content">
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>Rscript.exe PRSice.R --dir . ^
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>Rscript.exe PRSice.R --dir . ^
     --prsice ./PRSice.exe ^
     --base TOY_BASE_GWAS.assoc ^
     --target TOY_TARGET_DATA ^
@@ -219,7 +216,6 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 </span><span style="background-color: #ffffcc">    --beta ^
 </span><span style="background-color: #ffffcc">    --binary-target F
 </span></code></pre></div>
-
 </div>
 </div>
 <div class="admonition note">
@@ -242,7 +238,7 @@ Can be in the form of  <a href="https://www.cog-genomics.org/plink2/formats#bed"
 <p>Quality controls can be performed on the target samples using PLINK. 
 A good starting point is (assume <strong><em>($target)</em></strong> is the prefix of the target binary file)</p>
 <div class="tabbed-set" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><label for="__tabbed_3_1">Unix</label><div class="tabbed-content">
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>plink --bfile <span style="color: #666666">(</span><span style="color: #19177C">$target</span><span style="color: #666666">)</span> <span style="color: #BB6622; font-weight: bold">\</span>
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>plink --bfile <span style="color: #666666">(</span><span style="color: #19177C">$target</span><span style="color: #666666">)</span> <span style="color: #BB6622; font-weight: bold">\</span>
     --maf <span style="color: #666666">0</span>.05 <span style="color: #BB6622; font-weight: bold">\</span>
     --mind <span style="color: #666666">0</span>.1 <span style="color: #BB6622; font-weight: bold">\</span>
     --geno <span style="color: #666666">0</span>.1 <span style="color: #BB6622; font-weight: bold">\</span>
@@ -251,10 +247,9 @@ A good starting point is (assume <strong><em>($target)</em></strong> is the pref
     --make-just-fam <span style="color: #BB6622; font-weight: bold">\</span>
     --out <span style="color: #666666">(</span><span style="color: #19177C">$target</span><span style="color: #666666">)</span>.qc
 </code></pre></div>
-
 </div>
 <input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><label for="__tabbed_3_2">Windows</label><div class="tabbed-content">
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><code>plink.exe --bfile <span style="color: #666666">(</span><span style="color: #19177C">$target</span><span style="color: #666666">)</span> ^
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%;"><span></span><code>plink.exe --bfile <span style="color: #666666">(</span><span style="color: #19177C">$target</span><span style="color: #666666">)</span> ^
     --maf <span style="color: #666666">0</span>.05 ^
     --mind <span style="color: #666666">0</span>.1 ^
     --geno <span style="color: #666666">0</span>.1 ^
@@ -263,7 +258,6 @@ A good starting point is (assume <strong><em>($target)</em></strong> is the pref
     --make-just-fam ^
     --out <span style="color: #666666">(</span><span style="color: #19177C">$target</span><span style="color: #666666">)</span>.qc
 </code></pre></div>
-
 </div>
 </div>
 <p>Then, <code>--keep ($target).qc.fam --extract ($target).qc.bim</code> can be added to the PRSice command to filter out
