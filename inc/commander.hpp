@@ -43,7 +43,7 @@
 #endif
 
 const std::string version = "2.3.5";
-const std::string date = "2021-04-06";
+const std::string date = "2021-09-20";
 class Commander
 {
 public:
@@ -351,7 +351,9 @@ protected:
                     bool value = false;
                     size_t num_repeat = number_boolean(bin, value);
                     for (size_t i = 0; i < num_repeat; ++i)
-                    { target.push_back(value); }
+                    {
+                        target.push_back(value);
+                    }
                 }
                 catch (const std::runtime_error&)
                 {
@@ -517,7 +519,9 @@ protected:
     inline void append_log(const std::string& c, const std::string& input)
     {
         if (m_parameter_log.find(c) == m_parameter_log.end())
-        { m_parameter_log[c] = input; }
+        {
+            m_parameter_log[c] = input;
+        }
         else
         {
             m_parameter_log[c] = "," + input;
