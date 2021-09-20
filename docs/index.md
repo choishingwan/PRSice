@@ -26,13 +26,22 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.3](https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_linux.zip) |
-| OS X 64-bit | [v2.3.3](https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_mac.zip) |
+| Linux 64-bit | [v2.3.5](https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_linux.zip) |
+| OS X 64-bit | [v2.3.5](https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
-| Windows 64-bit | Not available |
+| Windows 64-bit | [v2.3.5](https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_win64.zip) |
 
 
 !!! Note "Latest Update"
+    # 2021-09-20 (v2.3.5)
+    - This is a temporary fix for known issues. We are currently re-building PRSice with best practices and try to make sure robustness and extensibility with unit tests.
+    - Some fixes are 
+        - Fixed `--perm`
+        - Fixed `--prevalence`
+        - Reduced memory usage for `bgen` in multi-threaded mode
+        - Increased speed of file generation when there's enough memory
+        - Some `chr-id` fix, though it is still rather buggy
+
     # 2020-08-05 (v2.3.3)
     - Thanks to report from @charlisech, we were able to pinpoint a bug related to sample selection when using bgen data.
 
