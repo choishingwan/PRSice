@@ -1,4 +1,4 @@
-!!! announcement We’re hiring!! 
+!!! announcement We’re hiring!!
 
 We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our [lab website](https://labs.icahn.mssm.edu/oreillylab/)). 
 
