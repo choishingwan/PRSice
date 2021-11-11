@@ -1,14 +1,10 @@
-!!! announcement Our guide paper is published
+!!! announcement We’re hiring!!
 
-    Our guide paper is now published in nature protocols:
+We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our [lab website](https://labs.icahn.mssm.edu/oreillylab/)). 
 
-    Choi, S.W., Mak, T.S. & O’Reilly, P.F. Tutorial: a guide to performing polygenic risk score analyses. Nat Protoc (2020). [https://doi.org/10.1038/s41596-020-0353-1](https://doi.org/10.1038/s41596-020-0353-1)
-
-    You can find the accompany tutorial [here](https://choishingwan.github.io/PRS-Tutorial/)
+Please email paul.oreilly@mssm.edu if interested!
 
 <h1>PRSice-2: Polygenic Risk Score software</h1>
-
-PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:
 
 
 PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating, applying, evaluating and plotting the results of polygenic risk scores (PRS) analyses. Some of the features include:

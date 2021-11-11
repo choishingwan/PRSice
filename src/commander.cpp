@@ -59,6 +59,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         throw std::runtime_error("Please provide the required parameters");
     }
     const char* optString = "b:B:c:C:f:F:g:h?i:k:l:L:m:n:o:p:s:t:u:v";
+
     const struct option longOpts[] = {
         // parameters with short flags
         {"base", required_argument, nullptr, 'b'},
@@ -88,6 +89,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"allow-inter", no_argument, &m_allow_inter, 1},
         {"all-score", no_argument, &m_print_all_scores, 1},
         {"beta", no_argument, &m_base_info.is_beta, 1},
+        {"clump-only", no_argument, &m_clump_only, 1},
         {"fastscore", no_argument, &m_p_thresholds.fastscore, 1},
         {"full-back", no_argument, &m_prset.full_as_background, 1},
         {"hard", no_argument, &m_target.hard_coded, 1},

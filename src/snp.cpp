@@ -21,7 +21,8 @@ SNP::~SNP() {}
 std::string SNP::g_separator = ":";
 bool SNP::g_use_chr = false;
 */
-std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
+std::vector<size_t>
+SNP::sort_by_p_chr(const std::vector<std::unique_ptr<SNP>>& input)
 {
     std::vector<size_t> idx(input.size());
     std::iota(idx.begin(), idx.end(), 0);
@@ -31,19 +32,20 @@ std::vector<size_t> SNP::sort_by_p_chr(const std::vector<SNP>& input)
         // instead
         // chr first such that SNPs within the same chromosome will be
         // processed together
-        if (input[i1].m_chr == input[i2].m_chr)
+        if (input[i1]->m_chr == input[i2]->m_chr)
         {
-            if (misc::logically_equal(input[i1].m_p_value, input[i2].m_p_value))
+            if (misc::logically_equal(input[i1]->m_p_value,
+                                      input[i2]->m_p_value))
             {
-                if (input[i1].m_loc == input[i2].m_loc)
-                    return input[i1].m_rs < input[i2].m_rs;
-                return input[i1].m_loc < input[i2].m_loc;
+                if (input[i1]->m_loc == input[i2]->m_loc)
+                    return input[i1]->m_rs < input[i2]->m_rs;
+                return input[i1]->m_loc < input[i2]->m_loc;
             }
             else
-                return input[i1].m_p_value < input[i2].m_p_value;
+                return input[i1]->m_p_value < input[i2]->m_p_value;
         }
         else
-            return input[i1].m_chr < input[i2].m_chr;
+            return input[i1]->m_chr < input[i2]->m_chr;
     });
     return idx;
 }

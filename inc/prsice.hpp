@@ -255,6 +255,8 @@ public:
     void
     print_best(const std::vector<std::vector<std::size_t>>& region_membership,
                std::unique_ptr<std::ostream> best_file, Genotype& target);
+    void write_all_score_file(std::unique_ptr<std::ostream>& all_score_file,
+                              Genotype& target);
 
 protected:
     static void parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
@@ -355,6 +357,7 @@ protected:
     Eigen::MatrixXd m_independent_variables;
     // TODO: Use other method for faster best output
     Eigen::MatrixXd m_fast_best_output;
+    Eigen::MatrixXd m_fast_all_output;
     Eigen::VectorXd m_phenotype;
     std::unordered_map<std::string, size_t> m_sample_with_phenotypes;
     std::vector<prsice_result> m_prs_results;
@@ -381,6 +384,7 @@ protected:
 
     int m_best_index = -1;
     bool m_quick_best = true;
+    bool m_quick_all = true;
     bool m_printed_warning = false;
     Reporter* m_reporter;
     CalculatePRS m_prs_info;

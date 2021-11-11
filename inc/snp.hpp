@@ -84,24 +84,25 @@ public:
         target.name_idx = idx;
         target.byte_pos = byte_pos;
     }
-    void add_snp_info(const SNP& src, const bool flipping, const bool is_ref)
+    void add_snp_info(const std::unique_ptr<SNP>& src, const bool flipping,
+                      const bool is_ref)
     {
         if (!is_ref)
         {
-            m_target.name_idx = src.get_file_idx();
-            m_target.byte_pos = src.get_byte_pos();
-            m_chr = src.chr();
-            m_loc = src.loc();
-            m_ref = src.ref();
-            m_alt = src.alt();
+            m_target.name_idx = src->get_file_idx();
+            m_target.byte_pos = src->get_byte_pos();
+            m_chr = src->chr();
+            m_loc = src->loc();
+            m_ref = src->ref();
+            m_alt = src->alt();
             m_flipped = flipping;
         }
         else
         {
             m_ref_flipped = flipping;
         }
-        m_reference.name_idx = src.get_file_idx();
-        m_reference.byte_pos = src.get_byte_pos();
+        m_reference.name_idx = src->get_file_idx();
+        m_reference.byte_pos = src->get_byte_pos();
     }
 
     /*!
@@ -110,7 +111,8 @@ public:
      * \param input is the vector containing the SNPs
      * \return return a vector containing index to the sort order of the input
      */
-    static std::vector<size_t> sort_by_p_chr(const std::vector<SNP>& input);
+    static std::vector<size_t>
+    sort_by_p_chr(const std::vector<std::unique_ptr<SNP>>& input);
 
     /*!
      * \brief Compare the current SNP with another SNP
@@ -122,9 +124,9 @@ public:
      * flipped = true
      * \return true if it is a match
      */
-    inline bool matching(const SNP& i, bool& flipped)
+    inline bool matching(const std::unique_ptr<SNP>& i, bool& flipped)
     {
-        return matching(i.chr(), i.loc(), i.ref(), i.alt(), flipped);
+        return matching(i->chr(), i->loc(), i->ref(), i->alt(), flipped);
     }
     inline bool matching(const size_t chr, const size_t loc,
                          const std::string& ref, const std::string& alt,
@@ -290,10 +292,11 @@ public:
      * \param use_proxy indicate if we want to perform proxy clump
      * \param proxy is the threshold for proxy clumping
      */
-    void clump(SNP& target, double r2, bool use_proxy, double proxy = 2)
+    void clump(std::unique_ptr<SNP>& target, double r2, bool use_proxy,
+               double proxy = 2)
     {
         // if the target is already clumped, we will do nothing
-        if (target.clumped()) return;
+        if (target->clumped()) return;
         // we need to check if the target SNP is completely clumped (e.g. no
         // longer representing any set)
         bool target_clumped = true;
@@ -302,16 +305,17 @@ public:
         // and the index SNP will get all membership (or) from the clumped
         if (use_proxy && r2 > proxy)
         {
-            for (size_t i_flag = 0; i_flag < target.m_clump_info.flags.size();
+            for (size_t i_flag = 0; i_flag < target->m_clump_info.flags.size();
                  ++i_flag)
             {
-                m_clump_info.flags[i_flag] |= target.m_clump_info.flags[i_flag];
+                m_clump_info.flags[i_flag] |=
+                    target->m_clump_info.flags[i_flag];
             }
             target_clumped = true;
         }
         else
         {
-            for (size_t i_flag = 0; i_flag < target.m_clump_info.flags.size();
+            for (size_t i_flag = 0; i_flag < target->m_clump_info.flags.size();
                  ++i_flag)
             {
                 // For normal clumping, we will remove set identity from the
@@ -323,15 +327,15 @@ public:
                 // ~m_clump_info = not in index
                 // target.m_clump_info & ~m_clump_info = retain bit that are not
                 // found in index
-                target.m_clump_info.flags[i_flag] =
-                    target.m_clump_info.flags[i_flag]
+                target->m_clump_info.flags[i_flag] =
+                    target->m_clump_info.flags[i_flag]
                     & ~m_clump_info.flags[i_flag];
                 // if all flags of the target SNP == 0, it means that it no
                 // longer represent any gene set and is consided as "clumped"
-                target_clumped &= (target.m_clump_info.flags[i_flag] == 0);
+                target_clumped &= (target->m_clump_info.flags[i_flag] == 0);
             }
         }
-        if (target_clumped) { target.set_clumped(); }
+        if (target_clumped) { target->set_clumped(); }
     }
 
     /*!

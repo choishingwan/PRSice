@@ -78,7 +78,9 @@ void PRSice::parse_pheno_header(std::unique_ptr<std::istream> pheno_file,
         pheno_info.pheno_col_idx.push_back(1 + !pheno_info.ignore_fid);
         pheno_info.pheno_col = {std::string(col[1 + !pheno_info.ignore_fid])};
         if (isdigit(col[1 + !pheno_info.ignore_fid].at(0)))
-        { pheno_info.pheno_col = {"Phenotype"}; }
+        {
+            pheno_info.pheno_col = {"Phenotype"};
+        }
         pheno_info.skip_pheno = {false};
     }
     else
@@ -124,7 +126,9 @@ void PRSice::pheno_check(const bool no_regress, Phenotype& pheno,
         return;
     }
     if (pheno.binary.empty())
-    { throw std::runtime_error("Error: No phenotype provided"); }
+    {
+        throw std::runtime_error("Error: No phenotype provided");
+    }
 
     // want to update the binary and prevalence vector by removing
     // phenotypes not found / duplicated
@@ -159,7 +163,9 @@ void PRSice::init_matrix(const Phenotype& pheno_info, const std::string& delim,
     const auto ignore_fid = pheno_info.ignore_fid;
     const auto no_regress = m_prs_info.no_regress;
     if (m_binary_trait && m_prs_info.scoring_method == SCORING::CONTROL_STD)
-    { target.reset_std_flag(); }
+    {
+        target.reset_std_flag();
+    }
     // we need genotype for no-regress if we are trying to do control std
     if ((no_regress && m_prs_info.scoring_method == SCORING::CONTROL_STD
          && m_binary_trait)
@@ -299,7 +305,9 @@ void PRSice::set_std_exclusion_flag(const std::string& delim,
         auto&& pheno_idx = m_sample_with_phenotypes.find(id);
         if (pheno_idx == m_sample_with_phenotypes.end()) { continue; }
         if (!misc::logically_equal(m_phenotype(pheno_idx->second), 0))
-        { target.exclude_from_std(i_sample); }
+        {
+            target.exclude_from_std(i_sample);
+        }
     }
 }
 std::tuple<bool, size_t, size_t>
@@ -348,7 +356,9 @@ PRSice::process_phenotype_info(const std::string& delim, const bool ignore_fid,
         if (target.pheno_is_na(i_sample)
             || !target.sample_selected_for_prs(i_sample)
             || (m_binary_trait && target.pheno(i_sample) == "-9"))
-        { continue; }
+        {
+            continue;
+        }
         try
         {
             parse_pheno(target.pheno(i_sample), pheno_store, max_pheno_code);
@@ -384,7 +394,9 @@ PRSice::process_phenotype_file(const std::string& file_name,
     pheno_store.reserve(sample_ct);
     size_t pheno_matrix_idx = 0;
     if (phenotype_info.empty())
-    { throw std::runtime_error("Error: No data found in phenotype file"); }
+    {
+        throw std::runtime_error("Error: No data found in phenotype file");
+    }
     for (size_t i_sample = 0; i_sample < sample_ct; ++i_sample)
     {
         target.update_valid_sample(i_sample, false);
@@ -398,7 +410,9 @@ PRSice::process_phenotype_file(const std::string& file_name,
             if (pheno_tmp == "na" || pheno_tmp == "nan"
                 || !target.sample_selected_for_prs(i_sample)
                 || (m_binary_trait && pheno_tmp == "-9"))
-            { continue; }
+            {
+                continue;
+            }
             else
             {
                 try
@@ -470,7 +484,9 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
                                  "Error: No sample left");
     }
     if (pheno_store.empty())
-    { throw std::runtime_error("No phenotype presented"); }
+    {
+        throw std::runtime_error("No phenotype presented");
+    }
     if (m_binary_trait)
     {
         auto [valid, num_case, num_control] =
@@ -501,7 +517,9 @@ void PRSice::print_pheno_log(const std::string& name, const size_t sample_ct,
             m_reporter->report(message);
             std::string error_message = "Only one phenotype value detected";
             if (misc::logically_equal(pheno_store.front(), -9))
-            { error_message.append(" and they are all -9"); }
+            {
+                error_message.append(" and they are all -9");
+            }
             throw std::runtime_error(error_message
                                      + ". Not enough valid phenotype");
         }
@@ -624,7 +642,9 @@ void PRSice::update_phenotype_matrix(const std::vector<bool>& valid_cov,
         {
             auto cur_idx = m_sample_with_phenotypes.find(id);
             if (cur_idx == m_sample_with_phenotypes.end())
-            { throw std::runtime_error("Error: Sam has some coding error"); }
+            {
+                throw std::runtime_error("Error: Sam has some coding error");
+            }
             if (valid_cov[cur_idx->second])
             {
                 new_pheno(new_matrix_idx) = m_phenotype(cur_idx->second);
@@ -700,7 +720,9 @@ PRSice::cov_check_and_factor_level_count(
                 auto&& cur_level = factor_levels[i_factor];
                 auto&& cur_cov = token[f];
                 if (cur_level.find(cur_cov) == cur_level.end())
-                { cur_level[cur_cov] = current_factor_level[i_factor]++; }
+                {
+                    cur_level[cur_cov] = current_factor_level[i_factor]++;
+                }
                 ++i_factor;
             }
         }
@@ -871,6 +893,7 @@ void PRSice::reset_result_containers(const Genotype& target,
     // m_perm_result stores the result (Z scores) from each permutation and
     // is then used for calculation of empirical p value
     m_perm_result.resize(m_perm_info.num_permutation, 0);
+    m_prs_results.clear();
     m_prs_results.resize(target.num_threshold(region_idx), prsice_result());
     std::fill(m_best_sample_score.begin(), m_best_sample_score.end(), 0);
 }
@@ -879,24 +902,56 @@ void PRSice::print_all_score(const size_t num_sample,
                              std::unique_ptr<std::ostream>& all_score_file,
                              Genotype& target)
 {
-    for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+    if (m_quick_all)
     {
-        // we will calculate the the number of white space we need
-        // to skip to reach the current sample + threshold's output
-        // position
-        const long long loc =
-            m_all_file.header_length
-            + static_cast<long long>(i_sample)
-                  * (m_all_file.line_width + NEXT_LENGTH)
-            + NEXT_LENGTH + m_all_file.skip_column_length
-            + m_all_file.processed_threshold
-            + m_all_file.processed_threshold * m_numeric_width;
-        all_score_file->seekp(loc);
-        // then we will output the score
-        (*all_score_file) << std::setprecision(static_cast<int>(m_precision))
-                          << target.calculate_score(i_sample);
+        for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+        {
+            m_fast_all_output(i_sample, m_all_file.processed_threshold) =
+                target.calculate_score(i_sample);
+        }
+    }
+    else
+    {
+        for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+        {
+            // we will calculate the the number of white space we need
+            // to skip to reach the current sample + threshold's output
+            // position
+            const long long loc =
+                m_all_file.header_length
+                + static_cast<long long>(i_sample)
+                      * (m_all_file.line_width + NEXT_LENGTH)
+                + NEXT_LENGTH + m_all_file.skip_column_length
+                + m_all_file.processed_threshold
+                + m_all_file.processed_threshold * m_numeric_width;
+            all_score_file->seekp(loc);
+            // then we will output the score
+            (*all_score_file)
+                << std::setprecision(static_cast<int>(m_precision))
+                << target.calculate_score(i_sample);
+        }
     }
     ++m_all_file.processed_threshold;
+}
+
+void PRSice::write_all_score_file(std::unique_ptr<std::ostream>& all_score_file,
+                                  Genotype& target)
+{
+    if (!m_quick_all) return;
+    const auto ncols = m_fast_all_output.cols();
+    for (size_t i_sample = 0; i_sample < target.num_sample(); ++i_sample)
+    {
+        (*all_score_file) << target.fid(i_sample) << " "
+                          << target.iid(i_sample);
+        for (auto col = 0; col < ncols; ++col)
+        {
+            (*all_score_file)
+                << " " << std::setprecision(static_cast<int>(m_precision))
+                << m_fast_all_output(i_sample, col);
+        }
+        (*all_score_file) << "\n";
+    }
+    all_score_file.reset();
 }
 void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
                         const std::vector<std::string>& region_names,
@@ -923,14 +978,18 @@ void PRSice::run_prsice(const std::vector<size_t>& set_snp_idx,
     std::vector<size_t>::const_iterator start = set_snp_idx.begin();
     double top = 1, bot = 0;
     if (prevalence <= 1.0)
-    { std::tie(top, bot) = lee_adjustment_factor(prevalence); }
+    {
+        std::tie(top, bot) = lee_adjustment_factor(prevalence);
+    }
     while (target.get_score(start, set_snp_idx.cend(), cur_threshold,
                             m_num_snp_included, first_run))
     {
         ++m_analysis_done;
         print_progress();
         if (print_all_scores && pheno_idx == 0)
-        { print_all_score(num_sample, all_score_file, target); }
+        {
+            print_all_score(num_sample, all_score_file, target);
+        }
         if (!no_regress)
         {
             regress_score(target, cur_threshold, num_thread, prs_result_idx);
@@ -1070,7 +1129,9 @@ void PRSice::regress_score(Genotype& target, const double threshold,
     assert(!m_prs_results.empty());
     if (m_num_snp_included == m_prs_results[prs_result_idx].num_snp
         && !m_prs_info.non_cumulate)
-    { return; }
+    {
+        return;
+    }
 
     for (size_t sample_id = 0; sample_id < num_regress_samples; ++sample_id)
     {
@@ -1109,7 +1170,9 @@ void PRSice::regress_score(Genotype& target, const double threshold,
         const size_t num_include_samples = target.num_sample();
         // load all sample, including those that are not used for regression
         for (size_t s = 0; s < num_include_samples; ++s)
-        { m_best_sample_score[s] = target.calculate_score(s); }
+        {
+            m_best_sample_score[s] = target.calculate_score(s);
+        }
     }
     // we can now store the prsice_result
 
@@ -1377,6 +1440,7 @@ void PRSice::prep_all_score_output(
 {
     auto set_thresholds = target.get_set_thresholds();
     unsigned long long total_set_thresholds = 0;
+    const size_t num_samples = target.num_sample();
     for (size_t thres = 0; thres < set_thresholds.size(); ++thres)
     {
         // skip bakcground and empty region
@@ -1393,12 +1457,16 @@ void PRSice::prep_all_score_output(
     }
     const long long begin_byte = all_score_file->tellp();
     (*all_score_file) << "FID IID";
+    size_t num_all_col = 0;
     if (!(region_name.size() > 2))
     {
         // add character in front so that when R parse it, it doesn't add
         // the annoying X and properly treat it as a header
         for (auto& thres : set_thresholds.front())
-        { (*all_score_file) << " Pt_" << thres; }
+        {
+            (*all_score_file) << " Pt_" << thres;
+            ++num_all_col;
+        }
     }
     else
     {
@@ -1408,34 +1476,55 @@ void PRSice::prep_all_score_output(
         {
             if (i == 1 || region_membership[i].empty()) continue;
             for (auto& thres : set_thresholds[i])
-            { (*all_score_file) << " " << region_name[i] << "_" << thres; }
+            {
+                (*all_score_file) << " " << region_name[i] << "_" << thres;
+                ++num_all_col;
+            }
         }
     }
+
     (*all_score_file) << "\n";
-    const long long end_byte = all_score_file->tellp();
-    // if the line is too long, we might encounter overflow
-    assert(end_byte >= begin_byte);
-    m_all_file.header_length = end_byte - begin_byte;
-    m_all_file.processed_threshold = 0;
-    m_all_file.line_width =
-        max_fid + 1LL + max_iid + 1LL
-        + static_cast<long long>(total_set_thresholds) * (m_numeric_width + 1LL)
-        + 1LL;
-    m_all_file.skip_column_length = max_fid + max_iid + 2;
-    size_t num_sample = target.num_sample();
-    // now print out all the empty lines
-    std::string name;
-    for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+
+    try
     {
-        name = target.fid(i_sample) + " " + target.iid(i_sample);
-        // TODO: Bug if line_width is bigger than what setw can handle
-        (*all_score_file) << std::setfill(' ')
-                          << std::setw(m_all_file.line_width) << std::left
-                          << name << "\n";
+        m_fast_all_output = Eigen::MatrixXd::Zero(num_samples, num_all_col);
+        m_quick_all = true;
+        m_has_best_for_print.resize(region_name.size(), false);
     }
-    ++m_all_file.line_width;
-    all_score_file->seekp(0, all_score_file->beg);
+    catch (...)
+    {
+        m_reporter->report(
+            "Warning: Not enough memory to store all scores "
+            "into the memory, will use a slower method to output "
+            "the all score file");
+        // not enough memory for fast best use the seekg method
+        m_quick_all = false;
+        const long long end_byte = all_score_file->tellp();
+        // if the line is too long, we might encounter overflow
+        assert(end_byte >= begin_byte);
+        m_all_file.header_length = end_byte - begin_byte;
+        m_all_file.processed_threshold = 0;
+        m_all_file.line_width = max_fid + 1LL + max_iid + 1LL
+                                + static_cast<long long>(total_set_thresholds)
+                                      * (m_numeric_width + 1LL)
+                                + 1LL;
+        m_all_file.skip_column_length = max_fid + max_iid + 2;
+        size_t num_sample = target.num_sample();
+        // now print out all the empty lines
+        std::string name;
+        for (size_t i_sample = 0; i_sample < num_sample; ++i_sample)
+        {
+            name = target.fid(i_sample) + " " + target.iid(i_sample);
+            // TODO: Bug if line_width is bigger than what setw can handle
+            (*all_score_file)
+                << std::setfill(' ') << std::setw(m_all_file.line_width)
+                << std::left << name << "\n";
+        }
+        ++m_all_file.line_width;
+        all_score_file->seekp(0, all_score_file->beg);
+    }
 }
+
 
 std::tuple<double, double>
 PRSice::lee_adjustment_factor(const double prevalence)
@@ -1482,21 +1571,26 @@ void PRSice::print_summary(const std::string& pheno_name,
 {
     assert(significant_count.size() == m_significant_store.size());
     for (size_t i = 0; i < significant_count.size(); ++i)
-    { significant_count[i] += m_significant_store[i]; }
+    {
+        significant_count[i] += m_significant_store[i];
+    }
     double top = 1, bot = 0;
     if (prevalence < 1.0)
-    { std::tie(top, bot) = lee_adjustment_factor(prevalence); }
+    {
+        std::tie(top, bot) = lee_adjustment_factor(prevalence);
+    }
     for (auto&& sum : m_prs_summary)
     {
         (*summary_file) << pheno_name << "\t" << sum.set << "\t"
                         << sum.result.threshold << "\t"
-                        << sum.result.r2 - m_null_r2;
+                        << 1.0 - (1.0 - sum.result.r2) / (1.0 - m_null_r2);
         if (has_prevalence && m_binary_trait)
         {
             (*summary_file)
                 << "\t"
-                << get_adjusted_r2(sum.result.r2, top, bot)
-                       - get_adjusted_r2(m_null_r2, top, bot)
+                << 1.0
+                       - (1.0 - get_adjusted_r2(sum.result.r2, top, bot))
+                             / (1.0 - get_adjusted_r2(m_null_r2, top, bot))
                 << "\t" << get_adjusted_r2(sum.result.r2, top, bot) << "\t"
                 << get_adjusted_r2(m_null_r2, top, bot) << "\t" << prevalence;
         }
@@ -1515,7 +1609,9 @@ void PRSice::print_summary(const std::string& pheno_name,
                         << sum.result.se << "\t" << sum.result.p << "\t"
                         << sum.result.num_snp;
         if (m_perm_info.run_set_perm && (sum.result.competitive_p >= 0.0))
-        { (*summary_file) << "\t" << sum.result.competitive_p; }
+        {
+            (*summary_file) << "\t" << sum.result.competitive_p;
+        }
         else if (m_perm_info.run_set_perm)
         {
             (*summary_file) << "\tNA";
@@ -1526,7 +1622,7 @@ void PRSice::print_summary(const std::string& pheno_name,
 }
 
 
-PRSice::~PRSice() {}
+PRSice::~PRSice() { }
 void PRSice::get_se_matrix(const Eigen::Index p, Regress& decomposed)
 {
     if (p == decomposed.rank)

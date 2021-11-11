@@ -25,13 +25,13 @@
 #include "prsice.hpp"
 #include "region.hpp"
 #include "reporter.hpp"
+#include <cassert>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
-
 
 int main(int argc, char* argv[])
 {
@@ -124,6 +124,7 @@ int main(int argc, char* argv[])
             auto region_membership = target_file->build_membership_matrix(
                 num_regions, region_names, commander.print_snp(),
                 *snp_file.get());
+            if (commander.clump_only()) return 0;
             // we can now quickly check if any of the region are empty
             try
             {
@@ -202,7 +203,6 @@ int main(int argc, char* argv[])
                                               all_score_file = nullptr;
                 if (!no_regress)
                 {
-
                     best_file =
                         misc::load_ostream(prefix + file_suffix + ".best");
                     prsice.prep_best_output(*target_file, region_membership,
@@ -246,6 +246,8 @@ int main(int argc, char* argv[])
                 }
                 prsice.print_summary(pheno_name, prevalence, has_prevalence,
                                      significant_count, summary_file);
+                if (commander.all_scores())
+                    prsice.write_all_score_file(all_score_file, *target_file);
             }
             if (!no_regress)
                 reporter.report(print_project_summary(significant_count));

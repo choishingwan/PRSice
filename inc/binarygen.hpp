@@ -90,14 +90,15 @@ protected:
         std::unordered_set<std::string>& processed_snps,
         std::vector<bool>& retain_snp, bool& chr_error, bool& sex_error,
         Genotype* genotype);
-    inline void read_genotype(const SNP& snp, const uintptr_t /*selected_size*/,
+    inline void read_genotype(const std::unique_ptr<SNP>& snp,
+                              const uintptr_t /*selected_size*/,
                               FileRead& genotype_file,
                               uintptr_t* __restrict /*tmp_genotype*/,
                               uintptr_t* __restrict genotype,
                               uintptr_t* __restrict subset_mask,
                               bool is_ref = false) override
     {
-        auto [file_idx, byte_pos] = snp.get_file_info(is_ref);
+        auto [file_idx, byte_pos] = snp->get_file_info(is_ref);
         const uintptr_t unfiltered_sample_ct4 =
             (m_unfiltered_sample_ct + 3) / 4;
         if ((m_ref_plink && is_ref) || (!is_ref && m_target_plink))
@@ -134,7 +135,7 @@ protected:
         return true;
     }
 
-    void count_and_read_genotype(SNP&) override;
+    void count_and_read_genotype(const std::unique_ptr<SNP>&) override;
     void read_score(std::vector<PRS>& prs_list,
                     const std::vector<size_t>::const_iterator& start_idx,
                     const std::vector<size_t>::const_iterator& end_idx,

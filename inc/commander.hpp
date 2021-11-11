@@ -42,8 +42,8 @@
 #include <windows.h>
 #endif
 
-const std::string version = "2.3.3";
-const std::string date = "2020-08-05";
+const std::string version = "2.3.5";
+const std::string date = "2021-09-20";
 class Commander
 {
 public:
@@ -94,6 +94,7 @@ public:
     bool keep_ambig() const { return m_keep_ambig; }
     bool nonfounders() const { return m_include_nonfounders; }
     bool ultra_aggressive() const { return m_ultra_aggressive; }
+    bool clump_only() const { return m_clump_only; }
 
 protected:
     const std::vector<std::string> supported_types = {"bed", "ped", "bgen"};
@@ -112,6 +113,7 @@ protected:
     int m_print_snp = false;
     int m_ultra_aggressive = false;
     int m_user_no_default = false;
+    int m_clump_only = false;
     bool m_provided_memory = false;
     bool m_set_delim = false;
     bool m_ran_base_check = false;
@@ -319,6 +321,8 @@ protected:
         }
     }
     inline bool validate_command(Reporter& reporter);
+
+
     inline bool parse_binary_vector(const std::string& input,
                                     const std::string& c,
                                     std::vector<bool>& target)
@@ -347,7 +351,9 @@ protected:
                     bool value = false;
                     size_t num_repeat = number_boolean(bin, value);
                     for (size_t i = 0; i < num_repeat; ++i)
-                    { target.push_back(value); }
+                    {
+                        target.push_back(value);
+                    }
                 }
                 catch (const std::runtime_error&)
                 {
@@ -513,7 +519,9 @@ protected:
     inline void append_log(const std::string& c, const std::string& input)
     {
         if (m_parameter_log.find(c) == m_parameter_log.end())
-        { m_parameter_log[c] = input; }
+        {
+            m_parameter_log[c] = input;
+        }
         else
         {
             m_parameter_log[c] = "," + input;

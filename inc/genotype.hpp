@@ -120,7 +120,7 @@ public:
     {
         m_existed_snps_index.clear();
         for (size_t i_snp = 0; i_snp < m_existed_snps.size(); ++i_snp)
-        { m_existed_snps_index[m_existed_snps[i_snp].rs()] = i_snp; }
+        { m_existed_snps_index[m_existed_snps[i_snp]->rs()] = i_snp; }
     }
     /*!
      * \brief Return the number of sample we wish to perform PRS on
@@ -525,7 +525,7 @@ public:
     static void
     construct_flag(const std::vector<IITree<size_t, size_t>>& gene_sets,
                    const size_t required_size,
-                   const bool genome_wide_background, SNP* snp)
+                   const bool genome_wide_background, std::unique_ptr<SNP>& snp)
     {
         auto& flag = snp->get_flag();
         if (flag.size() != required_size) { flag.resize(required_size); }
@@ -640,7 +640,10 @@ public:
     {
         return m_existed_snps_index;
     }
-    const std::vector<SNP>& included_snps() const { return m_existed_snps; }
+    const std::vector<std::unique_ptr<SNP>>& included_snps() const
+    {
+        return m_existed_snps;
+    }
     void parse_chr_id_formula(const std::string& chr_id_formula);
 
 
@@ -653,7 +656,7 @@ protected:
     // std::vector<Sample> m_sample_names;
     FileRead m_genotype_file;
     GenotypePool m_genotype_pool;
-    std::vector<SNP> m_existed_snps;
+    std::vector<std::unique_ptr<SNP>> m_existed_snps;
     std::unordered_map<std::string, size_t> m_existed_snps_index;
     std::unordered_set<std::string> m_sample_selection_list;
     std::unordered_set<std::string> m_snp_selection_list;
@@ -788,10 +791,10 @@ protected:
         }
         return message;
     }
-    std::string chr_id_from_genotype(const SNP& snp) const;
+    std::string chr_id_from_genotype(const std::unique_ptr<SNP>& snp) const;
     std::string
     get_chr_id_from_base(const BaseFile& base_file,
-                         const std::vector<std::string_view>& token) const;
+                         const std::vector<std::string_view>& token);
     bool has_parent(const std::unordered_set<std::string>& founder_info,
                     const std::vector<std::string>& token,
                     const std::string& fid, const size_t idx);
@@ -805,49 +808,129 @@ protected:
                     std::vector<std::string>& duplicated_sample_id);
     void recalculate_categories(const PThresholding& p_info);
     void print_mismatch(const std::string& out, const std::string& type,
-                        const SNP& target, const SNP& new_snp);
+                        const std::unique_ptr<SNP>& target,
+                        const std::unique_ptr<SNP>& new_snp);
 
-    bool snp_dup_selection_check(const std::string& id,
+    bool snp_dup_selection_check(const std::string& chr_id, std::string& id,
                                  std::unordered_set<std::string>& processed_idx,
                                  std::unordered_set<std::string>& dup_rs,
                                  std::vector<size_t>& filter_count)
     {
+        // resize the counting vector if it isn't the correct size
         if (filter_count.size() != +FILTER_COUNT::MAX)
         { filter_count.resize(+FILTER_COUNT::MAX, 0); }
-        if (processed_idx.find(id) != processed_idx.end())
+        // if rs id isn't provided, use chr_id for all
+        if (id.empty()) id = chr_id;
+        // if chr_id or the rs_id is already found, then
+        // add it to the duplicated list. Duplicated SNPs might be
+        // more of a problem for chr_id as it is more likely to have
+        // two SNPs with same coordinates than having two different
+        // SNPs to have same coordinates
+        if (processed_idx.find(id) != processed_idx.end()
+            || (!chr_id.empty()
+                && processed_idx.find(chr_id) != processed_idx.end()))
         {
             ++filter_count[+FILTER_COUNT::DUP_SNP];
             dup_rs.insert(id);
             return false;
         }
+        // check for extraction / exclusion using rs_id first
         auto&& selection = m_snp_selection_list.find(id);
-        if ((!m_exclude_snp && selection == m_snp_selection_list.end())
-            || (m_exclude_snp && selection != m_snp_selection_list.end()))
+        if (m_exclude_snp && selection != m_snp_selection_list.end())
         {
+            // we want to exclude this snp
             ++filter_count[+FILTER_COUNT::SELECT];
             return false;
         }
+        else if (!m_exclude_snp && selection == m_snp_selection_list.end())
+        {
+            // want to include, but not found
+            if (chr_id.empty())
+            {
+                ++filter_count[+FILTER_COUNT::SELECT];
+                return false;
+            }
+            else
+            {
+                selection = m_snp_selection_list.find(chr_id);
+                if ((!m_exclude_snp && selection == m_snp_selection_list.end())
+                    || (m_exclude_snp
+                        && selection != m_snp_selection_list.end()))
+                {
+                    ++filter_count[+FILTER_COUNT::SELECT];
+                    return false;
+                }
+                else
+                {
+                    processed_idx.insert(chr_id);
+                }
+            }
+        }
+        // without selection file
         processed_idx.insert(id);
         return true;
+    }
+
+    std::string get_chr_id(const std::unique_ptr<SNP>& snp) const
+    {
+        // check if we have all the column we need
+        std::string chr_id = "";
+        for (auto col : m_chr_id_column)
+        {
+            if (col < 0)
+            {
+                auto idx = (-1 * col - 1);
+                chr_id += m_chr_id_symbol[idx];
+            }
+            else
+            {
+                std::string str;
+                switch (col)
+                {
+                case +BASE_INDEX::EFFECT:
+                    str = snp->ref();
+                    misc::to_upper(str);
+                    chr_id += str;
+                    break;
+                case +BASE_INDEX::NONEFFECT:
+                    str = snp->alt();
+                    misc::to_upper(str);
+                    chr_id += str;
+                    break;
+                case +BASE_INDEX::CHR:
+                    str = std::to_string(snp->chr());
+                    chr_id += str;
+                    break;
+                case +BASE_INDEX::BP:
+                    str = std::to_string(snp->loc());
+                    chr_id += str;
+                    break;
+                }
+            }
+        }
+        return chr_id;
     }
     bool parse_rs_id(const std::vector<std::string_view>& token,
                      const BaseFile& base_file,
                      std::unordered_set<std::string>& processed_idx,
                      std::unordered_set<std::string>& dup_rs,
-                     std::vector<size_t>& filter_count, std::string& rs_id)
+                     std::vector<size_t>& filter_count, std::string& rs_id,
+                     std::string& chr_id)
     {
+        // when chr_id is provided, we should use both the rs and chr id and
+        // count it as extracted / excluded / successs whenever one of them
+        // is matched, this allow flexibility esp w.r.t. situation when
+        // there's duplicated SNPs
+        chr_id = "";
+        rs_id = "";
         if (!base_file.has_column[+BASE_INDEX::RS] && !m_has_chr_id_formula)
         { throw std::runtime_error("Error: RS ID column not provided!"); }
-        else if (base_file.has_column[+BASE_INDEX::RS])
-        {
-            rs_id = token[base_file.column_index[+BASE_INDEX::RS]];
-        }
-        else if (m_has_chr_id_formula)
-        {
-            rs_id = get_chr_id_from_base(base_file, token);
-        }
+        if (base_file.has_column[+BASE_INDEX::RS])
+        { rs_id = token[base_file.column_index[+BASE_INDEX::RS]]; }
+        if (m_has_chr_id_formula)
+        { chr_id = get_chr_id_from_base(base_file, token); }
 
-        return (snp_dup_selection_check(rs_id, processed_idx, dup_rs,
+        return (snp_dup_selection_check(chr_id, rs_id, processed_idx, dup_rs,
                                         filter_count));
     }
 
@@ -1192,12 +1275,17 @@ protected:
     }
 
 
-    virtual inline void count_and_read_genotype(SNP& /* snp*/) {}
     virtual inline void
-    read_genotype(const SNP& /*snp*/, const uintptr_t /* selected_size*/,
-                  FileRead& /*genotype_file*/, uintptr_t* /*tmp_store*/,
-                  uintptr_t* /*genotype*/, uintptr_t* /* subset_mask*/,
-                  bool is_ref = false)
+    count_and_read_genotype(const std::unique_ptr<SNP>& /* snp*/)
+    {
+    }
+    virtual inline void read_genotype(const std::unique_ptr<SNP>& /*snp*/,
+                                      const uintptr_t /* selected_size*/,
+                                      FileRead& /*genotype_file*/,
+                                      uintptr_t* /*tmp_store*/,
+                                      uintptr_t* /*genotype*/,
+                                      uintptr_t* /* subset_mask*/,
+                                      bool is_ref = false)
     {
     }
     virtual void
@@ -1226,7 +1314,8 @@ protected:
     load_ref(std::unique_ptr<std::istream> input, bool ignore_fid);
     bool
     not_in_xregion(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
-                   const SNP& base, const SNP& target);
+                   const std::unique_ptr<SNP>& base,
+                   const std::unique_ptr<SNP>& target);
     bool check_rs(const std::string& snpid, const std::string& chrid,
                   std::string& rsid,
                   std::unordered_set<std::string>& processed_snps,
@@ -1241,14 +1330,15 @@ protected:
     process_snp(const std::vector<IITree<size_t, size_t>>& exclusion_regions,
                 const std::string& mismatch_snp_record_name,
                 const std::string& mismatch_source, const std::string& snpid,
-                SNP& snp, std::unordered_set<std::string>& processed_snps,
+                const std::unique_ptr<SNP>& snp,
+                std::unordered_set<std::string>& processed_snps,
                 std::unordered_set<std::string>& duplicated_snps,
                 std::vector<bool>& retain_snp, Genotype* genotype);
     void shrink_snp_vector(const std::vector<bool>& retain)
     {
         m_existed_snps.erase(
             std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&retain, this](const SNP& s) {
+                           [&retain, this](const std::unique_ptr<SNP>& s) {
                                return !retain[(&s - &*begin(m_existed_snps))];
                            }),
             m_existed_snps.end());
@@ -1258,7 +1348,7 @@ protected:
     {
         m_existed_snps.erase(
             std::remove_if(m_existed_snps.begin(), m_existed_snps.end(),
-                           [&retain, this](const SNP& s) {
+                           [&retain, this](const std::unique_ptr<SNP>& s) {
                                return !retain[(&s - &*begin(m_existed_snps))];
                            }),
             m_existed_snps.end());

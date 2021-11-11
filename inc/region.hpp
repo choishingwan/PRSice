@@ -69,7 +69,8 @@ public:
                                    const std::string& exclusion_range);
     size_t generate_regions(
         const std::unordered_map<std::string, size_t>& included_snp_idx,
-        const std::vector<SNP>& included_snps, const size_t max_chr);
+        const std::vector<std::unique_ptr<SNP>>& included_snps,
+        const size_t max_chr);
 
     const std::vector<std::string>& get_names() const { return m_region_name; }
 
@@ -81,7 +82,7 @@ public:
 protected:
     void load_background(
         const std::unordered_map<std::string, size_t>& snp_list_idx,
-        const std::vector<SNP>& snp_list, const size_t max_chr,
+        const std::vector<std::unique_ptr<SNP>>& snp_list, const size_t max_chr,
         std::unordered_map<std::string, std::vector<size_t>>& msigdb_list);
 
     static void extend_region(std::string_view strand, const size_t wind_5,
@@ -197,12 +198,13 @@ protected:
                           const size_t max_chr);
     void transverse_snp_file(
         const std::unordered_map<std::string, size_t>& snp_list_idx,
-        const std::vector<SNP>& snp_list, const bool is_set_file,
-        std::unique_ptr<std::istream> input, size_t& set_idx);
+        const std::vector<std::unique_ptr<SNP>>& snp_list,
+        const bool is_set_file, std::unique_ptr<std::istream> input,
+        size_t& set_idx);
     void
     load_snp_sets(const std::unordered_map<std::string, size_t>& snp_list_idx,
-                  const std::vector<SNP>& snp_list, const std::string& snp_file,
-                  size_t& set_idx);
+                  const std::vector<std::unique_ptr<SNP>>& snp_list,
+                  const std::string& snp_file, size_t& set_idx);
     std::tuple<std::string, std::string, bool>
     get_set_name(const std::string& input)
     {
