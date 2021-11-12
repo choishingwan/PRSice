@@ -1,8 +1,17 @@
-!!! announcement We’re hiring!!
+<div class="admonition announcement">
+<p class="admonition-title">We're hiring!!</p>
+<p></p><h2>We are hiring!!</h2><p></p>
 
-We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our [lab website](https://labs.icahn.mssm.edu/oreillylab/)). 
+We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our <a href="https://labs.icahn.mssm.edu/oreillylab/">lab website</a>)
+<p></p>
+Please email <a href="#" class="cryptedmail"
+	data-name="paul.oreilly"
+	data-domain="mssm"
+	data-tld="edu"
+	onclick="window.location.href = 'mailto:' + this.dataset.name + '@' + this.dataset.domain '.' + this.dataset.tld; return false;"></a> if interested!
+</div>
+</br>
 
-Please email paul.oreilly@mssm.edu if interested!
 
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
