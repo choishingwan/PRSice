@@ -7,7 +7,7 @@ Based on a permutation study we estimate a significance threshold of P = 0.001 f
 PRSice is a software package written in R and C++. PRSice runs as a command-line program with a variety of user-options and is freely available for download below, compatible for Unix/Linux/Mac OS
 
 ## NOTE
-Please refer to our [website](https://www.prsice.info/) for more update instructions
+Please refer to our [website](https://choishingwan.github.io/PRSice/) for more update instructions
 
 ## Prerequisite
 GCC version 4.8.1 or higher (for c++11)
