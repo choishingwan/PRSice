@@ -2,7 +2,7 @@
 <p class="admonition-title">We're hiring!!</p>
 <p></p><h2>We are hiring!!</h2><p></p>
 
-We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our <a href="https://labs.icahn.mssm.edu/oreillylab/">lab website</a>)
+We are looking for multiple people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our <a href="https://labs.icahn.mssm.edu/oreillylab/">lab website</a>)
 <p></p>
 Please email <a href="#" class="cryptedmail"
 	data-name="paul.oreilly"
