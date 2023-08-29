@@ -1296,16 +1296,10 @@ void Genotype::threaded_clumping(
     size_t max_snp_in_chr = 0;
     // only reserves the max amount of SNPs required for all chromosome involved
     for (auto&& range : snp_range)
-    {
-        num_snp_in_chr = std::get<1>(range) - std::get<0>(range);
-        if (num_snp_in_chr > max_snp_in_chr) max_snp_in_chr = num_snp_in_chr;
-    }
-    // define the max size as the maximum window size if it is bigger than 20%
-    // of the size of current chromosome. Otherwise, define the max size as 20%
-    // of the chromosome.
-    const auto max_size = m_max_window_size > std::floor(max_snp_in_chr * 0.2)
+    { num_snp_in_chr += std::get<1>(range) - std::get<0>(range); }
+    const auto max_size = m_max_window_size > static_cast<size_t>(std::floor(static_cast<double>(num_snp_in_chr) * 0.01))
                               ? m_max_window_size
-                              : std::floor(max_snp_in_chr * 0.2);
+                              : static_cast<size_t>(std::floor(static_cast<double>(num_snp_in_chr) * 0.01));
     GenotypePool genotype_pool(max_size + 1, unfiltered_sample_ctv2);
     auto tmp_genotype = genotype_pool.alloc();
     double r2 = -1;

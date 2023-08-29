@@ -2312,6 +2312,16 @@ if (provided("cov_file", argv)) {
   }
     # We assume the first two columns are always FID and IID unless user used ignore-fid
     if(provided("ignore_fid", argv)){
+        # Add a check to see if FID is here. PRSice internal will assume the
+        # first column as IID. So we might want to manipulate this to account 
+        # for that 
+        # TODO: This is something that we need to check
+        if("IID" %in% colnames(covariance)){
+          if(which("IID" == colnames(covariance)) != 1){
+            warning("Warning: PRSice detected IID in your covariate that is not the first column yet you have used --ignore-fid. By default, when --ignore-fid is used, PRSice will use the first column as the IID.")
+            covariance <- covariance[, !(colnames(covariance) %in% "IID")]
+          }
+        }
         colnames(covariance)[1] <- "IID"
     }else{
         colnames(covariance)[1:2] <- c("FID", "IID")
@@ -2588,7 +2598,6 @@ if (use.data.table) {
   phenotype <-
     read.table(pheno.file, header = F, colClasses = colclass)
 }
-
 if (!is.null(pheno.cols) &
     length(pheno.cols) > 1) {
   for (i in 1:length(pheno.cols)) {

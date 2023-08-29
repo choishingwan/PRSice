@@ -1,8 +1,17 @@
-!!! announcement We’re hiring!!
+<div class="admonition announcement">
+<p class="admonition-title">We're hiring!!</p>
+<p></p><h2>We are hiring!!</h2><p></p>
 
-We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our [lab website](https://labs.icahn.mssm.edu/oreillylab/)). 
+We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our <a href="https://labs.icahn.mssm.edu/oreillylab/">lab website</a>)
+<p></p>
+Please email <a href="#" class="cryptedmail"
+	data-name="paul.oreilly"
+	data-domain="mssm"
+	data-tld="edu"
+	onclick="window.location.href = 'mailto:' + this.dataset.name + '@' + this.dataset.domain '.' + this.dataset.tld; return false;"></a> if interested!
+</div>
+</br>
 
-Please email paul.oreilly@mssm.edu if interested!
 
 <h1>PRSice-2: Polygenic Risk Score software</h1>
 
@@ -22,13 +31,22 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 # Executable downloads [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3703335.svg)](https://doi.org/10.5281/zenodo.3703335)[![Coverage Status](https://coveralls.io/repos/github/choishingwan/PRSice/badge.svg?branch=master)](https://coveralls.io/github/choishingwan/PRSice?branch=master)
 | Operating System | Link |
 | -----------------|:----:|
-| Linux 64-bit | [v2.3.3](https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_linux.zip) |
-| OS X 64-bit | [v2.3.3](https://github.com/choishingwan/PRSice/releases/download/2.3.3/PRSice_mac.zip) |
+| Linux 64-bit | [v2.3.5](https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_linux.zip) |
+| OS X 64-bit | [v2.3.5](https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_mac.zip) |
 | Windows 32-bit | Not available |
-| Windows 64-bit | Not available |
+| Windows 64-bit | [v2.3.5](https://github.com/choishingwan/PRSice/releases/download/2.3.5/PRSice_win64.zip) |
 
 
 !!! Note "Latest Update"
+    # 2021-09-20 (v2.3.5)
+    - This is a temporary fix for known issues. We are currently re-building PRSice with best practices and try to make sure robustness and extensibility with unit tests.
+    - Some fixes are 
+        - Fixed `--perm`
+        - Fixed `--prevalence`
+        - Reduced memory usage for `bgen` in multi-threaded mode
+        - Increased speed of file generation when there's enough memory
+        - Some `chr-id` fix, though it is still rather buggy
+
     # 2020-08-05 (v2.3.3)
     - Thanks to report from @charlisech, we were able to pinpoint a bug related to sample selection when using bgen data.
 

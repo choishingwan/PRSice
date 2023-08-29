@@ -5,7 +5,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(PROJECT_NAME PRSice)
-project(${PROJECT_NAME} CXX)
+project(${PROJECT_NAME} CXX C)
 
 add_compile_options(-g)
 add_compile_options(-Wall)
