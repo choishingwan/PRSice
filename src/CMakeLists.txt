@@ -35,9 +35,11 @@ target_link_libraries(utility PUBLIC
 # plink
 add_library(plink
     ${CMAKE_SOURCE_DIR}/src/plink_common.cpp
-    ${CMAKE_SOURCE_DIR}/src/dcdflib.cpp)
+    ${CMAKE_SOURCE_DIR}/src/dcdflib.cpp
+    ${CMAKE_SOURCE_DIR}/src/SFMT.c)
 target_include_directories(plink SYSTEM PUBLIC
-    ${CMAKE_SOURCE_DIR}/lib)
+    ${CMAKE_SOURCE_DIR}/lib
+    ${CMAKE_SOURCE_DIR}/lib/simde)
 target_link_libraries(plink PUBLIC utility)
 
 
