@@ -1327,5 +1327,5 @@ inline size_t getCurrentRSS()
     return (size_t) 0L; /* Unsupported. */
 #endif
 }
-
+}
 
