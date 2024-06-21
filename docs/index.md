@@ -1,14 +1,10 @@
 <div class="admonition announcement">
 <p class="admonition-title">We're hiring!!</p>
-<p></p><h2>We are hiring!!</h2><p></p>
+<p></p><h2>PRS Workshop 2024 in Japan!!!</h2><p></p>
 
-We are looking for several people to join our team at Mount Sinai in New York City - Postdoc and Faculty positions available! We need people with a strong background in computing/statistics interested in the themes of our lab (see our <a href="https://labs.icahn.mssm.edu/oreillylab/">lab website</a>)
+PRS Workshop 2024 in Japan!!! Please see details about a 2-day training workshop on the theory and application of PRS that we are running with the Okada Lab in Tokyo:  (see the <a href="http://www.sg.med.osaka-u.ac.jp/school_2024.html"> website</a>)
 <p></p>
-Please email <a href="#" class="cryptedmail"
-	data-name="paul.oreilly"
-	data-domain="mssm"
-	data-tld="edu"
-	onclick="window.location.href = 'mailto:' + this.dataset.name + '@' + this.dataset.domain '.' + this.dataset.tld; return false;"></a> if interested!
+
 </div>
 </br>
 
