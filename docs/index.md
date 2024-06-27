@@ -1,5 +1,5 @@
 <div class="admonition announcement">
-<p class="admonition-title">We're hiring!!</p>
+<p class="admonition-title">PRS Workshop 2024 in Japan!!!</p>
 <p></p><h2>PRS Workshop 2024 in Japan!!!</h2><p></p>
 
 PRS Workshop 2024 in Japan!!! Please see details about a 2-day training workshop on the theory and application of PRS that we are running with the Okada Lab in Tokyo:  (see the <a href="http://www.sg.med.osaka-u.ac.jp/school_2024.html"> website</a>)
