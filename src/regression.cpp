@@ -63,7 +63,7 @@ void fastLm(const Eigen::VectorXd& y, const Eigen::MatrixXd& X, double& p_value,
     long df_int = intercept; // 0 false 1 true
     r2_adjust = 1.0 - (1.0 - r2) * (static_cast<double>(n - df_int) / df);
     double tval = coeff / standard_error;
-    p_value = misc::calc_tprob(tval, n);
+    p_value = misc::calc_tprob(tval, df);
 }
 
 }
