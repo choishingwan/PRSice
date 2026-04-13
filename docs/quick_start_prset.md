@@ -1,10 +1,8 @@
 # Background
-A new feature of PRSice is the ability to perform set base/pathway based analysis. This new feature is called PRSet.
-
-Paper on PRSet currently under preparation.
+A new feature of PRSice is the ability to perform gene set/pathway based analysis. This new feature is called PRSet.
 
 !!! Important
-    PRSet is currently under active development.
+    If you use the PRSet feature please cite our dedicated paper [PRSet: Pathway-based polygenic risk score analyses and software.](https://doi.org/10.1371/journal.pgen.1010624)
 
 ## Preparation
 PRSet is based on [PRSice](quick_start.md), with additional input requirements
