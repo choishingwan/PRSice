@@ -38,6 +38,13 @@ PRSice (pronounced 'precise') is a Polygenic Risk Score software for calculating
 
 
 !!! Note "Latest Update"
+    # 2026-09-18 (v2.3.6)
+    - PRSice now builds on 64-bit non-x86 targets, such as Apple Silicon and arm64 Linux: the bundled PLINK dependency was updated to a version that falls back to SIMDe where SSE2 is unavailable
+    - `--beta` p-values are computed from the residual degrees of freedom rather than the sample size, which was inflating significance in linear regression
+    - The R2 reported in the `.prsice` file is now the incremental R2, `1 - (1 - full) / (1 - null)`, instead of the difference between the two
+    - Fixed a compilation error, a stray cast and a memory estimate that asked for more than needed
+    - `PRSice.R` gained a guard against missing input
+
     # 2021-09-20 (v2.3.5)
     - This is a temporary fix for known issues. We are currently re-building PRSice with best practices and try to make sure robustness and extensibility with unit tests.
     - Some fixes are 
