@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 add_library(Catch INTERFACE)
 set(CATCH_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/test/inc)
