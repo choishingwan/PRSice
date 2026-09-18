@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -24,7 +24,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 find_path(EIGEN_INCLUDE_DIR
     NAME EIGEN
     PATHS ${CMAKE_CURRENT_SOURCE_DIR}/lib/eigen-git-mirror/)
-if((NOT ${EIGEN_INCLUDE_DIR}) OR (NOT EXISTS ${EIGEN_INCLUDE_DIR}))
+if((NOT EIGEN_INCLUDE_DIR) OR (NOT EXISTS "${EIGEN_INCLUDE_DIR}"))
     execute_process(COMMAND git submodule update --init -- lib/eigen/
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     set(EIGEN_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/eigen/)
