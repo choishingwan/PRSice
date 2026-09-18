@@ -485,8 +485,7 @@ bool BinaryGen::calc_freq_gen_inter(const QCFiltering& filter_info,
         setter.get_count(ref_count, het_count, alt_count, missing_count);
         ++processed_count;
         if (filter_snp(ref_count, het_count, alt_count, ref_count, het_count,
-                       alt_count, filter_info.geno, filter_info.maf,
-                       missing_count))
+                       alt_count, filter_info.geno, filter_info.maf,filter_info.max_maf, missing_count))
         { continue; }
 
         if (setter.info_score(filter_info.info_type) < filter_info.info_score)

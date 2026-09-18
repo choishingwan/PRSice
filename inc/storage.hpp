@@ -184,6 +184,7 @@ struct QCFiltering
     double hard_threshold = 0.1;
     double maf = 0.0;
     double maf_case = 0.0;
+    double max_maf = 2.0;
     double info_score = 0.0;
     INFO info_type = INFO::IMPUTE2;
     bool provided_hard_thres = false;

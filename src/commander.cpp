@@ -144,6 +144,7 @@ bool Commander::init(int argc, char* argv[], bool& early_termination,
         {"ld-hard-thres", required_argument, nullptr, 0},
         {"ld-info", required_argument, nullptr, 0},
         {"maf", required_argument, nullptr, 0},
+        {"max-maf", required_argument, nullptr, 0},
         {"memory", required_argument, nullptr, 0},
         {"missing", required_argument, nullptr, 0},
         {"model", required_argument, nullptr, 0},
@@ -281,6 +282,9 @@ bool Commander::parse_command(int argc, char* argv[], const char* optString,
             else if (command == "maf")
                 error |=
                     !set_numeric<double>(optarg, command, m_target_filter.maf);
+            else if (command == "max-maf")
+                error |=
+                    !set_numeric<double>(optarg, command, m_target_filter.max_maf);
             else if (command == "memory")
                 error |= !set_memory(optarg);
             else if (command == "missing")

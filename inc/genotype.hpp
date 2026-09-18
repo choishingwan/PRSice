@@ -1358,7 +1358,8 @@ protected:
                     const uint32_t alt_ct, const uint32_t ref_founder_ct,
                     const uint32_t het_founder_ct,
                     const uint32_t alt_founder_ct, const double geno,
-                    const double maf, uint32_t& missing_founder_ct)
+                    const double maf, const double max_maf, 
+                    uint32_t& missing_founder_ct)
     {
         uint32_t total_alleles = ref_ct + het_ct + alt_ct;
         double cur_geno =
@@ -1388,7 +1389,7 @@ protected:
             / (static_cast<double>(2.0 * total_founder_alleles));
         cur_maf = (cur_maf > 0.5) ? 1 - cur_maf : cur_maf;
         if (alt_founder_ct == total_founder_alleles
-            || ref_founder_ct == total_founder_alleles || cur_maf < maf)
+            || ref_founder_ct == total_founder_alleles || cur_maf < maf || cur_maf > max_maf)
         {
             ++m_num_maf_filter;
             return true;

@@ -141,7 +141,7 @@ bool BinaryPlink::calc_freq_gen_inter(const QCFiltering& filter_info,
         ++processed_count;
         if (filter_snp(ref_count, het_count, alt_count, ref_founder_count,
                        het_founder_count, alt_founder_count, filter_info.geno,
-                       filter_info.maf, missing_founder_ct))
+                       filter_info.maf, filter_info.max_maf, missing_founder_ct))
         { continue; }
         // if we can reach here, it is not removed
         snp->set_counts(ref_founder_count, het_founder_count, alt_founder_count,
